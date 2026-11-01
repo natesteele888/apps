@@ -1,6 +1,6 @@
 // App shell only. Never caches Firebase or Google traffic: your data stays in
 // Firestore's own private cache on this phone, behind your sign-in.
-const CACHE = "toolbox-v1";
+const CACHE = "toolbox-v2";
 self.addEventListener("install", () => self.skipWaiting());
 self.addEventListener("activate", e => e.waitUntil(
   caches.keys().then(ks => Promise.all(ks.filter(k => k.startsWith("toolbox-") && k !== CACHE).map(k => caches.delete(k))))
