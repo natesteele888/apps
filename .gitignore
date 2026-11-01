@@ -1,0 +1,7 @@
+# Never commit secrets, exports or personal data
+.env*
+*.key
+*-export*.json
+*backup*.json
+data/
+private/
