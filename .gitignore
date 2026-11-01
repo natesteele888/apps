@@ -5,3 +5,5 @@
 *backup*.json
 data/
 private/
+toolbox-backup*.json
+*toolbox-export*.json

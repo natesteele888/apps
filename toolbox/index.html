@@ -1,0 +1,412 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Toolbox</title>
+<meta name="robots" content="noindex,nofollow">
+<meta name="referrer" content="no-referrer">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://www.gstatic.com https://apis.google.com; connect-src 'self' https://*.googleapis.com https://*.firebaseio.com wss://*.firebaseio.com; frame-src https://nates-toolbox.firebaseapp.com https://accounts.google.com; img-src 'self' data: https://*.googleusercontent.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; base-uri 'none'; form-action 'none'; object-src 'none'">
+<meta name="theme-color" content="#0F1318">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Toolbox">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Public+Sans:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: one column, phone first. Board (apps by status) -> App page (now, tasks, future features) -> Settings. */
+:root{
+  --bg:#F1F3EF; --surface:#FFFFFF; --sunk:#E7EBE5; --ink:#142033; --muted:#5A6577; --line:#D6DCD4;
+  --accent:#1D7A4D; --accent-ink:#FFFFFF;
+  --s-active:#1D7A4D; --s-blocked:#C2362B; --s-parked:#7E8592; --s-done:#3F6E57;
+  --mark:#E2B32C; --shadow:0 10px 30px rgba(20,32,51,.14);
+  --f-display:"Barlow Condensed","Arial Narrow",Arial,sans-serif;
+  --f-body:"Public Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0F1318; --surface:#171D26; --sunk:#11161D; --ink:#E6EBF1; --muted:#9AA6B6; --line:#283447;
+  --accent:#45BE85; --accent-ink:#0B1A12;
+  --s-active:#45BE85; --s-blocked:#F06A5E; --s-parked:#8C95A3; --s-done:#79A894;
+  --mark:#F3C63F; --shadow:0 10px 30px rgba(0,0,0,.45); color-scheme:dark;}}
+:root[data-theme="dark"]{
+  --bg:#0F1318; --surface:#171D26; --sunk:#11161D; --ink:#E6EBF1; --muted:#9AA6B6; --line:#283447;
+  --accent:#45BE85; --accent-ink:#0B1A12;
+  --s-active:#45BE85; --s-blocked:#F06A5E; --s-parked:#8C95A3; --s-done:#79A894;
+  --mark:#F3C63F; --shadow:0 10px 30px rgba(0,0,0,.45); color-scheme:dark;}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font:15px/1.45 var(--f-body);-webkit-font-smoothing:antialiased;
+  padding:env(safe-area-inset-top,0) env(safe-area-inset-right,0) env(safe-area-inset-bottom,0) env(safe-area-inset-left,0)}
+h1,h2,h3{font-family:var(--f-display);margin:0;letter-spacing:.01em;text-wrap:balance}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+a{color:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+[hidden]{display:none!important}
+.wrap{max-width:720px;margin:0 auto;padding:12px 16px 90px}
+.top{position:sticky;top:0;z-index:5;background:var(--bg);display:flex;align-items:center;gap:10px;padding:10px 0 8px;margin-bottom:6px}
+.top h1{font-size:30px;text-transform:uppercase;flex:1;min-width:0}
+.top .back{border:0;background:none;font-size:15px;font-weight:600;color:var(--muted);padding:6px 0}
+.ib{border:1px solid var(--line);background:var(--surface);border-radius:10px;min-width:40px;height:40px;padding:0 10px;font-weight:600}
+.btn{border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:9px 14px;font-weight:600;font-size:14px;text-decoration:none;color:var(--ink);display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:40px}
+.btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.btn.small{min-height:32px;padding:5px 10px;font-size:13px;border-radius:8px}
+.btn.ghost{background:none;border-color:transparent;color:var(--muted)}
+.btn.danger{color:var(--s-blocked)}
+.muted{color:var(--muted)}
+.search{width:100%;border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:10px 12px;margin-bottom:12px}
+
+/* app icon */
+.ic{--icbg:#1F4E8C;width:46px;height:46px;border-radius:12px;background:var(--icbg);display:grid;place-items:center;flex:none;overflow:hidden;color:#fff;font-family:var(--f-display);font-weight:700;font-size:19px}
+.ic img{width:100%;height:100%;object-fit:cover}
+.ic .emo{font-size:25px;line-height:1}
+.ic.big{width:64px;height:64px;border-radius:16px;font-size:26px}
+.ic.big .emo{font-size:36px}
+
+/* quick launch */
+.dock{display:flex;gap:12px;overflow-x:auto;padding:4px 2px 12px;margin:0 -2px 6px;scrollbar-width:none}
+.dock a{display:flex;flex-direction:column;align-items:center;gap:4px;width:62px;flex:none;text-decoration:none;font-size:11px;color:var(--muted);text-align:center}
+.dock a span{width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+/* board */
+.sec{margin:18px 0 8px;display:flex;align-items:center;gap:8px;font:700 12px/1 var(--f-body);text-transform:uppercase;letter-spacing:.1em;color:var(--muted)}
+.sec i{width:9px;height:9px;border-radius:50%;background:currentColor}
+.sec.st-active{color:var(--s-active)}.sec.st-blocked{color:var(--s-blocked)}.sec.st-parked{color:var(--s-parked)}.sec.st-done{color:var(--s-done)}
+.sec em{font-style:normal;color:var(--muted);margin-left:auto;letter-spacing:0}
+.card{display:grid;grid-template-columns:auto 1fr auto;gap:12px;align-items:center;width:100%;text-align:left;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:12px;margin-bottom:8px;color:var(--ink);text-decoration:none}
+.card.blocked{border-left:4px solid var(--s-blocked)}
+.card b{display:block;font-size:16px;line-height:1.2}
+.card .now{font-size:13px;color:var(--muted);margin-top:2px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.card .stuck{font-size:13px;color:var(--s-blocked);margin-top:2px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.meter{height:5px;background:var(--sunk);border-radius:3px;overflow:hidden;margin-top:6px}
+.meter i{display:block;height:100%;background:var(--accent)}
+.go{border:1px solid var(--line);background:var(--bg);border-radius:10px;padding:8px 10px;font-weight:700;font-size:13px;text-decoration:none;color:var(--ink);white-space:nowrap}
+details.more>summary{list-style:none;cursor:pointer}
+details.more>summary::-webkit-details-marker{display:none}
+
+/* app page */
+.hero{display:flex;gap:14px;align-items:center;margin:4px 0 12px}
+.hero h2{font-size:30px;line-height:1.05}
+.hero .sub{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:6px}
+.pill{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;padding:3px 8px;border-radius:5px;border:1px solid currentColor}
+.st-active{color:var(--s-active)}.st-blocked{color:var(--s-blocked)}.st-parked{color:var(--s-parked)}.st-done{color:var(--s-done)}
+.acts{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
+.acts .btn{flex:1 1 140px}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:12px}
+.panel h3{font-size:20px;text-transform:uppercase;display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.panel h3 em{font-style:normal;font:600 12px var(--f-body);color:var(--muted);margin-left:auto;text-transform:none}
+.panel.stuckp{border-color:var(--s-blocked)}
+.panel.stuckp h3{color:var(--s-blocked)}
+textarea.note{width:100%;min-height:84px;border:1px solid var(--line);border-radius:10px;background:var(--bg);padding:10px;resize:vertical}
+.saved{font-size:12px;color:var(--muted);height:16px}
+ul.list{list-style:none;margin:0;padding:0;display:grid;gap:2px}
+ul.list li{display:flex;gap:10px;align-items:flex-start;padding:7px 0;border-bottom:1px solid var(--line)}
+ul.list li:last-child{border-bottom:0}
+ul.list li.done span.t{text-decoration:line-through;color:var(--muted)}
+ul.list input[type=checkbox]{width:20px;height:20px;margin:1px 0 0;flex:none;accent-color:var(--accent)}
+ul.list span.t{flex:1;min-width:0;overflow-wrap:anywhere}
+ul.list .x{border:0;background:none;color:var(--muted);padding:0 4px;font-size:16px;line-height:1}
+.add{display:flex;gap:8px;margin-top:10px}
+.add input{flex:1;min-width:0;border:1px solid var(--line);border-radius:10px;background:var(--bg);padding:9px 11px}
+.wp{margin-top:10px}
+.wp summary{font-weight:700;padding:6px 0;cursor:pointer}
+.links a{display:flex;justify-content:space-between;gap:10px;padding:9px 0;border-bottom:1px solid var(--line);text-decoration:none}
+.links a:last-child{border-bottom:0}
+.links small{color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:55%}
+select.st{border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:4px 8px}
+.feat .promote{border:1px solid var(--line);background:var(--bg);border-radius:7px;font-size:12px;font-weight:600;padding:3px 8px;white-space:nowrap}
+
+/* sheets, gate, toast */
+.gate{min-height:80vh;display:grid;place-items:center;text-align:center}
+.gate .box{max-width:340px}
+.gate h1{font-size:42px;text-transform:uppercase;margin:14px 0 6px}
+.gate p{color:var(--muted);margin:0 0 18px}
+.scrim{position:fixed;inset:0;background:rgba(10,15,25,.45);z-index:20}
+.sheet{position:fixed;left:0;right:0;bottom:0;z-index:21;background:var(--bg);border-radius:18px 18px 0 0;max-height:88vh;overflow:auto;
+  padding:18px 16px calc(20px + env(safe-area-inset-bottom,0));box-shadow:var(--shadow);max-width:720px;margin:0 auto}
+.sheet h2{font-size:26px;text-transform:uppercase;margin-bottom:12px}
+.field{display:grid;gap:4px;margin-bottom:12px;font-size:13px;font-weight:600;color:var(--muted)}
+.field input,.field select{border:1px solid var(--line);border-radius:10px;background:var(--surface);padding:10px;font-weight:400;color:var(--ink)}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(20px + env(safe-area-inset-bottom,0));background:var(--ink);color:var(--bg);padding:9px 14px;border-radius:10px;font-size:14px;z-index:40;max-width:90vw}
+.fab{position:fixed;right:max(16px,calc(50% - 344px));bottom:calc(18px + env(safe-area-inset-bottom,0));z-index:6;border:0;background:var(--accent);color:var(--accent-ink);border-radius:16px;padding:14px 18px;font-weight:700;box-shadow:var(--shadow)}
+.empty{text-align:center;color:var(--muted);padding:40px 10px}
+.offline{font-size:12px;color:var(--muted);text-align:center;margin-top:-4px;margin-bottom:8px}
+</style>
+</head>
+<body>
+<div class="wrap" id="app"><div class="gate"><div class="box"><p class="muted">Loading…</p></div></div></div>
+<div id="layer"></div>
+<script type="module">
+/* ============================================================
+   Toolbox — Nathan's private tracker + launcher.
+   PUBLIC CODE, PRIVATE DATA: this file holds no projects, notes or names.
+   Everything comes from Firestore after Google sign-in, and the database
+   rules (set in the Firebase console, not here) only answer to the owner's account.
+   The config below is Firebase's public web identifier, not a secret.
+   ============================================================ */
+const FB = "https://www.gstatic.com/firebasejs/11.6.0";
+const firebaseConfig = {
+  apiKey: "AIzaSyDT_wGN93U4oM70orIU8flSAnvXHApqW2A",
+  authDomain: "nates-toolbox.firebaseapp.com",
+  projectId: "nates-toolbox",
+  storageBucket: "nates-toolbox.firebasestorage.app",
+  messagingSenderId: "567737923830",
+  appId: "1:567737923830:web:b597b5d71e7c7a73c4d4d7"
+};
+
+const AREAS = {lybs:"LYBS",football:"Football",family:"Family",work:"Work",platform:"Platform"};
+const STATUS = {blocked:"Stuck",active:"In progress",parked:"Parked",done:"Done"};
+const ORDER = ["blocked","active","parked","done"];
+const AREA_COLOR = {lybs:"#1F4E8C",football:"#C9561A",family:"#0F8282",work:"#7A4C9E",platform:"#677526"};
+
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+const safeUrl = u => /^https:\/\//i.test(String(u || "")) ? String(u) : "";
+const safeImg = s => typeof s === "string" && /^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/=]+$/.test(s) ? s : "";
+function toast(m){const t=document.createElement("div");t.className="toast";t.textContent=m;document.body.appendChild(t);setTimeout(()=>t.remove(),2200)}
+
+const S = {user:null, projects:{}, loaded:false, q:"", fs:null, db:null, auth:null, A:null};
+
+/* ---------- Firebase ---------- */
+async function boot(){
+  try{
+    const [{initializeApp}, A, F] = await Promise.all([
+      import(`${FB}/firebase-app.js`), import(`${FB}/firebase-auth.js`), import(`${FB}/firebase-firestore.js`)
+    ]);
+    const app = initializeApp(firebaseConfig);
+    S.A = A; S.fs = F; S.auth = A.getAuth(app);
+    try{ S.db = F.initializeFirestore(app, {localCache: F.persistentLocalCache({tabManager: F.persistentMultipleTabManager()})}); }
+    catch(_){ S.db = F.getFirestore(app); }
+    A.onAuthStateChanged(S.auth, user => {
+      S.user = user || null;
+      if(S.user) listen(); else { S.unsub && S.unsub(); S.projects = {}; S.loaded = false; }
+      render();
+    });
+  }catch(e){
+    $("#app").innerHTML = `<div class="gate"><div class="box"><h1>Toolbox</h1><p>Couldn't load. Check your connection and reopen the app.</p></div></div>`;
+  }
+}
+function listen(){
+  const F = S.fs;
+  S.unsub && S.unsub();
+  S.unsub = F.onSnapshot(F.collection(S.db, "projects"), snap => {
+    snap.docChanges().forEach(ch => { if(ch.type === "removed") delete S.projects[ch.doc.id]; else S.projects[ch.doc.id] = {id: ch.doc.id, ...ch.doc.data()}; });
+    S.loaded = true; S.fromCache = snap.metadata.fromCache;
+    if(!S.editing) render();
+  }, err => {
+    if(err && err.code === "permission-denied"){ toast("This toolbox is private to its owner."); S.A.signOut(S.auth); }
+    else toast("Couldn't reach your data.");
+  });
+}
+async function signIn(){
+  const A = S.A, prov = new A.GoogleAuthProvider();
+  prov.setCustomParameters({prompt: "select_account"});
+  try{ await A.signInWithPopup(S.auth, prov); }
+  catch(e){ if(e && /popup/.test(e.code||"")) await A.signInWithRedirect(S.auth, prov); else toast("Sign-in didn't finish. Try again."); }
+}
+function save(id, patch){
+  const F = S.fs;
+  Object.assign(S.projects[id] ||= {id}, patch);
+  return F.setDoc(F.doc(S.db, "projects", id), {...patch, updated: new Date().toISOString()}, {merge: true})
+    .catch(e => toast(e && e.code === "permission-denied" ? "Not allowed." : "Saved on this phone — it will sync when you're back online."));
+}
+
+/* ---------- helpers ---------- */
+const P = () => Object.values(S.projects).filter(p => p && p.name);
+const wpDone = w => (w.tasks || []).length > 0 && w.tasks.every(t => t.done);
+const curIdx = p => (p.waypoints || []).findIndex(w => !wpDone(w));
+function launchUrl(p){
+  const a = p.app || {}; if(safeUrl(a.launch)) return a.launch;
+  const ls = (p.links || []).filter(l => safeUrl(l.url) && !/claude\.ai\/(chat|project)\//.test(l.url));
+  const pick = ls.find(l => /live|app|site|dashboard/i.test(l.label)) || ls.find(l => !/github\.com/.test(l.url));
+  return pick ? pick.url : "";
+}
+function installUrl(u){ return /^https:\/\/natesteele888\.github\.io\//i.test(u) ? u + (u.includes("?") ? "&" : "?") + "install" : u; }
+function monogram(n){const w=String(n||"?").replace(/[^\w\s']/g," ").split(/\s+/).filter(Boolean);return (w.length>1?w[0][0]+w[1][0]:(w[0]||"?").slice(0,2)).toUpperCase()}
+function icon(p, big){
+  const a = p.app || {}, color = /^#[0-9a-f]{3,8}$/i.test(a.color||"") ? a.color : (AREA_COLOR[p.area] || "#1F4E8C"), img = safeImg(a.img);
+  return `<span class="ic ${big?"big":""}" style="--icbg:${color}">${img?`<img src="${img}" alt="">`:a.icon?`<span class="emo">${esc(a.icon)}</span>`:esc(monogram(p.name))}</span>`;
+}
+function nowText(p){
+  const i = curIdx(p); if(i < 0) return (p.waypoints||[]).length ? "All stops done" : "No tasks yet";
+  const w = p.waypoints[i], open = w.tasks.filter(t => !t.done);
+  return `${w.title}${open[0] ? " · next: " + open[0].t : ""}`;
+}
+function progress(p){ const i = curIdx(p); if(i < 0) return null; const w = p.waypoints[i], n = w.tasks.length, d = w.tasks.filter(t=>t.done).length; return n ? d/n : 0; }
+const sortP = list => list.sort((a,b) => String(b.updated||"").localeCompare(String(a.updated||"")) || a.name.localeCompare(b.name));
+
+/* ---------- routing ---------- */
+const route = () => { const h = location.hash.slice(1); if(h.startsWith("p/")) return {v:"p", id: decodeURIComponent(h.slice(2))}; if(h === "settings") return {v:"settings"}; return {v:"board"}; };
+addEventListener("hashchange", () => { closeSheet(); render(); scrollTo(0,0); });
+
+function render(){
+  if(!S.auth) return;
+  if(!S.user) return renderGate();
+  if(!S.loaded) { $("#app").innerHTML = `<div class="gate"><div class="box"><p class="muted">Opening your toolbox…</p></div></div>`; return; }
+  const r = route();
+  if(r.v === "p" && S.projects[r.id]) renderApp(S.projects[r.id]);
+  else if(r.v === "settings") renderSettings();
+  else renderBoard();
+}
+
+function renderGate(){
+  $("#app").innerHTML = `<div class="gate"><div class="box">
+    <img src="icons/icon-192.png" width="88" height="88" alt="" style="border-radius:22px">
+    <h1>Toolbox</h1><p>Private. Sign in with your Google account to open it.</p>
+    <button class="btn primary" id="signin" style="width:100%">Sign in with Google</button></div></div>`;
+  $("#signin").onclick = signIn;
+}
+
+function renderBoard(){
+  const all = P(), q = S.q.trim().toLowerCase();
+  const list = q ? all.filter(p => [p.name, p.summary, p.leftOff, AREAS[p.area]].join(" ").toLowerCase().includes(q)) : all;
+  const dock = sortP(all.filter(p => p.status !== "done" && launchUrl(p))).slice(0, 12);
+  const card = p => {
+    const u = launchUrl(p), pr = progress(p);
+    return `<div class="card ${p.status==="blocked"?"blocked":""}">
+      <a href="#p/${encodeURIComponent(p.id)}" style="display:contents;color:inherit;text-decoration:none">${icon(p)}
+      <span style="min-width:0"><b>${esc(p.name)}</b>${p.status==="blocked"&&p.leftOff?`<span class="stuck">⚠ ${esc(p.leftOff)}</span>`:`<span class="now">${esc(nowText(p))}</span>`}
+      ${pr!==null&&p.status!=="done"?`<span class="meter"><i style="width:${Math.round(pr*100)}%"></i></span>`:""}</span></a>
+      ${u?`<a class="go" href="${esc(u)}" target="_blank" rel="noopener noreferrer" aria-label="Open ${esc(p.name)}">Open ↗</a>`:"<span></span>"}</div>`;
+  };
+  const groups = ORDER.map(st => {
+    const ps = sortP(list.filter(p => (p.status||"active") === st)); if(!ps.length) return "";
+    const head = `<div class="sec st-${st}"><i></i>${STATUS[st]}<em>${ps.length}</em></div>`;
+    return st === "done" || st === "parked" ? `<details class="more"><summary>${head}</summary>${ps.map(card).join("")}</details>` : head + ps.map(card).join("");
+  }).join("");
+  $("#app").innerHTML = `<div class="top"><h1>Toolbox</h1><a class="ib" href="#settings" aria-label="Settings" style="display:grid;place-items:center;text-decoration:none">⚙</a></div>
+    ${S.fromCache?`<div class="offline">Showing what's saved on this phone</div>`:""}
+    ${dock.length?`<div class="dock">${dock.map(p=>`<a href="${esc(launchUrl(p))}" target="_blank" rel="noopener noreferrer">${icon(p)}<span>${esc(p.name)}</span></a>`).join("")}</div>`:""}
+    <input class="search" id="q" type="search" placeholder="Search apps" value="${esc(S.q)}" aria-label="Search apps">
+    ${groups || `<div class="empty">${all.length?"Nothing matches.":"No apps yet. Import from the old Toolbox in Settings, or add one."}</div>`}
+    <button class="fab" id="new">+ New app</button>`;
+  const qi = $("#q"); qi.oninput = e => { S.q = e.target.value; const pos = qi.selectionStart; renderBoard(); const n=$("#q"); n.focus(); n.setSelectionRange(pos,pos); };
+  $("#new").onclick = newApp;
+}
+
+function renderApp(p){
+  const u = launchUrl(p), i = curIdx(p), w = i >= 0 ? p.waypoints[i] : null;
+  const feats = p.features || [];
+  const others = (p.waypoints || []).map((x, k) => ({x, k})).filter(o => o.k !== i);
+  const taskLi = (t, wi, ti) => `<li class="${t.done?"done":""}"><input type="checkbox" data-t="${wi}|${ti}" ${t.done?"checked":""} aria-label="Done: ${esc(t.t)}"><span class="t">${esc(t.t)}</span><button class="x" data-tdel="${wi}|${ti}" aria-label="Delete task">×</button></li>`;
+  $("#app").innerHTML = `<div class="top"><button class="back" id="back">← Apps</button><span style="flex:1"></span>
+      <select class="st" id="st" aria-label="Status">${ORDER.map(s=>`<option value="${s}" ${p.status===s?"selected":""}>${STATUS[s]}</option>`).join("")}</select></div>
+    <div class="hero">${icon(p,true)}<div style="min-width:0"><h2>${esc(p.name)}</h2>
+      <div class="sub"><span class="pill st-${esc(p.status||"active")}">${STATUS[p.status]||"In progress"}</span><span class="muted">${esc(AREAS[p.area]||"")}</span></div></div></div>
+    ${p.summary?`<p class="muted" style="margin:0 0 12px">${esc(p.summary)}</p>`:""}
+    <div class="acts">${u?`<a class="btn primary" href="${esc(u)}" target="_blank" rel="noopener noreferrer">Open app ↗</a>
+      <a class="btn" href="${esc(installUrl(u))}" target="_blank" rel="noopener noreferrer">📲 Add to phone</a>`:`<span class="muted">No live link yet — add one under Links.</span>`}</div>
+
+    <div class="panel ${p.status==="blocked"?"stuckp":""}"><h3>${p.status==="blocked"?"⚠ Stuck on":"Where I left off"}</h3>
+      <textarea class="note" id="left" placeholder="${p.status==="blocked"?"What's blocking this?":"What you were doing, what's next…"}">${esc(p.leftOff)}</textarea><div class="saved" id="leftSaved"></div></div>
+
+    <div class="panel"><h3>Now${w?`: ${esc(w.title)}`:""}<em>${w?`${w.tasks.filter(t=>t.done).length}/${w.tasks.length}`:""}</em></h3>
+      ${w?`<ul class="list">${w.tasks.map((t,ti)=>taskLi(t,i,ti)).join("")}</ul>`:`<p class="muted" style="margin:0">${(p.waypoints||[]).length?"Every stop is done. Add a new stop for what's next.":"No tasks yet."}</p>`}
+      <div class="add"><input id="newTask" placeholder="${w?"Add a task":"Name the next stop"}" aria-label="Add task"><button class="btn small primary" id="addTask">Add</button></div>
+      ${others.length?`<details class="wp"><summary>Other stops (${others.length})</summary>${others.map(({x,k})=>`<div style="margin:8px 0 4px;font-weight:700">${esc(x.title)} <span class="muted" style="font-weight:400">${x.tasks.filter(t=>t.done).length}/${x.tasks.length}</span></div><ul class="list">${x.tasks.map((t,ti)=>taskLi(t,k,ti)).join("")}</ul>`).join("")}</details>`:""}</div>
+
+    <div class="panel feat"><h3>Future features<em>${(n=>n+(n===1?" idea":" ideas"))(feats.filter(f=>!f.done).length)}</em></h3>
+      ${feats.length?`<ul class="list">${feats.map(f=>`<li class="${f.done?"done":""}"><input type="checkbox" data-f="${esc(f.id)}" ${f.done?"checked":""} aria-label="Shipped: ${esc(f.t)}"><span class="t">${esc(f.t)}</span>${f.done?"":`<button class="promote" data-fp="${esc(f.id)}">→ Task</button>`}<button class="x" data-fdel="${esc(f.id)}" aria-label="Delete idea">×</button></li>`).join("")}</ul>`:`<p class="muted" style="margin:0">Park ideas here so the task list stays short.</p>`}
+      <div class="add"><input id="newFeat" placeholder="Add an idea" aria-label="Add a future feature"><button class="btn small" id="addFeat">Add</button></div></div>
+
+    <div class="panel links"><h3>Links</h3>${(p.links||[]).filter(l=>safeUrl(l.url)).map(l=>`<a href="${esc(l.url)}" target="_blank" rel="noopener noreferrer"><span>${esc(l.label)}</span><small>${esc(l.url.replace(/^https?:\/\//,""))}</small></a>`).join("")||`<p class="muted" style="margin:0">No links yet.</p>`}
+      <div class="add"><input id="lkLabel" placeholder="Label" style="flex:.6"><input id="lkUrl" placeholder="https://…" inputmode="url"><button class="btn small" id="addLink">Add</button></div></div>
+    <p style="text-align:center"><button class="btn ghost small" id="editApp">Edit name, icon, area</button></p>`;
+
+  $("#back").onclick = () => { location.hash = ""; };
+  $("#st").onchange = e => { save(p.id, {status: e.target.value}); render(); };
+  const left = $("#left"); let tmr;
+  left.onfocus = () => S.editing = true;
+  left.oninput = () => { clearTimeout(tmr); $("#leftSaved").textContent = "…"; tmr = setTimeout(() => { save(p.id, {leftOff: left.value.slice(0, 4000)}); $("#leftSaved").textContent = "Saved"; }, 700); };
+  left.onblur = () => { S.editing = false; clearTimeout(tmr); if(left.value !== (p.leftOff||"")) save(p.id, {leftOff: left.value.slice(0, 4000)}); };
+  const wps = () => JSON.parse(JSON.stringify(p.waypoints || []));
+  document.querySelectorAll("[data-t]").forEach(cb => cb.onchange = () => { const [a,b] = cb.dataset.t.split("|").map(Number); const W = wps(); W[a].tasks[b].done = cb.checked; if(cb.checked) W[a].tasks[b].doneAt = new Date().toISOString(); else delete W[a].tasks[b].doneAt; save(p.id, {waypoints: W}); render(); });
+  document.querySelectorAll("[data-tdel]").forEach(b => b.onclick = () => { const [a,c] = b.dataset.tdel.split("|").map(Number); const W = wps(); const gone = W[a].tasks.splice(c,1)[0]; save(p.id, {waypoints: W}); render(); toast(`Deleted “${gone.t.slice(0,40)}”`); });
+  const addTask = () => { const v = $("#newTask").value.trim(); if(!v) return; const W = wps(); if(w) W[i].tasks.push({t: v, done: false}); else W.push({title: v, tasks: []}); save(p.id, {waypoints: W}); render(); $("#newTask").focus(); };
+  $("#addTask").onclick = addTask; $("#newTask").onkeydown = e => { if(e.key === "Enter") addTask(); };
+  const F = () => JSON.parse(JSON.stringify(p.features || []));
+  const addFeat = () => { const v = $("#newFeat").value.trim(); if(!v) return; save(p.id, {features: [...F(), {id: uid(), t: v, done: false, added: new Date().toISOString()}]}); render(); $("#newFeat").focus(); };
+  $("#addFeat").onclick = addFeat; $("#newFeat").onkeydown = e => { if(e.key === "Enter") addFeat(); };
+  document.querySelectorAll("[data-f]").forEach(cb => cb.onchange = () => { save(p.id, {features: F().map(f => f.id === cb.dataset.f ? {...f, done: cb.checked} : f)}); render(); });
+  document.querySelectorAll("[data-fdel]").forEach(b => b.onclick = () => { save(p.id, {features: F().filter(f => f.id !== b.dataset.fdel)}); render(); });
+  document.querySelectorAll("[data-fp]").forEach(b => b.onclick = () => {
+    const f = F().find(x => x.id === b.dataset.fp); if(!f) return; const W = wps();
+    if(i >= 0) W[i].tasks.push({t: f.t, done: false}); else W.push({title: "Next", tasks: [{t: f.t, done: false}]});
+    save(p.id, {waypoints: W, features: F().filter(x => x.id !== f.id)}); render(); toast("Moved to tasks");
+  });
+  $("#addLink").onclick = () => { const label = $("#lkLabel").value.trim(), url = $("#lkUrl").value.trim(); if(!safeUrl(url)) return toast("Links need to start with https://"); save(p.id, {links: [...(p.links||[]), {label: label || url.replace(/^https:\/\//,""), url}]}); render(); };
+  $("#editApp").onclick = () => editApp(p);
+}
+
+/* ---------- sheets ---------- */
+function closeSheet(){ $("#layer").innerHTML = ""; S.editing = false; }
+function sheet(html){ $("#layer").innerHTML = `<div class="scrim" id="scrim"></div><section class="sheet" role="dialog">${html}</section>`; $("#scrim").onclick = closeSheet; S.editing = true; }
+function appForm(p){
+  return `<label class="field">Name<input id="fName" value="${esc(p.name||"")}" maxlength="60"></label>
+    <label class="field">Icon (an emoji, or leave blank for initials)<input id="fIcon" value="${esc((p.app||{}).icon||"")}" maxlength="4"></label>
+    <label class="field">Color<input id="fColor" type="color" value="${esc(/^#[0-9a-f]{6}$/i.test((p.app||{}).color||"")?p.app.color:(AREA_COLOR[p.area]||"#1F4E8C"))}"></label>
+    <label class="field">Area<select id="fArea">${Object.entries(AREAS).map(([k,v])=>`<option value="${k}" ${p.area===k?"selected":""}>${v}</option>`).join("")}</select></label>
+    <label class="field">Live link (what “Open app” launches)<input id="fUrl" inputmode="url" placeholder="https://…" value="${esc((p.app||{}).launch||"")}"></label>`;
+}
+function readForm(p){
+  const name = $("#fName").value.trim(); if(!name){ toast("Give it a name"); return null; }
+  const launch = $("#fUrl").value.trim(); if(launch && !safeUrl(launch)){ toast("Links need to start with https://"); return null; }
+  return {name, area: $("#fArea").value, app: {...(p.app||{}), icon: $("#fIcon").value.trim(), color: $("#fColor").value, launch}};
+}
+function newApp(){
+  const p = {status: "active", area: "family"};
+  sheet(`<h2>New app</h2>${appForm(p)}<label class="field">Summary<input id="fSum" maxlength="200" placeholder="One line on what it is"></label>
+    <div style="display:flex;gap:8px"><button class="btn" id="cancel">Cancel</button><button class="btn primary" id="ok" style="flex:1">Add</button></div>`);
+  $("#cancel").onclick = closeSheet;
+  $("#ok").onclick = () => { const f = readForm(p); if(!f) return; const id = f.name.toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"").slice(0,40) + "-" + uid().slice(-4);
+    save(id, {...f, id, status: "active", summary: $("#fSum").value.trim(), leftOff: "", waypoints: [], features: [], links: f.app.launch ? [{label: "Live app", url: f.app.launch}] : [], created: new Date().toISOString()});
+    closeSheet(); location.hash = "p/" + encodeURIComponent(id); };
+}
+function editApp(p){
+  sheet(`<h2>Edit app</h2>${appForm(p)}
+    <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn danger" id="del">Delete</button><span style="flex:1"></span><button class="btn" id="cancel">Cancel</button><button class="btn primary" id="ok">Save</button></div>`);
+  $("#cancel").onclick = closeSheet;
+  $("#ok").onclick = () => { const f = readForm(p); if(!f) return; save(p.id, f); closeSheet(); render(); };
+  $("#del").onclick = () => { $("#del").outerHTML = `<button class="btn danger" id="del2">Tap again to delete</button>`;
+    $("#del2").onclick = () => { S.fs.deleteDoc(S.fs.doc(S.db, "projects", p.id)); delete S.projects[p.id]; closeSheet(); location.hash = ""; toast("Deleted"); }; };
+}
+
+/* ---------- settings: import / export / sign out ---------- */
+function renderSettings(){
+  $("#app").innerHTML = `<div class="top"><button class="back" id="back">← Apps</button></div><h2 style="font-size:30px;text-transform:uppercase;margin-bottom:12px">Settings</h2>
+    <div class="panel"><h3>Signed in</h3><p style="margin:0 0 10px">${esc(S.user.email)}</p><button class="btn" id="out">Sign out</button></div>
+    <div class="panel"><h3>Import</h3><p class="muted" style="margin:0 0 10px">Pick the export file from the old Toolbox. Apps with the same name are updated, nothing is deleted. The file never leaves this phone except to go into your private database.</p>
+      <label class="btn"><input type="file" id="imp" accept="application/json,.json" hidden>Choose file…</label><div class="saved" id="impMsg"></div></div>
+    <div class="panel"><h3>Backup</h3><p class="muted" style="margin:0 0 10px">Download everything as a file on this device. Keep it somewhere private — never in a GitHub repo.</p><button class="btn" id="exp">Download backup</button></div>
+    <p class="muted" style="text-align:center;font-size:12px">${P().length} apps · data lives only in your private Firebase database</p>`;
+  $("#back").onclick = () => { location.hash = ""; };
+  $("#out").onclick = () => S.A.signOut(S.auth);
+  $("#exp").onclick = () => { const blob = new Blob([JSON.stringify({exported: new Date().toISOString(), projects: P()}, null, 1)], {type: "application/json"});
+    const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = `toolbox-backup-${new Date().toISOString().slice(0,10)}.json`; a.click(); setTimeout(()=>URL.revokeObjectURL(a.href), 5000); };
+  $("#imp").onchange = async e => {
+    const f = e.target.files[0]; if(!f) return; const msg = $("#impMsg"); S.editing = true; msg.textContent = "Importing…";
+    try{
+      const data = JSON.parse(await f.text()); const list = Array.isArray(data) ? data : data.projects;
+      if(!Array.isArray(list)) throw new Error("not a toolbox export");
+      const F = S.fs; let n = 0, batch = F.writeBatch(S.db), inBatch = 0;
+      for(const raw of list){
+        const p = raw && (raw.data && raw.id ? {...raw.data, id: raw.id} : raw); if(!p || !p.name) continue;
+        const id = String(p.id || p.name).replace(/[\/#?\s]+/g, "-").slice(0, 80);
+        const clean = {...p, id, features: Array.isArray(p.features) ? p.features : [], imported: new Date().toISOString()};
+        batch.set(F.doc(S.db, "projects", id), clean, {merge: true}); n++;
+        if(++inBatch === 400){ await batch.commit(); batch = F.writeBatch(S.db); inBatch = 0; }
+      }
+      await batch.commit(); msg.textContent = `Imported ${n} apps.`; toast(`Imported ${n} apps`);
+    }catch(err){ msg.textContent = "That file couldn't be imported: " + (err.message || err); }
+    e.target.value = ""; S.editing = false;
+  };
+}
+
+boot();
+if("serviceWorker" in navigator) addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(()=>{}));
+</script>
+</body>
+</html>
