@@ -12,8 +12,8 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Toolbox">
 <link rel="manifest" href="app.webmanifest">
-<link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
-<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="192x192" href="/apps/icons/toolbox-192.png">
+<link rel="apple-touch-icon" href="/apps/icons/toolbox-512.png">
 <style>html,body{margin:0}body{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}[hidden]:not([hidden=until-found i]){display:none!important}img{max-width:100%}
 #gate{position:fixed;inset:0;z-index:100;display:grid;place-items:center;background:var(--bg,#0E141D);color:var(--ink,#E6EBF1);text-align:center;padding:24px;font-family:"Public Sans",system-ui,sans-serif}
 #gate .box{max-width:340px}#gate h1{font-family:"Barlow Condensed",sans-serif;font-size:44px;text-transform:uppercase;margin:14px 0 6px}#gate p{opacity:.75;margin:0 0 18px}
@@ -1621,7 +1621,14 @@ async function drawIconPNG(p,mask){
   return c.toDataURL("image/png");
 }
 async function syncIcon(pid,quiet){
-  const p=S.projects[pid];const url=p&&ghApp(p);if(!url||!S.db)return;
+  const p=S.projects[pid];if(!p||!S.db)return;
+  const r=regMatch(p);
+  if(r&&!S.mcp){ /* phone app: publish the icon; a GitHub job copies it into apps/icons/ for every app, the store and installs */
+    const doc={any:await drawIconPNG(p,false),maskable:await drawIconPNG(p,true),color:appOf(p).color,pid,updatedAt:new Date().toISOString()};
+    try{await queue(()=>S.db.doc("public_icons/"+r.id).set(doc));if(!quiet)toast("Icon saved. The live app and App Store pick it up within about 15 minutes.")}
+    catch(e){toast(e&&e.code==="permission-denied"?"Icon saved here. To send it to the live apps, turn on the public_icons rule in Firebase (one-time setup).":"Icon saved here; sending it to the live apps didn't work. Try again later.")}
+    return}
+  const url=ghApp(p);if(!url)return;
   if(!S.mcp){if(!quiet)toast("Icon saved. To update the installed app's icon too, ask Claude: \"sync my Toolbox icons\".");return}
   const id="i-"+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
   const job={status:"queued",pid,name:p.name,url,color:appOf(p).color,any:await drawIconPNG(p,false),maskable:await drawIconPNG(p,true),createdAt:new Date().toISOString()};
@@ -1631,6 +1638,8 @@ async function syncIcon(pid,quiet){
   catch(e){toast("Saved. The phone icon will update next time it can.")}
 }
 function syncLine(p){
+  if(!S.mcp){const r=regMatch(p);if(!r)return "";
+    return `<div class="sync" id="asSync"><span>This icon is also the live app's icon: installed apps and the <a href="${STORE_URL}#app=${esc(r.id)}" target="_blank" rel="noopener">App Store</a> update within about 15 minutes of a change.</span>${S.canWrite?`<button type="button" class="btn small" id="asSyncGo">Push this icon now</button>`:""}</div>`}
   if(!ghApp(p))return "";const j=lastSync(p.id);
   const st=j?`<span><b>${SYNCST[j.status]||j.status}</b>${j.result?` · ${esc(j.result)}`:""}${j.commit?` · <a href="${esc(j.commit)}" target="_blank" rel="noopener">see change ↗</a>`:""}</span>`:`<span>Changing this app's icon in the Toolbox also updates the installed app.</span>`;
   return `<div class="sync" id="asSync">${st}${S.canWrite&&S.mcp&&(!j||j.status==="done"||j.status==="failed")?`<button type="button" class="btn small" id="asSyncGo">Push this icon to the app</button>`:""}</div>`;
@@ -1700,7 +1709,7 @@ function openIconEditor(pid){
     $("#ieSave").onclick=()=>{const name=(st.name||"").trim()||p.name;const cur=S.projects[p.id].app||{};
       const patch={name,app:{...cur,icon:st.icon||"",img:st.img||null,color:st.color,launch:st.launch||"",dock:!!st.dock}};if(st.area!==p.area){patch.area=st.area;patch.app.order=999;mapLayout=null}
       const looks=a.icon!==(st.icon||"")||(a.img||null)!==(st.img||null)||a.color!==st.color;
-      save(p.id,patch).then(()=>{if(looks&&ghApp({...p,...patch}))return syncIcon(p.id);toast("Saved")});closeSheet()};
+      save(p.id,patch).then(()=>{if(looks&&(regMatch({...p,...patch})||ghApp({...p,...patch})))return syncIcon(p.id);toast("Saved")});closeSheet()};
   };draw();
 }
 
