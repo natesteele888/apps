@@ -283,6 +283,18 @@ textarea.edin{min-height:0;resize:vertical}
 .jres{border-top:1px solid var(--line);padding-top:6px;margin-top:4px}
 .jch{font-size:12.5px;margin-top:6px}.jch code{font-family:var(--f-mono);font-size:11.5px;background:var(--sunk);padding:1px 4px;border-radius:4px}
 .jerr{color:var(--bad);font-size:12.5px;margin:4px 0}
+.ideas .idl{list-style:none;margin:0 0 10px;padding:0;display:grid;gap:8px}
+.ideas .idl li{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:10px 12px;display:grid;gap:3px}
+.ideas .idl small,.idcard small{color:var(--muted);font-size:13px;line-height:1.35}
+.ik{justify-self:start;font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;padding:2px 8px;border-radius:999px;background:var(--sunk);color:var(--muted)}
+.ik.k-easy{background:color-mix(in srgb,var(--good) 18%,transparent);color:var(--good)}
+.ik.k-feature{background:color-mix(in srgb,var(--accent) 18%,transparent);color:var(--accent)}
+.ik.k-polish{background:color-mix(in srgb,var(--warn) 22%,transparent);color:var(--warn)}
+.ia{display:flex;gap:6px;flex-wrap:wrap;margin-top:4px}
+.btn.ghost{background:transparent;border-color:transparent;color:var(--muted)}
+.idcards{display:grid;gap:10px;grid-template-columns:repeat(auto-fit,minmax(240px,1fr))}
+.idcard{display:grid;gap:4px;align-content:start;background:var(--surface);border:1px solid var(--line);border-left:4px solid var(--ac,var(--accent));border-radius:12px;padding:12px}
+.idcard .mlink{justify-self:start;background:none;border:0;padding:0;color:var(--ac,var(--accent));font-weight:700;font-size:13px;cursor:pointer}
 /* start buttons */
 .go{border:1px solid var(--ac,var(--accent));color:var(--ac,var(--accent));background:transparent;border-radius:999px;font-size:12px;font-weight:700;padding:1px 9px;min-height:24px;flex:0 0 auto;margin-left:auto;cursor:pointer;white-space:nowrap}
 .go.now{background:var(--ac,var(--accent));color:var(--surface)}
@@ -871,6 +883,7 @@ function renderHome(){
      <p style="margin:0 0 6px"><b>${esc(S.profile?.headline||"")}</b></p><p class="prog" style="margin:0 0 10px">${pendingUpdates().length} project updates waiting · synced ${fmtD(S.profile?.lastSync)||"never"}</p>
      <a class="btn" href="#resume">View resume</a></section>
    ${(S.jobs||[]).length?`<section class="panel span-12"><h2 class="section-h">On your iMac</h2><div class="mini">${S.jobs.slice(0,4).map(j=>`<div class="mrow area-${S.projects[j.pid]?S.projects[j.pid].area:"platform"}"><button class="mopen" data-jobopen="${esc(j.pid)}|${j.wi}|${j.ti}"><span class="rail"></span><span><b>${esc(j.task)}</b><small>${esc(j.project)} · ${esc(JOBST[j.status]||j.status)}</small></span><span class="pill ${j.status==="done"?"st-done":j.status==="failed"?"st-blocked":"st-active"}">${esc(JOBST[j.status]||j.status)}</span></button></div>`).join("")}</div></section>`:""}
+   ${ideasHome()}
    <section class="panel span-4"><h2 class="section-h">Recently finished</h2>
      ${feed.length?`<ul class="feed">${feed.map(f=>`<li><time>${fmtD(f.at)}</time><span><b>${esc(f.p.name)}</b> · ${esc(f.t)}</span></li>`).join("")}</ul>`:'<p class="lede" style="margin:0">Tasks you tick off show up here with the date, and on your resume.</p>'}</section>
   </div>`;
@@ -1067,6 +1080,7 @@ function renderDrawer(){
   <div class="blk"><h4>Where I left off <span class="saved" id="savedMsg" hidden>Saved</span></h4><textarea id="leftOff" ${ro}>${esc(p.leftOff)}</textarea></div>
   <div class="blk"><h4>Waypoints</h4><ul class="wps">${wps}</ul>
     ${S.canWrite?`<form class="addrow" id="addWp"><input id="addWpIn" placeholder="Add a waypoint (a safe stopping point)" aria-label="Add a waypoint"><button class="btn small">Add</button></form>`:""}</div>
+  ${ed?"":ideasBlock(p)}
   ${ed?`<div class="blk"><h4>Pick-up prompt</h4><textarea class="edin" id="ePrompt" rows="4" placeholder="What to paste into Claude to pick this back up">${esc(p.resume||"")}</textarea></div>`
     :p.resume?`<div class="blk"><h4>Pick-up prompt</h4><div class="pickup"><p id="pickText">${esc(p.resume)}</p><button class="btn small" id="copyR">Copy prompt</button></div></div>`:""}
   ${ed?`<div class="blk"><h4>Links</h4><div class="rowsE">${(p.links||[]).map((l,li)=>`<div class="edrow"><input class="edin" id="ll-${li}" data-ll="${li}" value="${esc(l.label)}" placeholder="Name" aria-label="Link name"><input class="edin" id="lu-${li}" data-lu="${li}" value="${esc(l.url)}" placeholder="https://" aria-label="Link address"><button type="button" class="ib del" data-ldel="${li}" aria-label="Remove link">×</button></div>`).join("")}</div>
@@ -1085,6 +1099,8 @@ function renderDrawer(){
   $("#scrim").onclick=closeP;$("#closeD").onclick=closeP;
   const cr=$("#copyR");if(cr)cr.onclick=()=>copyText(p.resume,$("#pickText"));
   if(!S.canWrite)return;
+  document.querySelectorAll("[data-idadd]").forEach(b=>b.onclick=()=>ideaToTask(p.id,+b.dataset.idadd));
+  document.querySelectorAll("[data-iddis]").forEach(b=>b.onclick=()=>ideaDismiss(p.id,+b.dataset.iddis));
   $("#editD").onclick=()=>{S.edit=!S.edit;S.inline=null;renderDrawer()};
   // tap a line to edit it in place: Enter or tapping away saves, Esc cancels, clearing it deletes (with undo)
   const startInline=(key,sel)=>{S.inline=key;renderDrawer();const el=document.querySelector(sel);if(el){el.focus();const n=el.value.length;try{el.setSelectionRange(n,n)}catch(_){}}};
@@ -1792,28 +1808,105 @@ function openSettings(){
     catch(err){msg.textContent="Couldn't import: "+(err.message||err)}e.target.value=""};
 }
 
+
+/* ---------- 💡 ideas from Claude: suggestions per app, one tap to make them tasks ---------- */
+const IDEA_KIND={easy:"Easier to use",feature:"New feature",polish:"Polish"};
+const STORE_URL="https://natesteele888.github.io/apps/store/";
+const STORE_IDS={"where-do-i-go":"situations",dev2:"bengals","signal-study":"bengals","gridiron-hub":"gridiron","lybs-dashboard":"dashboard",ballclub:"ballclub","steele-cards":"cards","cube-clock":"cube","toolbox-app":"toolbox","build-board":"toolbox"};
+function cleanIdeas(xs){return (Array.isArray(xs)?xs:[]).map(i=>typeof i==="string"?{t:i}:i).filter(i=>i&&typeof i.t==="string"&&i.t.trim()).slice(0,12)
+  .map(i=>({t:String(i.t).slice(0,200),why:String(i.why||"").slice(0,240),k:IDEA_KIND[i.k]?i.k:"feature"}))}
+function mergeIdeas(old,add){const now=new Date().toISOString();const out=(old||[]).slice();const seen=new Set(out.map(i=>i.t.toLowerCase()));
+  add.forEach(i=>{if(!seen.has(i.t.toLowerCase())){out.push({...i,at:now});seen.add(i.t.toLowerCase())}});return out.slice(-30)}
+function openIdeas(p){return (p.ideas||[]).map((i,ix)=>({...i,ix})).filter(i=>!i.status)}
+function ideasPrompt(p){
+  const open=(p.waypoints||[]).flatMap(w=>(w.tasks||[]).filter(t=>!t.done).map(t=>t.t)).slice(0,6);
+  const have=openIdeas(p).map(i=>i.t).slice(0,6);
+  let s=`Review my app "${p.name}" and suggest improvements I can act on.
+Where it lives: ${p.where||"?"}
+${p.summary?`What it is: ${p.summary.slice(0,240)}\n`:""}${p.leftOff?`Where I left off: ${p.leftOff.slice(0,240)}\n`:""}${open.length?`Already on my list: ${open.join("; ")}\n`:""}${have.length?`Ideas I already have: ${have.join("; ")}\n`:""}
+Look at the real app first (my linked computer's AutoNuvo_1 drive or github.com/natesteele888). Then give me 5 fresh ideas in three groups: easier to use, new features, polish. One line each plus a one-line why. Favor things I can finish in one sitting, and flag anything that touches privacy.
+Then give ONE link titled "Add these ideas to my Toolbox", built exactly like this: ${APP_URL}#apply= followed by URL-safe base64 (no padding) of compact JSON {"pid":"${p.id}","ideas":[{"t":"<idea>","why":"<why>","k":"easy|feature|polish"}]}.`;
+  return s.slice(0,1900);
+}
+function allIdeasPrompt(){
+  const ps=P().filter(p=>p.status==="active"||p.status==="blocked").slice(0,14);
+  return (`Look across all my apps and suggest the improvements that would matter most: easier to use, new features, polish, and anything two apps could share. My active apps (id: name):
+${ps.map(p=>`${p.id}: ${p.name}`).join("\n")}
+Check the real code first (my linked computer's AutoNuvo_1 drive or github.com/natesteele888). Give me 2-3 ideas per app, one line each plus a one-line why.
+Then give ONE link titled "Add these ideas to my Toolbox", built exactly like this: ${APP_URL}#apply= followed by URL-safe base64 (no padding) of compact JSON {"batch":[{"pid":"<id>","ideas":[{"t":"<idea>","why":"<why>","k":"easy|feature|polish"}]}]}.`).slice(0,1900);
+}
+function ideasBlock(p){
+  const xs=openIdeas(p);const sid=STORE_IDS[p.id];
+  return `<div class="blk ideas"><h4>💡 Ideas from Claude</h4>
+    ${xs.length?`<ul class="idl">${xs.map(i=>`<li><span class="ik k-${i.k}">${IDEA_KIND[i.k]}</span><b>${esc(i.t)}</b>${i.why?`<small>${esc(i.why)}</small>`:""}
+      ${S.canWrite?`<span class="ia"><button type="button" class="btn small" data-idadd="${i.ix}">＋ Make it a task</button><button type="button" class="btn small ghost" data-iddis="${i.ix}" aria-label="Not now: ${esc(i.t)}">Not now</button></span>`:""}</li>`).join("")}</ul>`
+      :`<p class="prog" style="margin:0 0 8px">No ideas yet. Ask Claude to look at this app and suggest what would make it better.</p>`}
+    <div class="links"><a href="${CLAUDE_NEW+encodeURIComponent(ideasPrompt(p))}" target="_blank" rel="noopener">${xs.length?"Get fresh ideas":"Ask Claude for ideas"} ↗</a>${sid?`<a href="${STORE_URL}#app=${sid}" target="_blank" rel="noopener">App Store page ↗</a>`:""}</div></div>`;
+}
+function ideaToTask(pid,ix){
+  const p=S.projects[pid];const idea=(p.ideas||[])[ix];if(!idea)return;
+  const wps=structuredClone(p.waypoints||[]);let wi=wps.findIndex(x=>!wpDone(x));if(wi<0){wps.push({title:"Next",tasks:[]});wi=wps.length-1}
+  wps[wi].tasks.push({t:idea.t,done:false,from:"idea"});
+  const ideas=structuredClone(p.ideas);ideas[ix].status="added";ideas[ix].doneAt=new Date().toISOString();
+  save(pid,{waypoints:wps,ideas}).then(()=>toast(`Added to “${wps[wi].title}”`));
+}
+function ideaDismiss(pid,ix){const p=S.projects[pid];if(!(p.ideas||[])[ix])return;const ideas=structuredClone(p.ideas);ideas[ix].status="dismissed";
+  save(pid,{ideas});undoToast("Idea hidden",()=>{const i2=structuredClone(S.projects[pid].ideas);if(i2[ix]){delete i2[ix].status;save(pid,{ideas:i2})}})}
+function ideasHome(){
+  const all=P().filter(p=>p.status!=="done").flatMap(p=>openIdeas(p).map(i=>({...i,p})));
+  const day=Math.floor(Date.now()/864e5);
+  const pick=[];const used=new Set();for(let n=0;n<all.length&&pick.length<3;n++){const i=all[(day*7+n*5)%all.length];if(!used.has(i.p.id+"|"+i.ix)&&!pick.some(x=>x.p.id===i.p.id)){pick.push(i);used.add(i.p.id+"|"+i.ix)}}
+  return `<section class="panel span-12 ideashome"><h2 class="section-h">💡 Claude suggests <a href="${STORE_URL}" target="_blank" rel="noopener">My App Store ↗</a></h2>
+   ${pick.length?`<div class="idcards">${pick.map(i=>`<div class="idcard area-${i.p.area}"><span class="ik k-${i.k}">${IDEA_KIND[i.k]}</span><b>${esc(i.t)}</b>${i.why?`<small>${esc(i.why)}</small>`:""}
+      <button class="mlink" data-open="${esc(i.p.id)}">${esc(i.p.name)} →</button>
+      ${S.canWrite?`<span class="ia"><button type="button" class="btn small primary" data-hidadd="${esc(i.p.id)}|${i.ix}">＋ Make it a task</button><button type="button" class="btn small ghost" data-hiddis="${esc(i.p.id)}|${i.ix}">Not now</button></span>`:""}</div>`).join("")}</div>
+      <p class="prog" style="margin:10px 0 0">${all.length} idea${all.length===1?"":"s"} waiting across your apps · <a href="${CLAUDE_NEW+encodeURIComponent(allIdeasPrompt())}" target="_blank" rel="noopener">Ask for a fresh round ↗</a></p>`
+    :`<p class="lede" style="margin:0 0 10px">Let Claude look over your apps and suggest what would make each one easier to use, more useful or more polished. Ideas land here, and one tap turns any of them into a task.</p><a class="btn primary" href="${CLAUDE_NEW+encodeURIComponent(allIdeasPrompt())}" target="_blank" rel="noopener">Get ideas for all my apps ↗</a>`}</section>`;
+}
+document.addEventListener("click",e=>{
+  const a=e.target.closest("[data-hidadd]");if(a){const [pid,ix]=a.dataset.hidadd.split("|");ideaToTask(pid,+ix);return}
+  const d=e.target.closest("[data-hiddis]");if(d){const [pid,ix]=d.dataset.hiddis.split("|");ideaDismiss(pid,+ix)}
+});
+function applyBatch(batch){
+  const rows=batch.filter(b=>b&&S.projects[b.pid]).map(b=>({p:S.projects[b.pid],ideas:cleanIdeas(b.ideas),add:(Array.isArray(b.add)?b.add:[]).map(x=>String(Array.isArray(x)?x[0]:x).slice(0,200)).filter(Boolean).slice(0,10)})).filter(r=>r.ideas.length||r.add.length);
+  const clear=()=>history.replaceState(null,"",location.pathname+"#home");
+  if(!rows.length){toast("Nothing in that link matches your projects.");clear();return}
+  const n=rows.reduce((s,r)=>s+r.ideas.length,0);
+  $("#sheet").innerHTML=`<div class="sheet-scrim" id="shScrim"></div><section class="sheet" id="applySheet" role="dialog" aria-label="Ideas from Claude">
+    <div class="sh-top"><div class="eyebrow2">Update from Claude · ${rows.length} apps</div><button class="btn small" id="shClose">Cancel</button></div>
+    <div class="applyc">${rows.map(r=>`<b>${esc(r.p.name)}</b><ul>${r.ideas.map(i=>`<li>💡 ${esc(i.t)}</li>`).join("")}${r.add.map(t=>`<li>＋ ${esc(t)}</li>`).join("")}</ul>`).join("")}</div>
+    <div class="sh-acts"><button class="btn primary" id="applyGo">Add ${n} idea${n===1?"":"s"}</button></div></section>`;
+  $("#shScrim").onclick=()=>{closeSheet();clear()};$("#shClose").onclick=()=>{closeSheet();clear()};
+  $("#applyGo").onclick=()=>{rows.forEach(r=>{const patch={};if(r.ideas.length)patch.ideas=mergeIdeas(r.p.ideas,r.ideas);
+      if(r.add.length){const wps=structuredClone(r.p.waypoints||[]);let wi=wps.findIndex(x=>!wpDone(x));if(wi<0){wps.push({title:"Next",tasks:[]});wi=wps.length-1}r.add.forEach(t=>wps[wi].tasks.push({t,done:false}));patch.waypoints=wps}
+      save(r.p.id,patch)});
+    toast("Ideas added");closeSheet();clear();setTimeout(()=>{if(route().v==="home")renderHome()},300)};
+}
 /* ---------- return links from Claude: #apply=<base64 json> ---------- */
 function readApply(){const m=location.hash.match(/^#apply=([A-Za-z0-9_\-]+)/);if(!m)return null;
-  try{let s=m[1].replace(/-/g,"+").replace(/_/g,"/");while(s.length%4)s+="=";const j=JSON.parse(decodeURIComponent(escape(atob(s))));return j&&typeof j.pid==="string"?j:null}catch(_){return {bad:true}}}
+  try{let s=m[1].replace(/-/g,"+").replace(/_/g,"/");while(s.length%4)s+="=";const j=JSON.parse(decodeURIComponent(escape(atob(s))));return j&&(typeof j.pid==="string"||Array.isArray(j.batch))?j:null}catch(_){return {bad:true}}}
 function maybeApply(){
   const a=readApply();if(!a||!S.loaded||$("#applySheet"))return;
   if(a.bad){toast("That update link looks damaged. Ask Claude for a fresh one.");history.replaceState(null,"",location.pathname+"#home");return}
+  if(Array.isArray(a.batch))return applyBatch(a.batch);
   const p=S.projects[a.pid];if(!p){toast("That update is for a project this toolbox doesn't have.");history.replaceState(null,"",location.pathname+"#home");return}
   const done=(Array.isArray(a.done)?a.done:[]).filter(x=>Array.isArray(x)&&p.waypoints&&p.waypoints[x[0]]&&p.waypoints[x[0]].tasks[x[1]]);
   const adds=(Array.isArray(a.add)?a.add:[]).map(x=>String(Array.isArray(x)?x[0]:x).slice(0,200)).filter(Boolean).slice(0,10);
   const left=typeof a.leftOff==="string"?a.leftOff.slice(0,1200):"";
+  const ideas=cleanIdeas(a.ideas);
   $("#sheet").innerHTML=`<div class="sheet-scrim" id="shScrim"></div><section class="sheet area-${p.area}" id="applySheet" role="dialog" aria-label="Update from Claude">
     <div class="sh-top"><div class="eyebrow2">Update from Claude · ${esc(p.name)}</div><button class="btn small" id="shClose">Cancel</button></div>
     <div class="applyc">${done.length?`<b>Tick off</b><ul>${done.map(([w,t])=>`<li>${esc(p.waypoints[w].tasks[t].t)}</li>`).join("")}</ul>`:""}
     ${adds.length?`<b>Add tasks</b><ul>${adds.map(t=>`<li>${esc(t)}</li>`).join("")}</ul>`:""}
-    ${left?`<b>Where I left off</b><p style="margin:4px 0 0">${esc(left)}</p>`:""}</div>
+    ${left?`<b>Where I left off</b><p style="margin:4px 0 0">${esc(left)}</p>`:""}
+    ${ideas.length?`<b>💡 New ideas</b><ul>${ideas.map(i=>`<li>${esc(i.t)}</li>`).join("")}</ul>`:""}</div>
     <div class="sh-acts"><button class="btn primary" id="applyGo">Apply</button></div></section>`;
   const clear=()=>history.replaceState(null,"",location.pathname+"#home");
   $("#shScrim").onclick=()=>{closeSheet();clear()};$("#shClose").onclick=()=>{closeSheet();clear()};
   $("#applyGo").onclick=()=>{const wps=structuredClone(p.waypoints||[]);const now=new Date().toISOString();
     done.forEach(([w,t])=>{wps[w].tasks[t].done=true;wps[w].tasks[t].doneAt=now});
     if(adds.length){let wi=wps.findIndex(x=>!wpDone(x));if(wi<0){wps.push({title:"Next",tasks:[]});wi=wps.length-1}adds.forEach(t=>wps[wi].tasks.push({t,done:false}))}
-    const patch={waypoints:wps};if(left)patch.leftOff=left;
+    const patch={waypoints:wps};if(left)patch.leftOff=left;if(ideas.length)patch.ideas=mergeIdeas(p.ideas,ideas);
     save(p.id,patch).then(()=>toast("Toolbox updated"));closeSheet();clear();setTimeout(()=>openP(p.id),50)};
 }
 

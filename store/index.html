@@ -1,0 +1,526 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Steele App Store</title>
+<meta name="description" content="Apps designed and built by Nathan Steele with Claude, for youth football and baseball, coaches, families and everyday use.">
+<meta property="og:title" content="Steele App Store">
+<meta property="og:description" content="Nine live apps for youth sports and everyday life, built by Nathan Steele with AI as a development partner.">
+<meta property="og:image" content="https://natesteele888.github.io/apps/store/img/share.jpg">
+<meta property="og:type" content="website">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="theme-color" content="#f2f2f7" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="img/store-icon.png">
+<link rel="apple-touch-icon" href="img/store-icon.png">
+<style>
+:root{
+  --bg:#f2f2f7;--card:#ffffff;--card2:#f7f7fa;--text:#111114;--muted:#6e6e76;--line:rgba(60,60,67,.14);
+  --blue:#0a73ff;--pill:#eceef3;--shadow:0 10px 30px rgba(0,0,0,.08);--glass:rgba(242,242,247,.82);
+  --football:#ff6a1a;--baseball:#2f6df6;--family:#8a5cf6;--builder:#e2a51b;
+  --r:22px;--f:-apple-system,BlinkMacSystemFont,"SF Pro Display","Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#000;--card:#1c1c1e;--card2:#242427;--text:#f5f5f7;--muted:#98989f;--line:rgba(84,84,88,.5);
+  --blue:#3d8bff;--pill:#2c2c2f;--shadow:0 10px 30px rgba(0,0,0,.5);--glass:rgba(10,10,12,.78)}}
+:root[data-theme="dark"]{--bg:#000;--card:#1c1c1e;--card2:#242427;--text:#f5f5f7;--muted:#98989f;--line:rgba(84,84,88,.5);
+  --blue:#3d8bff;--pill:#2c2c2f;--shadow:0 10px 30px rgba(0,0,0,.5);--glass:rgba(10,10,12,.78)}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--text);font:16px/1.45 var(--f);-webkit-font-smoothing:antialiased;padding-bottom:calc(84px + env(safe-area-inset-bottom))}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer;padding:0}
+a{color:var(--blue);text-decoration:none}
+img{display:block}
+.wrap{max-width:1040px;margin:0 auto;padding:0 20px}
+:focus-visible{outline:3px solid var(--blue);outline-offset:2px;border-radius:8px}
+
+/* header */
+.top{padding:calc(18px + env(safe-area-inset-top)) 0 6px}
+.date{font-size:13px;font-weight:600;text-transform:uppercase;color:var(--muted);letter-spacing:.02em}
+.titlerow{display:flex;align-items:center;justify-content:space-between;gap:12px}
+h1{font-size:34px;line-height:1.1;margin:2px 0 0;letter-spacing:-.02em;font-weight:800}
+.me{width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,#ff8a3d,#2f6df6);color:#fff;display:grid;place-items:center;font-weight:800;font-size:14px;flex:none}
+.sub{color:var(--muted);margin:6px 0 0;font-size:15px;max-width:640px}
+
+/* tabs */
+.tabbar{position:fixed;left:0;right:0;bottom:0;z-index:20;background:var(--glass);backdrop-filter:saturate(1.8) blur(20px);-webkit-backdrop-filter:saturate(1.8) blur(20px);border-top:1px solid var(--line);padding:6px 6px calc(6px + env(safe-area-inset-bottom));display:flex;justify-content:center}
+.tabbar .in{display:flex;width:100%;max-width:560px}
+.tab{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;padding:4px 0;font-size:10.5px;font-weight:600;color:var(--muted)}
+.tab svg{width:26px;height:26px}
+.tab[aria-current="page"]{color:var(--blue)}
+
+/* today stories */
+.stories{display:grid;gap:22px;margin:18px 0 34px}
+@media(min-width:820px){.stories{grid-template-columns:1fr 1fr}.story.wide{grid-column:1/-1}}
+.story{position:relative;border-radius:var(--r);overflow:hidden;background:var(--card);box-shadow:var(--shadow);text-align:left;display:block;width:100%;transition:transform .2s}
+.story:active{transform:scale(.985)}
+.story .kick{font-size:12.5px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;opacity:.8}
+.story h2{font-size:27px;line-height:1.12;margin:4px 0 0;letter-spacing:-.015em}
+.aotd{min-height:440px;color:#fff;display:flex;flex-direction:column;justify-content:space-between}
+.aotd .bgshots{position:absolute;inset:0;display:flex;gap:14px;justify-content:center;align-items:center;transform:rotate(-8deg) scale(1.25);opacity:.9}
+.aotd .bgshots img{width:150px;border-radius:18px;box-shadow:0 20px 40px rgba(0,0,0,.4)}
+.aotd .bgshots img:nth-child(2){transform:translateY(-40px)}
+.aotd::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,.55),rgba(0,0,0,0) 35%,rgba(0,0,0,0) 55%,rgba(0,0,0,.75))}
+.aotd>.t,.aotd>.b{position:relative;z-index:1;padding:20px}
+.lockup{display:flex;align-items:center;gap:12px}
+.lockup .ic{width:52px;height:52px;border-radius:12px}
+.lockup b{display:block;font-size:16px}.lockup small{display:block;opacity:.8;font-size:13px}
+.getbtn{margin-left:auto;background:var(--pill);color:var(--blue);font-weight:800;font-size:14px;padding:7px 18px;border-radius:999px;flex:none;white-space:nowrap}
+.aotd .getbtn{background:rgba(255,255,255,.25);color:#fff;backdrop-filter:blur(10px)}
+.getbtn.lock{color:var(--muted)}
+
+.idea{padding:22px;color:#fff;background:radial-gradient(120% 90% at 0% 0%,#2f6df6 0,#1b2a6b 45%,#0d1022 100%);min-height:300px}
+.idea p{opacity:.85;margin:10px 0 0;max-width:420px}
+.idea .orbit{position:absolute;right:-50px;bottom:-60px;width:250px;height:250px;opacity:.55}
+.idea>*:not(.orbit){position:relative;z-index:1}
+@media(min-width:820px){.idea .orbit{right:-20px;bottom:-20px;width:280px;height:280px;opacity:.9}}
+
+.picker{padding:22px}
+.picker .kick{color:var(--blue);opacity:1}
+.roles{display:flex;flex-wrap:wrap;gap:8px;margin:14px 0 4px}
+.role{background:var(--pill);border-radius:999px;padding:8px 14px;font-weight:600;font-size:14.5px}
+.role[aria-pressed="true"]{background:var(--blue);color:#fff}
+.picks{display:grid;gap:4px;margin-top:10px}
+
+.soon{padding:22px;background:repeating-linear-gradient(135deg,var(--card) 0 14px,var(--card2) 14px 28px)}
+.soon .kick{color:var(--builder);opacity:1}
+.soonrow{display:flex;gap:12px;align-items:flex-start;padding:12px 0;border-top:1px solid var(--line)}
+.soonrow:first-of-type{border-top:0}
+.soonrow .ic{width:48px;height:48px;border-radius:11px;display:grid;place-items:center;font-size:24px;background:var(--pill);flex:none}
+.soonrow b{display:block}.soonrow span{color:var(--muted);font-size:14px}
+
+/* list rows */
+.row{display:flex;align-items:center;gap:12px;padding:10px 0;width:100%;text-align:left}
+.row+.row{border-top:1px solid var(--line)}
+.row .ic{width:62px;height:62px;border-radius:14px;flex:none;box-shadow:0 0 0 1px var(--line)}
+.row .txt{flex:1;min-width:0}
+.row b{display:block;font-size:16px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.row small{display:block;color:var(--muted);font-size:13.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sect{margin:26px 0 8px;display:flex;align-items:baseline;justify-content:space-between}
+.sect h3{font-size:22px;margin:0;letter-spacing:-.01em}
+.sect span{color:var(--muted);font-size:14px}
+.cats{display:flex;gap:8px;overflow-x:auto;padding:12px 0 4px;scrollbar-width:none}
+.cats::-webkit-scrollbar{display:none}
+.cat{background:var(--card);border:1px solid var(--line);border-radius:999px;padding:7px 14px;font-weight:600;font-size:14px;white-space:nowrap}
+.cat[aria-pressed="true"]{background:var(--text);color:var(--bg);border-color:var(--text)}
+.grid2{display:grid;gap:0 32px;grid-template-columns:minmax(0,1fr)}
+@media(min-width:760px){.grid2{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}.grid2 .row+.row{border-top:0}.grid2 .row{border-bottom:1px solid var(--line)}}
+
+/* collect the set */
+.cardset{display:flex;gap:14px;overflow-x:auto;padding:6px 2px 18px;scroll-snap-type:x mandatory;scrollbar-width:none}
+.cardset::-webkit-scrollbar{display:none}
+.tcard{flex:none;width:168px;height:236px;perspective:900px;scroll-snap-align:start}
+.tcard .in{position:relative;width:100%;height:100%;transition:transform .6s cubic-bezier(.2,.8,.2,1);transform-style:preserve-3d}
+.tcard.flip .in{transform:rotateY(180deg)}
+.face{position:absolute;inset:0;border-radius:14px;backface-visibility:hidden;-webkit-backface-visibility:hidden;overflow:hidden;padding:10px;display:flex;flex-direction:column;color:#fff;box-shadow:0 8px 22px rgba(0,0,0,.25);border:3px solid rgba(255,255,255,.85)}
+.face.front{background:linear-gradient(160deg,var(--ac),#111 120%)}
+.face.front img{width:100%;aspect-ratio:1;border-radius:9px;object-fit:cover;margin-bottom:8px}
+.face.front b{font-size:15px;line-height:1.15}
+.face.front small{font-size:11px;opacity:.8;margin-top:auto;text-transform:uppercase;letter-spacing:.08em;font-weight:700}
+.face.front::after{content:"";position:absolute;inset:0;background:linear-gradient(115deg,transparent 30%,rgba(255,255,255,.45) 45%,rgba(120,220,255,.3) 52%,transparent 65%);background-size:250% 100%;background-position:var(--shine,120%) 0;mix-blend-mode:overlay;pointer-events:none;transition:background-position .1s}
+.face.back{transform:rotateY(180deg);background:#121216;font-size:12px;gap:4px}
+.face.back h4{margin:0 0 4px;font-size:13px;color:var(--ac)}
+.face.back .st{display:flex;justify-content:space-between;border-bottom:1px solid rgba(255,255,255,.12);padding:3px 0}
+.face.back .st span:first-child{opacity:.65}
+.face.back .no{margin-top:auto;opacity:.5;font-size:10.5px;text-align:right}
+
+/* big picture */
+.bp{background:var(--card);border-radius:var(--r);box-shadow:var(--shadow);padding:18px;margin:16px 0}
+.bp h3{margin:0 0 4px;font-size:21px}
+.bp p{margin:0;color:var(--muted)}
+.web{width:100%;height:auto;margin-top:10px}
+.web .node{cursor:pointer}
+.web .node circle.ring{transition:stroke-width .15s}
+.web .node:hover circle.ring,.web .node:focus circle.ring{stroke-width:4}
+.web text{font-family:var(--f)}
+.legend{display:flex;flex-wrap:wrap;gap:8px 16px;margin-top:10px;font-size:13.5px;color:var(--muted)}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:6px;vertical-align:middle}
+.parts{display:grid;gap:10px;margin-top:12px}
+@media(min-width:700px){.parts{grid-template-columns:1fr 1fr}}
+.part{display:flex;gap:12px;align-items:center;background:var(--card2);border-radius:14px;padding:12px}
+.part .em{font-size:24px;width:42px;height:42px;display:grid;place-items:center;border-radius:12px;background:var(--card);flex:none}
+.part b{display:block;font-size:15px}.part span{color:var(--muted);font-size:13.5px}
+.part .count{margin-left:auto;font-weight:800;font-size:20px;color:var(--blue);text-align:right;line-height:1}
+.part .count small{display:block;font-size:10.5px;color:var(--muted);font-weight:600}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:14px}
+.stat{background:var(--card2);border-radius:14px;padding:12px 8px;text-align:center}
+.stat b{display:block;font-size:26px;letter-spacing:-.02em}
+.stat span{font-size:12px;color:var(--muted)}
+@media(max-width:480px){.stats{grid-template-columns:repeat(2,1fr)}}
+.flow{display:grid;gap:10px;margin-top:12px;counter-reset:f}
+.flow div{background:var(--card2);border-radius:14px;padding:12px 14px 12px 48px;position:relative;font-size:14.5px}
+.flow div::before{counter-increment:f;content:counter(f);position:absolute;left:12px;top:12px;width:24px;height:24px;border-radius:50%;background:var(--blue);color:#fff;font-weight:800;font-size:13px;display:grid;place-items:center}
+.flow b{display:block}
+
+/* search */
+.search{display:flex;align-items:center;gap:8px;background:var(--pill);border-radius:12px;padding:9px 12px;margin:14px 0 6px}
+.search svg{width:18px;height:18px;color:var(--muted);flex:none}
+.search input{flex:1;border:0;background:none;font:inherit;color:var(--text);outline:none;min-width:0}
+.empty{color:var(--muted);padding:30px 0;text-align:center}
+
+/* detail sheet */
+.sheet{position:fixed;inset:0;z-index:40;background:var(--bg);overflow-y:auto;overscroll-behavior:contain;transform:translateY(100%);transition:transform .35s cubic-bezier(.2,.8,.2,1);visibility:hidden}
+.sheet.open{transform:none;visibility:visible}
+.sh-nav{position:sticky;top:0;z-index:2;display:flex;align-items:center;justify-content:space-between;padding:calc(10px + env(safe-area-inset-top)) 16px 10px;background:var(--glass);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px)}
+.sh-nav button{color:var(--blue);font-weight:600;font-size:16px;display:flex;align-items:center;gap:4px;padding:6px 4px}
+.dhead{display:flex;gap:16px;align-items:flex-start;padding:10px 0 4px}
+.dhead .ic{width:118px;height:118px;border-radius:26px;box-shadow:0 0 0 1px var(--line);flex:none}
+.dhead h2{margin:0;font-size:24px;line-height:1.15;letter-spacing:-.01em}
+.dhead .s{color:var(--muted);font-size:14.5px;margin-top:2px}
+.dhead .acts{display:flex;gap:10px;align-items:center;margin-top:12px}
+.openbtn{background:var(--blue);color:#fff;font-weight:800;padding:8px 22px;border-radius:999px;font-size:15px}
+.openbtn.lock{background:var(--pill);color:var(--muted)}
+.iconbtn{width:34px;height:34px;border-radius:50%;background:var(--pill);color:var(--blue);display:grid;place-items:center}
+.iconbtn svg{width:18px;height:18px}
+.info{display:flex;overflow-x:auto;margin:16px 0 4px;border-top:1px solid var(--line);border-bottom:1px solid var(--line);scrollbar-width:none}
+.info::-webkit-scrollbar{display:none}
+.info div{flex:1 0 108px;text-align:center;padding:10px 6px;position:relative}
+.info div+div::before{content:"";position:absolute;left:0;top:22%;bottom:22%;width:1px;background:var(--line)}
+.info small{display:block;font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:700}
+.info b{display:block;font-size:19px;color:var(--muted);margin:2px 0 0}
+.info span{display:block;font-size:12px;color:var(--muted)}
+.shots{display:flex;gap:12px;overflow-x:auto;padding:14px 0 6px;scroll-snap-type:x mandatory;scrollbar-width:none}
+.shots::-webkit-scrollbar{display:none}
+.shots img,.shots .mock{flex:none;width:230px;aspect-ratio:390/844;border-radius:24px;object-fit:cover;scroll-snap-align:start;box-shadow:0 0 0 1px var(--line),0 8px 20px rgba(0,0,0,.08);background:#111}
+.dsec{padding:14px 0;border-top:1px solid var(--line)}
+.dsec h3{margin:0 0 8px;font-size:20px}
+.dsec p{margin:0 0 8px}
+.feat{display:grid;gap:10px}
+@media(min-width:700px){.feat{grid-template-columns:1fr 1fr 1fr}}
+.feat div{background:var(--card);border-radius:14px;padding:12px;display:flex;gap:10px}
+.feat .e{font-size:20px}
+.feat b{display:block;font-size:14.5px}.feat span{font-size:13.5px;color:var(--muted)}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{background:var(--card);border:1px solid var(--line);border-radius:999px;padding:6px 12px;font-size:13.5px;font-weight:600}
+.tie{background:var(--card);border-radius:16px;padding:14px;display:grid;gap:8px}
+.tie .row{padding:6px 0}
+.tie .row .ic{width:44px;height:44px;border-radius:10px}
+.new{background:var(--card);border-radius:14px;padding:12px 14px}
+.new small{color:var(--muted)}
+.notice{font-size:13.5px;color:var(--muted);background:var(--card);border-radius:12px;padding:10px 12px}
+
+/* toolbox mock screen */
+.mock{position:relative;overflow:hidden;background:radial-gradient(120% 80% at 20% 0%,#2a2f45,#0d0f17 70%);padding:46px 16px 16px;color:#fff}
+.mock .clock{position:absolute;top:14px;left:22px;font-weight:700;font-size:13px}
+.mock .mg{display:grid;grid-template-columns:repeat(4,1fr);gap:16px 10px;margin-top:8px}
+.mock .mg div{text-align:center;font-size:9.5px;opacity:.95}
+.mock .mg img{width:100%;aspect-ratio:1;border-radius:22%;margin-bottom:4px}
+.mock .wid{background:rgba(255,255,255,.1);border-radius:18px;padding:12px;margin-bottom:16px;font-size:11px}
+.mock .wid b{font-size:13px;display:block;margin-bottom:6px}
+.mock .bar{height:7px;border-radius:9px;background:rgba(255,255,255,.15);margin:5px 0;overflow:hidden}
+.mock .bar i{display:block;height:100%;border-radius:9px;background:#e2a51b}
+.mock .dock{position:absolute;left:12px;right:12px;bottom:14px;background:rgba(255,255,255,.14);border-radius:22px;padding:10px;display:flex;justify-content:space-around}
+.mock .dock img{width:40px;height:40px;border-radius:22%}
+
+footer{color:var(--muted);font-size:13px;text-align:center;padding:30px 0 10px}
+.toast{position:fixed;left:50%;bottom:calc(96px + env(safe-area-inset-bottom));transform:translateX(-50%) translateY(20px);opacity:0;background:var(--text);color:var(--bg);padding:10px 16px;border-radius:12px;font-weight:600;font-size:14px;z-index:60;transition:.25s;pointer-events:none}
+.toast.on{opacity:1;transform:translateX(-50%)}
+[hidden]{display:none!important}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<main class="wrap" id="main"></main>
+<nav class="tabbar" aria-label="Store sections"><div class="in" id="tabs"></div></nav>
+<section class="sheet" id="sheet" role="dialog" aria-modal="true" aria-label="App details"></section>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+<script>
+/* ===== The catalog. Public copy only: no data, no names of kids, no schedules. ===== */
+const CATS={football:{n:"Football",e:"🏈",c:"var(--football)"},baseball:{n:"Baseball & League",e:"⚾",c:"var(--baseball)"},family:{n:"Everyday",e:"🧩",c:"var(--family)"},builder:{n:"Builder tools",e:"🧰",c:"var(--builder)"}};
+const PARTS={
+  signin:{e:"🔐",n:"Google sign-in",d:"One tap to get in, and private data stays private."},
+  rules:{e:"🛡️",n:"Security rules",d:"The database itself decides who can see what."},
+  pwa:{e:"📲",n:"Installs like a real app",d:"Home-screen icon, full screen, works with spotty signal."},
+  firebase:{e:"🔥",n:"Live cloud data",d:"Changes show up on every phone at once."},
+  calendar:{e:"📅",n:"Calendar export",d:"Games and events drop straight into your calendar."},
+  engine:{e:"🧠",n:"Rules engines",d:"The app knows the sport, not just the screens."},
+  offline:{e:"📴",n:"Works offline",d:"Keeps going in a gym, a field or a basement."},
+  share:{e:"🔗",n:"Share by link",d:"No account needed for families to join in."}
+};
+const APPS=[
+ {id:"situations",name:"Where Do I Go?",sub:"Baseball situations trainer",cat:"baseball",ac:"#2f6df6",icon:"img/situations-icon.png",url:"https://natesteele888.github.io/apps/situations/",install:true,access:"Open",
+  shots:["img/situations.webp","img/situations-b.webp"],
+  desc:"Teaches players where to be on every batted ball. Pick the runners, the outs and where the ball goes, then watch all nine fielders and every runner move on an animated field you can play, pause and scrub.",
+  feats:[["🧠","707-rule engine","Jobs change with runners on base and the number of outs."],["▶️","Animated field","Watch every player move, step by step."],["🔁","Cutoffs & relays","Covers the throws, not just the catch."]],
+  facts:[["Situations","1,320","covered"],["Rules","707","in the engine"],["Positions","9","plus runners"]],
+  parts:["engine","pwa","offline"],tie:"The situations brain is being packaged so any league app can use it. LYBS Ballclub's situations tab is next in line.",rel:["ballclub","bengals"],
+  for:["player","coach"]},
+ {id:"bengals",name:"Bengals Coaching App",sub:"Plays, signals and season for the 11U team",cat:"football",ac:"#ff6a1a",icon:"img/bengals-icon.png",url:"https://natesteele888.github.io/ASL-Bengals/dev2/index.html",install:true,access:"Team code",
+  shots:["img/bengals.webp"],
+  desc:"The team's week-to-week home. Players study every hand signal and play call, quiz themselves before game day and run a 2-Minute Drill trainer. Coaches get the schedule, game cards, a play builder, a stat keeper and a playoff mode.",
+  feats:[["🎓","Signal study & quizzes","Every signal broken down visually, with timed quizzes."],["✏️","Play builder","Draw plays and save them to the team playbook."],["🏆","Playoff mode","Bracket rounds, scouting film and game-day flyers."]],
+  facts:[["Signals","30","to master"],["Quiz modes","4","incl. 2-Min Drill"],["Access","Team","code"]],
+  news:{d:"Fall 2026",t:"Playoff mode: rounds, opponent film, final-week scenarios, a game-day flyer, and This Week now moves on by itself after midweek games."},
+  parts:["firebase","pwa","engine"],tie:"Feeds the Gridiron Hub for the whole organization, and is moving onto the League Ops platform.",rel:["gridiron","situations"],
+  for:["player","coach"]},
+ {id:"gridiron",name:"Gridiron Hub",sub:"Every team, one home field",cat:"football",ac:"#ff6a1a",icon:"img/gridiron-icon.png",url:"https://natesteele888.github.io/ASL-Bengals/gridiron-hub/",install:false,access:"Open",
+  shots:["img/gridiron.webp"],
+  desc:"A full website any youth football and cheer organization can run, with the ASL Bengals as the first. Schedules, results, programs and rosters for every team, built for families who show up on Friday night, not people who track spreadsheets.",
+  feats:[["🏟️","Multi-org ready","One codebase, each organization gets its own space."],["👥","Rosters & player pages","Team rosters with a page for every player, behind sign-in."],["📸","Photo tagging","Tag players in team photos and find them later."]],
+  facts:[["Teams","6","flag, tackle, cheer"],["Ages","6–14",""],["Season","9","game weeks"]],
+  news:{d:"In progress",t:"Building toward a demo for the organization: role-based visibility, RSVPs, read receipts and a two-way team message board."},
+  parts:["signin","rules","firebase","calendar"],tie:"The family-facing front door for the Bengals. The coaching app runs the team; this runs the organization.",rel:["bengals","dashboard"],
+  for:["parent","board"]},
+ {id:"dashboard",name:"LYBS Dashboard",sub:"Run a volunteer league",cat:"baseball",ac:"#2f6df6",icon:"img/dashboard-icon.png",url:"https://lybs-dashboard.web.app/",install:false,access:"Board sign-in",
+  shots:["img/dashboard.webp"],
+  desc:"A 22-tab operations hub for a youth baseball and softball league: registration and retention trends, governance, coaching, schedules, social planning and a TV-style live draft board.",
+  feats:[["📈","Registration analytics","Year-over-year trends by sport and division."],["🧢","Draft day board","Live TV and phone views for draft night."],["📷","Photo pipeline","Parents submit photos and wins; the board approves them."]],
+  facts:[["Tabs","22",""],["Draft","Live","TV + phone"],["Access","Board","sign-in"]],
+  news:{d:"Fall 2026",t:"Photo pipeline: families send in photos and wins, the board reviews them, and approved photos file themselves into Drive."},
+  parts:["signin","rules","firebase","calendar"],tie:"The league's back office. Ballclub is what families see; this is what the board runs on.",rel:["ballclub","cards"],
+  for:["board"]},
+ {id:"ballclub",name:"LYBS Ballclub",sub:"For coaches and families",cat:"baseball",ac:"#2f6df6",icon:"img/ballclub-icon.png",url:"https://natesteele888.github.io/lybs-ballclub/",install:true,access:"Team code",
+  shots:["img/ballclub.webp"],
+  desc:"Everything a team needs in one place: schedule, practices, lineups, drills, situations, standings and announcements, with coach contacts a tap away for rainouts and reschedules. Public standings and league info need no sign-in.",
+  feats:[["📝","Lineups & practices","Build lineups and plan practices from a drill library."],["📣","Announcements","Cancellations and updates straight to families."],["📊","Standings & situations","League standings and on-field situation drills."]],
+  facts:[["Teams","8","in the league view"],["Public info","Free","no sign-in"],["Access","Team","code or Google"]],
+  news:{d:"Oct 2026",t:"New knight-helmet opening screen."},
+  parts:["signin","firebase","pwa","calendar","share"],tie:"Where families meet the league. The Where Do I Go? trainer is being built into its situations tab.",rel:["dashboard","situations"],
+  for:["parent","coach"]},
+ {id:"cards",name:"Steele Cards",sub:"Trading card packs for youth teams",cat:"baseball",ac:"#3ddc97",icon:"img/cards-icon.png",url:"https://natesteele888.github.io/lybs-cards/",install:false,access:"Open",
+  shots:["img/cards.webp"],
+  desc:"Players rip open a digital pack of their team's cards, with a collection to fill, rare holo parallels and gift links. Nothing to sign up for: families just share a link.",
+  feats:[["🎴","Pack opening","Tear-open animation with a card reveal."],["✨","Holo parallels","Rare foil versions to chase."],["🎁","Gift links","Send a pack to a teammate with one link."]],
+  facts:[["Sign-up","None",""],["Rarity","Holo","parallels"],["Series","2026","Series 1"]],
+  parts:["share"],tie:"The fun layer on top of the league. Same teams, same season, but this one is for the kids.",rel:["ballclub","dashboard"],
+  for:["player","parent"]},
+ {id:"fitness",name:"Offseason Power Program",sub:"9-week youth athlete training",cat:"family",ac:"#c6f432",icon:"img/fitness-icon.png",url:"https://natesteele888.github.io/fitness-hub/",install:true,access:"Open",
+  shots:["img/fitness.webp"],
+  desc:"A morning checklist for plyometrics, core and light strength work, plus kicking drills, with a progress tab that tracks jumps, sprints and left/right balance over time.",
+  feats:[["✅","Daily checklist","A phased plan that builds week by week."],["📏","Progress tracking","Broad jump, plank, sprint and a left-right gap readout."],["🦵","Kicker work","Kicking drills and leg-balance protection built in."]],
+  facts:[["Weeks","9",""],["Sessions","63","10–12 min"],["Gear","Light","dumbbells"]],
+  news:{d:"Oct 2026",t:"Moved to its own app and folded in the winter kicking program and left/right balance testing."},
+  parts:["pwa","offline"],tie:"Off-season fuel for the football and baseball apps. Same athletes, different season.",rel:["bengals","situations"],
+  for:["player"]},
+ {id:"cube",name:"Cube Clock",sub:"Speedcubing timer",cat:"family",ac:"#e0313a",icon:"img/cube-icon.png",url:"https://natesteele888.github.io/cube-clock/",install:true,access:"Open",
+  shots:["img/cube.webp","img/cube-b.webp"],
+  desc:"A Rubik's cube timer that works with no signal: six puzzle types, official-notation scrambles, a leaderboard and home-screen shortcuts. Every solve is kept, so you can watch the times come down.",
+  feats:[["🎲","Six puzzle types","Each with its own official-notation scrambles."],["📴","Works offline","Times and scrambles with no connection."],["🏁","Leaderboard","Session stats and a shared leaderboard."]],
+  facts:[["Puzzles","6",""],["Offline","Yes",""],["Status","Shipped","v1"]],
+  parts:["pwa","offline","firebase"],tie:"The first app that proved the formula: install it, it works offline, it feels like a real app.",rel:["fitness"],
+  for:["curious","player"]},
+ {id:"toolbox",name:"Nate's Toolbox",sub:"The command center behind it all",cat:"builder",ac:"#e2a51b",icon:"img/toolbox-icon.png",url:"",install:true,access:"Private",
+  shots:["mock"],
+  desc:"Every app on this page is tracked here: where each build left off, task lists, future features, a map of how the apps share parts, and one-tap launch. Claude is built in, so a task can be picked up right where it stopped.",
+  feats:[["🗂️","Apps board","Status of every build at a glance."],["🗺️","Shared-parts map","See which apps reuse the same building blocks."],["🔐","Private by design","Code is public; data stays behind sign-in."]],
+  facts:[["Projects","29","tracked"],["Shared parts","15","mapped"],["Access","Private",""]],
+  news:{d:"Nov 2026",t:"Now its own phone app, with every app opening full screen inside it."},
+  parts:["signin","rules","firebase","pwa"],tie:"The hub. It's where every other app gets planned, fixed and launched.",rel:["situations","bengals","dashboard"],
+  for:["curious"]}
+];
+const SOON=[["💌","Steele Events","Invitations and RSVPs for any event: themes, custom questions, plus-ones, capacity and co-hosts. Built and tested; launching soon."],
+            ["🏢","League Ops in a Box","A youth league platform any organization can set up for itself, with document compliance that coaches can check without ever seeing the paperwork."]];
+const ROLES={player:"I'm a player",parent:"I'm a parent",coach:"I coach",board:"I run a league",curious:"Just curious"};
+
+/* ===== helpers ===== */
+const $=s=>document.querySelector(s);
+const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const byId=id=>APPS.find(a=>a.id===id);
+const icon=(a,cls="ic")=>`<img class="${cls}" src="${a.icon}" alt="" width="62" height="62" loading="lazy">`;
+let toastT;function toast(m){const t=$("#toast");t.textContent=m;t.classList.add("on");clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove("on"),2200)}
+function store(k,v){try{if(v===undefined)return localStorage.getItem(k);localStorage.setItem(k,v)}catch(_){return null}}
+const SV={
+  today:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="3" width="16" height="18" rx="3"/><path d="M8 8h8M8 12h8M8 16h5"/></svg>',
+  apps:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3.5" y="3.5" width="7" height="7" rx="2"/><rect x="13.5" y="3.5" width="7" height="7" rx="2"/><rect x="3.5" y="13.5" width="7" height="7" rx="2"/><rect x="13.5" y="13.5" width="7" height="7" rx="2"/></svg>',
+  big:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><circle cx="4.5" cy="5.5" r="2"/><circle cx="19.5" cy="5.5" r="2"/><circle cx="4.5" cy="18.5" r="2"/><circle cx="19.5" cy="18.5" r="2"/><path d="M6 7l4 3M18 7l-4 3M6 17l4-3M18 17l-4-3"/></svg>',
+  search:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/></svg>',
+  share:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 15V3M7 8l5-5 5 5"/><path d="M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7"/></svg>',
+  back:'<svg width="12" height="20" viewBox="0 0 12 20" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M10 2L2 10l8 8"/></svg>'
+};
+const TABS=[["today","Today"],["apps","Apps"],["big","Big Picture"],["search","Search"]];
+
+/* ===== routing: #today #apps #big #search, plus #app=<id> for a detail page ===== */
+let NAV=0,TAB="today",CAT="all",ROLE=store("store.role")||"",Q="";
+function parseHash(){const h=location.hash.slice(1);const m=h.match(/^app=([\w-]+)/);return{tab:TABS.some(t=>t[0]===h)?h:null,app:m?m[1]:null}}
+function go(){const r=parseHash();if(r.tab)TAB=r.tab;render();if(r.app&&byId(r.app))openApp(r.app,true);else closeApp(true)}
+addEventListener("hashchange",go);
+
+function renderTabs(){$("#tabs").innerHTML=TABS.map(([k,n])=>`<button class="tab" data-tab="${k}" ${k===TAB?'aria-current="page"':""}>${SV[k]}<span>${n}</span></button>`).join("")}
+$("#tabs").addEventListener("click",e=>{const b=e.target.closest("[data-tab]");if(!b)return;if(b.dataset.tab===TAB&&!$("#sheet").classList.contains("open")){scrollTo({top:0,behavior:"smooth"});return}location.hash=b.dataset.tab});
+
+function header(title,sub){
+  const d=new Date().toLocaleDateString(undefined,{weekday:"long",month:"long",day:"numeric"});
+  return `<header class="top"><div class="date">${esc(d)}</div><div class="titlerow"><h1>${esc(title)}</h1><div class="me" aria-hidden="true">NS</div></div>${sub?`<p class="sub">${sub}</p>`:""}</header>`;
+}
+function appRow(a){
+  const btn=a.url?`<span class="getbtn">OPEN</span>`:`<span class="getbtn lock">PRIVATE</span>`;
+  return `<button class="row" data-app="${a.id}">${icon(a)}<span class="txt"><b>${esc(a.name)}</b><small>${esc(a.sub)}</small></span>${btn}</button>`;
+}
+function aotd(){const live=APPS.filter(a=>a.url);const day=Math.floor((Date.now()-new Date().getTimezoneOffset()*6e4)/864e5);return live[day%live.length]}
+
+/* ===== Today ===== */
+function renderToday(){
+  const a=aotd();
+  const bgShots=[...a.shots.filter(s=>s!=="mock"),...APPS.filter(x=>x.id!==a.id&&x.shots[0]!=="mock").map(x=>x.shots[0])].slice(0,3);
+  const picks=ROLE?APPS.filter(x=>x.for.includes(ROLE)):[];
+  return header("Today",`Apps I've designed and built with Claude as my development partner, for youth football and baseball, coaches, families and everyday life.`)+
+  `<div class="stories">
+    <button class="story aotd wide" data-app="${a.id}" style="background:linear-gradient(160deg,${a.ac},#0b0b0f 80%)">
+      <div class="bgshots" aria-hidden="true">${bgShots.map(s=>`<img src="${s}" alt="">`).join("")}</div>
+      <div class="t"><div class="kick">App of the day</div><h2>${esc(a.name)}</h2></div>
+      <div class="b"><div class="lockup">${icon(a)}<span><b>${esc(a.name)}</b><small>${esc(a.sub)}</small></span><span class="getbtn">VIEW</span></div></div>
+    </button>
+    <button class="story idea" data-tab-go="big">
+      <svg class="orbit" viewBox="0 0 200 200" aria-hidden="true">${orbit()}</svg>
+      <div class="kick">The big picture</div><h2>One builder.<br>Nine apps.<br>One league of families.</h2>
+      <p>See how the apps connect, which pieces they share, and how an idea becomes an app.</p>
+    </button>
+    <div class="story picker">
+      <div class="kick">Find your app</div><h2>Which one is for you?</h2>
+      <div class="roles" role="group" aria-label="Who are you?">${Object.entries(ROLES).map(([k,n])=>`<button class="role" data-role="${k}" aria-pressed="${ROLE===k}">${n}</button>`).join("")}</div>
+      <div class="picks">${ROLE?picks.map(appRow).join(""):`<p class="sub" style="margin:8px 0 0">Tap one and I'll point you to the right apps.</p>`}</div>
+    </div>
+    <div class="story soon wide">
+      <div class="kick">Coming soon</div><h2 style="margin-bottom:8px">On the workbench</h2>
+      ${SOON.map(([e,n,d])=>`<div class="soonrow"><span class="ic">${e}</span><span><b>${esc(n)}</b><span>${esc(d)}</span></span></div>`).join("")}
+    </div>
+  </div>
+  <div class="sect"><h3>Collect the set</h3><span>Tap a card to flip it</span></div>
+  <div class="cardset" id="cardset">${APPS.map((x,i)=>tradingCard(x,i)).join("")}</div>`;
+}
+function orbit(){const n=APPS.length;return `<circle cx="100" cy="100" r="62" fill="none" stroke="rgba(255,255,255,.25)" stroke-dasharray="3 5"/><circle cx="100" cy="100" r="88" fill="none" stroke="rgba(255,255,255,.15)"/>`+
+  APPS.map((a,i)=>{const r=i%2?88:62,t=i/n*Math.PI*2-1;const x=100+r*Math.cos(t),y=100+r*Math.sin(t);return `<line x1="100" y1="100" x2="${x}" y2="${y}" stroke="rgba(255,255,255,.18)"/><image href="${a.icon}" x="${x-14}" y="${y-14}" width="28" height="28" clip-path="inset(0 round 7px)"/>`}).join("")+
+  `<circle cx="100" cy="100" r="20" fill="#fff"/><text x="100" y="105" text-anchor="middle" font-size="13" font-weight="800" fill="#1b2a6b" font-family="system-ui">NS</text>`}
+function tradingCard(a,i){
+  return `<div class="tcard" style="--ac:${a.ac}"><button class="in" aria-label="${esc(a.name)} card, tap to flip">
+    <div class="face front"><img src="${a.icon}" alt=""><b>${esc(a.name)}</b><small>${CATS[a.cat].e} ${esc(CATS[a.cat].n)}</small></div>
+    <div class="face back"><h4>${esc(a.name)}</h4>${a.facts.map(f=>`<div class="st"><span>${esc(f[0])}</span><span><b>${esc(f[1])}</b> ${esc(f[2])}</span></div>`).join("")}
+      <div class="st"><span>Installs</span><span>${a.install?"Yes":"No"}</span></div><div class="no">No. ${String(i+1).padStart(2,"0")} / ${String(APPS.length).padStart(2,"0")} · Series 2026</div></div>
+  </button></div>`;
+}
+
+/* ===== Apps ===== */
+function renderApps(){
+  const list=CAT==="all"?Object.keys(CATS):[CAT];
+  return header("Apps",`${APPS.filter(a=>a.url).length} live apps, ${APPS.filter(a=>a.install).length} install on your phone.`)+
+  `<div class="cats" role="group" aria-label="Category"><button class="cat" data-cat="all" aria-pressed="${CAT==="all"}">All</button>${Object.entries(CATS).map(([k,c])=>`<button class="cat" data-cat="${k}" aria-pressed="${CAT===k}">${c.e} ${esc(c.n)}</button>`).join("")}</div>`+
+  list.map(k=>{const xs=APPS.filter(a=>a.cat===k);if(!xs.length)return"";return `<div class="sect"><h3>${CATS[k].e} ${esc(CATS[k].n)}</h3><span>${xs.length} app${xs.length>1?"s":""}</span></div><div class="grid2">${xs.map(appRow).join("")}</div>`}).join("")+
+  `<div class="sect"><h3>🛠️ Coming soon</h3></div><div class="grid2">${SOON.map(([e,n,d])=>`<div class="row"><span class="ic" style="display:grid;place-items:center;font-size:28px;background:var(--card)">${e}</span><span class="txt"><b>${esc(n)}</b><small>${esc(d)}</small></span><span class="getbtn lock">SOON</span></div>`).join("")}</div>`;
+}
+
+/* ===== Big Picture ===== */
+const GROUPS=[
+  {k:"football",n:"ASL Bengals football",ids:["bengals","gridiron"],x:150,y:110},
+  {k:"baseball",n:"LYBS baseball & softball",ids:["dashboard","ballclub","situations","cards"],x:450,y:110},
+  {k:"family",n:"Everyday",ids:["fitness","cube"],x:150,y:370},
+  {k:"builder",n:"Behind the scenes",ids:["toolbox"],x:450,y:370}
+];
+const LINKS=[["situations","ballclub","trainer moving into"],["bengals","gridiron","team → organization"],["dashboard","ballclub","board ↔ families"],["cards","ballclub","same teams"],["fitness","bengals","off-season"],["toolbox","bengals",""],["toolbox","dashboard",""],["toolbox","situations",""],["toolbox","cube",""]];
+function webSVG(){
+  const narrow=innerWidth<620;const VW=narrow?380:600,VH=narrow?1000:480;
+  const G=narrow?GROUPS.map((g,i)=>({...g,x:190,y:[120,400,680,900][i]})):GROUPS;
+  const pos={};G.forEach(g=>{const n=g.ids.length;g.ids.forEach((id,i)=>{const t=n===1?0:(i/(n)*Math.PI*2)-Math.PI/2;const r=n===1?0:(n>2?78:62);pos[id]={x:g.x+r*Math.cos(t),y:g.y+r*Math.sin(t)+(n===1?0:8)}})});
+  const col=k=>getComputedStyle(document.documentElement).getPropertyValue("--"+k).trim();
+  let s=`<svg class="web" viewBox="0 0 ${VW} ${VH}" role="img" aria-labelledby="webT"><title id="webT">How the apps connect: football, baseball, everyday and behind-the-scenes groups with links between apps</title>`;
+  G.forEach(g=>{s+=`<circle cx="${g.x}" cy="${g.y+8}" r="${g.ids.length>2?128:g.ids.length>1?108:62}" fill="${col(g.k)}" fill-opacity=".09" stroke="${col(g.k)}" stroke-opacity=".35" stroke-dasharray="4 6"/>
+    <text x="${g.x}" y="${g.y-(g.ids.length>2?118:g.ids.length>1?98:56)}" text-anchor="middle" font-size="13" font-weight="700" fill="${col(g.k)}">${esc(g.n)}</text>`});
+  LINKS.forEach(([a,b,l])=>{const p=pos[a],q=pos[b];const mx=(p.x+q.x)/2,my=(p.y+q.y)/2-18;
+    s+=`<path d="M${p.x},${p.y} Q${mx},${my} ${q.x},${q.y}" fill="none" stroke="currentColor" stroke-opacity="${l?.45:.16}" stroke-width="${l?2:1.5}" ${l?"":'stroke-dasharray="3 5"'}/>`;
+    if(l&&!narrow)s+=`<text x="${mx}" y="${my+6}" text-anchor="middle" font-size="10.5" fill="currentColor" fill-opacity=".7" paint-order="stroke" stroke="var(--card)" stroke-width="4">${esc(l)}</text>`});
+  APPS.forEach(a=>{const p=pos[a.id];s+=`<g class="node" data-app="${a.id}" tabindex="0" role="button" aria-label="${esc(a.name)}">
+    <circle class="ring" cx="${p.x}" cy="${p.y}" r="27" fill="var(--card)" stroke="${a.ac}" stroke-width="2.5"/>
+    <image href="${a.icon}" x="${p.x-20}" y="${p.y-20}" width="40" height="40" clip-path="inset(0 round 10px)"/>
+    <text x="${p.x}" y="${p.y+42}" text-anchor="middle" font-size="11.5" font-weight="600" fill="currentColor">${esc(a.name.replace("Offseason ","").replace(" Coaching App",""))}</text></g>`});
+  return s+`</svg>`;
+}
+function renderBig(){
+  const used={};APPS.forEach(a=>a.parts.forEach(p=>used[p]=(used[p]||0)+1));
+  const top=Object.entries(used).sort((a,b)=>b[1]-a[1]);
+  return header("Big Picture",`These aren't nine separate projects. They're one system for a youth sports community, built a piece at a time and sharing the same building blocks.`)+
+  `<section class="bp" style="color:var(--text)"><h3>How it all connects</h3><p>Tap any app to open it. Solid lines are real hand-offs between apps.</p>${webSVG()}</section>
+  <section class="bp"><h3>By the numbers</h3><div class="stats">
+    <div class="stat"><b>${APPS.filter(a=>a.url).length}</b><span>live apps</span></div>
+    <div class="stat"><b>${APPS.filter(a=>a.install).length}</b><span>install on a phone</span></div>
+    <div class="stat"><b>2</b><span>leagues served</span></div>
+    <div class="stat"><b>${SOON.length}</b><span>on the workbench</span></div></div></section>
+  <section class="bp"><h3>Shared building blocks</h3><p>Solve it once, reuse it everywhere. Each block below shows up in several apps.</p>
+    <div class="parts">${top.map(([k,n])=>{const p=PARTS[k];const who=APPS.filter(a=>a.parts.includes(k));return `<div class="part"><span class="em">${p.e}</span><span><b>${esc(p.n)}</b><span>${esc(p.d)}</span></span><span class="count">${n}<small>app${n>1?"s":""}</small></span></div>`}).join("")}</div></section>
+  <section class="bp"><h3>How an idea becomes an app</h3><p>The same loop, every time, with Claude as the development partner.</p>
+    <div class="flow">
+      <div><b>Spot a real problem</b>A coach, a parent or the league board needs something a spreadsheet can't do.</div>
+      <div><b>Sketch it with Claude</b>Describe it in plain words, look at a working draft the same day, and react to it.</div>
+      <div><b>Reuse the building blocks</b>Sign-in, security rules and install-on-phone come from apps that already work.</div>
+      <div><b>Ship to real families</b>Share one link, watch how people use it, and keep the next steps in the Toolbox.</div>
+    </div></section>`;
+}
+
+/* ===== Search ===== */
+function renderSearch(){
+  return header("Search")+`<label class="search">${SV.search}<input id="q" type="search" placeholder="Apps, features, sports…" value="${esc(Q)}" autocomplete="off" aria-label="Search apps"></label><div id="results">${results()}</div>`;
+}
+function results(){
+  const q=Q.trim().toLowerCase();
+  const xs=q?APPS.filter(a=>[a.name,a.sub,a.desc,CATS[a.cat].n,...a.feats.flat(),...a.parts.map(p=>PARTS[p].n)].join(" ").toLowerCase().includes(q)):APPS;
+  if(!xs.length)return `<p class="empty">No apps match “${esc(Q)}”. Try “football”, “offline” or “quiz”.</p>`;
+  return (q?"":`<div class="sect"><h3>Browse everything</h3></div>`)+xs.map(appRow).join("");
+}
+
+/* ===== Detail ===== */
+function mockScreen(){
+  const ics=APPS.filter(a=>a.id!=="toolbox");
+  return `<div class="mock" role="img" aria-label="Illustration of the Toolbox home screen"><span class="clock">9:41</span>
+    <div class="wid"><b>🧰 Builds in progress</b>${[["Coaching app",86],["Gridiron Hub",64],["Where Do I Go?",72]].map(([n,v])=>`<div>${n}</div><div class="bar"><i style="width:${v}%"></i></div>`).join("")}</div>
+    <div class="mg">${ics.map(a=>`<div><img src="${a.icon}" alt="">${esc(a.name.split(" ").slice(0,2).join(" "))}</div>`).join("")}</div>
+    <div class="dock">${ics.slice(0,4).map(a=>`<img src="${a.icon}" alt="">`).join("")}</div></div>`;
+}
+function openApp(id,fromHash){
+  const a=byId(id);if(!a)return;
+  if(!fromHash){NAV++;location.hash="app="+id;return}
+  const sh=$("#sheet");
+  const more=APPS.filter(x=>x.id!==a.id&&x.cat===a.cat).concat(APPS.filter(x=>x.id!==a.id&&x.cat!==a.cat)).slice(0,4);
+  const open=a.url?`<a class="openbtn" href="${a.url}" target="_blank" rel="noopener">OPEN</a>`:`<span class="openbtn lock">PRIVATE</span>`;
+  sh.innerHTML=`<div class="sh-nav"><button id="shBack">${SV.back} ${esc(TABS.find(t=>t[0]===TAB)[1])}</button><button class="iconbtn" id="shShare" aria-label="Share ${esc(a.name)}">${SV.share}</button></div>
+  <div class="wrap">
+    <div class="dhead">${icon(a)}<div><h2>${esc(a.name)}</h2><div class="s">${esc(a.sub)}</div><div class="acts">${open}${a.install&&a.url?`<span class="s" style="margin:0">Installs on your phone</span>`:""}</div></div></div>
+    <div class="info">
+      <div><small>Category</small><b>${CATS[a.cat].e}</b><span>${esc(CATS[a.cat].n)}</span></div>
+      ${a.facts.map(f=>`<div><small>${esc(f[0])}</small><b>${esc(f[1])}</b><span>${esc(f[2])||"&nbsp;"}</span></div>`).join("")}
+      <div><small>Access</small><b>${a.access==="Open"?"🔓":"🔑"}</b><span>${esc(a.access)}</span></div>
+    </div>
+    <div class="shots" aria-label="Screenshots">${a.shots.map(s=>s==="mock"?mockScreen():`<img src="${s}" alt="${esc(a.name)} screenshot" loading="lazy">`).join("")}</div>
+    <div class="dsec"><p>${esc(a.desc)}</p>${a.access!=="Open"&&a.url?`<p class="notice">🔑 Some screens need a ${esc(a.access.toLowerCase())} so team and family info stays private.</p>`:""}${!a.url?`<p class="notice">🔒 This one is just for me. The code is public; the data stays behind sign-in.</p>`:""}</div>
+    ${a.news?`<div class="dsec"><h3>What's new</h3><div class="new"><small>${esc(a.news.d)}</small><div>${esc(a.news.t)}</div></div></div>`:""}
+    <div class="dsec"><h3>Highlights</h3><div class="feat">${a.feats.map(([e,t,d])=>`<div><span class="e">${e}</span><span><b>${esc(t)}</b><span>${esc(d)}</span></span></div>`).join("")}</div></div>
+    <div class="dsec"><h3>Part of the big picture</h3><div class="tie"><p style="margin:0">${esc(a.tie)}</p>${a.rel.map(r=>appRow(byId(r))).join("")}</div></div>
+    <div class="dsec"><h3>Built with</h3><div class="chips">${a.parts.map(p=>`<span class="chip">${PARTS[p].e} ${esc(PARTS[p].n)}</span>`).join("")}<span class="chip">🤖 Built with Claude</span></div></div>
+    <div class="dsec"><h3>More from Nathan</h3><div class="grid2">${more.map(appRow).join("")}</div></div>
+    <footer>© Nathan Steele · <a href="https://github.com/natesteele888" target="_blank" rel="noopener">GitHub</a></footer>
+  </div>`;
+  sh.scrollTop=0;sh.classList.add("open");document.body.style.overflow="hidden";
+  $("#shBack").onclick=()=>{if(NAV>0){NAV--;history.back()}else location.hash=TAB};
+  $("#shShare").onclick=()=>share(a.name,location.origin+location.pathname+"#app="+a.id);
+  setTimeout(()=>$("#shBack").focus(),50);
+}
+function closeApp(){const sh=$("#sheet");if(!sh.classList.contains("open"))return;sh.classList.remove("open");document.body.style.overflow=""}
+async function share(title,url){
+  try{if(navigator.share){await navigator.share({title,url});return}}catch(e){if(e&&e.name==="AbortError")return}
+  try{await navigator.clipboard.writeText(url);toast("Link copied")}catch(_){prompt("Copy this link",url)}
+}
+addEventListener("keydown",e=>{if(e.key==="Escape"&&$("#sheet").classList.contains("open"))$("#shBack").click()});
+
+/* ===== render + events ===== */
+function render(){
+  renderTabs();
+  $("#main").innerHTML=({today:renderToday,apps:renderApps,big:renderBig,search:renderSearch})[TAB]()+
+    `<footer>Designed and built by Nathan Steele with Claude · <button id="shareStore" style="color:var(--blue);font-weight:600">Share this store</button></footer>`;
+  document.title=TAB==="today"?"Steele App Store":`${TABS.find(t=>t[0]===TAB)[1]} · Steele App Store`;
+  const q=$("#q");if(q)q.oninput=()=>{Q=q.value;$("#results").innerHTML=results()};
+  $("#shareStore").onclick=()=>share("Steele App Store",location.origin+location.pathname);
+  shine();
+}
+document.addEventListener("click",e=>{
+  const ap=e.target.closest("[data-app]");if(ap&&!e.target.closest("a")){e.preventDefault();openApp(ap.dataset.app);return}
+  const tg=e.target.closest("[data-tab-go]");if(tg){location.hash=tg.dataset.tabGo;return}
+  const rl=e.target.closest("[data-role]");if(rl){ROLE=ROLE===rl.dataset.role?"":rl.dataset.role;store("store.role",ROLE);const y=scrollY;render();scrollTo(0,y);return}
+  const ct=e.target.closest("[data-cat]");if(ct){CAT=ct.dataset.cat;render();return}
+  const tc=e.target.closest(".tcard");if(tc){tc.classList.toggle("flip");return}
+});
+document.addEventListener("keydown",e=>{const n=e.target.closest&&e.target.closest("g.node");if(n&&(e.key==="Enter"||e.key===" ")){e.preventDefault();openApp(n.dataset.app)}});
+function shine(){const cs=$("#cardset");if(!cs)return;cs.addEventListener("pointermove",e=>{const c=e.target.closest(".tcard");if(!c)return;const r=c.getBoundingClientRect();c.style.setProperty("--shine",(100-((e.clientX-r.left)/r.width)*100+20)+"%")})}
+let NARROW=innerWidth<620;addEventListener("resize",()=>{const n=innerWidth<620;if(n!==NARROW){NARROW=n;if(TAB==="big")render()}});
+go();
+</script>
+</body>
+</html>
