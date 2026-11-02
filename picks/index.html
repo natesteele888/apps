@@ -1,0 +1,296 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#16231c">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" type="image/png" sizes="192x192" href="/apps/icons/picks-192.png">
+<link rel="apple-touch-icon" href="/apps/icons/picks-512.png">
+<title>Gameday Picks</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Teko:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://www.gstatic.com/firebasejs/11.6.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/11.6.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/11.6.0/firebase-firestore-compat.js"></script>
+<style>
+:root{--bg:#16231c;--panel:#1f2e24;--panel-2:#26382b;--line:rgba(245,243,236,.14);--line-soft:rgba(245,243,236,.07);
+  --ink:#f5f3ec;--ink-dim:#b9c2b7;--gold:#d6a94c;--teal:#4fa8a0;--win:#5a9c68;--loss:#d06a62;--r:10px}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font:15px/1.45 Inter,system-ui,sans-serif;min-height:100vh;padding-bottom:calc(40px + env(safe-area-inset-bottom))}
+h1,h2,.num{font-family:Teko,sans-serif;font-weight:600;letter-spacing:.01em}
+button{font:inherit;color:inherit}
+.wrap{max-width:880px;margin:0 auto;padding:0 16px}
+header{padding:calc(20px + env(safe-area-inset-top)) 0 14px;border-bottom:1px solid var(--line);display:flex;align-items:flex-end;justify-content:space-between;gap:12px}
+header h1{font-size:40px;line-height:1;margin:0}
+header p{margin:4px 0 0;color:var(--ink-dim);font-size:13.5px}
+.me{text-align:right;font-size:13px;color:var(--ink-dim)}
+.me b{display:block;color:var(--gold);font-family:Teko,sans-serif;font-size:22px;line-height:1}
+.linkbtn{background:none;border:0;color:var(--ink-dim);text-decoration:underline;cursor:pointer;padding:0;font-size:12px}
+nav.views{display:flex;gap:20px;margin-top:14px;border-bottom:1px solid var(--line);overflow-x:auto}
+nav.views button{background:none;border:0;border-bottom:2px solid transparent;color:var(--ink-dim);font-weight:600;padding:10px 2px;cursor:pointer;white-space:nowrap}
+nav.views button[aria-current="page"]{color:var(--ink);border-bottom-color:var(--gold)}
+.btn{background:var(--panel-2);border:1px solid var(--line);color:var(--ink);padding:9px 14px;border-radius:var(--r);cursor:pointer;font-weight:600;font-size:14px}
+.btn.gold{background:var(--gold);color:#1a1405;border-color:var(--gold)}
+.btn.small{padding:6px 10px;font-size:12.5px}
+.btn:disabled{opacity:.5}
+:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+.pills{display:flex;gap:6px;overflow-x:auto;padding:14px 0 4px;scrollbar-width:none}
+.pills::-webkit-scrollbar{display:none}
+.pill{flex:none;background:var(--panel);border:1px solid var(--line);color:var(--ink-dim);padding:6px 12px;border-radius:16px;font-size:13px;cursor:pointer}
+.pill[aria-pressed="true"]{background:var(--gold);color:#1a1405;border-color:var(--gold);font-weight:700}
+.status{color:var(--ink-dim);font-size:13px;margin:8px 0;min-height:18px;display:flex;justify-content:space-between;gap:8px;align-items:center}
+.games{display:grid;gap:10px}
+.game{border:1px solid var(--line);border-radius:var(--r);background:var(--panel);overflow:hidden}
+.gtop{font-size:11.5px;color:var(--ink-dim);padding:7px 12px;border-bottom:1px solid var(--line-soft);display:flex;justify-content:space-between;gap:8px}
+.matchup{display:flex}
+.side{flex:1;display:flex;flex-direction:column;align-items:center;gap:6px;padding:14px 6px 10px;border:2px solid transparent;background:none;cursor:pointer;min-width:0}
+.side:hover:not(:disabled){background:var(--panel-2)}
+.side:disabled{cursor:default}
+.side.mine{border-color:var(--gold);background:linear-gradient(180deg,rgba(214,169,76,.14),transparent)}
+.side.mine.right{border-color:var(--win)}.side.mine.wrong{border-color:var(--loss)}
+.badge{width:54px;height:54px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:Teko,sans-serif;font-size:21px;font-weight:700;border:1px solid rgba(0,0,0,.25)}
+.side.mine .badge{animation:lock .35s ease}
+@keyframes lock{40%{transform:scale(1.15);filter:brightness(1.3)}}
+.tname{font-size:13px;text-align:center;line-height:1.2}
+.tname small{display:block;color:var(--ink-dim);font-size:11px}
+.who{font-size:11.5px;color:var(--ink-dim);text-align:center;min-height:16px}
+.who b{color:var(--ink)}
+.mid{width:46px;flex:none;display:flex;flex-direction:column;align-items:center;justify-content:center;border-left:1px solid var(--line-soft);border-right:1px solid var(--line-soft);font-size:10.5px;color:var(--ink-dim);gap:2px}
+.mid span:first-child{font-size:17px}
+.score{display:flex;justify-content:center;gap:10px;padding:0 0 10px;font-family:Teko,sans-serif;font-size:20px;color:var(--ink-dim)}
+.score .f{color:var(--ink)}
+.empty{color:var(--ink-dim);padding:28px 0;text-align:center}
+.board{display:grid;gap:8px;margin-top:16px}
+.lrow{display:grid;grid-template-columns:28px 1fr auto;gap:10px;align-items:center;background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:10px 12px}
+.lrow.me-row{border-color:var(--gold)}
+.lrow .rk{font-family:Teko,sans-serif;font-size:22px;color:var(--ink-dim);text-align:center}
+.lrow .nm{font-weight:700}
+.lrow .bar{height:6px;background:var(--panel-2);border-radius:4px;margin-top:6px;overflow:hidden}
+.lrow .bar i{display:block;height:100%;background:var(--gold);border-radius:4px}
+.lrow .wl{font-family:Teko,sans-serif;font-size:24px;text-align:right;line-height:1}
+.lrow .wl small{display:block;font-family:Inter,sans-serif;font-size:11.5px;color:var(--ink-dim)}
+table{width:100%;border-collapse:collapse;margin-top:14px;font-size:13px}
+th,td{padding:8px 6px;text-align:center;border-bottom:1px solid var(--line-soft)}
+th{color:var(--ink-dim);font-size:12px}
+td:first-child,th:first-child{text-align:left}
+.tcell{display:flex;align-items:center;gap:8px}
+.mini{width:26px;height:26px;border-radius:50%;font:700 11px Teko,sans-serif;display:flex;align-items:center;justify-content:center;flex:none}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:16px;margin-top:16px}
+.card h2{margin:0 0 6px;font-size:26px}
+.card p{margin:0 0 10px;color:var(--ink-dim)}
+.field{display:grid;gap:6px;margin:10px 0}
+.field input{background:var(--bg);border:1px solid var(--line);color:var(--ink);border-radius:var(--r);padding:11px 12px;font:inherit;font-size:16px}
+.err{color:var(--loss);font-size:13.5px;min-height:18px}
+.list{display:grid;gap:6px;margin-top:8px}
+.li{display:flex;align-items:center;gap:10px;background:var(--bg);border:1px solid var(--line-soft);border-radius:var(--r);padding:9px 10px;font-size:14px}
+.li .grow{flex:1;min-width:0}
+.li small{color:var(--ink-dim);display:block;font-size:12px;overflow-wrap:anywhere}
+code{font-family:ui-monospace,Menlo,monospace;font-size:13px;background:var(--panel-2);padding:2px 6px;border-radius:6px}
+.gate{min-height:80vh;display:grid;place-items:center;text-align:center}
+.gate .box{max-width:360px}
+.gate img{width:96px;height:96px;border-radius:22px;margin:0 auto 12px;display:block}
+.gate h1{font-size:46px;margin:0}
+.toast{position:fixed;left:50%;bottom:calc(18px + env(safe-area-inset-bottom));transform:translateX(-50%);background:var(--panel-2);border:1px solid var(--line);padding:9px 16px;border-radius:var(--r);font-size:13.5px;opacity:0;pointer-events:none;transition:opacity .25s;z-index:9}
+.toast.on{opacity:1}
+[hidden]{display:none!important}
+@media(max-width:520px){header h1{font-size:32px}.badge{width:46px;height:46px;font-size:18px}.mid{width:36px}table{font-size:11.5px}}
+</style>
+</head>
+<body>
+<div class="wrap" id="app"><div class="gate"><div class="box"><img src="/apps/icons/picks-192.png" alt=""><h1>Gameday Picks</h1><p style="color:var(--ink-dim)">Loading…</p></div></div></div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+<script>
+"use strict";
+/* Gameday Picks: NFL weekly picks for invited players.
+   Sign in with Google. The owner is in automatically; everyone else joins once with an invite code.
+   Data lives in Firebase (nates-toolbox project, gp_* collections), protected by Firestore rules. */
+const FIREBASE_CONFIG={apiKey:"AIzaSyDT_wGN93U4oM70orIU8flSAnvXHApqW2A",authDomain:"nates-toolbox.firebaseapp.com",projectId:"nates-toolbox",storageBucket:"nates-toolbox.firebasestorage.app",messagingSenderId:"567737923830",appId:"1:567737923830:web:b597b5d71e7c7a73c4d4d7"};
+const API="https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard";
+const $=s=>document.querySelector(s);
+const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+let toastT;function toast(m){const t=$("#toast");t.textContent=m;t.classList.add("on");clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove("on"),2400)}
+function contrast(hex){hex=String(hex||"").replace("#","");if(hex.length!==6)return"#fff";const r=parseInt(hex.slice(0,2),16),g=parseInt(hex.slice(2,4),16),b=parseInt(hex.slice(4,6),16);return(.299*r+.587*g+.114*b)/255>.6?"#151515":"#fff"}
+function store(k,v){try{if(v===undefined)return localStorage.getItem(k);localStorage.setItem(k,v)}catch(_){return null}}
+
+const S={user:null,me:null,isOwner:false,players:{},weeks:{},picks:{},view:"picks",sel:null,season:null,codes:[],loading:false};
+let db,unsubs=[];
+
+/* ---------- routing between screens ---------- */
+function render(){
+  if(!S.user)return renderSignIn();
+  if(!S.me)return renderJoin();
+  const views=[["picks","Make picks"],["board","Leaderboard"],["stats","My stats"]];if(S.isOwner)views.push(["admin","Players & codes"]);
+  const rec=record(S.user.uid);
+  $("#app").innerHTML=`<header><div><h1>Gameday Picks</h1><p>Pick a side, every week, all season.</p></div>
+    <div class="me"><b>${esc(S.me.name)}</b>${rec.total?`${rec.w}-${rec.l} · ${Math.round(rec.w/rec.total*100)}%`:"No results yet"}<br><button class="linkbtn" id="rename">rename</button> · <button class="linkbtn" id="out">sign out</button></div></header>
+    <nav class="views">${views.map(([k,n])=>`<button data-view="${k}" ${S.view===k?'aria-current="page"':""}>${n}</button>`).join("")}</nav>
+    <section id="view"></section>`;
+  $("#out").onclick=()=>firebase.auth().signOut();
+  $("#rename").onclick=rename;
+  document.querySelectorAll("[data-view]").forEach(b=>b.onclick=()=>{S.view=b.dataset.view;render()});
+  ({picks:renderPicks,board:renderBoard,stats:renderStats,admin:renderAdmin})[S.view]();
+}
+function renderSignIn(){
+  $("#app").innerHTML=`<div class="gate"><div class="box"><img src="/apps/icons/picks-192.png" alt=""><h1>Gameday Picks</h1>
+    <p style="color:var(--ink-dim)">NFL picks with your crew. Sign in with Google to play.</p>
+    <button class="btn gold" id="si">Sign in with Google</button><p class="err" id="siErr"></p></div></div>`;
+  $("#si").onclick=signIn;
+}
+function renderJoin(){
+  const code=(new URLSearchParams(location.search).get("code")||store("gp.code")||"").toUpperCase();
+  $("#app").innerHTML=`<div class="gate"><div class="box" style="text-align:left"><img src="/apps/icons/picks-192.png" alt=""><h1 style="text-align:center">Join the picks</h1>
+    <form class="card" id="join"><p>Enter the invite code you were given and the name to show on the leaderboard.</p>
+    <label class="field">Invite code<input id="jcode" value="${esc(code)}" autocomplete="off" autocapitalize="characters" required></label>
+    <label class="field">Your name<input id="jname" maxlength="24" value="${esc((S.user.displayName||"").split(" ")[0])}" required></label>
+    <p class="err" id="jerr"></p><button class="btn gold">Join</button></form>
+    <p style="text-align:center"><button class="linkbtn" id="out">Use a different Google account</button></p></div></div>`;
+  $("#out").onclick=()=>firebase.auth().signOut();
+  $("#join").onsubmit=async e=>{e.preventDefault();const c=$("#jcode").value.trim().toUpperCase(),n=$("#jname").value.trim().slice(0,24);if(!c||!n)return;
+    $("#jerr").textContent="";try{await db.doc("gp_players/"+S.user.uid).set({name:n,code:c,joinedAt:new Date().toISOString()});store("gp.code","");history.replaceState(null,"",location.pathname)}
+    catch(err){$("#jerr").textContent=err&&err.code==="permission-denied"?"That code isn't valid. Check it with whoever sent you the link.":"Couldn't join just now. Check your connection and try again."}};
+}
+
+/* ---------- auth ---------- */
+function signIn(){const p=new firebase.auth.GoogleAuthProvider();p.setCustomParameters({prompt:"select_account"});
+  firebase.auth().signInWithPopup(p).catch(e=>{if(e&&/popup/.test(e.code||""))firebase.auth().signInWithRedirect(p);else{const x=$("#siErr");if(x)x.textContent="Sign-in didn't finish. Try again."}})}
+async function rename(){const n=(prompt("Name on the leaderboard:",S.me.name)||"").trim().slice(0,24);if(!n||n===S.me.name)return;
+  try{await db.doc("gp_players/"+S.user.uid).update({name:n});toast("Name updated")}catch(_){toast("Couldn't rename just now")}}
+
+function startData(){
+  unsubs.forEach(f=>f());unsubs=[];
+  let triedOwner=false;
+  unsubs.push(db.doc("gp_players/"+S.user.uid).onSnapshot({includeMetadataChanges:true},async d=>{
+    if(d.metadata.hasPendingWrites)return; // wait until the server accepts or refuses a join
+    if(!d.exists){
+      // the owner joins automatically; the rules only allow this for the owner's account
+      if(!triedOwner){triedOwner=true;try{await db.doc("gp_players/"+S.user.uid).set({name:(S.user.displayName||"Nate").split(" ")[0],code:"OWNER",joinedAt:new Date().toISOString()});return}catch(_){}}
+      if(S.me){S.me=null;S.isOwner=false;unsubs.slice(1).forEach(f=>f());unsubs.length=1}
+      if(!$("#join"))render();return}
+    const first=!S.me;S.me=d.data();S.isOwner=S.me.code==="OWNER";if(first)subscribeAll();render()},()=>{S.me=null;render()}));
+}
+function subscribeAll(){
+  const fail=()=>toast("Couldn't load part of the picks. Reload to try again.");
+  unsubs.push(db.collection("gp_players").onSnapshot(s=>{S.players={};s.docs.forEach(d=>S.players[d.id]=d.data());rerender()},fail));
+  unsubs.push(db.collection("gp_weeks").onSnapshot(s=>{S.weeks={};s.docs.forEach(d=>S.weeks[d.id]=d.data());rerender()},fail));
+  unsubs.push(db.collection("gp_picks").onSnapshot(s=>{S.picks={};s.docs.forEach(d=>{const x=d.data();(S.picks[x.week]=S.picks[x.week]||{})[x.uid]=x.picks||{}});rerender()},fail));
+  if(S.isOwner)unsubs.push(db.collection("gp_codes").onSnapshot(s=>{S.codes=s.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>String(b.createdAt).localeCompare(String(a.createdAt)));if(S.view==="admin")rerender()},()=>{}));
+  findCurrentWeek();
+}
+let rr;function rerender(){clearTimeout(rr);rr=setTimeout(()=>{const a=document.activeElement;if(a&&a.tagName==="INPUT")return;render()},60)}
+
+/* ---------- schedule (ESPN public scoreboard) ---------- */
+const wkKey=(y,t,w)=>`${y}-${t}-${w}`;
+function findCurrentWeek(){
+  fetch(API).then(r=>r.json()).then(d=>{S.season={year:d.season&&d.season.year,type:d.season&&d.season.type,week:d.week&&d.week.number};
+    if(!S.sel&&S.season.year)S.sel=wkKey(S.season.year,S.season.type,S.season.week);loadWeek(S.sel);render()})
+  .catch(()=>{if(!S.sel){const k=Object.keys(S.weeks).sort().pop();if(k)S.sel=k}render();toast("Couldn't reach the NFL schedule. Showing saved weeks.")});
+}
+async function loadWeek(key,quiet){
+  if(!key)return;const [y,t,w]=key.split("-");S.loading=true;
+  try{const d=await (await fetch(`${API}?year=${y}&seasontype=${t}&week=${w}`)).json();
+    const games={};(d.events||[]).forEach(ev=>{const c=ev.competitions&&ev.competitions[0];if(!c)return;
+      const A=c.competitors.find(x=>x.homeAway==="away"),H=c.competitors.find(x=>x.homeAway==="home");if(!A||!H)return;
+      const done=!!(c.status&&c.status.type&&c.status.type.completed);const win=done?(c.competitors.find(x=>x.winner)||{team:{}}).team.abbreviation||null:null;
+      const tm=x=>({abbr:x.team.abbreviation,name:x.team.shortDisplayName||x.team.name,city:x.team.location||"",color:x.team.color?"#"+x.team.color:"#555555",score:x.score??null});
+      games[ev.id]={date:ev.date,away:tm(A),home:tm(H),done,winner:win,state:(c.status&&c.status.type&&c.status.type.state)||"pre"}});
+    const old=S.weeks[key];const changed=!old||JSON.stringify(old.games)!==JSON.stringify(games);
+    S.weeks[key]={games,updatedAt:new Date().toISOString()};
+    if(changed&&Object.keys(games).length)db.doc("gp_weeks/"+key).set(S.weeks[key]).catch(()=>{});
+  }catch(_){if(!quiet)toast("Couldn't load that week's games.")}
+  S.loading=false;if(S.view==="picks")render();
+}
+function weekLabel(key){const [y,t,w]=key.split("-");return(t==="1"?"Pre ":t==="3"?"Playoffs ":"Wk ")+w}
+function started(g){return g.state!=="pre"||new Date(g.date)<=new Date()}
+
+/* ---------- picks ---------- */
+function renderPicks(){
+  const v=$("#view");if(!S.sel){v.innerHTML=`<p class="empty">Finding this week's games…</p>`;return}
+  const [y,t]=S.sel.split("-");const max=t==="3"?5:t==="1"?4:18;
+  const wk=S.weeks[S.sel];const games=wk?Object.entries(wk.games).sort((a,b)=>new Date(a[1].date)-new Date(b[1].date)):[];
+  const mine=(S.picks[S.sel]||{})[S.user.uid]||{};
+  const open=games.filter(([,g])=>!started(g));const pickedOpen=open.filter(([id])=>mine[id]).length;
+  v.innerHTML=`<div class="pills" role="group" aria-label="Week">${Array.from({length:max},(_,i)=>wkKey(y,t,i+1)).map(k=>`<button class="pill" data-wk="${k}" aria-pressed="${k===S.sel}">${weekLabel(k)}</button>`).join("")}</div>
+    <div class="status"><span>${S.loading?"Loading games…":games.length?`${open.length?`${pickedOpen} of ${open.length} open games picked`:"All games have started"}`:"No games loaded for this week."}</span><button class="btn small" id="refresh">Refresh scores</button></div>
+    <div class="games">${games.map(([id,g])=>gameCard(id,g,mine)).join("")||`<p class="empty">Pick a week above.</p>`}</div>`;
+  v.querySelectorAll("[data-wk]").forEach(b=>b.onclick=()=>{S.sel=b.dataset.wk;render();loadWeek(S.sel)});
+  $("#refresh").onclick=()=>loadWeek(S.sel);
+  v.querySelectorAll(".side[data-g]").forEach(b=>b.onclick=()=>pick(b.dataset.g,b.dataset.t));
+  const cur=v.querySelector('[aria-pressed="true"]');if(cur)cur.scrollIntoView({block:"nearest",inline:"center"});
+}
+function gameCard(id,g,mine){
+  const lock=started(g);const all=S.picks[S.sel]||{};
+  const side=(t,cls)=>{const isMine=mine[id]===t.abbr;const res=g.done&&isMine?(g.winner===t.abbr?" right":" wrong"):"";
+    const who=lock?Object.entries(all).filter(([u,p])=>p[id]===t.abbr).map(([u])=>S.players[u]?S.players[u].name:"?"):[];
+    const n=Object.values(all).filter(p=>p[id]===t.abbr).length;
+    return `<button class="side ${cls}${isMine?" mine":""}${res}" data-g="${id}" data-t="${esc(t.abbr)}" ${lock?"disabled":""} aria-pressed="${isMine}" aria-label="${esc(t.city+" "+t.name)}${isMine?", your pick":""}">
+      <span class="badge" style="background:${esc(t.color)};color:${contrast(t.color)}">${esc(t.abbr)}</span>
+      <span class="tname">${esc(t.name)}<small>${esc(t.city)}</small></span>
+      <span class="who">${lock?(who.length?who.map(w=>`<b>${esc(w)}</b>`).join(", "):"&nbsp;"):(n?`${n} pick${n>1?"s":""}`:"&nbsp;")}</span></button>`};
+  let date="";try{date=new Date(g.date).toLocaleString(undefined,{weekday:"short",month:"short",day:"numeric",hour:"numeric",minute:"2-digit"})}catch(_){}
+  const sc=g.away.score!=null&&g.state!=="pre"?`<div class="score"><span class="${g.done?"f":""}">${esc(g.away.score)}</span><span>–</span><span class="${g.done?"f":""}">${esc(g.home.score)}</span></div>`:"";
+  return `<div class="game"><div class="gtop"><span>${esc(date)}</span><span>${g.done?"Final":lock?"Locked · in progress":mine[id]?"Picked":"Open"}</span></div>
+    <div class="matchup">${side(g.away,"aw")}<div class="mid"><span>🏈</span><span>at</span></div>${side(g.home,"hm")}</div>${sc}</div>`;
+}
+async function pick(gid,abbr){
+  const g=S.weeks[S.sel]&&S.weeks[S.sel].games[gid];if(!g||started(g)){toast("That game has started. Picks are locked.");return}
+  const mine={...((S.picks[S.sel]||{})[S.user.uid]||{})};if(mine[gid]===abbr)delete mine[gid];else mine[gid]=abbr;
+  (S.picks[S.sel]=S.picks[S.sel]||{})[S.user.uid]=mine;render();
+  try{await db.doc(`gp_picks/${S.user.uid}_${S.sel}`).set({uid:S.user.uid,week:S.sel,picks:mine,updatedAt:new Date().toISOString()})}
+  catch(_){toast("Couldn't save that pick. Check your connection.")}
+}
+
+/* ---------- results ---------- */
+function record(uid){let w=0,l=0;Object.entries(S.picks).forEach(([k,by])=>{const p=by[uid];const wk=S.weeks[k];if(!p||!wk)return;
+  Object.entries(p).forEach(([gid,abbr])=>{const g=wk.games[gid];if(!g||!g.done||!g.winner)return;g.winner===abbr?w++:l++})});return{w,l,total:w+l}}
+function renderBoard(){
+  const rows=Object.entries(S.players).map(([u,p])=>({u,name:p.name,...record(u)})).sort((a,b)=>b.w-a.w||(b.total?b.w/b.total:0)-(a.total?a.w/a.total:0)||a.name.localeCompare(b.name));
+  const lastWk=S.sel&&S.weeks[S.sel];
+  $("#view").innerHTML=`<div class="board">${rows.map((r,i)=>{const pct=r.total?Math.round(r.w/r.total*100):0;
+    return `<div class="lrow${r.u===S.user.uid?" me-row":""}"><span class="rk">${i+1}</span><span><span class="nm">${esc(r.name)}</span><div class="bar"><i style="width:${pct}%"></i></div></span><span class="wl">${r.w}-${r.l}<small>${r.total?pct+"%":"no results"}</small></span></div>`}).join("")||`<p class="empty">No players yet.</p>`}</div>
+    <p class="status">Wins count when a picked game goes final. Everyone's picks show once a game kicks off.</p>`;
+}
+function renderStats(){
+  const teams={};const uid=S.user.uid;
+  Object.entries(S.picks).forEach(([k,by])=>{const p=by[uid];const wk=S.weeks[k];if(!p||!wk)return;
+    Object.entries(p).forEach(([gid,abbr])=>{const g=wk.games[gid];if(!g)return;const me=g.away.abbr===abbr?g.away:g.home,op=g.away.abbr===abbr?g.home:g.away;
+      const T=x=>teams[x.abbr]=teams[x.abbr]||{name:x.name,color:x.color,f:0,fw:0,fl:0,a:0,aw:0,al:0};
+      const a=T(me),b=T(op);a.f++;b.a++;if(g.done&&g.winner){if(g.winner===abbr){a.fw++;b.al++}else{a.fl++;b.aw++}}})});
+  const list=Object.entries(teams).sort((x,y)=>y[1].f-x[1].f||x[1].name.localeCompare(y[1].name));
+  $("#view").innerHTML=list.length?`<table><thead><tr><th>Team</th><th>Picked</th><th>Record</th><th>Against</th><th>Record</th></tr></thead><tbody>
+    ${list.map(([ab,t])=>`<tr><td><span class="tcell"><span class="mini" style="background:${esc(t.color)};color:${contrast(t.color)}">${esc(ab)}</span>${esc(t.name)}</span></td><td class="num">${t.f}</td><td class="num">${t.f?t.fw+"-"+t.fl:"—"}</td><td class="num">${t.a}</td><td class="num">${t.a?t.aw+"-"+t.al:"—"}</td></tr>`).join("")}</tbody></table>
+    <p class="status">"Against" is how often you picked a team's opponent, and how those picks went.</p>`:`<p class="empty">Make some picks to see your team breakdown.</p>`;
+}
+
+/* ---------- owner: players and invite codes ---------- */
+function inviteLink(code){return location.origin+location.pathname+"?code="+encodeURIComponent(code)}
+function newCode(){const a="ABCDEFGHJKMNPQRSTUVWXYZ23456789";let s="";const r=crypto.getRandomValues(new Uint8Array(6));r.forEach(n=>s+=a[n%a.length]);return s}
+function renderAdmin(){
+  const byCode={};Object.values(S.players).forEach(p=>(byCode[p.code]=byCode[p.code]||[]).push(p.name));
+  $("#view").innerHTML=`<div class="card"><h2>Invite codes</h2><p>Send someone the link for a code. They sign in with Google and they're in. Turn a code off to stop new people joining with it.</p>
+    <form class="field" id="nc" style="grid-template-columns:1fr auto;align-items:end"><label class="field" style="margin:0">Who it's for (just for you)<input id="ncl" maxlength="40" placeholder="e.g. Football team"></label><button class="btn gold">New code</button></form>
+    <div class="list">${S.codes.map(c=>`<div class="li"><span class="grow"><b><code>${esc(c.id)}</code></b> ${esc(c.label||"")} ${c.active?"":"· <i>off</i>"}<small>${(byCode[c.id]||[]).length} joined${(byCode[c.id]||[]).length?": "+esc(byCode[c.id].join(", ")):""}</small></span>
+      <button class="btn small" data-copy="${esc(c.id)}">Share link</button><button class="btn small" data-tog="${esc(c.id)}">${c.active?"Turn off":"Turn on"}</button></div>`).join("")||`<p class="status">No codes yet.</p>`}</div></div>
+    <div class="card"><h2>Players</h2><div class="list">${Object.entries(S.players).sort((a,b)=>a[1].name.localeCompare(b[1].name)).map(([u,p])=>`<div class="li"><span class="grow"><b>${esc(p.name)}</b><small>${p.code==="OWNER"?"Owner":"Code "+esc(p.code)} · joined ${esc(String(p.joinedAt||"").slice(0,10))}</small></span>${u===S.user.uid?"":`<button class="btn small" data-rm="${esc(u)}">Remove</button>`}</div>`).join("")}</div></div>`;
+  $("#nc").onsubmit=async e=>{e.preventDefault();const id=newCode();try{await db.doc("gp_codes/"+id).set({label:$("#ncl").value.trim().slice(0,40),active:true,createdAt:new Date().toISOString()});share(id)}catch(_){toast("Couldn't make a code")}};
+  document.querySelectorAll("[data-copy]").forEach(b=>b.onclick=()=>share(b.dataset.copy));
+  document.querySelectorAll("[data-tog]").forEach(b=>b.onclick=()=>{const c=S.codes.find(x=>x.id===b.dataset.tog);db.doc("gp_codes/"+c.id).update({active:!c.active}).catch(()=>toast("Couldn't change that code"))});
+  document.querySelectorAll("[data-rm]").forEach(b=>{let armed=false;b.onclick=async()=>{if(!armed){armed=true;b.textContent="Tap again to remove";setTimeout(()=>{armed=false;b.textContent="Remove"},3000);return}
+    try{await db.doc("gp_players/"+b.dataset.rm).delete();toast("Removed. Their old picks stay hidden from the board.")}catch(_){toast("Couldn't remove")}}});
+}
+async function share(code){const url=inviteLink(code);const text=`Join my NFL picks on Gameday Picks. Code: ${code}`;
+  try{if(navigator.share){await navigator.share({title:"Gameday Picks",text,url});return}}catch(e){if(e&&e.name==="AbortError")return}
+  try{await navigator.clipboard.writeText(text+"\n"+url);toast("Invite link copied")}catch(_){prompt("Copy this invite link",url)}}
+
+/* ---------- boot ---------- */
+(function boot(){
+  const c=new URLSearchParams(location.search).get("code");if(c)store("gp.code",c.toUpperCase());
+  if(!window.firebase){$("#app").innerHTML=`<div class="gate"><div class="box"><h1>Gameday Picks</h1><p>Couldn't load. Check your connection and reopen the app.</p></div></div>`;return}
+  firebase.initializeApp(FIREBASE_CONFIG);db=firebase.firestore();try{db.enablePersistence({synchronizeTabs:true}).catch(()=>{})}catch(_){}
+  firebase.auth().onAuthStateChanged(u=>{unsubs.forEach(f=>f());unsubs=[];S.user=u;S.me=null;S.players={};S.picks={};S.weeks={};if(u)startData();render()});
+  if("serviceWorker" in navigator)addEventListener("load",()=>navigator.serviceWorker.register("sw.js").catch(()=>{}));
+})();
+</script>
+</body>
+</html>

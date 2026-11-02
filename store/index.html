@@ -294,6 +294,14 @@ const APPS=[
   news:{d:"Oct 2026",t:"Moved to its own app and folded in the winter kicking program and left/right balance testing."},
   parts:["pwa","offline"],tie:"Off-season fuel for the football and baseball apps. Same athletes, different season.",rel:["bengals","situations"],
   for:["player"]},
+ {id:"picks",name:"Gameday Picks",sub:"NFL weekly picks with your crew",cat:"family",ac:"#d6a94c",icon:"../icons/picks-192.png",url:"https://natesteele888.github.io/apps/picks/",install:true,access:"Invite code",
+  shots:["img/picks.webp"],
+  desc:"Pick a side in every NFL game, every week. The schedule and scores load on their own, picks lock at kickoff, and everyone's picks show once a game starts. A season-long leaderboard and a team-by-team breakdown keep score.",
+  feats:[["🏈","Pick every game","Away on the left, home on the right. Tap to lock it in."],["🔒","Locks at kickoff","No changing a pick once the game starts."],["🏆","Leaderboard","Season record and win % for everyone in the group."]],
+  facts:[["Games","Every","NFL week"],["Join","Code","from the host"],["Scores","Auto","from the schedule"]],
+  news:{d:"Nov 2026",t:"Now a real app: sign in with Google, join with an invite code, picks sync across phones."},
+  parts:["signin","rules","firebase","pwa","share"],tie:"Family game night in app form. Same sign-in and security-rule pieces as the league apps.",rel:["fitness","bengals"],
+  for:["player","parent","curious"]},
  {id:"cube",name:"Cube Clock",sub:"Speedcubing timer",cat:"family",ac:"#e0313a",icon:"../icons/cube-192.png",url:"https://natesteele888.github.io/cube-clock/",install:true,access:"Open",
   shots:["img/cube.webp","img/cube-b.webp"],
   desc:"A Rubik's cube timer that works with no signal: six puzzle types, official-notation scrambles, a leaderboard and home-screen shortcuts. Every solve is kept, so you can watch the times come down.",
@@ -364,7 +372,7 @@ function renderToday(){
     </button>
     <button class="story idea" data-tab-go="big">
       <svg class="orbit" viewBox="0 0 200 200" aria-hidden="true">${orbit()}</svg>
-      <div class="kick">The big picture</div><h2>One builder.<br>Nine apps.<br>One league of families.</h2>
+      <div class="kick">The big picture</div><h2>One builder.<br>Ten apps.<br>One league of families.</h2>
       <p>See how the apps connect, which pieces they share, and how an idea becomes an app.</p>
     </button>
     <div class="story picker">
@@ -404,7 +412,7 @@ function renderApps(){
 const GROUPS=[
   {k:"football",n:"ASL Bengals football",ids:["bengals","gridiron"],x:150,y:110},
   {k:"baseball",n:"LYBS baseball & softball",ids:["dashboard","ballclub","situations","cards"],x:450,y:110},
-  {k:"family",n:"Everyday",ids:["fitness","cube"],x:150,y:370},
+  {k:"family",n:"Everyday",ids:["fitness","cube","picks"],x:150,y:370},
   {k:"builder",n:"Behind the scenes",ids:["toolbox"],x:450,y:370}
 ];
 const LINKS=[["situations","ballclub","trainer moving into"],["bengals","gridiron","team → organization"],["dashboard","ballclub","board ↔ families"],["cards","ballclub","same teams"],["fitness","bengals","off-season"],["toolbox","bengals",""],["toolbox","dashboard",""],["toolbox","situations",""],["toolbox","cube",""]];
@@ -428,7 +436,7 @@ function webSVG(){
 function renderBig(){
   const used={};APPS.forEach(a=>a.parts.forEach(p=>used[p]=(used[p]||0)+1));
   const top=Object.entries(used).sort((a,b)=>b[1]-a[1]);
-  return header("Big Picture",`These aren't nine separate projects. They're one system for a youth sports community, built a piece at a time and sharing the same building blocks.`)+
+  return header("Big Picture",`These aren't ten separate projects. They're one system for a youth sports community, built a piece at a time and sharing the same building blocks.`)+
   `<section class="bp" style="color:var(--text)"><h3>How it all connects</h3><p>Tap any app to open it. Solid lines are real hand-offs between apps.</p>${webSVG()}</section>
   <section class="bp"><h3>By the numbers</h3><div class="stats">
     <div class="stat"><b>${APPS.filter(a=>a.url).length}</b><span>live apps</span></div>

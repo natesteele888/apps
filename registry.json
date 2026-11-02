@@ -4,16 +4,124 @@
   "toolbox": "https://natesteele888.github.io/apps/toolbox/",
   "store": "https://natesteele888.github.io/apps/store/",
   "apps": [
-    {"id": "toolbox", "name": "Nate's Toolbox", "live": "https://natesteele888.github.io/apps/toolbox/", "repo": "natesteele888/apps", "path": "toolbox/", "toolboxIds": ["toolbox-app"], "private": true},
-    {"id": "store", "name": "Steele App Store", "live": "https://natesteele888.github.io/apps/store/", "repo": "natesteele888/apps", "path": "store/", "toolboxIds": []},
-    {"id": "situations", "name": "Where Do I Go?", "live": "https://natesteele888.github.io/apps/situations/", "repo": "natesteele888/apps", "path": "situations/", "toolboxIds": ["where-do-i-go"]},
-    {"id": "bengals", "name": "Bengals Coaching App", "live": "https://natesteele888.github.io/ASL-Bengals/dev2/index.html", "repo": "natesteele888/ASL-Bengals", "path": "dev2/", "toolboxIds": ["dev2", "signal-study"]},
-    {"id": "gridiron", "name": "Gridiron Hub", "live": "https://natesteele888.github.io/ASL-Bengals/gridiron-hub/", "repo": "natesteele888/ASL-Bengals", "path": "gridiron-hub/", "toolboxIds": ["gridiron-hub"]},
-    {"id": "dashboard", "name": "LYBS Dashboard", "live": "https://lybs-dashboard.web.app/", "repo": "natesteele888/lybs-reporting", "path": "", "toolboxIds": ["lybs-dashboard"]},
-    {"id": "ballclub", "name": "LYBS Ballclub", "live": "https://natesteele888.github.io/lybs-ballclub/", "repo": "natesteele888/lybs-ballclub", "path": "", "toolboxIds": ["ballclub"]},
-    {"id": "cards", "name": "Steele Cards", "live": "https://natesteele888.github.io/lybs-cards/", "repo": "natesteele888/lybs-cards", "path": "", "toolboxIds": ["steele-cards"]},
-    {"id": "fitness", "name": "Offseason Power Program", "live": "https://natesteele888.github.io/fitness-hub/", "repo": "natesteele888/fitness-hub", "path": "", "toolboxIds": [], "match": "fitness-hub"},
-    {"id": "cube", "name": "Cube Clock", "live": "https://natesteele888.github.io/cube-clock/", "repo": "natesteele888/cube-clock", "path": "public/", "toolboxIds": ["cube-clock"]},
-    {"id": "portfolio", "name": "Portfolio", "live": "https://natesteele888.github.io/portfolio", "repo": "natesteele888/portfolio", "path": "", "toolboxIds": ["portfolio"]}
+    {
+      "id": "toolbox",
+      "name": "Nate's Toolbox",
+      "live": "https://natesteele888.github.io/apps/toolbox/",
+      "repo": "natesteele888/apps",
+      "path": "toolbox/",
+      "toolboxIds": [
+        "toolbox-app"
+      ],
+      "private": true
+    },
+    {
+      "id": "store",
+      "name": "Steele App Store",
+      "live": "https://natesteele888.github.io/apps/store/",
+      "repo": "natesteele888/apps",
+      "path": "store/",
+      "toolboxIds": []
+    },
+    {
+      "id": "situations",
+      "name": "Where Do I Go?",
+      "live": "https://natesteele888.github.io/apps/situations/",
+      "repo": "natesteele888/apps",
+      "path": "situations/",
+      "toolboxIds": [
+        "where-do-i-go"
+      ]
+    },
+    {
+      "id": "picks",
+      "name": "Gameday Picks",
+      "live": "https://natesteele888.github.io/apps/picks/",
+      "repo": "natesteele888/apps",
+      "path": "picks/",
+      "toolboxIds": [
+        "gameday-picks"
+      ]
+    },
+    {
+      "id": "bengals",
+      "name": "Bengals Coaching App",
+      "live": "https://natesteele888.github.io/ASL-Bengals/dev2/index.html",
+      "repo": "natesteele888/ASL-Bengals",
+      "path": "dev2/",
+      "toolboxIds": [
+        "dev2",
+        "signal-study"
+      ]
+    },
+    {
+      "id": "gridiron",
+      "name": "Gridiron Hub",
+      "live": "https://natesteele888.github.io/ASL-Bengals/gridiron-hub/",
+      "repo": "natesteele888/ASL-Bengals",
+      "path": "gridiron-hub/",
+      "toolboxIds": [
+        "gridiron-hub"
+      ]
+    },
+    {
+      "id": "dashboard",
+      "name": "LYBS Dashboard",
+      "live": "https://lybs-dashboard.web.app/",
+      "repo": "natesteele888/lybs-reporting",
+      "path": "",
+      "toolboxIds": [
+        "lybs-dashboard"
+      ]
+    },
+    {
+      "id": "ballclub",
+      "name": "LYBS Ballclub",
+      "live": "https://natesteele888.github.io/lybs-ballclub/",
+      "repo": "natesteele888/lybs-ballclub",
+      "path": "",
+      "toolboxIds": [
+        "ballclub"
+      ]
+    },
+    {
+      "id": "cards",
+      "name": "Steele Cards",
+      "live": "https://natesteele888.github.io/lybs-cards/",
+      "repo": "natesteele888/lybs-cards",
+      "path": "",
+      "toolboxIds": [
+        "steele-cards"
+      ]
+    },
+    {
+      "id": "fitness",
+      "name": "Offseason Power Program",
+      "live": "https://natesteele888.github.io/fitness-hub/",
+      "repo": "natesteele888/fitness-hub",
+      "path": "",
+      "toolboxIds": [],
+      "match": "fitness-hub"
+    },
+    {
+      "id": "cube",
+      "name": "Cube Clock",
+      "live": "https://natesteele888.github.io/cube-clock/",
+      "repo": "natesteele888/cube-clock",
+      "path": "public/",
+      "toolboxIds": [
+        "cube-clock"
+      ]
+    },
+    {
+      "id": "portfolio",
+      "name": "Portfolio",
+      "live": "https://natesteele888.github.io/portfolio",
+      "repo": "natesteele888/portfolio",
+      "path": "",
+      "toolboxIds": [
+        "portfolio"
+      ]
+    }
   ]
 }
