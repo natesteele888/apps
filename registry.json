@@ -122,6 +122,16 @@
       "toolboxIds": [
         "portfolio"
       ]
+    },
+    {
+      "id": "sponsor-banners",
+      "name": "Sponsor Banner Inventory",
+      "live": "https://natesteele888.github.io/sponsor-banner-inventory/",
+      "repo": "natesteele888/sponsor-banner-inventory",
+      "path": "",
+      "toolboxIds": [
+        "sponsor-banners"
+      ]
     }
   ]
 }
