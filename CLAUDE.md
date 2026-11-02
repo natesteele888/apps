@@ -13,6 +13,10 @@ Everything in this repo is public. Nathan's rule: no data, personal info or sens
 ## Nate AI Brain (shared memory)
 This app is one of several that share parts and lessons through the private
 `natesteele888/nate-brain` repo.
+- **Apps & links:** `apps.md` lists every app's live link, repo and Toolbox id,
+  explains Nate's Toolbox app (his hub, natesteele888.github.io/apps/toolbox/) and
+  how to send it updates. Never guess an app URL; if one changes, update
+  `registry.json` in this repo.
 - **Read first:** before building, check `lessons.md`, and check `parts.md` for
   anything that already exists (sign-in, rules, calendar export, offline install,
   rosters…). Reuse the keeper version and follow its `playbooks/<id>.md`.

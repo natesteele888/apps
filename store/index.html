@@ -521,6 +521,9 @@ document.addEventListener("keydown",e=>{const n=e.target.closest&&e.target.close
 function shine(){const cs=$("#cardset");if(!cs)return;cs.addEventListener("pointermove",e=>{const c=e.target.closest(".tcard");if(!c)return;const r=c.getBoundingClientRect();c.style.setProperty("--shine",(100-((e.clientX-r.left)/r.width)*100+20)+"%")})}
 let NARROW=innerWidth<620;addEventListener("resize",()=>{const n=innerWidth<620;if(n!==NARROW){NARROW=n;if(TAB==="big")render()}});
 go();
+/* live links come from the shared app list, so the store never shows an old address */
+fetch("../registry.json",{cache:"no-store"}).then(r=>r.ok?r.json():null).then(j=>{if(!j||!Array.isArray(j.apps))return;let ch=0;
+  j.apps.forEach(x=>{const a=byId(x.id);if(a&&a.url&&x.live&&!x.private&&a.url!==x.live){a.url=x.live;ch++}});if(ch)go()}).catch(()=>{});
 </script>
 </body>
 </html>

@@ -295,6 +295,7 @@ textarea.edin{min-height:0;resize:vertical}
 .idcards{display:grid;gap:10px;grid-template-columns:repeat(auto-fit,minmax(240px,1fr))}
 .idcard{display:grid;gap:4px;align-content:start;background:var(--surface);border:1px solid var(--line);border-left:4px solid var(--ac,var(--accent));border-radius:12px;padding:12px}
 .idcard .mlink{justify-self:start;background:none;border:0;padding:0;color:var(--ac,var(--accent));font-weight:700;font-size:13px;cursor:pointer}
+.regban{border-left:4px solid var(--accent)}.regban .feed li{display:block}
 /* start buttons */
 .go{border:1px solid var(--ac,var(--accent));color:var(--ac,var(--accent));background:transparent;border-radius:999px;font-size:12px;font-weight:700;padding:1px 9px;min-height:24px;flex:0 0 auto;margin-left:auto;cursor:pointer;white-space:nowrap}
 .go.now{background:var(--ac,var(--accent));color:var(--surface)}
@@ -872,6 +873,7 @@ function renderHome(){
   $("#main").innerHTML=`<div class="vh"><div><h1>${esc(S.profile?.name?.split(" ")[0]||"Nate")}'s toolbox</h1><p>What's open, where everything lives, what you're learning, and the resume that builds itself from your work.</p></div>
   <div class="score">${Object.keys(STATUS).map(k=>`<a href="#projects" class="k-${k}"><b>${c[k]||0}</b><span>${STATUS[k]}</span></a>`).join("")}</div></div>
   <div class="dash">
+   ${linkBanner()}
    <section class="panel span-7"><h2 class="section-h">Pick up next <a href="#projects">All projects →</a></h2><div class="mini">${stops.map(p=>{const w=p.waypoints[curIdx(p)];const nt=(w.tasks||[]).find(x=>!x.done);
      const nx=nextTask(p);return `<div class="mrow area-${p.area}"><button class="mopen" data-open="${esc(p.id)}"><span class="rail"></span><span><b>${esc(p.name)}</b><small>${esc(w.title)}${nt?" · "+esc(nt.t):""}</small></span><span class="pill st-${p.status}">${STATUS[p.status]}</span></button>${nx?`<button class="go now" data-start="${esc(p.id)}|${nx.wi}|${nx.ti}" aria-label="Start: ${esc(nt.t)}">Start ▶</button>`:""}</div>`}).join("")||'<p class="lede">Nothing open.</p>'}</div></section>
    <section class="panel span-5"><h2 class="section-h">Quick launch <a href="#links">All links →</a></h2>
@@ -1763,6 +1765,7 @@ function signIn(){const pr=new firebase.auth.GoogleAuthProvider();pr.setCustomPa
 function startData(db){
   S.db=db;S.canWrite=true;S.sample=null;S.mcp=null;S.dl=null;
   const fail=e=>{if(e&&e.code==="permission-denied"){toast("This toolbox is private to its owner.");firebase.auth().signOut()}else toast("Couldn't load part of your toolbox. Reload to try again.")};
+  loadRegistry();
   unsubs.push(db.collection("projects").onSnapshot(snap=>{const next={};snap.docs.forEach(d=>{if(d.exists)next[d.id]=d.data()});S.projects=next;S.loaded=true;if(!S.cvEdit)render();maybeApply()},fail));
   unsubs.push(db.doc("profile/me").onSnapshot(d=>{S.profile=d.exists?d.data():null;if(!S.cvEdit)render()},fail));
   unsubs.push(db.doc("toolbox/links").onSnapshot(d=>{S.links=d.exists?d.data():{items:[]};if(!S.cvEdit&&!S.linkAdd)render()},fail));
@@ -1809,6 +1812,22 @@ function openSettings(){
 }
 
 
+
+/* ---------- app registry: the one list of current live links (registry.json in this repo) ---------- */
+S.registry=null;
+function loadRegistry(){fetch(new URL("../registry.json",location.href),{cache:"no-store"}).then(r=>r.ok?r.json():null).then(j=>{if(j&&Array.isArray(j.apps)){S.registry=j;if(route().v==="home"&&!S.open)renderHome()}}).catch(()=>{})}
+function regMatch(p){const R=S.registry;if(!R)return null;
+  return R.apps.find(a=>(a.toolboxIds||[]).includes(p.id))||R.apps.find(a=>a.match&&!(a.toolboxIds||[]).length&&(p.links||[]).some(l=>(l.url||"").includes(a.match)))||null}
+const normU=u=>String(u||"").replace(/\/index\.html$/,"/").replace(/\/+$/,"").toLowerCase();
+function staleLinks(){if(!S.registry)return[];return P().map(p=>{const r=regMatch(p);if(!r||!r.live)return null;const cur=launchUrl(p);return normU(cur)===normU(r.live)?null:{p,r,cur}}).filter(Boolean)}
+function linkBanner(){const xs=staleLinks();if(!xs.length||!S.canWrite)return"";
+  return `<section class="panel span-12 regban"><h2 class="section-h">🔗 ${xs.length} app link${xs.length>1?"s":""} changed</h2>
+    <ul class="feed">${xs.map(x=>`<li><span><b>${esc(x.p.name)}</b> now lives at <a href="${esc(x.r.live)}" target="_blank" rel="noopener">${esc(x.r.live.replace(/^https:\/\//,""))}</a>${x.cur?`<br><small class="prog">was ${esc(x.cur.replace(/^https:\/\//,""))}</small>`:""}</span></li>`).join("")}</ul>
+    <button class="btn primary" id="regFix">Update ${xs.length>1?"them":"it"}</button> <span class="prog">From your app list, the same one Claude updates when it moves an app.</span></section>`}
+function fixLinks(){staleLinks().forEach(({p,r})=>{const links=structuredClone(p.links||[]);const i=links.findIndex(l=>/^live|open app|live site|live dashboard/i.test(l.label||""));
+  if(i>-1)links[i]={...links[i],label:/open app in its chat/i.test(links[i].label)?"Live app":links[i].label,url:r.live};else links.unshift({label:"Live app",url:r.live});
+  save(p.id,{links,app:{...(p.app||{}),launch:r.live}})});toast("Links updated")}
+document.addEventListener("click",e=>{if(e.target.closest("#regFix"))fixLinks()});
 /* ---------- 💡 ideas from Claude: suggestions per app, one tap to make them tasks ---------- */
 const IDEA_KIND={easy:"Easier to use",feature:"New feature",polish:"Polish"};
 const STORE_URL="https://natesteele888.github.io/apps/store/";
