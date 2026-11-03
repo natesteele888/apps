@@ -141,6 +141,17 @@
       "access": "Board sign-in",
       "install": true,
       "desc": "Board members can see every sponsor banner with its photo, hung status, contact details and a map of where it hangs. Sign in with a LYBS Dashboard board account to open it. No sponsor information is shown publicly."
+    },
+    {
+      "id": "events",
+      "name": "Steele Events",
+      "live": "https://steele-events.web.app/",
+      "repo": "natesteele888/events",
+      "path": "",
+      "toolboxIds": [
+        "steele-events"
+      ],
+      "store": false
     }
   ]
 }
