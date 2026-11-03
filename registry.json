@@ -136,7 +136,11 @@
       "toolboxIds": [
         "sponsor-banners"
       ],
-      "store": false
+      "sub": "Every LYBS sponsor banner, tracked",
+      "cat": "baseball",
+      "access": "Board sign-in",
+      "install": true,
+      "desc": "Board members can see every sponsor banner with its photo, hung status, contact details and a map of where it hangs. Sign in with a LYBS Dashboard board account to open it. No sponsor information is shown publicly."
     }
   ]
 }
