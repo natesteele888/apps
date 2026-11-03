@@ -556,6 +556,19 @@ h3.sec:after{content:"";flex:1;height:1px;background:var(--line)}
   .score{width:100%}.score > *{flex:1;min-width:0;padding:6px 10px}
 }
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
+/* Now screen, Ask Claude, Learn & Resume switch */
+#main{padding-bottom:calc(88px + env(safe-area-inset-bottom,0px))}
+.drawer{padding-bottom:calc(88px + env(safe-area-inset-bottom,0px))}
+#askFab{position:fixed;z-index:35;right:max(16px,env(safe-area-inset-right,0px));bottom:calc(16px + env(safe-area-inset-bottom,0px));padding:12px 18px;border:0;border-radius:999px;background:var(--accent);color:var(--accent-ink);font:inherit;font-weight:700;box-shadow:0 6px 20px rgba(0,0,0,.28);cursor:pointer}
+.nowcard{border-left:4px solid var(--ac,var(--accent))}
+.nowname{margin:4px 0 8px;font-size:24px;line-height:1.15}
+.nowleft{margin:0 0 8px}.nownext{margin:0 0 14px}
+.ask-l{display:block;margin:14px 0 6px;font-weight:700}
+#askQ{width:100%;box-sizing:border-box;font:inherit}
+.ask-knows{margin:6px 0 10px;font-size:13px;color:var(--muted)}
+.subtabs{display:inline-flex;gap:4px;margin:0 0 14px;padding:3px;border-radius:10px;background:var(--sunk)}
+.subtabs a{padding:6px 16px;border-radius:8px;text-decoration:none;color:var(--ink);font-weight:600}
+.subtabs a[aria-current="page"]{background:var(--surface);box-shadow:0 1px 2px rgba(0,0,0,.15)}
 </style>
 
 <div class="shell">
@@ -847,12 +860,13 @@ const doneStages=()=>new Set(S.progress.done||[]);
 function nextStage(){const d=doneStages();for(let i=1;i<=STAGES.length;i++)if(!d.has(i))return i;return 1}
 
 /* ---------- routing ---------- */
-const NAV=[["home","Home"],["apps","Apps"],["projects","Projects"],["map","Map"],["learn","Learn"],["resume","Resume"],["links","Links"]];
+const NAV=[["home","Now"],["apps","Apps"],["learn","Learn & Resume"]];
+const MORE=["projects","map","resume","links"]; /* still open from links and Settings */
 function route(){const h=location.hash.slice(1);const m=h.match(/^learn-(\d+)$/);if(m)return{v:"learn",n:Math.min(Math.max(+m[1],1),STAGES.length)};
-  if(h==="learn")return{v:"learn",n:nextStage()};return{v:NAV.some(n=>n[0]===h)?h:"home"}}
+  if(h==="learn")return{v:"learn",n:nextStage()};return{v:NAV.some(n=>n[0]===h)||MORE.includes(h)?h:"home"}}
 function renderNav(){const r=route();const open=P().filter(p=>curIdx(p)>-1&&p.status!=="done").length;
   const extra={projects:open?open+" open":"",learn:doneStages().size+"/"+STAGES.length,links:(S.links.items||[]).length||""};
-  $("#nav").innerHTML=NAV.map(([k,v])=>`<a href="#${k}" ${r.v===k&&!S.q?'aria-current="page"':""}>${v}<em>${extra[k]||""}</em></a>`).join("")}
+  $("#nav").innerHTML=NAV.map(([k,v])=>`<a href="#${k}" ${(r.v===k||(k==="learn"&&r.v==="resume"))&&!S.q?'aria-current="page"':""}>${v}<em>${extra[k]||""}</em></a>`).join("")}
 
 /* ---------- home ---------- */
 function allLinks(){
@@ -863,31 +877,20 @@ function allLinks(){
 function launchTile(l){return `<a href="${esc(l.url)}" target="_blank" rel="noopener"><b>${esc(l.label)}</b><span>${esc(l.note||l.group||"")}</span></a>`}
 function recentFeed(n){const out=[];P().forEach(p=>(p.waypoints||[]).forEach(w=>(w.tasks||[]).forEach(t=>{if(t.done&&t.doneAt)out.push({at:t.doneAt,p,t:t.t})})));return out.sort((a,b)=>b.at.localeCompare(a.at)).slice(0,n)}
 function renderHome(){
-  const ps=P();const c={active:0,blocked:0,parked:0,done:0};ps.forEach(p=>c[p.status]=(c[p.status]||0)+1);
-  const order={blocked:0,active:1,parked:2,done:3};
-  const stops=ps.filter(p=>curIdx(p)>-1&&p.status!=="done").sort((a,b)=>order[a.status]-order[b.status]||(b.updated||"").localeCompare(a.updated||"")).slice(0,6);
-  const pinned=(S.links.items||[]).filter(l=>l.pin);
-  const ds=doneStages().size,ns=nextStage();const st=STAGES[ns-1];
-  const feed=recentFeed(6);
-    const last=ps.map(p=>p.updated||"").sort().pop();
-  $("#main").innerHTML=`<div class="vh"><div><h1>${esc(S.profile?.name?.split(" ")[0]||"Nate")}'s toolbox</h1><p>What's open, where everything lives, what you're learning, and the resume that builds itself from your work.</p></div>
-  <div class="score">${Object.keys(STATUS).map(k=>`<a href="#projects" class="k-${k}"><b>${c[k]||0}</b><span>${STATUS[k]}</span></a>`).join("")}</div></div>
+  const stops=P().filter(p=>curIdx(p)>-1&&p.status!=="done"&&p.status!=="parked").sort((x,y)=>(y.updated||"").localeCompare(x.updated||""));
+  const top=stops[0];const nx=top&&nextTask(top);const nt=nx&&top.waypoints[nx.wi].tasks[nx.ti];
+  const hasIdeas=P().some(p=>p.status!=="done"&&openIdeas(p).length);
+  $("#main").innerHTML=`<div class="vh"><div><h1>Now</h1><p>Where you left off and what's next.</p></div></div>
   <div class="dash">
    ${linkBanner()}
-   <section class="panel span-7"><h2 class="section-h">Pick up next <a href="#projects">All projects →</a></h2><div class="mini">${stops.map(p=>{const w=p.waypoints[curIdx(p)];const nt=(w.tasks||[]).find(x=>!x.done);
-     const nx=nextTask(p);return `<div class="mrow area-${p.area}"><button class="mopen" data-open="${esc(p.id)}"><span class="rail"></span><span><b>${esc(p.name)}</b><small>${esc(w.title)}${nt?" · "+esc(nt.t):""}</small></span><span class="pill st-${p.status}">${STATUS[p.status]}</span></button>${nx?`<button class="go now" data-start="${esc(p.id)}|${nx.wi}|${nx.ti}" aria-label="Start: ${esc(nt.t)}">Start ▶</button>`:""}</div>`}).join("")||'<p class="lede">Nothing open.</p>'}</div></section>
-   <section class="panel span-5"><h2 class="section-h">Quick launch <a href="#links">All links →</a></h2>
-     <div class="launch">${pinned.map(launchTile).join("")||'<p class="lede">Star links on the Links page to pin them here.</p>'}</div></section>
-   <section class="panel span-4"><h2 class="section-h">Learning <a href="#learn-${ns}">Open →</a></h2>
-     <div class="bigbar"><i style="width:${ds/STAGES.length*100}%"></i></div><div class="prog">${ds} of ${STAGES.length} stages</div>
-     <p style="margin:10px 0 8px"><b>Next: Stage ${ns} · ${esc(st.title)}</b></p><a class="btn primary" href="#learn-${ns}">Continue</a></section>
-   <section class="panel span-4"><h2 class="section-h">Resume <a href="#resume">Open →</a></h2>
-     <p style="margin:0 0 6px"><b>${esc(S.profile?.headline||"")}</b></p><p class="prog" style="margin:0 0 10px">${pendingUpdates().length} project updates waiting · synced ${fmtD(S.profile?.lastSync)||"never"}</p>
-     <a class="btn" href="#resume">View resume</a></section>
-   ${(S.jobs||[]).length?`<section class="panel span-12"><h2 class="section-h">On your iMac</h2><div class="mini">${S.jobs.slice(0,4).map(j=>`<div class="mrow area-${S.projects[j.pid]?S.projects[j.pid].area:"platform"}"><button class="mopen" data-jobopen="${esc(j.pid)}|${j.wi}|${j.ti}"><span class="rail"></span><span><b>${esc(j.task)}</b><small>${esc(j.project)} · ${esc(JOBST[j.status]||j.status)}</small></span><span class="pill ${j.status==="done"?"st-done":j.status==="failed"?"st-blocked":"st-active"}">${esc(JOBST[j.status]||j.status)}</span></button></div>`).join("")}</div></section>`:""}
-   ${ideasHome()}
-   <section class="panel span-4"><h2 class="section-h">Recently finished</h2>
-     ${feed.length?`<ul class="feed">${feed.map(f=>`<li><time>${fmtD(f.at)}</time><span><b>${esc(f.p.name)}</b> · ${esc(f.t)}</span></li>`).join("")}</ul>`:'<p class="lede" style="margin:0">Tasks you tick off show up here with the date, and on your resume.</p>'}</section>
+   ${top?`<section class="panel span-12 nowcard area-${top.area}"><div class="eyebrow2">Pick up here</div><h2 class="nowname">${esc(top.name)}</h2>
+     ${top.leftOff?`<p class="nowleft">${esc(top.leftOff)}</p>`:""}
+     ${nt?`<p class="nownext"><b>Next:</b> ${esc(nt.t)}</p>`:""}
+     <div class="sh-acts">${nx?`<button class="btn primary" data-start="${esc(top.id)}|${nx.wi}|${nx.ti}">Open this task</button>`:""}<button class="btn" data-open="${esc(top.id)}">Project details</button></div></section>`
+    :`<section class="panel span-12"><p class="lede" style="margin:0">Nothing open.</p></section>`}
+   ${stops.length>1?`<section class="panel span-12"><h2 class="section-h">Also open <a href="#projects">All projects →</a></h2><div class="mini">${stops.slice(1,6).map(p=>{const w=p.waypoints[curIdx(p)];const t=(w.tasks||[]).find(x=>!x.done);
+     return `<div class="mrow area-${p.area}"><button class="mopen" data-open="${esc(p.id)}"><span class="rail"></span><span><b>${esc(p.name)}</b><small>${esc(t?t.t:w.title)}</small></span><span class="pill st-${p.status}">${STATUS[p.status]}</span></button></div>`}).join("")}</div></section>`:""}
+   ${hasIdeas?ideasHome():""}
   </div>`;
 }
 
@@ -897,7 +900,7 @@ function filterBar(extra=""){return `<div class="bar"><div class="filters">${Obj
 function renderProjects(){
   const ps=filtered();const order={blocked:0,active:1,parked:2,done:3};
   const areas=Object.keys(AREAS).filter(a=>ps.some(p=>p.area===a));
-  $("#main").innerHTML=`<div class="vh"><div><h1>Projects</h1><p>Every build, grouped by area. Open one to tick off tasks, update where you left off, or copy its pick-up prompt.</p></div>
+  $("#main").innerHTML=`<div class="vh"><div><h1>Projects</h1><p>Every build, grouped by area. Open one to tick off tasks or update where you left off.</p></div>
   ${S.db&&S.canWrite?'<button class="btn primary" id="addBtn">+ Project</button>':""}</div>
   <div id="newWrap"></div>${filterBar('<a class="btn" href="#map">Show map</a>')}
   <div class="cols">${areas.map(a=>{const arr=ps.filter(p=>p.area===a).sort((x,y)=>order[x.status]-order[y.status]||x.name.localeCompare(y.name));
@@ -1084,7 +1087,7 @@ function renderDrawer(){
     ${S.canWrite?`<form class="addrow" id="addWp"><input id="addWpIn" placeholder="Add a waypoint (a safe stopping point)" aria-label="Add a waypoint"><button class="btn small">Add</button></form>`:""}</div>
   ${ed?"":ideasBlock(p)}
   ${ed?`<div class="blk"><h4>Pick-up prompt</h4><textarea class="edin" id="ePrompt" rows="4" placeholder="What to paste into Claude to pick this back up">${esc(p.resume||"")}</textarea></div>`
-    :p.resume?`<div class="blk"><h4>Pick-up prompt</h4><div class="pickup"><p id="pickText">${esc(p.resume)}</p><button class="btn small" id="copyR">Copy prompt</button></div></div>`:""}
+    :""}
   ${ed?`<div class="blk"><h4>Links</h4><div class="rowsE">${(p.links||[]).map((l,li)=>`<div class="edrow"><input class="edin" id="ll-${li}" data-ll="${li}" value="${esc(l.label)}" placeholder="Name" aria-label="Link name"><input class="edin" id="lu-${li}" data-lu="${li}" value="${esc(l.url)}" placeholder="https://" aria-label="Link address"><button type="button" class="ib del" data-ldel="${li}" aria-label="Remove link">×</button></div>`).join("")}</div>
       <form class="addrow" id="addLink"><input id="nlLabel" placeholder="Name" aria-label="New link name"><input id="nlUrl" placeholder="https://" aria-label="New link address"><button class="btn small">Add</button></form></div>`
     :(p.links||[]).length?`<div class="blk"><h4>Links</h4><div class="links">${p.links.map(l=>`<a href="${esc(l.url)}" ${l.url.startsWith("#")?"":'target="_blank" rel="noopener"'}>${esc(l.label)} ${l.url.startsWith("#")?"→":"↗"}</a>`).join("")}</div></div>`:""}
@@ -1328,27 +1331,66 @@ function nextTask(p){const wi=curIdx(p);if(wi<0)return null;const ti=p.waypoints
 function closeSheet(){closeWork();$("#sheet").innerHTML=""}
 function openStart(pid,wi,ti){
   const p=S.projects[pid];if(!p)return;const w=p.waypoints[wi];const t=w&&w.tasks[ti];if(!t)return;
-  const d=t.do||{};const you=d.how==="you";const prompt=taskPrompt(p,wi,ti);
-  $("#sheet").innerHTML=`<div class="sheet-scrim" id="shScrim"></div><section class="sheet area-${p.area}" role="dialog" aria-label="Start task">
-    <div class="sh-top"><div class="eyebrow2">Start task · ${esc(p.name)}</div><button class="btn small" id="shClose">Close</button></div>
+  const d=t.do||{};const you=d.how==="you";const ctx={pid,wi,ti};const c=lastChat(p);
+  $("#sheet").innerHTML=`<div class="sheet-scrim" id="shScrim"></div><section class="sheet area-${p.area}" role="dialog" aria-label="Task">
+    <div class="sh-top"><div class="eyebrow2">${esc(p.name)} · ${esc(w.title)}</div><button class="btn small" id="shClose">Close</button></div>
     <h2 class="sh-title">${esc(t.t)}</h2>
-    <div class="sh-meta"><span>${esc(w.title)}</span>${p.where?`<span class="where">${esc(p.where)}</span>`:""}</div>
-    <div class="sh-who ${you?"you":"claude"}">${you?"<b>You do this one.</b> Follow the steps below. Claude can still walk you through it.":"<b>Claude can do this with you.</b> Start opens a new chat that already knows the project and the task."}</div>
+    ${you?`<p class="sh-note" style="margin-top:4px"><b>You do this one.</b> Claude can walk you through it.</p>`:""}
     ${(d.steps||[]).length?`<ol class="sh-steps">${d.steps.map((s,i)=>`<li><label><input type="checkbox" id="st-${i}"><span>${esc(s)}</span></label></li>`).join("")}</ol>`:""}
     ${(d.open||[]).length?`<div class="sh-open">${d.open.map(o=>`<a class="btn" href="${esc(o.url)}" ${o.url.startsWith("#")?"":'target="_blank" rel="noopener"'}>${esc(o.label)} ${o.url.startsWith("#")?"→":"↗"}</a>`).join("")}</div>`:""}
-    <details class="sh-prompt" ${you?"":"open"}><summary>Prompt for Claude <span class="prog">edit it first if you like</span></summary><textarea id="shPrompt" rows="7" aria-label="Prompt for Claude">${esc(prompt)}</textarea></details>
-    <div class="sh-acts">${(()=>{const c=lastChat(p);return c?`<a class="btn cont" href="${esc(c.url)}" target="_blank" rel="noopener">↩ Continue my chat</a>`:""})()}<a class="btn primary" id="shGo" href="${CLAUDE_NEW+encodeURIComponent(prompt)}" target="_blank" rel="noopener">${you?"Walk me through it in Claude":"▶ Start in Claude"} ↗</a><a class="btn" id="shImac" href="${CLAUDE_NEW+encodeURIComponent(imacPrompt(p,wi,ti))}" target="_blank" rel="noopener">🖥 Work on my iMac ↗</a>
-      <button class="btn" id="shCopy">Copy prompt</button>${S.canWrite?`<button class="btn" id="shDone">✓ Mark done</button>`:""}</div>
-    <p class="sh-note"><b>Continue</b> reopens this project's Claude chat. <b>Start</b> opens a new chat that already knows the task. <b>iMac</b> opens one that works on your files through the desktop app. When you're done, Claude gives you an <b>Update my Toolbox</b> link: tap it and this task ticks off and "where I left off" updates.</p>
+    ${askBox(ctx,c,S.canWrite?`<button class="btn" id="shDone">✓ Mark done</button>`:"")}
   </section>`;
-  $("#shScrim").onclick=closeSheet;$("#shClose").onclick=closeSheet;
-  const ta=$("#shPrompt"),go=$("#shGo");ta.oninput=()=>{go.href=CLAUDE_NEW+encodeURIComponent(ta.value.slice(0,1900))};
-  $("#shCopy").onclick=()=>copyText(ta.value,ta);
-  const wk=$("#shWork");if(wk)wk.onclick=()=>openWork(pid,wi,ti);
-  if(S.canWrite)document.querySelectorAll(".sh-steps input").forEach((c,i)=>{c.checked=!!((t.do||{}).stepsDone||[])[i];c.onchange=()=>{WORK={pid,wi,ti};setStep(i,c.checked).finally(()=>{WORK=null})}});
+  $("#shScrim").onclick=closeSheet;$("#shClose").onclick=closeSheet;wireAsk(ctx);
+  if(S.canWrite)document.querySelectorAll(".sh-steps input").forEach((b,i)=>{b.checked=!!((t.do||{}).stepsDone||[])[i];b.onchange=()=>{WORK={pid,wi,ti};setStep(i,b.checked).finally(()=>{WORK=null})}});
   const dn=$("#shDone");if(dn)dn.onclick=()=>{const wps=structuredClone(p.waypoints);const tt=wps[wi].tasks[ti];tt.done=true;tt.doneAt=new Date().toISOString();
     save(p.id,{waypoints:wps}).then(()=>toast(wpDone(wps[wi])?"Done. Waypoint reached, a good place to stop and commit.":"Done"));closeSheet()};
 }
+
+/* ---------- Ask Claude: one button that knows where you are ---------- */
+function askHere(){
+  if(S.open&&S.projects[S.open])return{pid:S.open};
+  const r=route();return S.q?{view:"search"}:{view:r.v,n:r.n};
+}
+function askLabel(ctx){
+  const p=ctx.pid&&S.projects[ctx.pid];
+  if(p&&ctx.ti!=null)return `this task in ${p.name}`;if(p)return p.name;
+  if(ctx.view==="learn"){const st=STAGES[(ctx.n||1)-1];return st?`Learn, stage ${ctx.n}: ${st.title}`:"Learn"}
+  return({home:"your open projects",apps:"your apps",projects:"your projects",map:"your map of how the apps connect",resume:"your resume",links:"your links",search:"your search"})[ctx.view]||"your Toolbox";
+}
+function askPrompt(ctx,q){
+  const cut=(s,n)=>{s=String(s||"");return s.length>n?s.slice(0,n-1)+"…":s};
+  const p=ctx.pid&&S.projects[ctx.pid];const task=p&&ctx.ti!=null;const w=task&&p.waypoints[ctx.wi];const t=w&&w.tasks[ctx.ti];const d=(t&&t.do)||{};
+  const head=[`I'm asking from my Nate's Toolbox app.`];
+  if(p){const nx=!task&&nextTask(p);const nt=nx&&p.waypoints[nx.wi].tasks[nx.ti];
+    head.push(`Project: ${p.name}`,p.summary&&`What it is: ${cut(p.summary,220)}`,p.where&&`Where it lives: ${cut(p.where,200)}`,p.leftOff&&`Where I left off: ${cut(p.leftOff,420)}`,
+      task&&`Waypoint: ${w.title}`,task&&`Task: ${t.t}`,(d.steps||[]).length&&`My steps: ${d.steps.map((s,i)=>`${i+1}) ${s}`).join(" ")}`,d.prompt&&`Task notes: ${cut(d.prompt,300)}`,nt&&`Next task: ${nt.t}`,p.resume&&`Pick-up notes: ${cut(p.resume,240)}`)}
+  else if(ctx.view==="learn"){const st=STAGES[(ctx.n||1)-1];head.push(`I'm on my Dev Foundations course${st?`, stage ${ctx.n}: ${st.title}`:""}. Explain things with a real example from my own apps.`)}
+  else if(ctx.view==="resume")head.push("I'm looking at my resume. The current one is in the Nate Steele Resume 2026 folder on my AutoNuvo_1 drive (resume-master.md).");
+  else{head.push(`I'm looking at ${askLabel(ctx).replace(/^your /,"my ")}.`);const open=P().filter(x=>curIdx(x)>-1&&x.status!=="done"&&x.status!=="parked").sort((x,y)=>(y.updated||"").localeCompare(x.updated||"")).slice(0,6);
+    if(open.length)head.push("My open projects:",...open.map(x=>{const n=nextTask(x);return `- ${x.name}${n?`: ${x.waypoints[n.wi].tasks[n.ti].t}`:""}`}))}
+  const ask=q?`My question: ${q}`:task?"Help me finish this task now. Start with 2-3 lines on what you'll do.":"Give me 2-3 lines on where this stands, then ask what I want to do.";
+  const rules="My app list is in natesteele888/nate-brain › apps.md. If this needs files on my AutoNuvo_1 drive, use my linked computer. Pause before anything only I can do (sign-ins, clicking in another app) and tell me exactly what to click.";
+  const back=task?returnNote(p,ctx.wi,ctx.ti):p?returnNote(p,0,0).replace('"done":[[0,0]],','"done":[],'):"";
+  const tail=[ask,rules,back].filter(Boolean).join("\n\n");
+  return cut(head.filter(Boolean).join("\n"),Math.max(200,1890-tail.length))+"\n\n"+tail;
+}
+function askBox(ctx,c,extra=""){
+  return `<label class="ask-l" for="askQ">Ask Claude <span class="prog">(optional)</span></label>
+    <textarea id="askQ" rows="2" placeholder="What do you want to do or know?"></textarea>
+    <p class="ask-knows">Claude will already know ${esc(askLabel(ctx))}, and can use your iMac if it's needed.</p>
+    <div class="sh-acts"><a class="btn primary" id="askGo" href="${CLAUDE_NEW+encodeURIComponent(askPrompt(ctx,""))}" target="_blank" rel="noopener">✦ Ask Claude ↗</a>${extra}${c?`<a class="btn" href="${esc(c.url)}" target="_blank" rel="noopener">↩ Continue my chat</a>`:""}</div>`;
+}
+function wireAsk(ctx){const q=$("#askQ"),go=$("#askGo");q.oninput=()=>{go.href=CLAUDE_NEW+encodeURIComponent(askPrompt(ctx,q.value.trim()))}}
+function openAsk(ctx){
+  const p=ctx.pid&&S.projects[ctx.pid];
+  $("#sheet").innerHTML=`<div class="sheet-scrim" id="shScrim"></div><section class="sheet ${p?`area-${p.area}`:""}" role="dialog" aria-label="Ask Claude">
+    <div class="sh-top"><div class="eyebrow2">About ${esc(askLabel(ctx))}</div><button class="btn small" id="shClose">Close</button></div>
+    ${askBox(ctx,p?lastChat(p):null)}</section>`;
+  $("#shScrim").onclick=closeSheet;$("#shClose").onclick=closeSheet;wireAsk(ctx);
+  if(matchMedia("(hover:hover)").matches)$("#askQ").focus();
+}
+function addAskFab(){if($("#askFab"))return;const b=document.createElement("button");b.id="askFab";b.type="button";b.textContent="✦ Ask Claude";b.onclick=()=>openAsk(askHere());document.body.appendChild(b)}
+function subTabs(cur){const m=$("#main");if(!m||$("#subTabs"))return;m.insertAdjacentHTML("afterbegin",`<div class="subtabs" id="subTabs" role="group" aria-label="Learn and resume"><a href="#learn" ${cur==="learn"?'aria-current="page"':""}>Learn</a><a href="#resume" ${cur==="resume"?'aria-current="page"':""}>Resume</a></div>`)}
 
 /* ---------- work on it: Claude built into the toolbox ---------- */
 let WORK=null;
@@ -1587,7 +1629,7 @@ function renderApps(){
   const dock=sortedApps(ps.filter(p=>appOf(p).dock)).slice(0,8);
   const now=new Date();const tm=now.toLocaleTimeString([], {hour:"numeric",minute:"2-digit"});const dt=now.toLocaleDateString([], {weekday:"short",month:"short",day:"numeric"});
   $("#main").innerHTML=`<div class="vh"><div><h1>Apps</h1><p>Your projects as apps. Tap one to open it or start its next task. Hold an icon, or tap Edit, to change icons and names.</p></div>
-    ${S.canWrite?`<button class="btn ${S.homeEdit?"primary":""}" id="homeEditBtn">${S.homeEdit?"Done":"Edit home screen"}</button>`:""}</div>
+    <div class="hb2"><a class="btn" href="${STORE_URL}" target="_blank" rel="noopener">Public App Store ↗</a>${S.canWrite?`<button class="btn ${S.homeEdit?"primary":""}" id="homeEditBtn">${S.homeEdit?"Done":"Edit home screen"}</button>`:""}</div></div>
   <div class="tablet"><div class="screen">
     <div class="statusbar"><span>${esc(tm)}</span><span>${esc(dt)}</span><span class="batt">100% <i></i></span></div>
     <div class="pages" id="pages">${areas.map(a=>`<section class="hpage" data-area="${a}" aria-label="${AREAS[a]}"><div class="pgtitle area-${a}"><i></i>${AREAS[a]}</div><div class="hgrid">${sortedApps(ps.filter(p=>p.area===a)).map(appBtn).join("")}</div></section>`).join("")}</div>
@@ -1657,7 +1699,7 @@ function openAppSheet(pid){
   const open=ni<0?[]:p.waypoints[ni].tasks.map((t,ti)=>({t,ti})).filter(x=>!x.t.done);
   $("#sheet").innerHTML=`<div class="sheet-scrim" id="shScrim"></div><section class="sheet appsheet area-${p.area}" role="dialog" aria-label="${esc(p.name)}">
     <div class="sh-top"><div class="as-head">${iconHTML(p,"big")}<div><h2 class="sh-title" style="margin:0">${esc(p.name)}</h2><div class="sh-meta"><span>${AREAS[p.area]}</span><span class="pill st-${p.status}">${STATUS[p.status]}</span></div></div></div><button class="btn small" id="shClose">Close</button></div>
-    <div class="sh-open">${url?`<a class="btn primary" href="${esc(url)}" target="_blank" rel="noopener">${/claude\.ai\/chat\//.test(url)?"Open app in its chat":"Open app"} ↗</a>`:""}${installInfo(url)?`<button class="btn" id="asInstall" aria-expanded="false" aria-controls="asInstPanel">📲 Add to phone</button>`:""}${(()=>{const c=lastChat(p);return c?`<a class="btn" href="${esc(c.url)}" target="_blank" rel="noopener">↩ Continue in Claude</a>`:""})()}<button class="btn" id="asProj">Project details</button>${S.canWrite?`<button class="btn" id="asEdit">Edit icon and name</button>`:""}</div>
+    <div class="sh-open">${url?`<a class="btn primary" href="${esc(url)}" target="_blank" rel="noopener">${/claude\.ai\/chat\//.test(url)?"Open app in its chat":"Open app"} ↗</a>`:""}${installInfo(url)?`<button class="btn" id="asInstall" aria-expanded="false" aria-controls="asInstPanel">📲 Add to phone</button>`:""}<button class="btn" data-ask="${esc(p.id)}">✦ Ask Claude</button><button class="btn" id="asProj">Project details</button>${S.canWrite?`<button class="btn" id="asEdit">Edit icon and name</button>`:""}</div>
     ${(()=>{const ii=installInfo(url);return ii?`<div class="as-inst" id="asInstPanel" hidden><div class="kind">${ii.kind}</div><p>${ii.note}</p><ol>${ii.steps.map(s=>`<li>${s}</li>`).join("")}</ol><a class="btn primary" href="${esc(ii.href)}" target="_blank" rel="noopener" data-external="1">Open it ↗</a>${syncLine(p)}</div>`:""})()}
     ${ni<0?`<p class="lede" style="margin:14px 0 0">All waypoints done.</p>`:`<h3 class="as-h">Next stop: ${esc(p.waypoints[ni].title)}</h3>
       <ul class="as-tasks">${open.map(x=>`<li><span>${esc(x.t.t)}</span><button class="btn small go" data-start="${esc(p.id)}|${ni}|${x.ti}" aria-label="Start: ${esc(x.t.t)}">Start ▶</button></li>`).join("")}</ul>`}
@@ -1723,7 +1765,10 @@ function render(){
   // wait a tick so a click into the next field lands before the panel redraws
   if(S.open)setTimeout(()=>{if(S.open)renderDrawer()},0);
 }
+renderLearn=(f=>function(){f.apply(this,arguments);subTabs("learn")})(renderLearn);
+renderResume=(f=>function(){f.apply(this,arguments);subTabs("resume")})(renderResume);
 document.addEventListener("click",e=>{
+  const ak=e.target.closest("[data-ask]");if(ak){openAsk({pid:ak.dataset.ask});return}
   const jo=e.target.closest("[data-jobopen]");if(jo){const [pid,wi,ti]=jo.dataset.jobopen.split("|");if(S.projects[pid])openWork(pid,+wi,+ti);return}
   const st=e.target.closest("[data-start]");if(st){e.preventDefault();e.stopPropagation();const [pid,wi,ti]=st.dataset.start.split("|");openStart(pid,+wi,+ti);return}
   const o=e.target.closest("[data-open]");if(o&&!e.target.closest("input,select,textarea,form")){openP(o.dataset.open);return}
@@ -1795,6 +1840,7 @@ function startData(db){
 
 /* ---------- settings: import from the old Toolbox, backup, sign out ---------- */
 function addSettings(){
+  addAskFab();
   if($("#tbSettings"))return;
   const b=document.createElement("button");b.className="btn";b.id="tbSettings";b.textContent="⚙ Settings";b.onclick=openSettings;
   document.querySelector(".side").appendChild(b);
@@ -1803,12 +1849,14 @@ function openSettings(){
   $("#sheet").innerHTML=`<div class="sheet-scrim" id="shScrim"></div><section class="sheet" role="dialog" aria-label="Settings">
     <div class="sh-top"><div class="eyebrow2">Settings</div><button class="btn small" id="shClose">Close</button></div>
     <p style="margin:8px 0">Signed in as <b>${esc(S.user&&S.user.email||"")}</b></p>
+    <h3 class="as-h">More</h3><div class="sh-open"><a class="btn" href="#projects" data-closesheet>All projects</a><a class="btn" href="#map" data-closesheet>Map</a><a class="btn" href="#links" data-closesheet>Links</a><a class="btn" href="${STORE_URL}" target="_blank" rel="noopener">Public App Store ↗</a></div>
     <h3 class="as-h">Import</h3><p class="sh-note">Pick the export file Claude gave you. Everything is merged in; nothing is deleted. The file only goes into your private database.</p>
     <label class="btn"><input type="file" id="imp" accept="application/json,.json" hidden>Choose file…</label> <span class="prog" id="impMsg"></span>
     <h3 class="as-h">Backup</h3><p class="sh-note">Saves everything to this device. Keep it private, never in a GitHub repo.</p><button class="btn" id="exp">Download backup</button>
     <h3 class="as-h">Account</h3><button class="btn" id="out">Sign out</button></section>`;
   $("#shScrim").onclick=closeSheet;$("#shClose").onclick=closeSheet;
-  $("#out").onclick=()=>{closeSheet();firebase.auth().signOut()};
+  document.querySelectorAll("[data-closesheet]").forEach(a=>a.addEventListener("click",closeSheet));
+  $("#out").onclick=()=>{closeSheet();const f=$("#askFab");if(f)f.remove();firebase.auth().signOut()};
   $("#exp").onclick=()=>{const docs={};Object.entries(S.projects).forEach(([id,p])=>docs["projects/"+id]=p);if(S.profile)docs["profile/me"]=S.profile;docs["toolbox/links"]=S.links;docs["progress/course"]=S.progress;if(S.brain)docs["brain/parts"]=S.brain;
     const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([JSON.stringify({exported:new Date().toISOString(),docs})],{type:"application/json"}));a.download=`toolbox-backup-${new Date().toISOString().slice(0,10)}.json`;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),5000)};
   $("#imp").onchange=async e=>{const f=e.target.files[0];if(!f)return;const msg=$("#impMsg");msg.textContent="Importing…";

@@ -1,6 +1,6 @@
 {
-  "about": "Current live links for Nathan Steele's apps. Source of truth for the Toolbox app and the Steele App Store. When an app's live address changes, update it here in the same change.",
-  "updated": "2026-11-02",
+  "about": "Current live links for Nathan Steele's apps. Source of truth for the Toolbox app and the Steele App Store. When an app's live address changes, update it here in the same change. store:false keeps an app out of the public App Store. retired:true keeps it off the install page.",
+  "updated": "2026-11-03",
   "toolbox": "https://natesteele888.github.io/apps/toolbox/",
   "store": "https://natesteele888.github.io/apps/store/",
   "apps": [
@@ -21,7 +21,8 @@
       "live": "https://natesteele888.github.io/apps/store/",
       "repo": "natesteele888/apps",
       "path": "store/",
-      "toolboxIds": []
+      "toolboxIds": [],
+      "store": false
     },
     {
       "id": "situations",
@@ -121,7 +122,10 @@
       "path": "",
       "toolboxIds": [
         "portfolio"
-      ]
+      ],
+      "store": false,
+      "retired": true,
+      "redirectsTo": "https://natesteele888.github.io/apps/store/#about"
     },
     {
       "id": "sponsor-banners",
@@ -131,7 +135,8 @@
       "path": "",
       "toolboxIds": [
         "sponsor-banners"
-      ]
+      ],
+      "store": false
     }
   ]
 }

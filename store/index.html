@@ -311,13 +311,14 @@ const APPS=[
   for:["curious","player"]},
  {id:"toolbox",name:"Nate's Toolbox",sub:"The command center behind it all",cat:"builder",ac:"#e2a51b",icon:"../icons/toolbox-192.png",url:"",install:true,access:"Private",
   shots:["mock"],
-  desc:"Every app on this page is tracked here: where each build left off, task lists, future features, a map of how the apps share parts, and one-tap launch. Claude is built in, so a task can be picked up right where it stopped.",
+  desc:"Every app on this page is tracked here: where each build left off, task lists, future features, a map of how the apps share parts, and one-tap launch. One Ask Claude button picks up any task with its full context, right where it stopped.",
   feats:[["🗂️","Apps board","Status of every build at a glance."],["🗺️","Shared-parts map","See which apps reuse the same building blocks."],["🔐","Private by design","Code is public; data stays behind sign-in."]],
   facts:[["Projects","29","tracked"],["Shared parts","15","mapped"],["Access","Private",""]],
   news:{d:"Nov 2026",t:"Now its own phone app, with every app opening full screen inside it."},
   parts:["signin","rules","firebase","pwa"],tie:"The hub. It's where every other app gets planned, fixed and launched.",rel:["situations","bengals","dashboard"],
   for:["curious"]}
 ];
+const NUMW=["Zero","One","Two","Three","Four","Five","Six","Seven","Eight","Nine","Ten","Eleven","Twelve","Thirteen","Fourteen","Fifteen","Sixteen"];
 const SOON=[["💌","Steele Events","Invitations and RSVPs for any event: themes, custom questions, plus-ones, capacity and co-hosts. Built and tested; launching soon."],
             ["🏢","League Ops in a Box","A youth league platform any organization can set up for itself, with document compliance that coaches can check without ever seeing the paperwork."]];
 const ROLES={player:"I'm a player",parent:"I'm a parent",coach:"I coach",board:"I run a league",curious:"Just curious"};
@@ -330,6 +331,7 @@ const icon=(a,cls="ic")=>`<img class="${cls}" src="${a.icon}" alt="" width="62" 
 let toastT;function toast(m){const t=$("#toast");t.textContent=m;t.classList.add("on");clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove("on"),2200)}
 function store(k,v){try{if(v===undefined)return localStorage.getItem(k);localStorage.setItem(k,v)}catch(_){return null}}
 const SV={
+  about:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="8" r="4"/><path d="M4.5 21c1-4.5 4-6.5 7.5-6.5s6.500 2 7.500 6.500"/></svg>',
   today:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="3" width="16" height="18" rx="3"/><path d="M8 8h8M8 12h8M8 16h5"/></svg>',
   apps:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3.5" y="3.5" width="7" height="7" rx="2"/><rect x="13.5" y="3.5" width="7" height="7" rx="2"/><rect x="3.5" y="13.5" width="7" height="7" rx="2"/><rect x="13.5" y="13.5" width="7" height="7" rx="2"/></svg>',
   big:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><circle cx="4.5" cy="5.5" r="2"/><circle cx="19.5" cy="5.5" r="2"/><circle cx="4.5" cy="18.5" r="2"/><circle cx="19.5" cy="18.5" r="2"/><path d="M6 7l4 3M18 7l-4 3M6 17l4-3M18 17l-4-3"/></svg>',
@@ -337,7 +339,7 @@ const SV={
   share:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 15V3M7 8l5-5 5 5"/><path d="M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7"/></svg>',
   back:'<svg width="12" height="20" viewBox="0 0 12 20" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M10 2L2 10l8 8"/></svg>'
 };
-const TABS=[["today","Today"],["apps","Apps"],["big","Big Picture"],["search","Search"]];
+const TABS=[["today","Today"],["apps","Apps"],["big","Big Picture"],["search","Search"],["about","About"]];
 
 /* ===== routing: #today #apps #big #search, plus #app=<id> for a detail page ===== */
 let NAV=0,TAB="today",CAT="all",ROLE=store("store.role")||"",Q="";
@@ -361,7 +363,7 @@ function aotd(){const live=APPS.filter(a=>a.url);const day=Math.floor((Date.now(
 /* ===== Today ===== */
 function renderToday(){
   const a=aotd();
-  const bgShots=[...a.shots.filter(s=>s!=="mock"),...APPS.filter(x=>x.id!==a.id&&x.shots[0]!=="mock").map(x=>x.shots[0])].slice(0,3);
+  const bgShots=[...a.shots.filter(s=>s!=="mock"),...APPS.filter(x=>x.id!==a.id&&x.shots[0]&&x.shots[0]!=="mock").map(x=>x.shots[0])].slice(0,3);
   const picks=ROLE?APPS.filter(x=>x.for.includes(ROLE)):[];
   return header("Today",`Apps I've designed and built with Claude as my development partner, for youth football and baseball, coaches, families and everyday life.`)+
   `<div class="stories">
@@ -372,7 +374,7 @@ function renderToday(){
     </button>
     <button class="story idea" data-tab-go="big">
       <svg class="orbit" viewBox="0 0 200 200" aria-hidden="true">${orbit()}</svg>
-      <div class="kick">The big picture</div><h2>One builder.<br>Ten apps.<br>One league of families.</h2>
+      <div class="kick">The big picture</div><h2>One builder.<br>${NUMW[APPS.length]||APPS.length} apps.<br>One league of families.</h2>
       <p>See how the apps connect, which pieces they share, and how an idea becomes an app.</p>
     </button>
     <div class="story picker">
@@ -427,7 +429,7 @@ function webSVG(){
   LINKS.forEach(([a,b,l])=>{const p=pos[a],q=pos[b];const mx=(p.x+q.x)/2,my=(p.y+q.y)/2-18;
     s+=`<path d="M${p.x},${p.y} Q${mx},${my} ${q.x},${q.y}" fill="none" stroke="currentColor" stroke-opacity="${l?.45:.16}" stroke-width="${l?2:1.5}" ${l?"":'stroke-dasharray="3 5"'}/>`;
     if(l&&!narrow)s+=`<text x="${mx}" y="${my+6}" text-anchor="middle" font-size="10.5" fill="currentColor" fill-opacity=".7" paint-order="stroke" stroke="var(--card)" stroke-width="4">${esc(l)}</text>`});
-  APPS.forEach(a=>{const p=pos[a.id];s+=`<g class="node" data-app="${a.id}" tabindex="0" role="button" aria-label="${esc(a.name)}">
+  APPS.forEach(a=>{const p=pos[a.id];if(!p)return;s+=`<g class="node" data-app="${a.id}" tabindex="0" role="button" aria-label="${esc(a.name)}">
     <circle class="ring" cx="${p.x}" cy="${p.y}" r="27" fill="var(--card)" stroke="${a.ac}" stroke-width="2.5"/>
     <image href="${a.icon}" x="${p.x-20}" y="${p.y-20}" width="40" height="40" clip-path="inset(0 round 10px)"/>
     <text x="${p.x}" y="${p.y+42}" text-anchor="middle" font-size="11.5" font-weight="600" fill="currentColor">${esc(a.name.replace("Offseason ","").replace(" Coaching App",""))}</text></g>`});
@@ -465,6 +467,19 @@ function results(){
   return (q?"":`<div class="sect"><h3>Browse everything</h3></div>`)+xs.map(appRow).join("");
 }
 
+/* ===== About the builder (the old portfolio page redirects here) ===== */
+function renderAbout(){
+  const cats=Object.keys(CATS).filter(k=>APPS.some(a=>a.cat===k));
+  return header("Nathan Steele","Live web apps I've designed and built with AI as my development partner, for youth football and baseball programs, coaches, families and everyday use. Every one runs in the browser, and most install on a phone like a real app.")+
+  `<section class="bp"><h3>At a glance</h3><div class="stats">
+    <div class="stat"><b>${APPS.filter(a=>a.url).length}</b><span>live apps</span></div>
+    <div class="stat"><b>${APPS.filter(a=>a.install).length}</b><span>install on a phone</span></div>
+    <div class="stat"><b>${SOON.length}</b><span>in the works</span></div></div></section>`+
+  cats.map(k=>`<div class="sect"><h3>${CATS[k].e} ${esc(CATS[k].n)}</h3></div>${APPS.filter(a=>a.cat===k).map(appRow).join("")}`).join("")+
+  `<div class="sect"><h3>In the works</h3></div>${SOON.map(([e,n,d])=>`<div class="soonrow"><span class="ic">${e}</span><span><b>${esc(n)}</b><span>${esc(d)}</span></span></div>`).join("")}
+  <section class="bp"><h3>How it fits together</h3><p>See which apps hand off to each other and which pieces they share.</p><p><button data-tab-go="big" style="color:var(--blue);font-weight:600">Open the Big Picture</button> · <a href="https://github.com/natesteele888" target="_blank" rel="noopener" style="color:var(--blue);font-weight:600">GitHub</a></p></section>`;
+}
+
 /* ===== Detail ===== */
 function mockScreen(){
   const ics=APPS.filter(a=>a.id!=="toolbox");
@@ -490,8 +505,8 @@ function openApp(id,fromHash){
     <div class="shots" aria-label="Screenshots">${a.shots.map(s=>s==="mock"?mockScreen():`<img src="${s}" alt="${esc(a.name)} screenshot" loading="lazy">`).join("")}</div>
     <div class="dsec"><p>${esc(a.desc)}</p>${a.access!=="Open"&&a.url?`<p class="notice">🔑 Some screens need a ${esc(a.access.toLowerCase())} so team and family info stays private.</p>`:""}${!a.url?`<p class="notice">🔒 This one is just for me. The code is public; the data stays behind sign-in.</p>`:""}</div>
     ${a.news?`<div class="dsec"><h3>What's new</h3><div class="new"><small>${esc(a.news.d)}</small><div>${esc(a.news.t)}</div></div></div>`:""}
-    <div class="dsec"><h3>Highlights</h3><div class="feat">${a.feats.map(([e,t,d])=>`<div><span class="e">${e}</span><span><b>${esc(t)}</b><span>${esc(d)}</span></span></div>`).join("")}</div></div>
-    <div class="dsec"><h3>Part of the big picture</h3><div class="tie"><p style="margin:0">${esc(a.tie)}</p>${a.rel.map(r=>appRow(byId(r))).join("")}</div></div>
+    ${a.feats.length?`<div class="dsec"><h3>Highlights</h3><div class="feat">${a.feats.map(([e,t,d])=>`<div><span class="e">${e}</span><span><b>${esc(t)}</b><span>${esc(d)}</span></span></div>`).join("")}</div></div>`:""}
+    ${a.tie?`<div class="dsec"><h3>Part of the big picture</h3><div class="tie"><p style="margin:0">${esc(a.tie)}</p>${a.rel.filter(byId).map(r=>appRow(byId(r))).join("")}</div></div>`:""}
     <div class="dsec"><h3>Built with</h3><div class="chips">${a.parts.map(p=>`<span class="chip">${PARTS[p].e} ${esc(PARTS[p].n)}</span>`).join("")}<span class="chip">🤖 Built with Claude</span></div></div>
     <div class="dsec"><h3>More from Nathan</h3><div class="grid2">${more.map(appRow).join("")}</div></div>
     <footer>© Nathan Steele · <a href="https://github.com/natesteele888" target="_blank" rel="noopener">GitHub</a></footer>
@@ -511,7 +526,7 @@ addEventListener("keydown",e=>{if(e.key==="Escape"&&$("#sheet").classList.contai
 /* ===== render + events ===== */
 function render(){
   renderTabs();
-  $("#main").innerHTML=({today:renderToday,apps:renderApps,big:renderBig,search:renderSearch})[TAB]()+
+  $("#main").innerHTML=({today:renderToday,apps:renderApps,big:renderBig,search:renderSearch,about:renderAbout})[TAB]()+
     `<footer>Designed and built by Nathan Steele with Claude · <button id="shareStore" style="color:var(--blue);font-weight:600">Share this store</button></footer>`;
   document.title=TAB==="today"?"Steele App Store":`${TABS.find(t=>t[0]===TAB)[1]} · Steele App Store`;
   const q=$("#q");if(q)q.oninput=()=>{Q=q.value;$("#results").innerHTML=results()};
@@ -531,7 +546,12 @@ let NARROW=innerWidth<620;addEventListener("resize",()=>{const n=innerWidth<620;
 go();
 /* live links come from the shared app list, so the store never shows an old address */
 fetch("../registry.json",{cache:"no-store"}).then(r=>r.ok?r.json():null).then(j=>{if(!j||!Array.isArray(j.apps))return;let ch=0;
-  j.apps.forEach(x=>{const a=byId(x.id);if(a&&a.url&&x.live&&!x.private&&a.url!==x.live){a.url=x.live;ch++}});if(ch)go()}).catch(()=>{});
+  /* registry.json decides which apps appear and their names and links. The text above only adds the story for each app. */
+  j.apps.forEach(x=>{const a=byId(x.id);
+    if(x.store===false){if(a){APPS.splice(APPS.indexOf(a),1);ch++}return}
+    if(!a){APPS.push({id:x.id,name:x.name,sub:x.sub||"New app",cat:CATS[x.cat]?x.cat:"family",ac:x.color||"#2f6df6",icon:`../icons/${x.id}-192.png`,url:x.private?"":x.live,install:x.install!==false,access:x.private?"Private":(x.access||"Open"),shots:[],desc:x.desc||x.sub||"",feats:[],facts:[],parts:[],tie:x.tie||"",rel:[],for:["curious"]});ch++;return}
+    if(x.name&&a.name!==x.name){a.name=x.name;ch++}
+    if(a.url&&x.live&&!x.private&&a.url!==x.live){a.url=x.live;ch++}});if(ch)go()}).catch(()=>{});
 </script>
 <script>if("serviceWorker" in navigator){addEventListener("load",()=>navigator.serviceWorker.register("sw.js").catch(()=>{}))}</script>
 </body>

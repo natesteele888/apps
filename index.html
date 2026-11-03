@@ -19,7 +19,7 @@ ol{color:var(--muted);padding-left:20px;font-size:14px}
 <script>
 fetch("registry.json",{cache:"no-store"}).then(r=>r.json()).then(j=>{
   const e=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
-  document.getElementById("list").innerHTML=j.apps.map(a=>`<div class="app"><img src="icons/${e(a.id)}-192.png" alt=""><span><a href="${e(a.live)}"><b>${e(a.name)}</b></a><small>${e(a.live.replace(/^https:\/\//,""))}</small></span><a class="go" href="${e(a.live)}${a.live.includes("?")?"&":"?"}install">Install</a></div>`).join("");
+  document.getElementById("list").innerHTML=j.apps.filter(a=>!a.retired).map(a=>`<div class="app"><img src="icons/${e(a.id)}-192.png" alt=""><span><a href="${e(a.live)}"><b>${e(a.name)}</b></a><small>${e(a.live.replace(/^https:\/\//,""))}</small></span><a class="go" href="${e(a.live)}${a.live.includes("?")?"&":"?"}install">Install</a></div>`).join("");
 }).catch(()=>{document.getElementById("list").textContent="Couldn't load the app list. Check your connection."});
 </script>
 </body></html>
