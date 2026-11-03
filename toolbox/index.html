@@ -297,6 +297,7 @@ textarea.edin{min-height:0;resize:vertical}
 .idcard .mlink{justify-self:start;background:none;border:0;padding:0;color:var(--ac,var(--accent));font-weight:700;font-size:13px;cursor:pointer}
 .regban{border-left:4px solid var(--accent)}.regban .feed li{display:block}
 .ie-live{font-size:13.5px;color:var(--muted);margin:2px 0 6px}.ie-live .linkbtn{background:none;border:0;padding:0;color:var(--accent);text-decoration:underline;cursor:pointer;font:inherit}
+.quick{display:flex;flex-wrap:wrap;gap:8px}.quick .btn{flex:1 1 140px;text-align:center}
 /* start buttons */
 .go{border:1px solid var(--ac,var(--accent));color:var(--ac,var(--accent));background:transparent;border-radius:999px;font-size:12px;font-weight:700;padding:1px 9px;min-height:24px;flex:0 0 auto;margin-left:auto;cursor:pointer;white-space:nowrap}
 .go.now{background:var(--ac,var(--accent));color:var(--surface)}
@@ -851,7 +852,7 @@ const $=s=>document.querySelector(s);
 const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 function undoToast(m,undo){const t=document.createElement("div");t.className="toast";t.innerHTML=`<span></span> <button type="button" class="undo">Undo</button>`;t.firstChild.textContent=m;t.querySelector(".undo").onclick=()=>{t.remove();undo()};document.body.appendChild(t);setTimeout(()=>t.remove(),6000)}
 function toast(m){const t=document.createElement("div");t.className="toast";t.textContent=m;document.body.appendChild(t);setTimeout(()=>t.remove(),2000)}
-const P=()=>Object.values(S.projects);
+const P=()=>Object.values(S.projects).filter(p=>!p.archived);
 function stats(p){let all=0,done=0;(p.waypoints||[]).forEach(w=>(w.tasks||[]).forEach(t=>{all++;if(t.done)done++}));return{all,done}}
 function wpDone(w){return (w.tasks||[]).length>0&&w.tasks.every(t=>t.done)}
 function curIdx(p){return (p.waypoints||[]).findIndex(x=>!wpDone(x))}
@@ -883,6 +884,7 @@ function renderHome(){
   const hasIdeas=P().some(p=>p.status!=="done"&&openIdeas(p).length);
   $("#main").innerHTML=`<div class="vh"><div><h1>Now</h1><p>Where you left off and what's next.</p></div></div>
   <div class="dash">
+   <section class="panel span-12 quick"><a class="btn" href="${STORE_URL}" target="_blank" rel="noopener">🛍️ App Store</a><a class="btn" href="../" target="_blank" rel="noopener">📲 Install my apps</a><a class="btn" href="https://lybs-dashboard.web.app/" target="_blank" rel="noopener">📊 LYBS Dashboard</a><a class="btn" href="https://claude.ai/artifact/KQ9BEry1WTHwXoX8zM3yCS" target="_blank" rel="noopener">✅ Claude's daily review</a></section>
    ${linkBanner()}
    ${top?`<section class="panel span-12 nowcard area-${top.area}"><div class="eyebrow2">Pick up here</div><h2 class="nowname">${esc(top.name)}</h2>
      ${top.leftOff?`<p class="nowleft">${esc(top.leftOff)}</p>`:""}
@@ -1662,7 +1664,9 @@ async function drawIconPNG(p,mask){
   else{x.textAlign="center";x.textBaseline="middle";
     if(a.icon){x.font=`${mask?220:290}px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif`;x.fillText(a.icon,256,272)}
     else{x.fillStyle="#fff";x.font=`700 ${mask?170:220}px ${getComputedStyle(document.documentElement).getPropertyValue("--f-display")||"sans-serif"}`;x.fillText(monogram(p.name),256,270)}}
-  return c.toDataURL("image/png");
+  // keep each icon small: two copies must fit in one database record (1 MB)
+  const png=c.toDataURL("image/png");if(png.length<300000)return png;
+  const webp=c.toDataURL("image/webp",0.9);return webp.startsWith("data:image/webp")&&webp.length<300000?webp:c.toDataURL("image/jpeg",0.88);
 }
 async function syncIcon(pid,quiet){
   const p=S.projects[pid];if(!p||!S.db)return;

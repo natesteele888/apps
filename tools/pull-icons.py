@@ -14,7 +14,7 @@ REG = json.load(open(os.path.join(ROOT, "registry.json")))
 IDS = {a["id"] for a in REG["apps"]}
 
 def png(data_url):
-    m = re.match(r"^data:image/png;base64,(.+)$", data_url or "")
+    m = re.match(r"^data:image/(?:png|jpeg|webp);base64,(.+)$", data_url or "")
     if not m:
         return None
     im = Image.open(io.BytesIO(base64.b64decode(m.group(1)))).convert("RGBA")
