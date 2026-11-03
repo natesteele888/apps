@@ -296,6 +296,7 @@ textarea.edin{min-height:0;resize:vertical}
 .idcard{display:grid;gap:4px;align-content:start;background:var(--surface);border:1px solid var(--line);border-left:4px solid var(--ac,var(--accent));border-radius:12px;padding:12px}
 .idcard .mlink{justify-self:start;background:none;border:0;padding:0;color:var(--ac,var(--accent));font-weight:700;font-size:13px;cursor:pointer}
 .regban{border-left:4px solid var(--accent)}.regban .feed li{display:block}
+.ie-live{font-size:13.5px;color:var(--muted);margin:2px 0 6px}.ie-live .linkbtn{background:none;border:0;padding:0;color:var(--accent);text-decoration:underline;cursor:pointer;font:inherit}
 /* start buttons */
 .go{border:1px solid var(--ac,var(--accent));color:var(--ac,var(--accent));background:transparent;border-radius:999px;font-size:12px;font-weight:700;padding:1px 9px;min-height:24px;flex:0 0 auto;margin-left:auto;cursor:pointer;white-space:nowrap}
 .go.now{background:var(--ac,var(--accent));color:var(--surface)}
@@ -1616,11 +1617,12 @@ async function readOpenPage(){
 /* ---------- apps: a tablet home screen of projects ---------- */
 const EMOJI=["⚾","🥎","🏈","🏆","🧢","📋","🗂️","📊","📈","🗓️","📣","📸","🎬","🎤","🃏","🎣","🏋️","⏱️","🧩","🎨","🖌️","🧭","🗺️","🏗️","🧰","🛠️","⚙️","🔒","📬","✉️","🌐","💬","🎉","🎂","🍕","🎟️","🧾","💡","🚀","📱","🖥️","🎮","🏁","🔥","⭐","🐉","🦅","🐯"];
 const SWATCH=["#1F4E8C","#2E6BE6","#0F8282","#1D7A4D","#677526","#C9561A","#C2362B","#A3334A","#7A4C9E","#151515","#5A6577","#E2B32C"];
-function appOf(p){const a=p.app||{};return{icon:a.icon||"",img:safeAppImg(a.img),color:a.color||getComputedStyle(document.documentElement).getPropertyValue("--a-"+p.area).trim()||"#1F4E8C",launch:a.launch||"",dock:!!a.dock,order:typeof a.order==="number"?a.order:999}}
+function liveIcon(p){const r=typeof regMatch==="function"?regMatch(p):null;return r?`/apps/icons/${r.id}-192.png`:""}
+function appOf(p){const a=p.app||{};return{live:liveIcon(p),icon:a.icon||"",img:safeAppImg(a.img),color:a.color||getComputedStyle(document.documentElement).getPropertyValue("--a-"+p.area).trim()||"#1F4E8C",launch:a.launch||"",dock:!!a.dock,order:typeof a.order==="number"?a.order:999}}
 function safeAppImg(s){return typeof s==="string"&&/^data:image\/(png|jpeg|webp);base64,/.test(s)?s:null}
 function launchUrl(p){const a=appOf(p);if(a.launch)return a.launch;const ls=(p.links||[]).filter(l=>/^https?:/.test(l.url));const pick=ls.find(l=>/live|app|site|page|dashboard/i.test(l.label)&&!/claude\.ai\/chat/.test(l.url))||ls.find(l=>!/claude\.ai\/chat/.test(l.url))||ls[0];return pick?pick.url:""}
 function monogram(n){const w=String(n||"?").replace(/[^\w\s']/g," ").split(/\s+/).filter(Boolean);return (w.length>1?w[0][0]+w[1][0]:(w[0]||"?").slice(0,2)).toUpperCase()}
-function iconHTML(p,size=""){const a=appOf(p);return `<span class="ic ${size}" style="--icbg:${esc(a.color)}">${a.img?`<img src="${a.img}" alt="">`:a.icon?`<span class="emo">${esc(a.icon)}</span>`:`<span class="mono">${esc(monogram(p.name))}</span>`}</span>`}
+function iconHTML(p,size=""){const a=appOf(p);return `<span class="ic ${size}" style="--icbg:${esc(a.color)}">${a.img?`<img src="${a.img}" alt="">`:a.live?`<img src="${esc(a.live)}" alt="">`:a.icon?`<span class="emo">${esc(a.icon)}</span>`:`<span class="mono">${esc(monogram(p.name))}</span>`}</span>`}
 function badgeOf(p){const ni=curIdx(p);if(ni<0||p.status==="done"||p.status==="parked")return "";const n=p.waypoints[ni].tasks.filter(t=>!t.done).length;return p.status==="blocked"?`<span class="badge red" aria-label="Blocked">!</span>`:n?`<span class="badge" aria-label="${n} open at next stop">${n}</span>`:""}
 function appBtn(p){return `<button type="button" class="app ${S.homeEdit?"jiggle":""}" data-app="${esc(p.id)}" aria-label="${esc(p.name)}">${iconHTML(p)}${badgeOf(p)}<span class="nm">${esc(p.name)}</span>${S.homeEdit?'<span class="edot" aria-hidden="true">✎</span>':""}</button>`}
 function sortedApps(list){return list.slice().sort((a,b)=>appOf(a).order-appOf(b).order||a.name.localeCompare(b.name))}
@@ -1665,9 +1667,10 @@ async function drawIconPNG(p,mask){
 async function syncIcon(pid,quiet){
   const p=S.projects[pid];if(!p||!S.db)return;
   const r=regMatch(p);
+  if(r&&!S.mcp&&!appOf(p).img){if(!quiet)toast("Pick or upload an icon first. The app keeps its current live icon until you do.");return}
   if(r&&!S.mcp){ /* phone app: publish the icon; a GitHub job copies it into apps/icons/ for every app, the store and installs */
     const doc={any:await drawIconPNG(p,false),maskable:await drawIconPNG(p,true),color:appOf(p).color,pid,updatedAt:new Date().toISOString()};
-    try{await queue(()=>S.db.doc("public_icons/"+r.id).set(doc));if(!quiet)toast("Icon saved. The live app and App Store pick it up within about 15 minutes.")}
+    try{await queue(()=>S.db.doc("public_icons/"+r.id).set(doc));if(!quiet)showPublish(r)}
     catch(e){toast(e&&e.code==="permission-denied"?"Icon saved here. To send it to the live apps, turn on the public_icons rule in Firebase (one-time setup).":"Icon saved here; sending it to the live apps didn't work. Try again later.")}
     return}
   const url=ghApp(p);if(!url)return;
@@ -1681,7 +1684,7 @@ async function syncIcon(pid,quiet){
 }
 function syncLine(p){
   if(!S.mcp){const r=regMatch(p);if(!r)return "";
-    return `<div class="sync" id="asSync"><span>This icon is also the live app's icon: installed apps and the <a href="${STORE_URL}#app=${esc(r.id)}" target="_blank" rel="noopener">App Store</a> update within about 15 minutes of a change.</span>${S.canWrite?`<button type="button" class="btn small" id="asSyncGo">Push this icon now</button>`:""}</div>`}
+    return `<div class="sync" id="asSync"><span>This icon is the live app's icon too. A change reaches the App Store and the apps at GitHub's next icon sync (every few hours), or right away with <a href="${PUBLISH_URL}" target="_blank" rel="noopener">Publish now ↗</a>.</span>${S.canWrite&&appOf(p).img?`<button type="button" class="btn small" id="asSyncGo">Send this icon again</button>`:""}</div>`}
   if(!ghApp(p))return "";const j=lastSync(p.id);
   const st=j?`<span><b>${SYNCST[j.status]||j.status}</b>${j.result?` · ${esc(j.result)}`:""}${j.commit?` · <a href="${esc(j.commit)}" target="_blank" rel="noopener">see change ↗</a>`:""}</span>`:`<span>Changing this app's icon in the Toolbox also updates the installed app.</span>`;
   return `<div class="sync" id="asSync">${st}${S.canWrite&&S.mcp&&(!j||j.status==="done"||j.status==="failed")?`<button type="button" class="btn small" id="asSyncGo">Push this icon to the app</button>`:""}</div>`;
@@ -1714,9 +1717,9 @@ function openAppSheet(pid){
 async function squareIcon(file){
   const url=await new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result);r.onerror=rej;r.readAsDataURL(file)});
   const img=await new Promise((res,rej)=>{const i=new Image();i.onload=()=>res(i);i.onerror=rej;i.src=url});
-  const c=document.createElement("canvas");c.width=c.height=256;const s=Math.min(img.naturalWidth,img.naturalHeight);
-  c.getContext("2d").drawImage(img,(img.naturalWidth-s)/2,(img.naturalHeight-s)/2,s,s,0,0,256,256);
-  const png=c.toDataURL("image/png");return png.length<90000?png:c.toDataURL("image/jpeg",0.82);
+  const c=document.createElement("canvas");c.width=c.height=512;const s=Math.min(img.naturalWidth,img.naturalHeight);
+  c.getContext("2d").drawImage(img,(img.naturalWidth-s)/2,(img.naturalHeight-s)/2,s,s,0,0,512,512);
+  const png=c.toDataURL("image/png");return png.length<400000?png:c.toDataURL("image/jpeg",0.9);
 }
 function openIconEditor(pid){
   const p=S.projects[pid];if(!p)return;const a=appOf(p);
@@ -1727,6 +1730,7 @@ function openIconEditor(pid){
     <div class="sh-top"><div class="eyebrow2">Edit app</div><button class="btn small" id="shClose">Cancel</button></div>
     <div class="ie-preview"><div class="app static">${iconHTML(fake)}<span class="nm">${esc(st.name||p.name)}</span></div></div>
     <label class="ie-f">Name <span class="prog">(also the project's name)</span><input id="ieName" value="${esc(st.name)}" maxlength="60"></label>
+    ${regMatch(p)?`<p class="ie-live">This is the app's real icon. Saving a new one updates your phone, every app that shows it and the <a href="${STORE_URL}#app=${esc(regMatch(p).id)}" target="_blank" rel="noopener">App Store</a>. ${st.img?'<button type="button" class="linkbtn" id="ieUseLive">Go back to the current live icon</button>':""}</p>`:""}
     <div class="ie-f">Icon</div>
     <div class="ie-emo">${["",...EMOJI].map(e=>`<button type="button" data-emo="${esc(e)}" aria-pressed="${!st.img&&st.icon===e}" aria-label="${e?"Use "+e:"Use initials"}">${e?esc(e):`<span class="mono sm">${esc(monogram(st.name||p.name))}</span>`}</button>`).join("")}</div>
     <div class="ie-row"><label class="btn small" style="cursor:pointer">Upload image<input type="file" id="ieImg" accept="image/*" hidden></label>${st.img?'<button type="button" class="btn small" id="ieImgRm">Remove image</button>':""}<span class="prog">Square images look best</span></div>
@@ -1744,14 +1748,17 @@ function openIconEditor(pid){
     $("#ieColor").onchange=()=>draw();
     $("#ieImg").onchange=async e=>{const f=e.target.files[0];if(!f)return;try{st.img=await squareIcon(f);draw()}catch(_){toast("That image couldn't be read. Try a JPG or PNG.")}};
     const rm=$("#ieImgRm");if(rm)rm.onclick=()=>{st.img=null;draw()};
+    const ul=$("#ieUseLive");if(ul)ul.onclick=()=>{st.img=null;st.icon="";st.useLive=true;draw()};
     $("#ieArea").onchange=e=>{st.area=e.target.value;draw()};$("#ieLaunch").onchange=e=>{st.launch=e.target.value};$("#ieDock").onchange=e=>{st.dock=e.target.checked};
     const move=dir=>{const list=sortedApps(P().filter(q=>q.area===p.area));const i=list.findIndex(q=>q.id===p.id),j=i+dir;if(j<0||j>=list.length)return toast(dir<0?"Already first":"Already last");
       list.splice(j,0,list.splice(i,1)[0]);list.forEach((q,k)=>{const qa=appOf(q);if(qa.order!==k)save(q.id,{app:{...(q.app||{}),order:k}})});toast("Moved")};
     $("#ieLeft").onclick=()=>move(-1);$("#ieRight").onclick=()=>move(1);
-    $("#ieSave").onclick=()=>{const name=(st.name||"").trim()||p.name;const cur=S.projects[p.id].app||{};
+    $("#ieSave").onclick=async()=>{const name=(st.name||"").trim()||p.name;const cur=S.projects[p.id].app||{};
+      const isLive=!!regMatch(p);const looks0=a.icon!==(st.icon||"")||(a.img||null)!==(st.img||null)||a.color!==st.color;
+      if(isLive&&looks0&&!st.img&&!st.useLive&&st.icon){st.img=await drawIconPNG({...p,app:{icon:st.icon,img:null,color:st.color}},false)}
       const patch={name,app:{...cur,icon:st.icon||"",img:st.img||null,color:st.color,launch:st.launch||"",dock:!!st.dock}};if(st.area!==p.area){patch.area=st.area;patch.app.order=999;mapLayout=null}
       const looks=a.icon!==(st.icon||"")||(a.img||null)!==(st.img||null)||a.color!==st.color;
-      save(p.id,patch).then(()=>{if(looks&&(regMatch({...p,...patch})||ghApp({...p,...patch})))return syncIcon(p.id);toast("Saved")});closeSheet()};
+      save(p.id,patch).then(()=>{if(looks&&!st.useLive&&(regMatch({...p,...patch})||ghApp({...p,...patch})))return syncIcon(p.id);toast("Saved")});closeSheet()};
   };draw();
 }
 
@@ -1853,10 +1860,14 @@ function openSettings(){
     <h3 class="as-h">Import</h3><p class="sh-note">Pick the export file Claude gave you. Everything is merged in; nothing is deleted. The file only goes into your private database.</p>
     <label class="btn"><input type="file" id="imp" accept="application/json,.json" hidden>Choose file…</label> <span class="prog" id="impMsg"></span>
     <h3 class="as-h">Backup</h3><p class="sh-note">Saves everything to this device. Keep it private, never in a GitHub repo.</p><button class="btn" id="exp">Download backup</button>
+    <h3 class="as-h">App icons</h3><p class="sh-note">Send every icon you've set here to the live apps and the App Store in one go.</p><button class="btn" id="pubAll">Publish all my app icons</button> <span class="prog" id="pubMsg"></span>
     <h3 class="as-h">Account</h3><button class="btn" id="out">Sign out</button></section>`;
   $("#shScrim").onclick=closeSheet;$("#shClose").onclick=closeSheet;
   document.querySelectorAll("[data-closesheet]").forEach(a=>a.addEventListener("click",closeSheet));
   $("#out").onclick=()=>{closeSheet();const f=$("#askFab");if(f)f.remove();firebase.auth().signOut()};
+  $("#pubAll").onclick=async()=>{const b=$("#pubAll");b.disabled=true;const ps=P().filter(p=>regMatch(p)&&appOf(p).img);let n=0;
+    for(const p of ps){try{await syncIcon(p.id,true);n++}catch(_){}}
+    $("#pubMsg").textContent=n?`${n} icon${n>1?"s":""} sent`:"No custom icons to send yet";if(n)showPublish(regMatch(ps[0]))};
   $("#exp").onclick=()=>{const docs={};Object.entries(S.projects).forEach(([id,p])=>docs["projects/"+id]=p);if(S.profile)docs["profile/me"]=S.profile;docs["toolbox/links"]=S.links;docs["progress/course"]=S.progress;if(S.brain)docs["brain/parts"]=S.brain;
     const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([JSON.stringify({exported:new Date().toISOString(),docs})],{type:"application/json"}));a.download=`toolbox-backup-${new Date().toISOString().slice(0,10)}.json`;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),5000)};
   $("#imp").onchange=async e=>{const f=e.target.files[0];if(!f)return;const msg=$("#impMsg");msg.textContent="Importing…";
@@ -1870,6 +1881,18 @@ function openSettings(){
 
 
 
+
+/* ---------- publishing icons: the GitHub job copies Toolbox icons into apps/icons/ ---------- */
+const PUBLISH_URL="https://github.com/natesteele888/apps/actions/workflows/icons.yml";
+function showPublish(r){
+  $("#sheet").innerHTML=`<div class="sheet-scrim" id="shScrim"></div><section class="sheet" role="dialog" aria-label="Icon saved">
+    <div class="sh-top"><div class="eyebrow2">Icon saved</div><button class="btn small" id="shClose">Done</button></div>
+    <p>Your new icon is saved. GitHub copies it to the live apps and the App Store at its next icon sync, usually within a few hours.</p>
+    <p><b>Want it live now?</b> Tap <b>Publish now</b>, then on GitHub tap <b>Run workflow</b> and the green <b>Run workflow</b> button. It's live about two minutes later.</p>
+    <div class="sh-acts"><a class="btn primary" href="${PUBLISH_URL}" target="_blank" rel="noopener">Publish now ↗</a></div>
+    <p class="sh-note">Installed apps on your phone pick up the new icon the next time Android checks them, usually within a day of opening the app.</p></section>`;
+  $("#shScrim").onclick=closeSheet;$("#shClose").onclick=closeSheet;
+}
 /* ---------- app registry: the one list of current live links (registry.json in this repo) ---------- */
 S.registry=null;
 function loadRegistry(){fetch(new URL("../registry.json",location.href),{cache:"no-store"}).then(r=>r.ok?r.json():null).then(j=>{if(j&&Array.isArray(j.apps)){S.registry=j;if(route().v==="home"&&!S.open)renderHome()}}).catch(()=>{})}
