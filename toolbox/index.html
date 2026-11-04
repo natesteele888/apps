@@ -884,7 +884,7 @@ function renderHome(){
   const hasIdeas=P().some(p=>p.status!=="done"&&openIdeas(p).length);
   $("#main").innerHTML=`<div class="vh"><div><h1>Now</h1><p>Where you left off and what's next.</p></div></div>
   <div class="dash">
-   <section class="panel span-12 quick"><a class="btn" href="${STORE_URL}" target="_blank" rel="noopener">🛍️ App Store</a><a class="btn" href="../" target="_blank" rel="noopener">📲 Install my apps</a><a class="btn" href="https://lybs-dashboard.web.app/" target="_blank" rel="noopener">📊 LYBS Dashboard</a><a class="btn" href="https://claude.ai/artifact/KQ9BEry1WTHwXoX8zM3yCS" target="_blank" rel="noopener">✅ Claude's daily review</a></section>
+   <section class="panel span-12 quick"><a class="btn" href="${STORE_URL}" target="_blank" rel="noopener">🛍️ App Store</a><a class="btn" href="../" target="_blank" rel="noopener">📲 Install my apps</a><a class="btn" href="https://lybs-dashboard.web.app/" target="_blank" rel="noopener">📊 LYBS Dashboard</a><a class="btn" href="https://claude.ai/artifact/KQ9BEry1WTHwXoX8zM3yCS" target="_blank" rel="noopener">✅ Claude's daily review</a><a class="btn" href="https://claude.ai/artifact/3us7d3hyQGdnA9VtJJ56dr" target="_blank" rel="noopener">🗺️ App Map</a></section>
    ${linkBanner()}
    ${top?`<section class="panel span-12 nowcard area-${top.area}"><div class="eyebrow2">Pick up here</div><h2 class="nowname">${esc(top.name)}</h2>
      ${top.leftOff?`<p class="nowleft">${esc(top.leftOff)}</p>`:""}
