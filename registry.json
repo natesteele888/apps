@@ -994,12 +994,19 @@
           "board",
           "curious"
         ],
-        "shots": [],
+        "shots": [
+          "store/shots/events-1.webp"
+        ],
         "autoShots": [
           {
             "url": ""
           }
-        ]
+        ],
+        "latest": {
+          "d": "Nov 4, 2026",
+          "t": "Ignore Firebase deploy cache",
+          "url": "https://github.com/natesteele888/events/commit/2d0e9dba4e2d3c0317df43a6ec08d8d5a449db3b"
+        }
       }
     }
   ],
