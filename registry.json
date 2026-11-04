@@ -80,8 +80,8 @@
         "autoShots": [],
         "latest": {
           "d": "Nov 4, 2026",
-          "t": "One app catalog drives the App Store; one sync job keeps it current",
-          "url": "https://github.com/natesteele888/apps/commit/096dd326638ade1e266a8f0398c9245c10c57ac4"
+          "t": "Toolbox: Claude's review on Now and in every app",
+          "url": "https://github.com/natesteele888/apps/commit/c226074b15dec2882a44634953cb520202a52489"
         }
       }
     },
@@ -341,8 +341,8 @@
         ],
         "latest": {
           "d": "Nov 4, 2026",
-          "t": "Rename Defense tab to Opponent Offense",
-          "url": "https://github.com/natesteele888/ASL-Bengals/commit/2378d4a71eb42840ad8e8212732505668736fd0d"
+          "t": "Opponent Offense notice: \"making changes on defense\"",
+          "url": "https://github.com/natesteele888/ASL-Bengals/commit/7786a6363f41eb61afeba388a8123f9ec504c124"
         }
       }
     },
@@ -745,9 +745,9 @@
           }
         ],
         "latest": {
-          "d": "Nov 3, 2026",
-          "t": "Default the reminders to Mon Nov 2, the day he actually started",
-          "url": "https://github.com/natesteele888/fitness-hub/commit/d9abcd0778fcd10dbf026d48a794bbaeace6c799"
+          "d": "Nov 4, 2026",
+          "t": "Add a Backup/Restore Progress feature for lost local data",
+          "url": "https://github.com/natesteele888/fitness-hub/commit/e55433631d7a710661f862df98cd1563dbf9e997"
         }
       }
     },
