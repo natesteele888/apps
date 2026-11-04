@@ -174,7 +174,7 @@ nav.tabs button.on{color:var(--amber);border-top-color:var(--amber)}
   </div>
 
   <div class="fieldwrap">
-    <svg class="field" id="svg" viewBox="0 0 520 482" role="img" aria-label="Baseball field with player movement"></svg>
+    <svg class="field" id="svg" viewBox="-46 44 612 490" role="img" aria-label="Baseball field with player movement"></svg>
     <div class="hint" id="fieldHint">Tap the field to hit it there</div>
   </div>
 
@@ -214,7 +214,7 @@ nav.tabs button.on{color:var(--amber);border-top-color:var(--amber)}
   </div>
   <div class="chips" id="qPosChips" style="margin-bottom:10px"></div>
   <div class="fieldwrap">
-    <svg class="field" id="qsvg" viewBox="0 0 520 482" role="img" aria-label="Quiz field — tap where you would go"></svg>
+    <svg class="field" id="qsvg" viewBox="-46 44 612 490" role="img" aria-label="Quiz field — tap where you would go"></svg>
   </div>
   <div id="qFeedback" style="margin-top:10px"></div>
   <div class="row" style="margin-top:8px">
@@ -380,11 +380,11 @@ WILD_PITCH,Wild pitch or passed ball,Battery plays,loose,306,452,Pitcher coverin
 STEAL_2B,Runner steals second,Battery plays,steal,260,452,Pitcher must get off the mound and out of the throwing lane.,no,PLATE,,,steal2
 STEAL_3B,Runner steals third,Battery plays,steal,260,452,,no,PLATE,,,steal3
 OVER_LF,Over the left fielder's head,Cutoffs & relays,gap,100,179,Two-man relay. The trail man exists because 11-year-olds throw the relay over the cutoff's head.,yes,PLATE,,,double
-CORNER_LF,Ball rolls into the left field corner,Cutoffs & relays,gap,78,210,Longest throw on the field. Nobody should try to make it in one.,yes,PLATE,,,double
-WALL_LC,Off the fence in left-center,Cutoffs & relays,gap,170,102,,yes,PLATE,,,double
+CORNER_LF,Ball rolls into the left field corner,Cutoffs & relays,gap,42,169,Longest throw on the field. Nobody should try to make it in one.,yes,PLATE,,,double
+WALL_LC,Off the fence in left-center,Cutoffs & relays,gap,166,89,,yes,PLATE,,,double
 OVER_RF,Over the right fielder's head,Cutoffs & relays,gap,420,179,,yes,PLATE,,,double
-CORNER_RF,Ball rolls into the right field corner,Cutoffs & relays,gap,442,210,,yes,PLATE,,,double
-WALL_RC,Off the fence in right-center,Cutoffs & relays,gap,350,102,Second base is open on purpose. The trail man is the one who retreats to it.,yes,PLATE,,,double
+CORNER_RF,Ball rolls into the right field corner,Cutoffs & relays,gap,478,169,,yes,PLATE,,,double
+WALL_RC,Off the fence in right-center,Cutoffs & relays,gap,354,89,Second base is open on purpose. The trail man is the one who retreats to it.,yes,PLATE,,,double
 THROW_BEHIND_1B,Cut man throws behind the runner at first,Cutoffs & relays,hit,398,250,"This is why the second baseman covers first on a throw home. Free out, twice a season.",no,PLATE,2,,single
 THROW_BEHIND_2B,Cut man throws behind the runner at second,Cutoffs & relays,hit,116,244,Runners round second hard and stop watching the ball. The cut man is the only one who can see it.,no,PLATE,1,,single
 RD_1B_2B,Rundown between first and second,Rundowns,run,300,300,Run him BACK toward first. A runner retreating can't advance if you drop the ball.,no,BASE_2,1,,rundown
@@ -398,7 +398,7 @@ PICK_2B,Pickoff at second,Pickoffs,pick,260,265,"Timing play, not a look play. C
 PICK_3B_BACK,Catcher back-picks at third,Pickoffs,pick,185,340,"High risk. Only with a big lead off the bag, and only on a clean catch.",no,PLATE,3,,pickoff
 D3K_TAG,"Strike three in the dirt, ball at your feet",Dropped third strike,loose,276,436,"If the ball is right there, tag him. A three-foot tag beats a ninety-foot throw every time.",no,PLATE,_,,force
 D3K_THROW,"Strike three in the dirt, throw to first",Dropped third strike,loose,302,448,"Step around the batter and throw from OUTSIDE the baseline, or you'll hit him in the back.",no,PLATE,_,,force
-D3K_BACKSTOP,Strike three gets all the way to the backstop,Dropped third strike,loose,314,462,Now it's a wild pitch AND a dropped third strike. Look at the other runners before you look at the batter.,no,PLATE,_,,contact
+D3K_BACKSTOP,Strike three gets all the way to the backstop,Dropped third strike,loose,298,462,Now it's a wild pitch AND a dropped third strike. Look at the other runners before you look at the batter.,no,PLATE,_,,contact
 D3K_LOADED,"Strike three in the dirt, bases loaded, two outs",Dropped third strike,loose,268,430,"Everybody is forced, including the batter. Step on the plate — do not throw anywhere.",no,PLATE,123,2,force
 SQUEEZE,Squeeze bunt with a runner on third,Bunts,bunt,246,386,"You have about two seconds. Everybody charges, the catcher clears a lane, nobody panics.",no,PLATE,3,,contact`;
 const RESP_CSV = `ball_id,bases,outs,context,pos,role,target,cue,throw
@@ -1063,7 +1063,7 @@ PICK_3B_BACK,*,*,*,LF,BACKUP,BU_3,Sprint in. Without you this throw is a run.,
 PICK_3B_BACK,*,*,*,CF,BACKUP,BU_2,In behind second.,
 PICK_3B_BACK,*,*,*,RF,BACKUP,BU_1,In behind first.,
 D3K_TAG,*,*,*,1B,COVER,BASE_1,Get to the bag. He is running whether he knows the rule or not.,
-D3K_TAG,*,*,*,P,BACKUP,BU_1_IN,"Point at the ball and yell 'Ball! Ball!', then get down the line behind first.",
+D3K_TAG,*,*,*,P,COVER,PLATE,"Yell 'Ball! Ball!' and head to the plate. The catcher is away, so home is yours.",
 D3K_TAG,*,*,*,RF,BACKUP,BU_1,Sprint in behind first. This throw sails more than any other throw all year.,
 D3K_TAG,*,*,*,2B,COVER,BASE_2,Take second. He'll keep running if the throw gets away.,
 D3K_TAG,*,*,*,SS,BACKUP,BU_2_L,Get behind second from the left side.,
@@ -1072,7 +1072,7 @@ D3K_TAG,*,*,*,LF,BACKUP,BU_3,In behind third.,
 D3K_TAG,*,*,*,CF,BACKUP,BU_2,In behind second.,
 D3K_TAG,*,*,*,C,FIELD,BALL,Don't throw. Pick it up and tag him before he clears the box. Easiest out in baseball.,
 D3K_THROW,*,*,*,1B,COVER,BASE_1,Get to the bag. He is running whether he knows the rule or not.,
-D3K_THROW,*,*,*,P,BACKUP,BU_1_IN,"Point at the ball and yell 'Ball! Ball!', then get down the line behind first.",
+D3K_THROW,*,*,*,P,COVER,PLATE,"Yell 'Ball! Ball!' and head to the plate. The catcher is away, so home is yours.",
 D3K_THROW,*,*,*,RF,BACKUP,BU_1,Sprint in behind first. This throw sails more than any other throw all year.,
 D3K_THROW,*,*,*,2B,COVER,BASE_2,Take second. He'll keep running if the throw gets away.,
 D3K_THROW,*,*,*,SS,BACKUP,BU_2_L,Get behind second from the left side.,
@@ -1092,7 +1092,7 @@ D3K_BACKSTOP,*,*,*,C,FIELD,BALL,"Sprint, don't jog. Get it, then look up: the ba
 D3K_BACKSTOP,3|13|23|123,*,*,C,FIELD,BALL,Runner on third is going. Forget the batter — get it and flip it to the pitcher at the plate.,PLATE
 D3K_BACKSTOP,3|13|23|123,*,*,P,COVER,PLATE,"Straddle the line at the plate, give a target, take the throw and swipe tag.",
 D3K_LOADED,*,*,*,1B,COVER,BASE_1,Get to the bag. He is running whether he knows the rule or not.,
-D3K_LOADED,*,*,*,P,BACKUP,BU_1_IN,"Point at the ball and yell 'Ball! Ball!', then get down the line behind first.",
+D3K_LOADED,*,*,*,P,COVER,PLATE,"Yell 'Ball! Ball!' and head to the plate. The catcher is away, so home is yours.",
 D3K_LOADED,*,*,*,RF,BACKUP,BU_1,Sprint in behind first. This throw sails more than any other throw all year.,
 D3K_LOADED,*,*,*,2B,COVER,BASE_2,Take second. He'll keep running if the throw gets away.,
 D3K_LOADED,*,*,*,SS,BACKUP,BU_2_L,Get behind second from the left side.,
@@ -1146,7 +1146,7 @@ const STARTS={P:[260,336],C:[260,452],'1B':[348,316],'2B':[312,258],'3B':[172,31
               LF:[108,214],CF:[260,162],RF:[412,214]};
 const LM={
   BASE_1:B1, BASE_2:B2, BASE_3:B3, PLATE:HOME, MOUND:MOUND, BALL:null,
-  BU_1:[392,308], BU_2:[260,210], BU_3:[128,308], BU_PLATE:[300,466],
+  BU_1:[392,308], BU_2:[260,210], BU_3:[128,308], BU_PLATE:[272,464],
   BU_1_IN:[369,334], BU_1_LINE:[318,362], BU_3_IN:[151,334],
   BU_2_L:[234,232], BU_2_R:[286,232],
   CHASE_TO_1:[318,320], CHASE_TO_2:[238,288], CHASE_TO_3:[208,362],
@@ -1225,46 +1225,34 @@ function pt(name,sit){
 }
 
 /* ------------------------------ field drawing ------------------------------ */
-  const FAN = 'M260,415 L15.3,300.9 A252,252 0 0 1 504.7,300.9 Z';
-  const SKIN = 'M260,415 L121.4,276.4 A196,196 0 0 1 398.6,276.4 Z';
-  /* The whole playing surface: outfield fence, then straight down each side
-     to where that side meets the backstop circle, then around behind home.
-     FAN alone stops at a line from each corner to home plate, which left
-     black wedges of "nothing" where foul ground belongs along both baselines.
-     Each side runs along the tangent to the backstop circle, so the edge
-     meets the circle with no corner. Mirror-symmetric around x=260. */
-  function groundPath(cornerX, cornerY, arcR, cx, cy, r) {
-    const dx = cornerX - cx, dy = cornerY - cy, d = Math.hypot(dx, dy);
-    const a = Math.atan2(dy, dx) - Math.acos(r / d);
-    const tx = cx + r * Math.cos(a), ty = cy + r * Math.sin(a);
-    const f = n => n.toFixed(1), rx = 2 * cx - tx, rc = 2 * cx - cornerX;
-    return `M${f(cornerX)},${f(cornerY)} A${arcR},${arcR} 0 0 1 ${f(rc)},${f(cornerY)} ` +
-      `L${f(rx)},${f(ty)} A${r},${r} 0 1 1 ${f(tx)},${f(ty)} Z`;
+  /* Field shape, drawn to scale from the reference image: 106px = 60ft.
+     Majors dimensions: 60ft bases, 46ft mound, 200ft fence measured from home
+     (353px), so the fence is an arc centred on home. Foul ground runs parallel
+     to each foul line and the two sides meet in a point behind home. The
+     skinned infield is an arc of 81ft around a point just in front of the
+     mound, cut off at the foul lines. Recompute TRACK_* with GROUND_* if the
+     fence moves: they're the same shape, 12px larger. */
+  const FENCE_R = 353, FOUL_W = 62, TRACK_W = 12;
+  function vPoint(offset, r) {
+    // Where a side, `offset` px outside the foul line, meets a fence arc of radius r.
+    const k = offset * Math.SQRT2, t = (k + Math.sqrt(2 * r * r - k * k)) / 2;
+    return [260 - t, 415 + k - t];
   }
-  const GROUND = groundPath(15.3, 300.9, 252, 260, 428, 80);
-  const TRACK = groundPath(-4.6, 291.6, 272.1, 260, 428, 94);
-  /* FAN's own arc, decoded once: a circle of radius FAN_R centred below the
-     chord between its two corners (same chord+sagitta construction as the
-     comment above -- the arc bulges away from home). Lets buildPlay() find
-     exactly where a ball's own flight path would reach the fence, instead
-     of a second hand-placed constant that could drift out of sync with
-     FAN. Recompute alongside FAN if it ever changes. */
-  const FAN_L = [15.3, 300.9], FAN_R_PT = [504.7, 300.9], FAN_R = 252;
-  const FAN_CENTER = [260, (FAN_L[1] + FAN_R_PT[1]) / 2 +
-    Math.sqrt(FAN_R * FAN_R - ((FAN_R_PT[0] - FAN_L[0]) / 2) ** 2)];
-  function fenceDist(toward) {
-    const dx = toward[0] - HOME[0], dy = toward[1] - HOME[1], len = Math.hypot(dx, dy);
-    const ux = dx / len, uy = dy / len;
-    const ox = HOME[0] - FAN_CENTER[0], oy = HOME[1] - FAN_CENTER[1];
-    const b = 2 * (ux * ox + uy * oy), c = ox * ox + oy * oy - FAN_R * FAN_R;
-    return (-b + Math.sqrt(b * b - 4 * c)) / 2;
+  function groundPath(offset, r) {
+    const [x, y] = vPoint(offset, r), f = n => n.toFixed(1), k = offset * Math.SQRT2;
+    return `M${f(x)},${f(y)} A${r},${r} 0 0 1 ${f(520 - x)},${f(y)} L260,${f(415 + k)} Z`;
   }
+  const GROUND = groundPath(FOUL_W, FENCE_R);
+  const TRACK = groundPath(FOUL_W + TRACK_W, FENCE_R + TRACK_W);
+  const FOUL_END = 250; // 200ft down each line: 353px at 45 deg is 250px on each axis
+  const SKIN = 'M260,415 L131.4,286.4 A143,143 0 0 1 388.6,286.4 Z';
+  function fenceDist() { return FENCE_R; }
   function mowStripes() {
     let out = '';
-    const N = 10, span = 130, a0 = -65;
+    const N = 18, span = 180, a0 = -90;
     for (let i = 0; i < N; i++) {
       if (i % 2) continue;
-      const r = 360, p = a => [260 + r * Math.sin(a * Math.PI / 180), 415 - r * Math.cos(a * Math.PI / 180)];
+      const r = 460, p = a => [260 + r * Math.sin(a * Math.PI / 180), 415 - r * Math.cos(a * Math.PI / 180)];
       const [x0, y0] = p(a0 + i * span / N), [x1, y1] = p(a0 + (i + 1) * span / N);
       out += `<path d="M260,415 L${x0.toFixed(1)},${y0.toFixed(1)} L${x1.toFixed(1)},${y1.toFixed(1)} Z" fill="var(--grass2)" opacity=".62"/>`;
     }
@@ -1273,24 +1261,10 @@ function pt(name,sit){
   function fieldBase() {
     return `
     <defs>
-      <clipPath id="fairclip"><path d="${FAN}"/></clipPath>
-      <!-- The three dirt cutout circles that sit ON a foul line (home, 1B,
-           3B) are plain circles -- unclipped, they bulge past the line into
-           what should be foul grass on one or both sides (home has a foul
-           line on each side; 1B/3B each have just the one). skinClip
-           trims that to the same fair 45deg wedge SKIN already draws, so
-           the cutoff lands exactly on the chalk, not past it. Home's own
-           circle also reaches behind the plate, outside SKIN entirely (SKIN
-           only runs forward, into the field) -- homeDirtClip adds a
-           second, backward-facing 90deg wedge (mirrored across home, same
-           45deg half-angle) just for that side, so the catcher's box stays
-           dirt instead of also getting clipped to nothing. 2B and the mound
-           aren't near either line and don't need this. -->
+      <clipPath id="groundClip"><path d="${GROUND}"/></clipPath>
+      <!-- 1B and 3B cutouts sit on a foul line, so they're trimmed to the fair
+           side. Home's circle is full, as on a real field. -->
       <clipPath id="skinClip"><path d="${SKIN}"/></clipPath>
-      <clipPath id="homeDirtClip">
-        <path d="${SKIN}"/>
-        <path d="M260,415 L235.3,439.8 A35,35 0 0 0 284.8,439.8 Z"/>
-      </clipPath>
       <radialGradient id="gLight" cx="50%" cy="74%" r="80%">
         <stop offset="0" stop-color="#ffffff" stop-opacity=".17"/>
         <stop offset=".5" stop-color="#ffffff" stop-opacity=".05"/>
@@ -1307,21 +1281,19 @@ function pt(name,sit){
       </radialGradient>
     </defs>
 
-    <rect width="520" height="482" fill="#0e1a15"/>
+    <rect x="-60" y="20" width="640" height="520" fill="#0e1a15"/>
 
     <path d="${TRACK}" fill="var(--track)"/>
-    <path d="${TRACK}" fill="none" stroke="#16241c" stroke-width="3.5"/>
+    <path d="${TRACK}" fill="none" stroke="#16241c" stroke-width="3.5" stroke-linejoin="round"/>
 
     <path d="${GROUND}" fill="var(--grass)"/>
-    <g clip-path="url(#fairclip)">${mowStripes()}</g>
+    <g clip-path="url(#groundClip)">${mowStripes()}</g>
     <path d="${GROUND}" fill="url(#gLight)"/>
-    <path d="${GROUND}" fill="none" stroke="#2a5a41" stroke-width="2"/>
+    <path d="${GROUND}" fill="none" stroke="#2a5a41" stroke-width="2" stroke-linejoin="round"/>
 
     <path d="${SKIN}" fill="var(--dirt)"/>
     <path d="${SKIN}" fill="url(#dLight)"/>
     <path d="${SKIN}" fill="none" stroke="#7d5133" stroke-width="1.6" opacity=".7"/>
-    <g clip-path="url(#homeDirtClip)"><circle cx="260" cy="417" r="31" fill="var(--dirt)"/></g>
-    <path d="M182,438 A80,80 0 0 0 338,438" fill="none" stroke="#dfe6e0" stroke-width="2" opacity=".45"/>
 
     <polygon points="260,395 315,340 260,285 205,340" fill="var(--grass)"/>
     <polygon points="260,395 315,340 260,285 205,340" fill="url(#gLight)"/>
@@ -1329,14 +1301,15 @@ function pt(name,sit){
     <g clip-path="url(#skinClip)"><circle cx="335" cy="340" r="17" fill="var(--dirt)"/></g>
     <circle cx="260" cy="265" r="17" fill="var(--dirt)"/>
     <g clip-path="url(#skinClip)"><circle cx="185" cy="340" r="17" fill="var(--dirt)"/></g>
-    <circle cx="260" cy="334" r="27" fill="var(--dirt)"/>
-    <circle cx="260" cy="334" r="27" fill="url(#mLight)"/>
+    <circle cx="260" cy="417" r="26" fill="var(--dirt)"/>
+    <circle cx="260" cy="334" r="18" fill="var(--dirt)"/>
+    <circle cx="260" cy="334" r="18" fill="url(#mLight)"/>
     <rect x="254" y="332" width="12" height="4" rx="1" fill="#fff" opacity=".92"/>
 
-    <line x1="260" y1="415" x2="52.5" y2="207.5" stroke="#fff" stroke-width="3"/>
-    <line x1="260" y1="415" x2="467.5" y2="207.5" stroke="#fff" stroke-width="3"/>
-    <line x1="52.5" y1="207.5" x2="52.5" y2="180" stroke="#f5d76e" stroke-width="4.5" stroke-linecap="round"/>
-    <line x1="467.5" y1="207.5" x2="467.5" y2="180" stroke="#f5d76e" stroke-width="4.5" stroke-linecap="round"/>
+    <line x1="260" y1="415" x2="${260 - FOUL_END}" y2="${415 - FOUL_END}" stroke="#fff" stroke-width="3"/>
+    <line x1="260" y1="415" x2="${260 + FOUL_END}" y2="${415 - FOUL_END}" stroke="#fff" stroke-width="3"/>
+    <line x1="${260 - FOUL_END}" y1="${415 - FOUL_END}" x2="${260 - FOUL_END}" y2="${415 - FOUL_END - 28}" stroke="#f5d76e" stroke-width="4.5" stroke-linecap="round"/>
+    <line x1="${260 + FOUL_END}" y1="${415 - FOUL_END}" x2="${260 + FOUL_END}" y2="${415 - FOUL_END - 28}" stroke="#f5d76e" stroke-width="4.5" stroke-linecap="round"/>
 
     <rect x="343" y="341" width="38" height="15" fill="none" stroke="#fff" stroke-width="1.6"
           opacity=".8" transform="rotate(-45 362 348.5)"/>
@@ -1627,7 +1600,7 @@ function svgPoint(svg,evt){
   const r=svg.getBoundingClientRect(), vb=svg.viewBox.baseVal;
   const cx=(evt.touches?evt.touches[0].clientX:evt.clientX)-r.left;
   const cy=(evt.touches?evt.touches[0].clientY:evt.clientY)-r.top;
-  return [cx/r.width*vb.width, cy/r.height*vb.height];
+  return [vb.x + cx / r.width * vb.width, vb.y + cy / r.height * vb.height];
 }
 
 /* ------------------------------ quiz ------------------------------ */
