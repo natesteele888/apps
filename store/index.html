@@ -304,10 +304,10 @@ function renderToday(){
       <div class="roles" role="group" aria-label="Who are you?">${Object.entries(ROLES).map(([k,n])=>`<button class="role" data-role="${k}" aria-pressed="${ROLE===k}">${n}</button>`).join("")}</div>
       <div class="picks">${ROLE?picks.map(appRow).join(""):`<p class="sub" style="margin:8px 0 0">Tap one and I'll point you to the right apps.</p>`}</div>
     </div>
-    <div class="story soon wide">
+    ${SOON.length?`<div class="story soon wide">
       <div class="kick">Coming soon</div><h2 style="margin-bottom:8px">On the workbench</h2>
       ${SOON.map(([e,n,d])=>`<div class="soonrow"><span class="ic">${e}</span><span><b>${esc(n)}</b><span>${esc(d)}</span></span></div>`).join("")}
-    </div>
+    </div>`:""}
   </div>
   <div class="sect"><h3>Collect the set</h3><span>Tap a card to flip it</span></div>
   <div class="cardset" id="cardset">${APPS.map((x,i)=>tradingCard(x,i)).join("")}</div>`;
@@ -329,7 +329,7 @@ function renderApps(){
   return header("Apps",`${APPS.filter(a=>a.url).length} live apps, ${APPS.filter(a=>a.install).length} install on your phone.`)+
   `<div class="cats" role="group" aria-label="Category"><button class="cat" data-cat="all" aria-pressed="${CAT==="all"}">All</button>${Object.entries(CATS).map(([k,c])=>`<button class="cat" data-cat="${k}" aria-pressed="${CAT===k}">${c.e} ${esc(c.n)}</button>`).join("")}</div>`+
   list.map(k=>{const xs=APPS.filter(a=>a.cat===k);if(!xs.length)return"";return `<div class="sect"><h3>${CATS[k].e} ${esc(CATS[k].n)}</h3><span>${xs.length} app${xs.length>1?"s":""}</span></div><div class="grid2">${xs.map(appRow).join("")}</div>`}).join("")+
-  `<div class="sect"><h3>🛠️ Coming soon</h3></div><div class="grid2">${SOON.map(([e,n,d])=>`<div class="row"><span class="ic" style="display:grid;place-items:center;font-size:28px;background:var(--card)">${e}</span><span class="txt"><b>${esc(n)}</b><small>${esc(d)}</small></span><span class="getbtn lock">SOON</span></div>`).join("")}</div>`;
+  (SOON.length?`<div class="sect"><h3>🛠️ Coming soon</h3></div><div class="grid2">${SOON.map(([e,n,d])=>`<div class="row"><span class="ic" style="display:grid;place-items:center;font-size:28px;background:var(--card)">${e}</span><span class="txt"><b>${esc(n)}</b><small>${esc(d)}</small></span><span class="getbtn lock">SOON</span></div>`).join("")}</div>`:"");
 }
 
 /* ===== Big Picture ===== */
@@ -366,7 +366,7 @@ function renderBig(){
     <div class="stat"><b>${APPS.filter(a=>a.url).length}</b><span>live apps</span></div>
     <div class="stat"><b>${APPS.filter(a=>a.install).length}</b><span>install on a phone</span></div>
     <div class="stat"><b>2</b><span>leagues served</span></div>
-    <div class="stat"><b>${SOON.length}</b><span>on the workbench</span></div></div></section>
+    <div class="stat"><b>${APPS.filter(a=>a.cat==="baseball").length}</b><span>league apps</span></div></div></section>
   <section class="bp"><h3>What's new</h3><p>Recent ships across the system, straight from each app's own changelog.</p>
     ${APPS.filter(a=>a.news).map(a=>`<button class="part" data-app="${a.id}" style="width:100%;text-align:left;margin-bottom:8px">${icon(a,"em")}<span><b>${esc(a.name)} · ${esc(a.news.d)}</b><span>${esc(a.news.t)}</span></span></button>`).join("")}</section>
   <section class="bp"><h3>Shared building blocks</h3><p>Solve it once, reuse it everywhere. Each block below shows up in several apps.</p>
@@ -400,7 +400,7 @@ function renderAbout(){
   `<section class="bp"><h3>At a glance</h3><div class="stats">
     <div class="stat"><b>${APPS.filter(a=>a.url).length}</b><span>live apps</span></div>
     <div class="stat"><b>${APPS.filter(a=>a.install).length}</b><span>install on a phone</span></div>
-    <div class="stat"><b>${SOON.length}</b><span>in the works</span></div></div></section>`+
+    <div class="stat"><b>${APPS.filter(a=>a.cat==="baseball").length}</b><span>league apps</span></div></div></section>`+
   `<section class="bp"><h3>How I build</h3><p>Three things make this more than the same app shipped ${(NUMW[APPS.length]||APPS.length).toLowerCase()} times.</p>
   <div class="feat">
     <div><span class="e">💻</span><span><b>Dev skills</b><span>Vanilla JS and CSS, no framework. Firebase and Firestore for sign-in and live sync, security rules I write by hand, service workers for offline and install, SVG for every diagram and animation.</span></span></div>
@@ -414,7 +414,7 @@ function renderAbout(){
   <p style="margin:16px 0 0">Every app on this page shares parts with at least one other — ${Object.keys(PARTS).length} reusable building blocks mapped so far. That shared memory is the real engine behind it: it remembers what broke, what worked and what's already built, so the next app starts ahead instead of from zero. <button data-tab-go="big" style="color:var(--blue);font-weight:600">See how they connect →</button></p>
   </section>`+
   cats.map(k=>`<div class="sect"><h3>${CATS[k].e} ${esc(CATS[k].n)}</h3></div>${APPS.filter(a=>a.cat===k).map(appRow).join("")}`).join("")+
-  `<div class="sect"><h3>In the works</h3></div>${SOON.map(([e,n,d])=>`<div class="soonrow"><span class="ic">${e}</span><span><b>${esc(n)}</b><span>${esc(d)}</span></span></div>`).join("")}
+  (SOON.length?`<div class="sect"><h3>In the works</h3></div>${SOON.map(([e,n,d])=>`<div class="soonrow"><span class="ic">${e}</span><span><b>${esc(n)}</b><span>${esc(d)}</span></span></div>`).join("")}`:"")+`
   <section class="bp"><h3>How it fits together</h3><p>See which apps hand off to each other and which pieces they share.</p><p><button data-tab-go="big" style="color:var(--blue);font-weight:600">Open the Big Picture</button> · <a href="https://github.com/natesteele888" target="_blank" rel="noopener" style="color:var(--blue);font-weight:600">GitHub</a></p></section>`;
 }
 

@@ -936,19 +936,72 @@
       "toolboxIds": [
         "steele-events"
       ],
-      "store": false
+      "listing": {
+        "sub": "Invitations and RSVPs for any event",
+        "cat": "family",
+        "ac": "#e0457b",
+        "install": true,
+        "access": "Open",
+        "desc": "Build an invitation on screen with your own colors, banner, schedule and questions, share one link, and see every answer in one place. Guests RSVP from their phone with no account, and capacity, plus-one limits, invite-only lists and the RSVP deadline are all enforced for you.",
+        "feats": [
+          [
+            "🎨",
+            "Design it on screen",
+            "Colors, banner, schedule and questions, with a live phone preview."
+          ],
+          [
+            "👥",
+            "Guest rules built in",
+            "Capacity, plus-ones, invite-only lists and a deadline."
+          ],
+          [
+            "📊",
+            "Every answer in one place",
+            "Headcount, answers per question and a CSV download."
+          ]
+        ],
+        "facts": [
+          [
+            "Guests",
+            "No",
+            "account needed"
+          ],
+          [
+            "Hosts",
+            "Google",
+            "sign-in"
+          ],
+          [
+            "Co-hosts",
+            "Yes",
+            "per event"
+          ]
+        ],
+        "parts": [
+          "signin",
+          "rules",
+          "firebase",
+          "share",
+          "pwa"
+        ],
+        "tie": "Grew out of a one-off birthday party page and now handles any event: team parties, league nights and birthdays.",
+        "rel": [
+          "picks",
+          "cards"
+        ],
+        "for": [
+          "parent",
+          "board",
+          "curious"
+        ],
+        "shots": [],
+        "autoShots": [
+          {
+            "url": ""
+          }
+        ]
+      }
     }
   ],
-  "comingSoon": [
-    {
-      "emoji": "💌",
-      "name": "Steele Events",
-      "desc": "Invitations and RSVPs for any event: themes, custom questions, plus-ones, capacity and co-hosts. Built and tested; launching soon."
-    },
-    {
-      "emoji": "🏢",
-      "name": "League Ops in a Box",
-      "desc": "A youth league platform any organization can set up for itself, with document compliance that coaches can check without ever seeing the paperwork."
-    }
-  ]
+  "comingSoon": []
 }
