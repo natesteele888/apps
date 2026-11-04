@@ -297,6 +297,25 @@ textarea.edin{min-height:0;resize:vertical}
 .idcard .mlink{justify-self:start;background:none;border:0;padding:0;color:var(--ac,var(--accent));font-weight:700;font-size:13px;cursor:pointer}
 .regban{border-left:4px solid var(--accent)}.regban .feed li{display:block}
 .ie-live{font-size:13.5px;color:var(--muted);margin:2px 0 6px}.ie-live .linkbtn{background:none;border:0;padding:0;color:var(--accent);text-decoration:underline;cursor:pointer;font:inherit}
+.acthome .acts{display:grid;gap:10px;grid-template-columns:repeat(auto-fit,minmax(260px,1fr))}
+.acthome .revsum{margin:0 0 12px;color:var(--ink);line-height:1.45}
+.acthome .revsum small{display:block;color:var(--muted);font-size:12px;margin-top:4px}
+.acth{font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin:14px 0 8px}
+.act{gap:6px}.act .jres{font-size:13.5px}
+.act details{font-size:13px}.act details summary{cursor:pointer;color:var(--accent);font-weight:700}
+.act details ol{margin:6px 0 0;padding-left:20px;display:grid;gap:3px}
+.act .q{font-weight:700;margin-top:2px}
+.act .clamp{display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.failgrp summary{cursor:pointer;list-style:none}.failgrp summary::before{content:"▸ "}.failgrp[open] summary::before{content:"▾ "}
+.act .opts{display:grid;gap:6px}.act .opts .btn{text-align:left;white-space:normal}
+.act .anote{width:100%;margin-top:6px;font:inherit;font-size:13px;padding:7px 9px;border:1px solid var(--line);border-radius:8px;background:var(--sunk);color:var(--ink)}
+.act .pend{margin:2px 0 0;font-size:13px;color:var(--good);font-weight:700}
+.ik.k-code{background:color-mix(in srgb,var(--accent) 18%,transparent);color:var(--accent)}
+.ik.k-decision{background:color-mix(in srgb,var(--warn) 22%,transparent);color:var(--warn)}
+.ik.k-you{background:color-mix(in srgb,var(--bad) 16%,transparent);color:var(--bad)}
+.actmini{list-style:none;margin:0;padding:0;display:grid;gap:6px}
+.actmini li{display:flex;gap:8px;justify-content:space-between;align-items:baseline;font-size:13.5px;border-bottom:1px solid var(--line);padding-bottom:6px}
+.actmini li span:last-child{color:var(--muted);font-size:12px;white-space:nowrap}
 .quick{display:flex;flex-wrap:wrap;gap:8px}.quick .btn{flex:1 1 140px;text-align:center}
 /* start buttons */
 .go{border:1px solid var(--ac,var(--accent));color:var(--ac,var(--accent));background:transparent;border-radius:999px;font-size:12px;font-weight:700;padding:1px 9px;min-height:24px;flex:0 0 auto;margin-left:auto;cursor:pointer;white-space:nowrap}
@@ -884,7 +903,7 @@ function renderHome(){
   const hasIdeas=P().some(p=>p.status!=="done"&&openIdeas(p).length);
   $("#main").innerHTML=`<div class="vh"><div><h1>Now</h1><p>Where you left off and what's next.</p></div></div>
   <div class="dash">
-   <section class="panel span-12 quick"><a class="btn" href="${STORE_URL}" target="_blank" rel="noopener">🛍️ App Store</a><a class="btn" href="../" target="_blank" rel="noopener">📲 Install my apps</a><a class="btn" href="https://lybs-dashboard.web.app/" target="_blank" rel="noopener">📊 LYBS Dashboard</a><a class="btn" href="https://claude.ai/artifact/KQ9BEry1WTHwXoX8zM3yCS" target="_blank" rel="noopener">✅ Claude's daily review</a><a class="btn" href="https://claude.ai/artifact/3us7d3hyQGdnA9VtJJ56dr" target="_blank" rel="noopener">🗺️ App Map</a></section>
+   <section class="panel span-12 quick"><a class="btn" href="${STORE_URL}" target="_blank" rel="noopener">🛍️ App Store</a><a class="btn" href="../" target="_blank" rel="noopener">📲 Install my apps</a><a class="btn" href="https://lybs-dashboard.web.app/" target="_blank" rel="noopener">📊 LYBS Dashboard</a><a class="btn" href="#home" data-jump="actHome">✅ Claude's review</a><a class="btn" href="https://claude.ai/artifact/3us7d3hyQGdnA9VtJJ56dr" target="_blank" rel="noopener">🗺️ App Map</a></section>
    ${linkBanner()}
    ${top?`<section class="panel span-12 nowcard area-${top.area}"><div class="eyebrow2">Pick up here</div><h2 class="nowname">${esc(top.name)}</h2>
      ${top.leftOff?`<p class="nowleft">${esc(top.leftOff)}</p>`:""}
@@ -893,6 +912,7 @@ function renderHome(){
     :`<section class="panel span-12"><p class="lede" style="margin:0">Nothing open.</p></section>`}
    ${stops.length>1?`<section class="panel span-12"><h2 class="section-h">Also open <a href="#projects">All projects →</a></h2><div class="mini">${stops.slice(1,6).map(p=>{const w=p.waypoints[curIdx(p)];const t=(w.tasks||[]).find(x=>!x.done);
      return `<div class="mrow area-${p.area}"><button class="mopen" data-open="${esc(p.id)}"><span class="rail"></span><span><b>${esc(p.name)}</b><small>${esc(t?t.t:w.title)}</small></span><span class="pill st-${p.status}">${STATUS[p.status]}</span></button></div>`}).join("")}</div></section>`:""}
+   ${actionsHome()}
    ${hasIdeas?ideasHome():""}
   </div>`;
 }
@@ -1088,6 +1108,7 @@ function renderDrawer(){
   <div class="blk"><h4>Where I left off <span class="saved" id="savedMsg" hidden>Saved</span></h4><textarea id="leftOff" ${ro}>${esc(p.leftOff)}</textarea></div>
   <div class="blk"><h4>Waypoints</h4><ul class="wps">${wps}</ul>
     ${S.canWrite?`<form class="addrow" id="addWp"><input id="addWpIn" placeholder="Add a waypoint (a safe stopping point)" aria-label="Add a waypoint"><button class="btn small">Add</button></form>`:""}</div>
+  ${ed?"":actionsBlock(p)}
   ${ed?"":ideasBlock(p)}
   ${ed?`<div class="blk"><h4>Pick-up prompt</h4><textarea class="edin" id="ePrompt" rows="4" placeholder="What to paste into Claude to pick this back up">${esc(p.resume||"")}</textarea></div>`
     :""}
@@ -1712,6 +1733,7 @@ function openAppSheet(pid){
     ${ni<0?`<p class="lede" style="margin:14px 0 0">All waypoints done.</p>`:`<h3 class="as-h">Next stop: ${esc(p.waypoints[ni].title)}</h3>
       <ul class="as-tasks">${open.map(x=>`<li><span>${esc(x.t.t)}</span><button class="btn small go" data-start="${esc(p.id)}|${ni}|${x.ti}" aria-label="Start: ${esc(x.t.t)}">Start ▶</button></li>`).join("")}</ul>`}
     ${p.leftOff?`<p class="as-left"><b>Where I left off:</b> ${esc(p.leftOff)}</p>`:""}
+    ${actionsBlock(p,true)}
   </section>`;
   $("#shScrim").onclick=closeSheet;$("#shClose").onclick=closeSheet;
   $("#asProj").onclick=()=>{closeSheet();openP(p.id)};
@@ -1856,6 +1878,8 @@ function startData(db){
   unsubs.push(db.collection("projects").onSnapshot(snap=>{const next={};snap.docs.forEach(d=>{if(d.exists)next[d.id]=d.data()});S.projects=next;S.loaded=true;if(!S.cvEdit)render();maybeApply()},fail));
   unsubs.push(db.doc("profile/me").onSnapshot(d=>{S.profile=d.exists?d.data():null;if(!S.cvEdit)render()},fail));
   unsubs.push(db.doc("toolbox/links").onSnapshot(d=>{S.links=d.exists?d.data():{items:[]};if(!S.cvEdit&&!S.linkAdd)render()},fail));
+  unsubs.push(db.collection("actions").onSnapshot(snap=>{S.actions=snap.docs.filter(d=>d.exists).map(d=>({id:d.id,...d.data()}));if(route().v==="home"&&!S.cvEdit)renderHome()},()=>{}));
+  unsubs.push(db.doc("toolbox/agents").onSnapshot(d=>{S.agents=d.exists?d.data():null;if(route().v==="home"&&!S.cvEdit)renderHome()},()=>{}));
   unsubs.push(db.doc("brain/parts").onSnapshot(d=>{S.brain=d.exists?d.data():null;if(route().v==="map"&&S.brainMode&&!S.cvEdit)render()},()=>{}));
   unsubs.push(db.doc("progress/course").onSnapshot(d=>{S.progress=d.exists?d.data():{done:[]};if(!S.cvEdit)render()},fail));
 }
@@ -1991,6 +2015,89 @@ function ideasHome(){
 document.addEventListener("click",e=>{
   const a=e.target.closest("[data-hidadd]");if(a){const [pid,ix]=a.dataset.hidadd.split("|");ideaToTask(pid,+ix);return}
   const d=e.target.closest("[data-hiddis]");if(d){const [pid,ix]=d.dataset.hiddis.split("|");ideaDismiss(pid,+ix)}
+});
+/* ---------- Claude's review: the agents propose, Nathan decides here ----------
+   Firestore actions/<id> holds each item. The agents' fields arrive through the
+   nate-brain bridge (state/actions.json -> Firestore). Nathan's choice is written to
+   the item's `nate` field only; the bridge carries it back to state/decisions.json,
+   and the reviewer and builder pick it up on their next run. */
+const BRIDGE_URL="https://github.com/natesteele888/nate-brain/actions/workflows/toolbox-bridge.yml";
+const ACT_ST={proposed:"Waiting for your OK",approved:"Approved · Claude builds it overnight",working:"Claude is working on it",review:"Ready for you to check",needs_you:"Needs you",answered:"Answered · Claude plans the next step",done:"Done",failed:"Didn't finish",declined:"Not now"};
+const NATE_DO={approve:"approved",retry:"approved",decline:"declined",answer:"answered",done:"done"};
+const NATE_SAID={approve:"Approved",retry:"Sent back to try again",decline:"Not now",answer:"Answer sent",done:"Marked done"};
+const actPending=a=>!!(a.nate&&a.nate.at&&a.nate.at!==a.phoneAt);
+const actState=a=>actPending(a)?(NATE_DO[a.nate.do]||a.status):a.status;
+const actAgo=iso=>{if(!iso)return"";const m=Math.round((Date.now()-new Date(iso))/6e4);return m<2?"just now":m<60?m+" min ago":m<1440?Math.round(m/60)+" h ago":fmtD(iso)};
+function actsOf(pid){return (S.actions||[]).filter(a=>!pid||a.pid===pid).sort((x,y)=>(y.createdAt||"").localeCompare(x.createdAt||""))}
+function actCard(a,showApp){
+  const st=actState(a);const p=S.projects[a.pid];const pend=actPending(a);const dec=a.kind==="decision";
+  const tag=st==="review"||st==="needs_you"?`<span class="ik k-you">${ACT_ST[st]}</span>`:`<span class="ik k-${dec?"decision":"code"}">${dec?"Your call":"Claude can do it"}${a.size?" · "+esc(a.size):""}</span>`;
+  let btns="";
+  if(S.canWrite&&!pend){
+    if(st==="proposed"&&dec)btns=`<div class="q">${esc(a.question||"")}</div><div class="opts">${(a.options||[]).map((o,i)=>`<button type="button" class="btn small ${i?"":"primary"}" data-actans="${esc(a.id)}|${i}">${esc(o)}</button>`).join("")}</div>
+      <input class="anote" id="an-${esc(a.id)}" placeholder="Optional note for Claude (no names)"><span class="ia"><button type="button" class="btn small ghost" data-act="${esc(a.id)}|decline">Not now</button></span>`;
+    else if(st==="proposed")btns=`<input class="anote" id="an-${esc(a.id)}" placeholder="Optional note for Claude (no names)"><span class="ia"><button type="button" class="btn small primary" data-act="${esc(a.id)}|approve">✓ Approve</button><button type="button" class="btn small ghost" data-act="${esc(a.id)}|decline">Not now</button></span>`;
+    else if(st==="failed")btns=`<span class="ia"><button type="button" class="btn small primary" data-act="${esc(a.id)}|retry">↻ Try again</button><button type="button" class="btn small ghost" data-act="${esc(a.id)}|decline">Drop it</button></span>`;
+    else if(st==="review"||st==="needs_you")btns=`<span class="ia"><button type="button" class="btn small" data-act="${esc(a.id)}|done">✓ I've handled it</button></span>`;
+  }
+  return `<div class="idcard act area-${p?p.area:"platform"}">${tag}<b>${esc(a.title)}</b>
+    ${st==="proposed"||!a.result?`<small class="clamp">${esc(a.why||"")}</small>`:""}
+    ${showApp?(p?`<button class="mlink" data-open="${esc(p.id)}">${esc(p.name)} →</button>`:`<small>${esc(a.project||"")}</small>`):""}
+    ${(a.plan||[]).length&&st!=="done"?`<details><summary>Claude's plan · ${a.plan.length} step${a.plan.length===1?"":"s"}</summary><ol>${a.plan.map(x=>`<li>${esc(x)}</li>`).join("")}</ol></details>`:""}
+    ${a.result&&st!=="proposed"?`<details><summary>What Claude did · next step</summary><div class="jres">${mdLite(a.result)}</div></details>`:""}
+    ${a.answer&&dec?`<small><b>You chose:</b> ${esc(a.answer)}</small>`:""}
+    ${a.prUrl&&st!=="done"?`<a class="btn small" href="${esc(a.prUrl)}" target="_blank" rel="noopener">Open the pull request ↗</a>`:""}
+    ${pend?`<p class="pend">✓ ${NATE_SAID[a.nate.do]||"Sent"}${a.nate.answer?": "+esc(a.nate.answer):""}. Claude picks it up on its next run.</p>`:""}
+    ${btns}</div>`;
+}
+function actGroups(list){
+  const g={ok:[],you:[],going:[],failed:[],done:[]};
+  list.forEach(a=>{const st=actState(a);
+    if(st==="proposed")g.ok.push(a);else if(st==="review"||st==="needs_you")g.you.push(a);
+    else if(st==="approved"||st==="working"||st==="answered")g.going.push(a);else if(st==="failed")g.failed.push(a);else if(st==="done")g.done.push(a)});
+  return g;
+}
+function actMini(xs){return `<ul class="actmini">${xs.map(a=>`<li><span>${esc(a.title)}</span><span>${esc(ACT_ST[actState(a)]||a.status)}</span></li>`).join("")}</ul>`}
+function actionsHome(){
+  const ag=S.agents;const all=actsOf();
+  if(!all.length&&!ag)return `<section class="panel span-12 acthome" id="actHome"><h2 class="section-h">🤖 Claude's review</h2><p class="lede" style="margin:0">Each morning Claude reads every app's code and suggests what to fix or build next. Its suggestions will show here, ready to approve, once the link to your private Brain is switched on.</p></section>`;
+  const g=actGroups(all);const rv=ag&&ag.review;
+  return `<section class="panel span-12 acthome" id="actHome"><h2 class="section-h">🤖 Claude's review <a href="${BRIDGE_URL}" target="_blank" rel="noopener">Sync now ↗</a></h2>
+    ${rv&&rv.summary?`<p class="revsum">${esc(rv.summary)}<small>Reviewed ${esc(actAgo(rv.at))}${ag.bridgedAt?" · synced "+esc(actAgo(ag.bridgedAt)):""}</small></p>`:""}
+    ${g.ok.length?`<div class="acth">Waiting for your OK · ${g.ok.length}</div><div class="acts">${g.ok.map(a=>actCard(a,true)).join("")}</div>`:`<p class="prog" style="margin:0">Nothing waiting for your OK.</p>`}
+    ${g.you.length?`<div class="acth">Ready for you · ${g.you.length}</div><div class="acts">${g.you.map(a=>actCard(a,true)).join("")}</div>`:""}
+    ${g.failed.length?`<details class="failgrp"><summary class="acth">Didn't finish · ${g.failed.length}</summary><p class="prog" style="margin:4px 0 8px">Most of these stopped because the builder couldn't reach the repo. That's fixed, so they can run again.</p>${S.canWrite?`<button type="button" class="btn small primary" data-actretryall="1">↻ Try all ${g.failed.length} again</button>`:""}<div class="acts" style="margin-top:8px">${g.failed.map(a=>actCard(a,true)).join("")}</div></details>`:""}
+    ${g.going.length?`<div class="acth">In progress · ${g.going.length}</div>${actMini(g.going)}`:""}
+    ${g.done.length?`<details style="margin-top:12px"><summary class="acth" style="cursor:pointer;display:inline">Done · ${g.done.length}</summary>${actMini(g.done.slice(0,15))}</details>`:""}
+    <p class="prog" style="margin:12px 0 0">Approve here and Claude builds it overnight (about 2:30am), then opens a pull request for you to check. New suggestions arrive after the morning review.</p></section>`;
+}
+function actionsBlock(p,compact){
+  const xs=actsOf(p.id);if(!xs.length)return"";const g=actGroups(xs);const live=[...g.ok,...g.you,...g.failed];
+  return `<div class="blk acthome"><h4>🤖 Claude's review</h4>
+    ${live.length?`<div class="acts">${live.map(a=>actCard(a,false)).join("")}</div>`:`<p class="prog" style="margin:0 0 6px">Nothing needs you on this app.</p>`}
+    ${g.going.length?`<div class="acth">In progress</div>${actMini(g.going)}`:""}
+    ${g.done.length&&!compact?`<details style="margin-top:8px"><summary class="acth" style="cursor:pointer;display:inline">Done · ${g.done.length}</summary>${actMini(g.done)}</details>`:""}</div>`;
+}
+function actRefresh(){if(S.open)renderDrawer();else if(S.sheetPid&&$("#sheet .appsheet"))openAppSheet(S.sheetPid);if(route().v==="home")renderHome()}
+async function setNate(id,what,answer){
+  if(!S.db)return;const a=(S.actions||[]).find(x=>x.id===id);if(!a)return;
+  const el=document.getElementById("an-"+id);const note=el?el.value.trim().slice(0,500):"";
+  const nate={do:what,answer:answer||"",note,at:new Date().toISOString()};
+  a.nate=nate;actRefresh();
+  try{await queue(()=>S.db.doc("actions/"+id).set({nate},{merge:true}))}catch(e){toast("Couldn't save that. Try again.");return}
+  undoToast(NATE_SAID[what]||"Sent",()=>{delete a.nate;actRefresh();queue(()=>S.db.doc("actions/"+id).update({nate:firebase.firestore.FieldValue.delete()}))});
+}
+async function retryAll(){
+  const xs=(S.actions||[]).filter(a=>actState(a)==="failed");if(!xs.length||!S.db)return;const at=new Date().toISOString();
+  xs.forEach(a=>a.nate={do:"retry",answer:"",note:"",at});actRefresh();
+  const batch=S.db.batch();xs.forEach(a=>batch.set(S.db.doc("actions/"+a.id),{nate:a.nate},{merge:true}));
+  await queue(()=>batch.commit());toast(`${xs.length} sent back to Claude`);
+}
+document.addEventListener("click",e=>{
+  const b=e.target.closest("[data-act]");if(b){const [id,w]=b.dataset.act.split("|");setNate(id,w);return}
+  const o=e.target.closest("[data-actans]");if(o){const [id,i]=o.dataset.actans.split("|");const a=(S.actions||[]).find(x=>x.id===id);if(a)setNate(id,"answer",(a.options||[])[+i]||"");return}
+  const r=e.target.closest("[data-actretryall]");if(r){retryAll();return}
+  const j=e.target.closest("[data-jump]");if(j){const t=document.getElementById(j.dataset.jump);if(t){e.preventDefault();t.scrollIntoView({behavior:"smooth",block:"start"})}}
 });
 function applyBatch(batch){
   const rows=batch.filter(b=>b&&S.projects[b.pid]).map(b=>({p:S.projects[b.pid],ideas:cleanIdeas(b.ideas),add:(Array.isArray(b.add)?b.add:[]).map(x=>String(Array.isArray(x)?x[0]:x).slice(0,200)).filter(Boolean).slice(0,10)})).filter(r=>r.ideas.length||r.add.length);
