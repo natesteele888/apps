@@ -6,7 +6,7 @@
 <title>Steele App Store</title>
 <meta name="description" content="Apps designed and built by Nathan Steele with Claude, for youth football and baseball, coaches, families and everyday use.">
 <meta property="og:title" content="Steele App Store">
-<meta property="og:description" content="Nine live apps for youth sports and everyday life, built by Nathan Steele with AI as a development partner.">
+<meta property="og:description" content="Ten live apps for youth sports and everyday life, built by Nathan Steele with AI as a development partner.">
 <meta property="og:image" content="https://natesteele888.github.io/apps/store/img/share.jpg">
 <meta property="og:type" content="website">
 <meta name="twitter:card" content="summary_large_image">
@@ -286,6 +286,13 @@ const APPS=[
   facts:[["Sign-up","None",""],["Rarity","Holo","parallels"],["Series","2026","Series 1"]],
   parts:["share"],tie:"The fun layer on top of the league. Same teams, same season, but this one is for the kids.",rel:["ballclub","dashboard"],
   for:["player","parent"]},
+ {id:"sponsor-banners",name:"Sponsor Banner Inventory",sub:"Every LYBS sponsor banner, tracked",cat:"baseball",ac:"#2f6df6",icon:"../icons/sponsor-banners-192.png",url:"https://natesteele888.github.io/sponsor-banner-inventory/",install:true,access:"Board sign-in",
+  shots:["img/sponsor-banners.webp"],
+  desc:"Board members can see every sponsor banner with its photo, hung status, contact details and a map of where it hangs. Sign in with a LYBS Dashboard board account to open it. No sponsor information is shown publicly.",
+  feats:[["📸","Banner photos","Every banner on file, with its hung status at a glance."],["📍","Hang map","See where each banner hangs around the fields."],["📇","Contacts on file","Sponsor contact details a tap away for renewals."]],
+  facts:[["Banners","Every","sponsor"],["Access","Board","sign-in"],["Public info","None","shown"]],
+  parts:["signin","rules","firebase"],tie:"A board-only extra on top of the Dashboard: same sign-in, one more job off the league's plate.",rel:["dashboard","ballclub"],
+  for:["board"]},
  {id:"fitness",name:"Offseason Power Program",sub:"9-week youth athlete training",cat:"family",ac:"#c6f432",icon:"../icons/fitness-192.png",url:"https://natesteele888.github.io/fitness-hub/",install:true,access:"Open",
   shots:["img/fitness.webp"],
   desc:"A morning checklist for plyometrics, core and light strength work, plus kicking drills, with a progress tab that tracks jumps, sprints and left/right balance over time.",
@@ -413,11 +420,11 @@ function renderApps(){
 /* ===== Big Picture ===== */
 const GROUPS=[
   {k:"football",n:"ASL Bengals football",ids:["bengals","gridiron"],x:150,y:110},
-  {k:"baseball",n:"LYBS baseball & softball",ids:["dashboard","ballclub","situations","cards"],x:450,y:110},
+  {k:"baseball",n:"LYBS baseball & softball",ids:["dashboard","ballclub","situations","cards","sponsor-banners"],x:450,y:110},
   {k:"family",n:"Everyday",ids:["fitness","cube","picks"],x:150,y:370},
   {k:"builder",n:"Behind the scenes",ids:["toolbox"],x:450,y:370}
 ];
-const LINKS=[["situations","ballclub","trainer moving into"],["bengals","gridiron","team → organization"],["dashboard","ballclub","board ↔ families"],["cards","ballclub","same teams"],["fitness","bengals","off-season"],["toolbox","bengals",""],["toolbox","dashboard",""],["toolbox","situations",""],["toolbox","cube",""]];
+const LINKS=[["situations","ballclub","trainer moving into"],["bengals","gridiron","team → organization"],["dashboard","ballclub","board ↔ families"],["cards","ballclub","same teams"],["sponsor-banners","dashboard","same board sign-in"],["fitness","bengals","off-season"],["toolbox","bengals",""],["toolbox","dashboard",""],["toolbox","situations",""],["toolbox","cube",""]];
 function webSVG(){
   const narrow=innerWidth<620;const VW=narrow?380:600,VH=narrow?1000:480;
   const G=narrow?GROUPS.map((g,i)=>({...g,x:190,y:[120,400,680,900][i]})):GROUPS;
@@ -438,7 +445,7 @@ function webSVG(){
 function renderBig(){
   const used={};APPS.forEach(a=>a.parts.forEach(p=>used[p]=(used[p]||0)+1));
   const top=Object.entries(used).sort((a,b)=>b[1]-a[1]);
-  return header("Big Picture",`These aren't ten separate projects. They're one system for a youth sports community, built a piece at a time and sharing the same building blocks.`)+
+  return header("Big Picture",`These aren't ${(NUMW[APPS.length]||APPS.length).toLowerCase()} separate projects. They're one system for a youth sports community, built a piece at a time and sharing the same building blocks.`)+
   `<section class="bp" style="color:var(--text)"><h3>How it all connects</h3><p>Tap any app to open it. Solid lines are real hand-offs between apps.</p>${webSVG()}</section>
   <section class="bp"><h3>By the numbers</h3><div class="stats">
     <div class="stat"><b>${APPS.filter(a=>a.url).length}</b><span>live apps</span></div>
@@ -475,6 +482,18 @@ function renderAbout(){
     <div class="stat"><b>${APPS.filter(a=>a.url).length}</b><span>live apps</span></div>
     <div class="stat"><b>${APPS.filter(a=>a.install).length}</b><span>install on a phone</span></div>
     <div class="stat"><b>${SOON.length}</b><span>in the works</span></div></div></section>`+
+  `<section class="bp"><h3>How I build</h3><p>Three things make this more than the same app shipped ${(NUMW[APPS.length]||APPS.length).toLowerCase()} times.</p>
+  <div class="feat">
+    <div><span class="e">💻</span><span><b>Dev skills</b><span>Vanilla JS and CSS, no framework. Firebase and Firestore for sign-in and live sync, security rules I write by hand, service workers for offline and install, SVG for every diagram and animation.</span></span></div>
+    <div><span class="e">🎨</span><span><b>Design skills</b><span>Phone-native layouts, dark mode by default, glass-blur nav bars and motion that explains itself — built for a sideline or a kitchen counter, not a desk.</span></span></div>
+    <div><span class="e">🧠</span><span><b>App brains</b><span>A private shared memory that carries reusable parts and hard-won lessons from one app into the next, so nothing gets solved twice.</span></span></div>
+  </div>
+  <p style="margin:16px 0 6px;font-weight:700;color:var(--text)">Development</p>
+  <div class="chips">${["Firebase & Firestore","Security rules","Service workers / PWA","Offline-first","Google sign-in","SVG & animation","Responsive & accessible UI","Rules engines"].map(s=>`<span class="chip">${esc(s)}</span>`).join("")}</div>
+  <p style="margin:14px 0 6px;font-weight:700;color:var(--text)">Design</p>
+  <div class="chips">${["iOS-style UI","Dark mode theming","Micro-interactions","Icon & brand systems","Information architecture","Plain-spoken copy"].map(s=>`<span class="chip">${esc(s)}</span>`).join("")}</div>
+  <p style="margin:16px 0 0">Every app on this page shares parts with at least one other — ${Object.keys(PARTS).length} reusable building blocks mapped so far. That shared memory is the real engine behind it: it remembers what broke, what worked and what's already built, so the next app starts ahead instead of from zero. <button data-tab-go="big" style="color:var(--blue);font-weight:600">See how they connect →</button></p>
+  </section>`+
   cats.map(k=>`<div class="sect"><h3>${CATS[k].e} ${esc(CATS[k].n)}</h3></div>${APPS.filter(a=>a.cat===k).map(appRow).join("")}`).join("")+
   `<div class="sect"><h3>In the works</h3></div>${SOON.map(([e,n,d])=>`<div class="soonrow"><span class="ic">${e}</span><span><b>${esc(n)}</b><span>${esc(d)}</span></span></div>`).join("")}
   <section class="bp"><h3>How it fits together</h3><p>See which apps hand off to each other and which pieces they share.</p><p><button data-tab-go="big" style="color:var(--blue);font-weight:600">Open the Big Picture</button> · <a href="https://github.com/natesteele888" target="_blank" rel="noopener" style="color:var(--blue);font-weight:600">GitHub</a></p></section>`;
