@@ -1,5 +1,5 @@
 {
-  "about": "Current live links for Nathan Steele's apps. Source of truth for the Toolbox app and the Steele App Store. When an app's live address changes, update it here in the same change. store:false keeps an app out of the public App Store. retired:true keeps it off the install page.",
+  "about": "The one list of Nathan's apps. Live links, which apps show where, and each app's App Store listing (text, highlights, screenshots) all come from here. Edit listings and icons in the Toolbox; the sync job copies them here. Don't hand-edit text in store/index.html.",
   "updated": "2026-11-03",
   "toolbox": "https://natesteele888.github.io/apps/toolbox/",
   "store": "https://natesteele888.github.io/apps/store/",
@@ -13,7 +13,72 @@
       "toolboxIds": [
         "toolbox-app"
       ],
-      "private": true
+      "private": true,
+      "listing": {
+        "sub": "The command center behind it all",
+        "cat": "builder",
+        "ac": "#e2a51b",
+        "install": true,
+        "access": "Private",
+        "desc": "Every app on this page is tracked here: where each build left off, task lists, future features, a map of how the apps share parts, and one-tap launch. One Ask Claude button picks up any task with its full context, right where it stopped.",
+        "feats": [
+          [
+            "🗂️",
+            "Apps board",
+            "Status of every build at a glance."
+          ],
+          [
+            "🗺️",
+            "Shared-parts map",
+            "See which apps reuse the same building blocks."
+          ],
+          [
+            "🔐",
+            "Private by design",
+            "Code is public; data stays behind sign-in."
+          ]
+        ],
+        "facts": [
+          [
+            "Projects",
+            "29",
+            "tracked"
+          ],
+          [
+            "Shared parts",
+            "15",
+            "mapped"
+          ],
+          [
+            "Access",
+            "Private",
+            ""
+          ]
+        ],
+        "news": {
+          "d": "Nov 2026",
+          "t": "Now its own phone app, with every app opening full screen inside it."
+        },
+        "parts": [
+          "signin",
+          "rules",
+          "firebase",
+          "pwa"
+        ],
+        "tie": "The hub. It's where every other app gets planned, fixed and launched.",
+        "rel": [
+          "situations",
+          "bengals",
+          "dashboard"
+        ],
+        "for": [
+          "curious"
+        ],
+        "shots": [
+          "mock"
+        ],
+        "autoShots": []
+      }
     },
     {
       "id": "store",
@@ -32,7 +97,77 @@
       "path": "situations/",
       "toolboxIds": [
         "where-do-i-go"
-      ]
+      ],
+      "listing": {
+        "sub": "Baseball situations trainer",
+        "cat": "baseball",
+        "ac": "#2f6df6",
+        "install": true,
+        "access": "Open",
+        "desc": "Teaches players where to be on every batted ball. Pick the runners, the outs and where the ball goes, then watch all nine fielders and every runner move on an animated field you can play, pause and scrub.",
+        "feats": [
+          [
+            "🧠",
+            "707-rule engine",
+            "Jobs change with runners on base and the number of outs."
+          ],
+          [
+            "▶️",
+            "Animated field",
+            "Watch every player move, step by step."
+          ],
+          [
+            "🔁",
+            "Cutoffs & relays",
+            "Covers the throws, not just the catch."
+          ]
+        ],
+        "facts": [
+          [
+            "Situations",
+            "1,320",
+            "covered"
+          ],
+          [
+            "Rules",
+            "707",
+            "in the engine"
+          ],
+          [
+            "Positions",
+            "9",
+            "plus runners"
+          ]
+        ],
+        "parts": [
+          "engine",
+          "pwa",
+          "offline"
+        ],
+        "tie": "The situations brain is being packaged so any league app can use it. LYBS Ballclub's situations tab is next in line.",
+        "rel": [
+          "ballclub",
+          "bengals"
+        ],
+        "for": [
+          "player",
+          "coach"
+        ],
+        "shots": [
+          "store/img/situations.webp",
+          "store/img/situations-b.webp"
+        ],
+        "autoShots": [
+          {
+            "url": "",
+            "click": "Run the play",
+            "wait": 2500
+          },
+          {
+            "url": ""
+          }
+        ]
+      }
     },
     {
       "id": "picks",
@@ -42,7 +177,74 @@
       "path": "picks/",
       "toolboxIds": [
         "gameday-picks"
-      ]
+      ],
+      "listing": {
+        "sub": "NFL weekly picks with your crew",
+        "cat": "family",
+        "ac": "#d6a94c",
+        "install": true,
+        "access": "Invite code",
+        "desc": "Pick a side in every NFL game, every week. The schedule and scores load on their own, picks lock at kickoff, and everyone's picks show once a game starts. A season-long leaderboard and a team-by-team breakdown keep score.",
+        "feats": [
+          [
+            "🏈",
+            "Pick every game",
+            "Away on the left, home on the right. Tap to lock it in."
+          ],
+          [
+            "🔒",
+            "Locks at kickoff",
+            "No changing a pick once the game starts."
+          ],
+          [
+            "🏆",
+            "Leaderboard",
+            "Season record and win % for everyone in the group."
+          ]
+        ],
+        "facts": [
+          [
+            "Games",
+            "Every",
+            "NFL week"
+          ],
+          [
+            "Join",
+            "Code",
+            "from the host"
+          ],
+          [
+            "Scores",
+            "Auto",
+            "from the schedule"
+          ]
+        ],
+        "news": {
+          "d": "Nov 2026",
+          "t": "Now a real app: sign in with Google, join with an invite code, picks sync across phones."
+        },
+        "parts": [
+          "signin",
+          "rules",
+          "firebase",
+          "pwa",
+          "share"
+        ],
+        "tie": "Family game night in app form. Same sign-in and security-rule pieces as the league apps.",
+        "rel": [
+          "fitness",
+          "bengals"
+        ],
+        "for": [
+          "player",
+          "parent",
+          "curious"
+        ],
+        "shots": [
+          "store/img/picks.webp"
+        ],
+        "autoShots": []
+      }
     },
     {
       "id": "bengals",
@@ -52,7 +254,77 @@
       "path": "dev2/",
       "toolboxIds": [
         "dev2"
-      ]
+      ],
+      "listing": {
+        "sub": "Plays, signals and season for the 11U team",
+        "cat": "football",
+        "ac": "#ff6a1a",
+        "install": true,
+        "access": "Team code",
+        "desc": "The team's week-to-week home. Players study every hand signal and play call, quiz themselves before game day and run a 2-Minute Drill trainer. Coaches get the schedule, game cards, a play builder, a stat keeper and a playoff mode.",
+        "feats": [
+          [
+            "🎓",
+            "Signal study & quizzes",
+            "Every signal broken down visually, with timed quizzes."
+          ],
+          [
+            "✏️",
+            "Play builder",
+            "Draw plays and save them to the team playbook."
+          ],
+          [
+            "🏆",
+            "Playoff mode",
+            "Bracket rounds, scouting film and game-day flyers."
+          ]
+        ],
+        "facts": [
+          [
+            "Signals",
+            "30",
+            "to master"
+          ],
+          [
+            "Quiz modes",
+            "4",
+            "incl. 2-Min Drill"
+          ],
+          [
+            "Access",
+            "Team",
+            "code"
+          ]
+        ],
+        "news": {
+          "d": "Fall 2026",
+          "t": "Playoff mode: rounds, opponent film, final-week scenarios, a game-day flyer, and This Week now moves on by itself after midweek games."
+        },
+        "parts": [
+          "firebase",
+          "pwa",
+          "engine"
+        ],
+        "tie": "Feeds the Gridiron Hub for the whole organization, and is moving onto the League Ops platform.",
+        "rel": [
+          "gridiron",
+          "situations"
+        ],
+        "for": [
+          "player",
+          "coach"
+        ],
+        "shots": [
+          "store/img/bengals.webp"
+        ],
+        "autoShots": [
+          {
+            "url": "",
+            "click": "Let's go",
+            "wait": 2000
+          }
+        ]
+      }
     },
     {
       "id": "gridiron",
@@ -62,7 +334,77 @@
       "path": "gridiron-hub/",
       "toolboxIds": [
         "gridiron-hub"
-      ]
+      ],
+      "listing": {
+        "sub": "Every team, one home field",
+        "cat": "football",
+        "ac": "#ff6a1a",
+        "install": false,
+        "access": "Open",
+        "desc": "A full website any youth football and cheer organization can run, with the ASL Bengals as the first. Schedules, results, programs and rosters for every team, built for families who show up on Friday night, not people who track spreadsheets.",
+        "feats": [
+          [
+            "🏟️",
+            "Multi-org ready",
+            "One codebase, each organization gets its own space."
+          ],
+          [
+            "👥",
+            "Rosters & player pages",
+            "Team rosters with a page for every player, behind sign-in."
+          ],
+          [
+            "📸",
+            "Photo tagging",
+            "Tag players in team photos and find them later."
+          ]
+        ],
+        "facts": [
+          [
+            "Teams",
+            "6",
+            "flag, tackle, cheer"
+          ],
+          [
+            "Ages",
+            "6–14",
+            ""
+          ],
+          [
+            "Season",
+            "9",
+            "game weeks"
+          ]
+        ],
+        "news": {
+          "d": "In progress",
+          "t": "Building toward a demo for the organization: role-based visibility, RSVPs, read receipts and a two-way team message board."
+        },
+        "parts": [
+          "signin",
+          "rules",
+          "firebase",
+          "calendar"
+        ],
+        "tie": "The family-facing front door for the Bengals. The coaching app runs the team; this runs the organization.",
+        "rel": [
+          "bengals",
+          "dashboard"
+        ],
+        "for": [
+          "parent",
+          "board"
+        ],
+        "shots": [
+          "store/img/gridiron.webp"
+        ],
+        "autoShots": [
+          {
+            "url": "",
+            "scrollY": 1180
+          }
+        ]
+      }
     },
     {
       "id": "dashboard",
@@ -72,7 +414,75 @@
       "path": "",
       "toolboxIds": [
         "lybs-dashboard"
-      ]
+      ],
+      "listing": {
+        "sub": "Run a volunteer league",
+        "cat": "baseball",
+        "ac": "#2f6df6",
+        "install": false,
+        "access": "Board sign-in",
+        "desc": "A 22-tab operations hub for a youth baseball and softball league: registration and retention trends, governance, coaching, schedules, social planning and a TV-style live draft board.",
+        "feats": [
+          [
+            "📈",
+            "Registration analytics",
+            "Year-over-year trends by sport and division."
+          ],
+          [
+            "🧢",
+            "Draft day board",
+            "Live TV and phone views for draft night."
+          ],
+          [
+            "📷",
+            "Photo pipeline",
+            "Parents submit photos and wins; the board approves them."
+          ]
+        ],
+        "facts": [
+          [
+            "Tabs",
+            "22",
+            ""
+          ],
+          [
+            "Draft",
+            "Live",
+            "TV + phone"
+          ],
+          [
+            "Access",
+            "Board",
+            "sign-in"
+          ]
+        ],
+        "news": {
+          "d": "Fall 2026",
+          "t": "Photo pipeline: families send in photos and wins, the board reviews them, and approved photos file themselves into Drive."
+        },
+        "parts": [
+          "signin",
+          "rules",
+          "firebase",
+          "calendar"
+        ],
+        "tie": "The league's back office. Ballclub is what families see; this is what the board runs on.",
+        "rel": [
+          "ballclub",
+          "cards"
+        ],
+        "for": [
+          "board"
+        ],
+        "shots": [
+          "store/img/dashboard.webp"
+        ],
+        "autoShots": [
+          {
+            "url": ""
+          }
+        ]
+      }
     },
     {
       "id": "ballclub",
@@ -82,7 +492,77 @@
       "path": "",
       "toolboxIds": [
         "ballclub"
-      ]
+      ],
+      "listing": {
+        "sub": "For coaches and families",
+        "cat": "baseball",
+        "ac": "#2f6df6",
+        "install": true,
+        "access": "Team code",
+        "desc": "Everything a team needs in one place: schedule, practices, lineups, drills, situations, standings and announcements, with coach contacts a tap away for rainouts and reschedules. Public standings and league info need no sign-in.",
+        "feats": [
+          [
+            "📝",
+            "Lineups & practices",
+            "Build lineups and plan practices from a drill library."
+          ],
+          [
+            "📣",
+            "Announcements",
+            "Cancellations and updates straight to families."
+          ],
+          [
+            "📊",
+            "Standings & situations",
+            "League standings and on-field situation drills."
+          ]
+        ],
+        "facts": [
+          [
+            "Teams",
+            "8",
+            "in the league view"
+          ],
+          [
+            "Public info",
+            "Free",
+            "no sign-in"
+          ],
+          [
+            "Access",
+            "Team",
+            "code or Google"
+          ]
+        ],
+        "news": {
+          "d": "Oct 2026",
+          "t": "New knight-helmet opening screen."
+        },
+        "parts": [
+          "signin",
+          "firebase",
+          "pwa",
+          "calendar",
+          "share"
+        ],
+        "tie": "Where families meet the league. The Where Do I Go? trainer is being built into its situations tab.",
+        "rel": [
+          "dashboard",
+          "situations"
+        ],
+        "for": [
+          "parent",
+          "coach"
+        ],
+        "shots": [
+          "store/img/ballclub.webp"
+        ],
+        "autoShots": [
+          {
+            "url": ""
+          }
+        ]
+      }
     },
     {
       "id": "cards",
@@ -92,7 +572,69 @@
       "path": "",
       "toolboxIds": [
         "steele-cards"
-      ]
+      ],
+      "listing": {
+        "sub": "Trading card packs for youth teams",
+        "cat": "baseball",
+        "ac": "#3ddc97",
+        "install": false,
+        "access": "Open",
+        "desc": "Players rip open a digital pack of their team's cards, with a collection to fill, rare holo parallels and gift links. Nothing to sign up for: families just share a link.",
+        "feats": [
+          [
+            "🎴",
+            "Pack opening",
+            "Tear-open animation with a card reveal."
+          ],
+          [
+            "✨",
+            "Holo parallels",
+            "Rare foil versions to chase."
+          ],
+          [
+            "🎁",
+            "Gift links",
+            "Send a pack to a teammate with one link."
+          ]
+        ],
+        "facts": [
+          [
+            "Sign-up",
+            "None",
+            ""
+          ],
+          [
+            "Rarity",
+            "Holo",
+            "parallels"
+          ],
+          [
+            "Series",
+            "2026",
+            "Series 1"
+          ]
+        ],
+        "parts": [
+          "share"
+        ],
+        "tie": "The fun layer on top of the league. Same teams, same season, but this one is for the kids.",
+        "rel": [
+          "ballclub",
+          "dashboard"
+        ],
+        "for": [
+          "player",
+          "parent"
+        ],
+        "shots": [
+          "store/img/cards.webp"
+        ],
+        "autoShots": [
+          {
+            "url": ""
+          }
+        ]
+      }
     },
     {
       "id": "fitness",
@@ -101,7 +643,73 @@
       "repo": "natesteele888/fitness-hub",
       "path": "",
       "toolboxIds": [],
-      "match": "fitness-hub"
+      "match": "fitness-hub",
+      "listing": {
+        "sub": "9-week youth athlete training",
+        "cat": "family",
+        "ac": "#c6f432",
+        "install": true,
+        "access": "Open",
+        "desc": "A morning checklist for plyometrics, core and light strength work, plus kicking drills, with a progress tab that tracks jumps, sprints and left/right balance over time.",
+        "feats": [
+          [
+            "✅",
+            "Daily checklist",
+            "A phased plan that builds week by week."
+          ],
+          [
+            "📏",
+            "Progress tracking",
+            "Broad jump, plank, sprint and a left-right gap readout."
+          ],
+          [
+            "🦵",
+            "Kicker work",
+            "Kicking drills and leg-balance protection built in."
+          ]
+        ],
+        "facts": [
+          [
+            "Weeks",
+            "9",
+            ""
+          ],
+          [
+            "Sessions",
+            "63",
+            "10–12 min"
+          ],
+          [
+            "Gear",
+            "Light",
+            "dumbbells"
+          ]
+        ],
+        "news": {
+          "d": "Oct 2026",
+          "t": "Moved to its own app and folded in the winter kicking program and left/right balance testing."
+        },
+        "parts": [
+          "pwa",
+          "offline"
+        ],
+        "tie": "Off-season fuel for the football and baseball apps. Same athletes, different season.",
+        "rel": [
+          "bengals",
+          "situations"
+        ],
+        "for": [
+          "player"
+        ],
+        "shots": [
+          "store/img/fitness.webp"
+        ],
+        "autoShots": [
+          {
+            "url": ""
+          }
+        ]
+      }
     },
     {
       "id": "cube",
@@ -111,7 +719,76 @@
       "path": "public/",
       "toolboxIds": [
         "cube-clock"
-      ]
+      ],
+      "listing": {
+        "sub": "Speedcubing timer",
+        "cat": "family",
+        "ac": "#e0313a",
+        "install": true,
+        "access": "Open",
+        "desc": "A Rubik's cube timer that works with no signal: six puzzle types, official-notation scrambles, a leaderboard and home-screen shortcuts. Every solve is kept, so you can watch the times come down.",
+        "feats": [
+          [
+            "🎲",
+            "Six puzzle types",
+            "Each with its own official-notation scrambles."
+          ],
+          [
+            "📴",
+            "Works offline",
+            "Times and scrambles with no connection."
+          ],
+          [
+            "🏁",
+            "Leaderboard",
+            "Session stats and a shared leaderboard."
+          ]
+        ],
+        "facts": [
+          [
+            "Puzzles",
+            "6",
+            ""
+          ],
+          [
+            "Offline",
+            "Yes",
+            ""
+          ],
+          [
+            "Status",
+            "Shipped",
+            "v1"
+          ]
+        ],
+        "parts": [
+          "pwa",
+          "offline",
+          "firebase"
+        ],
+        "tie": "The first app that proved the formula: install it, it works offline, it feels like a real app.",
+        "rel": [
+          "fitness"
+        ],
+        "for": [
+          "curious",
+          "player"
+        ],
+        "shots": [
+          "store/img/cube.webp",
+          "store/img/cube-b.webp"
+        ],
+        "autoShots": [
+          {
+            "url": "",
+            "click": "Got it",
+            "hideText": "Could not load Firebase"
+          },
+          {
+            "url": ""
+          }
+        ]
+      }
     },
     {
       "id": "portfolio",
@@ -139,7 +816,66 @@
       "cat": "baseball",
       "access": "Board sign-in",
       "install": true,
-      "desc": "Board members can see every sponsor banner with its photo, hung status, contact details and a map of where it hangs. Sign in with a LYBS Dashboard board account to open it. No sponsor information is shown publicly."
+      "desc": "Board members can see every sponsor banner with its photo, hung status, contact details and a map of where it hangs. Sign in with a LYBS Dashboard board account to open it. No sponsor information is shown publicly.",
+      "listing": {
+        "sub": "Every LYBS sponsor banner, tracked",
+        "cat": "baseball",
+        "ac": "#2f6df6",
+        "install": true,
+        "access": "Board sign-in",
+        "desc": "Board members can see every sponsor banner with its photo, hung status, contact details and a map of where it hangs. Sign in with a LYBS Dashboard board account to open it. No sponsor information is shown publicly.",
+        "feats": [
+          [
+            "📸",
+            "Banner photos",
+            "Every banner on file, with its hung status at a glance."
+          ],
+          [
+            "📍",
+            "Hang map",
+            "See where each banner hangs around the fields."
+          ],
+          [
+            "📇",
+            "Contacts on file",
+            "Sponsor contact details a tap away for renewals."
+          ]
+        ],
+        "facts": [
+          [
+            "Banners",
+            "Every",
+            "sponsor"
+          ],
+          [
+            "Access",
+            "Board",
+            "sign-in"
+          ],
+          [
+            "Public info",
+            "None",
+            "shown"
+          ]
+        ],
+        "parts": [
+          "signin",
+          "rules",
+          "firebase"
+        ],
+        "tie": "A board-only extra on top of the Dashboard: same sign-in, one more job off the league's plate.",
+        "rel": [
+          "dashboard",
+          "ballclub"
+        ],
+        "for": [
+          "board"
+        ],
+        "shots": [
+          "store/img/sponsor-banners.webp"
+        ],
+        "autoShots": []
+      }
     },
     {
       "id": "events",
@@ -151,6 +887,18 @@
         "steele-events"
       ],
       "store": false
+    }
+  ],
+  "comingSoon": [
+    {
+      "emoji": "💌",
+      "name": "Steele Events",
+      "desc": "Invitations and RSVPs for any event: themes, custom questions, plus-ones, capacity and co-hosts. Built and tested; launching soon."
+    },
+    {
+      "emoji": "🏢",
+      "name": "League Ops in a Box",
+      "desc": "A youth league platform any organization can set up for itself, with document compliance that coaches can check without ever seeing the paperwork."
     }
   ]
 }

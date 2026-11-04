@@ -239,95 +239,9 @@ const PARTS={
   offline:{e:"📴",n:"Works offline",d:"Keeps going in a gym, a field or a basement."},
   share:{e:"🔗",n:"Share by link",d:"No account needed for families to join in."}
 };
-const APPS=[
- {id:"situations",name:"Where Do I Go?",sub:"Baseball situations trainer",cat:"baseball",ac:"#2f6df6",icon:"../icons/situations-192.png",url:"https://natesteele888.github.io/apps/situations/",install:true,access:"Open",
-  shots:["img/situations.webp","img/situations-b.webp"],
-  desc:"Teaches players where to be on every batted ball. Pick the runners, the outs and where the ball goes, then watch all nine fielders and every runner move on an animated field you can play, pause and scrub.",
-  feats:[["🧠","707-rule engine","Jobs change with runners on base and the number of outs."],["▶️","Animated field","Watch every player move, step by step."],["🔁","Cutoffs & relays","Covers the throws, not just the catch."]],
-  facts:[["Situations","1,320","covered"],["Rules","707","in the engine"],["Positions","9","plus runners"]],
-  parts:["engine","pwa","offline"],tie:"The situations brain is being packaged so any league app can use it. LYBS Ballclub's situations tab is next in line.",rel:["ballclub","bengals"],
-  for:["player","coach"]},
- {id:"bengals",name:"Bengals Coaching App",sub:"Plays, signals and season for the 11U team",cat:"football",ac:"#ff6a1a",icon:"../icons/bengals-192.png",url:"https://natesteele888.github.io/ASL-Bengals/dev2/index.html",install:true,access:"Team code",
-  shots:["img/bengals.webp"],
-  desc:"The team's week-to-week home. Players study every hand signal and play call, quiz themselves before game day and run a 2-Minute Drill trainer. Coaches get the schedule, game cards, a play builder, a stat keeper and a playoff mode.",
-  feats:[["🎓","Signal study & quizzes","Every signal broken down visually, with timed quizzes."],["✏️","Play builder","Draw plays and save them to the team playbook."],["🏆","Playoff mode","Bracket rounds, scouting film and game-day flyers."]],
-  facts:[["Signals","30","to master"],["Quiz modes","4","incl. 2-Min Drill"],["Access","Team","code"]],
-  news:{d:"Fall 2026",t:"Playoff mode: rounds, opponent film, final-week scenarios, a game-day flyer, and This Week now moves on by itself after midweek games."},
-  parts:["firebase","pwa","engine"],tie:"Feeds the Gridiron Hub for the whole organization, and is moving onto the League Ops platform.",rel:["gridiron","situations"],
-  for:["player","coach"]},
- {id:"gridiron",name:"Gridiron Hub",sub:"Every team, one home field",cat:"football",ac:"#ff6a1a",icon:"../icons/gridiron-192.png",url:"https://natesteele888.github.io/ASL-Bengals/gridiron-hub/",install:false,access:"Open",
-  shots:["img/gridiron.webp"],
-  desc:"A full website any youth football and cheer organization can run, with the ASL Bengals as the first. Schedules, results, programs and rosters for every team, built for families who show up on Friday night, not people who track spreadsheets.",
-  feats:[["🏟️","Multi-org ready","One codebase, each organization gets its own space."],["👥","Rosters & player pages","Team rosters with a page for every player, behind sign-in."],["📸","Photo tagging","Tag players in team photos and find them later."]],
-  facts:[["Teams","6","flag, tackle, cheer"],["Ages","6–14",""],["Season","9","game weeks"]],
-  news:{d:"In progress",t:"Building toward a demo for the organization: role-based visibility, RSVPs, read receipts and a two-way team message board."},
-  parts:["signin","rules","firebase","calendar"],tie:"The family-facing front door for the Bengals. The coaching app runs the team; this runs the organization.",rel:["bengals","dashboard"],
-  for:["parent","board"]},
- {id:"dashboard",name:"LYBS Dashboard",sub:"Run a volunteer league",cat:"baseball",ac:"#2f6df6",icon:"../icons/dashboard-192.png",url:"https://lybs-dashboard.web.app/",install:false,access:"Board sign-in",
-  shots:["img/dashboard.webp"],
-  desc:"A 22-tab operations hub for a youth baseball and softball league: registration and retention trends, governance, coaching, schedules, social planning and a TV-style live draft board.",
-  feats:[["📈","Registration analytics","Year-over-year trends by sport and division."],["🧢","Draft day board","Live TV and phone views for draft night."],["📷","Photo pipeline","Parents submit photos and wins; the board approves them."]],
-  facts:[["Tabs","22",""],["Draft","Live","TV + phone"],["Access","Board","sign-in"]],
-  news:{d:"Fall 2026",t:"Photo pipeline: families send in photos and wins, the board reviews them, and approved photos file themselves into Drive."},
-  parts:["signin","rules","firebase","calendar"],tie:"The league's back office. Ballclub is what families see; this is what the board runs on.",rel:["ballclub","cards"],
-  for:["board"]},
- {id:"ballclub",name:"LYBS Ballclub",sub:"For coaches and families",cat:"baseball",ac:"#2f6df6",icon:"../icons/ballclub-192.png",url:"https://natesteele888.github.io/lybs-ballclub/",install:true,access:"Team code",
-  shots:["img/ballclub.webp"],
-  desc:"Everything a team needs in one place: schedule, practices, lineups, drills, situations, standings and announcements, with coach contacts a tap away for rainouts and reschedules. Public standings and league info need no sign-in.",
-  feats:[["📝","Lineups & practices","Build lineups and plan practices from a drill library."],["📣","Announcements","Cancellations and updates straight to families."],["📊","Standings & situations","League standings and on-field situation drills."]],
-  facts:[["Teams","8","in the league view"],["Public info","Free","no sign-in"],["Access","Team","code or Google"]],
-  news:{d:"Oct 2026",t:"New knight-helmet opening screen."},
-  parts:["signin","firebase","pwa","calendar","share"],tie:"Where families meet the league. The Where Do I Go? trainer is being built into its situations tab.",rel:["dashboard","situations"],
-  for:["parent","coach"]},
- {id:"cards",name:"Steele Cards",sub:"Trading card packs for youth teams",cat:"baseball",ac:"#3ddc97",icon:"../icons/cards-192.png",url:"https://natesteele888.github.io/lybs-cards/",install:false,access:"Open",
-  shots:["img/cards.webp"],
-  desc:"Players rip open a digital pack of their team's cards, with a collection to fill, rare holo parallels and gift links. Nothing to sign up for: families just share a link.",
-  feats:[["🎴","Pack opening","Tear-open animation with a card reveal."],["✨","Holo parallels","Rare foil versions to chase."],["🎁","Gift links","Send a pack to a teammate with one link."]],
-  facts:[["Sign-up","None",""],["Rarity","Holo","parallels"],["Series","2026","Series 1"]],
-  parts:["share"],tie:"The fun layer on top of the league. Same teams, same season, but this one is for the kids.",rel:["ballclub","dashboard"],
-  for:["player","parent"]},
- {id:"sponsor-banners",name:"Sponsor Banner Inventory",sub:"Every LYBS sponsor banner, tracked",cat:"baseball",ac:"#2f6df6",icon:"../icons/sponsor-banners-192.png",url:"https://natesteele888.github.io/sponsor-banner-inventory/",install:true,access:"Board sign-in",
-  shots:["img/sponsor-banners.webp"],
-  desc:"Board members can see every sponsor banner with its photo, hung status, contact details and a map of where it hangs. Sign in with a LYBS Dashboard board account to open it. No sponsor information is shown publicly.",
-  feats:[["📸","Banner photos","Every banner on file, with its hung status at a glance."],["📍","Hang map","See where each banner hangs around the fields."],["📇","Contacts on file","Sponsor contact details a tap away for renewals."]],
-  facts:[["Banners","Every","sponsor"],["Access","Board","sign-in"],["Public info","None","shown"]],
-  parts:["signin","rules","firebase"],tie:"A board-only extra on top of the Dashboard: same sign-in, one more job off the league's plate.",rel:["dashboard","ballclub"],
-  for:["board"]},
- {id:"fitness",name:"Offseason Power Program",sub:"9-week youth athlete training",cat:"family",ac:"#c6f432",icon:"../icons/fitness-192.png",url:"https://natesteele888.github.io/fitness-hub/",install:true,access:"Open",
-  shots:["img/fitness.webp"],
-  desc:"A morning checklist for plyometrics, core and light strength work, plus kicking drills, with a progress tab that tracks jumps, sprints and left/right balance over time.",
-  feats:[["✅","Daily checklist","A phased plan that builds week by week."],["📏","Progress tracking","Broad jump, plank, sprint and a left-right gap readout."],["🦵","Kicker work","Kicking drills and leg-balance protection built in."]],
-  facts:[["Weeks","9",""],["Sessions","63","10–12 min"],["Gear","Light","dumbbells"]],
-  news:{d:"Oct 2026",t:"Moved to its own app and folded in the winter kicking program and left/right balance testing."},
-  parts:["pwa","offline"],tie:"Off-season fuel for the football and baseball apps. Same athletes, different season.",rel:["bengals","situations"],
-  for:["player"]},
- {id:"picks",name:"Gameday Picks",sub:"NFL weekly picks with your crew",cat:"family",ac:"#d6a94c",icon:"../icons/picks-192.png",url:"https://natesteele888.github.io/apps/picks/",install:true,access:"Invite code",
-  shots:["img/picks.webp"],
-  desc:"Pick a side in every NFL game, every week. The schedule and scores load on their own, picks lock at kickoff, and everyone's picks show once a game starts. A season-long leaderboard and a team-by-team breakdown keep score.",
-  feats:[["🏈","Pick every game","Away on the left, home on the right. Tap to lock it in."],["🔒","Locks at kickoff","No changing a pick once the game starts."],["🏆","Leaderboard","Season record and win % for everyone in the group."]],
-  facts:[["Games","Every","NFL week"],["Join","Code","from the host"],["Scores","Auto","from the schedule"]],
-  news:{d:"Nov 2026",t:"Now a real app: sign in with Google, join with an invite code, picks sync across phones."},
-  parts:["signin","rules","firebase","pwa","share"],tie:"Family game night in app form. Same sign-in and security-rule pieces as the league apps.",rel:["fitness","bengals"],
-  for:["player","parent","curious"]},
- {id:"cube",name:"Cube Clock",sub:"Speedcubing timer",cat:"family",ac:"#e0313a",icon:"../icons/cube-192.png",url:"https://natesteele888.github.io/cube-clock/",install:true,access:"Open",
-  shots:["img/cube.webp","img/cube-b.webp"],
-  desc:"A Rubik's cube timer that works with no signal: six puzzle types, official-notation scrambles, a leaderboard and home-screen shortcuts. Every solve is kept, so you can watch the times come down.",
-  feats:[["🎲","Six puzzle types","Each with its own official-notation scrambles."],["📴","Works offline","Times and scrambles with no connection."],["🏁","Leaderboard","Session stats and a shared leaderboard."]],
-  facts:[["Puzzles","6",""],["Offline","Yes",""],["Status","Shipped","v1"]],
-  parts:["pwa","offline","firebase"],tie:"The first app that proved the formula: install it, it works offline, it feels like a real app.",rel:["fitness"],
-  for:["curious","player"]},
- {id:"toolbox",name:"Nate's Toolbox",sub:"The command center behind it all",cat:"builder",ac:"#e2a51b",icon:"../icons/toolbox-192.png",url:"",install:true,access:"Private",
-  shots:["mock"],
-  desc:"Every app on this page is tracked here: where each build left off, task lists, future features, a map of how the apps share parts, and one-tap launch. One Ask Claude button picks up any task with its full context, right where it stopped.",
-  feats:[["🗂️","Apps board","Status of every build at a glance."],["🗺️","Shared-parts map","See which apps reuse the same building blocks."],["🔐","Private by design","Code is public; data stays behind sign-in."]],
-  facts:[["Projects","29","tracked"],["Shared parts","15","mapped"],["Access","Private",""]],
-  news:{d:"Nov 2026",t:"Now its own phone app, with every app opening full screen inside it."},
-  parts:["signin","rules","firebase","pwa"],tie:"The hub. It's where every other app gets planned, fixed and launched.",rel:["situations","bengals","dashboard"],
-  for:["curious"]}
-];
+let APPS=[]; /* filled from ../registry.json (the app catalog). Edit listings in the Toolbox, not here. */
 const NUMW=["Zero","One","Two","Three","Four","Five","Six","Seven","Eight","Nine","Ten","Eleven","Twelve","Thirteen","Fourteen","Fifteen","Sixteen"];
-const SOON=[["💌","Steele Events","Invitations and RSVPs for any event: themes, custom questions, plus-ones, capacity and co-hosts. Built and tested; launching soon."],
-            ["🏢","League Ops in a Box","A youth league platform any organization can set up for itself, with document compliance that coaches can check without ever seeing the paperwork."]];
+let SOON=[];
 const ROLES={player:"I'm a player",parent:"I'm a parent",coach:"I coach",board:"I run a league",curious:"Just curious"};
 const ROLE_E={player:"🏃",parent:"👪",coach:"📋",board:"🏛️"};
 
@@ -567,15 +481,26 @@ document.addEventListener("click",e=>{
 document.addEventListener("keydown",e=>{const n=e.target.closest&&e.target.closest("g.node");if(n&&(e.key==="Enter"||e.key===" ")){e.preventDefault();openApp(n.dataset.app)}});
 function shine(){const cs=$("#cardset");if(!cs)return;cs.addEventListener("pointermove",e=>{const c=e.target.closest(".tcard");if(!c)return;const r=c.getBoundingClientRect();c.style.setProperty("--shine",(100-((e.clientX-r.left)/r.width)*100+20)+"%")})}
 let NARROW=innerWidth<620;addEventListener("resize",()=>{const n=innerWidth<620;if(n!==NARROW){NARROW=n;if(TAB==="big")render()}});
-go();
+
 /* live links come from the shared app list, so the store never shows an old address */
-fetch("../registry.json",{cache:"no-store"}).then(r=>r.ok?r.json():null).then(j=>{if(!j||!Array.isArray(j.apps))return;let ch=0;
-  /* registry.json decides which apps appear and their names and links. The text above only adds the story for each app. */
-  j.apps.forEach(x=>{const a=byId(x.id);
-    if(x.store===false){if(a){APPS.splice(APPS.indexOf(a),1);ch++}return}
-    if(!a){APPS.push({id:x.id,name:x.name,sub:x.sub||"New app",cat:CATS[x.cat]?x.cat:"family",ac:x.color||"#2f6df6",icon:`../icons/${x.id}-192.png`,url:x.private?"":x.live,install:x.install!==false,access:x.private?"Private":(x.access||"Open"),shots:[],desc:x.desc||x.sub||"",feats:[],facts:[],parts:[],tie:x.tie||"",rel:[],for:["curious"]});ch++;return}
-    if(x.name&&a.name!==x.name){a.name=x.name;ch++}
-    if(a.url&&x.live&&!x.private&&a.url!==x.live){a.url=x.live;ch++}});if(ch)go()}).catch(()=>{});
+/* ===== the app catalog: one file decides every app, its listing, icon and screenshots ===== */
+function fromCatalog(j){
+  const out=[];(j.apps||[]).forEach(x=>{if(x.store===false||x.retired||!x.listing)return;const L=x.listing;
+    out.push({id:x.id,name:x.name,sub:L.sub||x.sub||"",cat:CATS[L.cat]?L.cat:"family",ac:L.ac||"#2f6df6",icon:`../icons/${x.id}-192.png`,
+      url:x.private?"":x.live,install:L.install!==false,access:x.private?"Private":(L.access||"Open"),
+      shots:(L.shots||[]).map(s=>s==="mock"?s:"../"+s),desc:L.desc||"",feats:L.feats||[],facts:L.facts||[],
+      news:L.latest||L.news||null,parts:(L.parts||[]).filter(p=>PARTS[p]),tie:L.tie||"",rel:L.rel||[],for:L.for&&L.for.length?L.for:["curious"]})});
+  const ids=new Set(out.map(a=>a.id));out.forEach(a=>a.rel=a.rel.filter(r=>ids.has(r)));
+  return out;
+}
+function useCatalog(j){APPS=fromCatalog(j);SOON=(j.comingSoon||[]).map(s=>[s.emoji||"🛠️",s.name,s.desc]);go()}
+(function loadCatalog(){
+  let cached=null;try{cached=JSON.parse(localStorage.getItem("store.catalog")||"null")}catch(_){}
+  if(cached)useCatalog(cached);else $("#main").innerHTML='<p class="empty" style="padding:40px 0">Loading apps…</p>';
+  fetch("../registry.json",{cache:"no-store"}).then(r=>r.ok?r.json():null).then(j=>{if(!j||!Array.isArray(j.apps))return;
+    try{localStorage.setItem("store.catalog",JSON.stringify(j))}catch(_){}useCatalog(j)})
+  .catch(()=>{if(!cached)$("#main").innerHTML='<p class="empty" style="padding:40px 0">Couldn\'t load the apps. Check your connection.</p>'});
+})();
 </script>
 <script>if("serviceWorker" in navigator){addEventListener("load",()=>navigator.serviceWorker.register("sw.js").catch(()=>{}))}</script>
 </body>

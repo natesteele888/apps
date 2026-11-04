@@ -1688,7 +1688,7 @@ async function syncIcon(pid,quiet){
 }
 function syncLine(p){
   if(!S.mcp){const r=regMatch(p);if(!r)return "";
-    return `<div class="sync" id="asSync"><span>This icon is the live app's icon too. A change reaches the App Store and the apps at GitHub's next icon sync (every few hours), or right away with <a href="${PUBLISH_URL}" target="_blank" rel="noopener">Publish now ↗</a>.</span>${S.canWrite&&appOf(p).img?`<button type="button" class="btn small" id="asSyncGo">Send this icon again</button>`:""}</div>`}
+    return `<div class="sync" id="asSync"><span>This icon is the live app's icon too. A change reaches the App Store and the apps at the next sync (every 3 hours), or right away with <a href="${PUBLISH_URL}" target="_blank" rel="noopener">Publish now ↗</a>.</span>${S.canWrite&&appOf(p).img?`<button type="button" class="btn small" id="asSyncGo">Send this icon again</button>`:""}</div>`}
   if(!ghApp(p))return "";const j=lastSync(p.id);
   const st=j?`<span><b>${SYNCST[j.status]||j.status}</b>${j.result?` · ${esc(j.result)}`:""}${j.commit?` · <a href="${esc(j.commit)}" target="_blank" rel="noopener">see change ↗</a>`:""}</span>`:`<span>Changing this app's icon in the Toolbox also updates the installed app.</span>`;
   return `<div class="sync" id="asSync">${st}${S.canWrite&&S.mcp&&(!j||j.status==="done"||j.status==="failed")?`<button type="button" class="btn small" id="asSyncGo">Push this icon to the app</button>`:""}</div>`;
@@ -1708,6 +1708,7 @@ function openAppSheet(pid){
     <div class="sh-top"><div class="as-head">${iconHTML(p,"big")}<div><h2 class="sh-title" style="margin:0">${esc(p.name)}</h2><div class="sh-meta"><span>${AREAS[p.area]}</span><span class="pill st-${p.status}">${STATUS[p.status]}</span></div></div></div><button class="btn small" id="shClose">Close</button></div>
     <div class="sh-open">${url?`<a class="btn primary" href="${esc(url)}" target="_blank" rel="noopener">${/claude\.ai\/chat\//.test(url)?"Open app in its chat":"Open app"} ↗</a>`:""}${installInfo(url)?`<button class="btn" id="asInstall" aria-expanded="false" aria-controls="asInstPanel">📲 Add to phone</button>`:""}<button class="btn" data-ask="${esc(p.id)}">✦ Ask Claude</button><button class="btn" id="asProj">Project details</button>${S.canWrite?`<button class="btn" id="asEdit">Edit icon and name</button>`:""}</div>
     ${(()=>{const ii=installInfo(url);return ii?`<div class="as-inst" id="asInstPanel" hidden><div class="kind">${ii.kind}</div><p>${ii.note}</p><ol>${ii.steps.map(s=>`<li>${s}</li>`).join("")}</ol><a class="btn primary" href="${esc(ii.href)}" target="_blank" rel="noopener" data-external="1">Open it ↗</a>${syncLine(p)}</div>`:""})()}
+    ${regMatch(p)&&regMatch(p).listing?`<div class="sh-open"><button class="btn" id="asListing">🛍️ Edit App Store listing</button><a class="btn" href="${STORE_URL}#app=${esc(regMatch(p).id)}" target="_blank" rel="noopener">See it in the store ↗</a></div>`:""}
     ${ni<0?`<p class="lede" style="margin:14px 0 0">All waypoints done.</p>`:`<h3 class="as-h">Next stop: ${esc(p.waypoints[ni].title)}</h3>
       <ul class="as-tasks">${open.map(x=>`<li><span>${esc(x.t.t)}</span><button class="btn small go" data-start="${esc(p.id)}|${ni}|${x.ti}" aria-label="Start: ${esc(x.t.t)}">Start ▶</button></li>`).join("")}</ul>`}
     ${p.leftOff?`<p class="as-left"><b>Where I left off:</b> ${esc(p.leftOff)}</p>`:""}
@@ -1717,7 +1718,28 @@ function openAppSheet(pid){
   bindSync(p);
   const ai=$("#asInstall");if(ai)ai.onclick=()=>{const pn=$("#asInstPanel");const show=pn.hidden;pn.hidden=!show;ai.setAttribute("aria-expanded",String(show));if(show)pn.scrollIntoView({block:"nearest",behavior:"smooth"})};
   const ae=$("#asEdit");if(ae)ae.onclick=()=>openIconEditor(p.id);
+  const al=$("#asListing");if(al)al.onclick=()=>openListingEditor(p.id);
 }
+/* ---------- App Store listing: edit here, the sync job copies it into the app catalog ---------- */
+function openListingEditor(pid){
+  const p=S.projects[pid];const r=regMatch(p);if(!r)return;const L=r.listing||{};
+  const feats=[0,1,2].map(i=>(L.feats||[])[i]||["","",""]);
+  $("#sheet").innerHTML=`<div class="sheet-scrim" id="shScrim"></div><section class="sheet" role="dialog" aria-label="App Store listing">
+    <div class="sh-top"><div class="eyebrow2">App Store listing · ${esc(r.name)}</div><button class="btn small" id="shClose">Cancel</button></div>
+    <p class="sh-note" style="margin-top:0">What people see on this app's page in the App Store. Screenshots refresh on their own from the live app.</p>
+    <label class="chk2"><input type="checkbox" id="lsShow" ${r.store===false?"":"checked"}> Show this app in the App Store</label>
+    <label class="ie-f">One-line subtitle<input id="lsSub" maxlength="70" value="${esc(L.sub||"")}"></label>
+    <label class="ie-f">Description<textarea id="lsDesc" rows="5" maxlength="700">${esc(L.desc||"")}</textarea></label>
+    <div class="ie-f">Highlights (three)</div>
+    ${feats.map((f,i)=>`<div class="ie-row" style="align-items:flex-start"><input id="lsE${i}" value="${esc(f[0])}" maxlength="4" style="width:3.2em;text-align:center" aria-label="Highlight ${i+1} emoji"><span style="flex:1;display:grid;gap:4px"><input id="lsT${i}" value="${esc(f[1])}" maxlength="40" placeholder="Title" aria-label="Highlight ${i+1} title"><input id="lsD${i}" value="${esc(f[2])}" maxlength="90" placeholder="One line" aria-label="Highlight ${i+1} text"></span></div>`).join("")}
+    <div class="sh-acts"><button class="btn primary" id="lsSave">Save listing</button></div></section>`;
+  $("#shScrim").onclick=closeSheet;$("#shClose").onclick=closeSheet;
+  $("#lsSave").onclick=async()=>{const v=id=>($("#"+id).value||"").trim();
+    const doc={store:$("#lsShow").checked,sub:v("lsSub"),desc:v("lsDesc"),feats:[0,1,2].map(i=>[v("lsE"+i),v("lsT"+i),v("lsD"+i)]).filter(f=>f[1]),pid,updatedAt:new Date().toISOString()};
+    try{await queue(()=>S.db.doc("public_listings/"+r.id).set(doc));r.listing={...L,sub:doc.sub||L.sub,desc:doc.desc||L.desc,feats:doc.feats.length?doc.feats:L.feats};showPublish(r,"listing")}
+    catch(e){toast(e&&e.code==="permission-denied"?"Saved nowhere yet: the listing rule isn't turned on in Firebase.":"Couldn't save the listing. Try again.")}};
+}
+
 async function squareIcon(file){
   const url=await new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result);r.onerror=rej;r.readAsDataURL(file)});
   const img=await new Promise((res,rej)=>{const i=new Image();i.onload=()=>res(i);i.onerror=rej;i.src=url});
@@ -1887,12 +1909,12 @@ function openSettings(){
 
 
 /* ---------- publishing icons: the GitHub job copies Toolbox icons into apps/icons/ ---------- */
-const PUBLISH_URL="https://github.com/natesteele888/apps/actions/workflows/icons.yml";
-function showPublish(r){
+const PUBLISH_URL="https://github.com/natesteele888/apps/actions/workflows/sync.yml";
+function showPublish(r,what){
   $("#sheet").innerHTML=`<div class="sheet-scrim" id="shScrim"></div><section class="sheet" role="dialog" aria-label="Icon saved">
-    <div class="sh-top"><div class="eyebrow2">Icon saved</div><button class="btn small" id="shClose">Done</button></div>
-    <p>Your new icon is saved. GitHub copies it to the live apps and the App Store at its next icon sync, usually within a few hours.</p>
-    <p><b>Want it live now?</b> Tap <b>Publish now</b>, then on GitHub tap <b>Run workflow</b> and the green <b>Run workflow</b> button. It's live about two minutes later.</p>
+    <div class="sh-top"><div class="eyebrow2">${what==="listing"?"Listing saved":"Icon saved"}</div><button class="btn small" id="shClose">Done</button></div>
+    <p>${what==="listing"?"Your listing is saved. The App Store picks it up at the next sync, which runs every 3 hours.":"Your new icon is saved. The live apps and the App Store pick it up at the next sync, which runs every 3 hours."}</p>
+    <p><b>Want it live now?</b> Tap <b>Publish now</b>, then on GitHub tap <b>Run workflow</b> and the green <b>Run workflow</b> button. It's live about three minutes later.</p>
     <div class="sh-acts"><a class="btn primary" href="${PUBLISH_URL}" target="_blank" rel="noopener">Publish now ↗</a></div>
     <p class="sh-note">Installed apps on your phone pick up the new icon the next time Android checks them, usually within a day of opening the app.</p></section>`;
   $("#shScrim").onclick=closeSheet;$("#shClose").onclick=closeSheet;
