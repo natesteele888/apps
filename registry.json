@@ -1,6 +1,6 @@
 {
   "about": "The one list of Nathan's apps. Live links, which apps show where, and each app's App Store listing (text, highlights, screenshots) all come from here. Edit listings and icons in the Toolbox; the sync job copies them here. Don't hand-edit text in store/index.html.",
-  "updated": "2026-11-03",
+  "updated": "2026-11-04",
   "toolbox": "https://natesteele888.github.io/apps/toolbox/",
   "store": "https://natesteele888.github.io/apps/store/",
   "apps": [
@@ -77,7 +77,12 @@
         "shots": [
           "mock"
         ],
-        "autoShots": []
+        "autoShots": [],
+        "latest": {
+          "d": "Nov 4, 2026",
+          "t": "One app catalog drives the App Store; one sync job keeps it current",
+          "url": "https://github.com/natesteele888/apps/commit/096dd326638ade1e266a8f0398c9245c10c57ac4"
+        }
       }
     },
     {
@@ -154,8 +159,8 @@
           "coach"
         ],
         "shots": [
-          "store/img/situations.webp",
-          "store/img/situations-b.webp"
+          "store/shots/situations-1.webp",
+          "store/shots/situations-2.webp"
         ],
         "autoShots": [
           {
@@ -166,7 +171,12 @@
           {
             "url": ""
           }
-        ]
+        ],
+        "latest": {
+          "d": "Nov 4, 2026",
+          "t": "Line up the cut on a single to right with a runner on first",
+          "url": "https://github.com/natesteele888/apps/commit/476b0629311deaaa589e54a33eb5ea49428a6c88"
+        }
       }
     },
     {
@@ -243,7 +253,12 @@
         "shots": [
           "store/img/picks.webp"
         ],
-        "autoShots": []
+        "autoShots": [],
+        "latest": {
+          "d": "Nov 2, 2026",
+          "t": "Gameday Picks: a real installable app with Google sign-in and invite codes",
+          "url": "https://github.com/natesteele888/apps/commit/41ccaf649fd9a590fd6f943b5978536ead73d697"
+        }
       }
     },
     {
@@ -315,7 +330,7 @@
           "coach"
         ],
         "shots": [
-          "store/img/bengals.webp"
+          "store/shots/bengals-1.webp"
         ],
         "autoShots": [
           {
@@ -323,7 +338,12 @@
             "click": "Let's go",
             "wait": 2000
           }
-        ]
+        ],
+        "latest": {
+          "d": "Nov 4, 2026",
+          "t": "Rename Defense tab to Opponent Offense",
+          "url": "https://github.com/natesteele888/ASL-Bengals/commit/2378d4a71eb42840ad8e8212732505668736fd0d"
+        }
       }
     },
     {
@@ -396,14 +416,19 @@
           "board"
         ],
         "shots": [
-          "store/img/gridiron.webp"
+          "store/shots/gridiron-1.webp"
         ],
         "autoShots": [
           {
             "url": "",
             "scrollY": 1180
           }
-        ]
+        ],
+        "latest": {
+          "d": "Nov 4, 2026",
+          "t": "Gridiron Hub: unlock the already-built RSVP/roster/message board, make messages two-way, add read receipts",
+          "url": "https://github.com/natesteele888/ASL-Bengals/commit/89e58575201e4f96b70c4f93aa97aeb4f4ef14a4"
+        }
       }
     },
     {
@@ -475,7 +500,7 @@
           "board"
         ],
         "shots": [
-          "store/img/dashboard.webp"
+          "store/shots/dashboard-1.webp"
         ],
         "autoShots": [
           {
@@ -555,13 +580,18 @@
           "coach"
         ],
         "shots": [
-          "store/img/ballclub.webp"
+          "store/shots/ballclub-1.webp"
         ],
         "autoShots": [
           {
             "url": ""
           }
-        ]
+        ],
+        "latest": {
+          "d": "Nov 4, 2026",
+          "t": "Add import-archive-team.mjs: fetch a team's season game list from GameChanger",
+          "url": "https://github.com/natesteele888/lybs-ballclub/commit/2709d0009530b1ee9c2767763f548f34a29d0221"
+        }
       }
     },
     {
@@ -627,13 +657,18 @@
           "parent"
         ],
         "shots": [
-          "store/img/cards.webp"
+          "store/shots/cards-1.webp"
         ],
         "autoShots": [
           {
             "url": ""
           }
-        ]
+        ],
+        "latest": {
+          "d": "Nov 2, 2026",
+          "t": "Point Claude sessions at the shared nate-brain memory",
+          "url": "https://github.com/natesteele888/lybs-cards/commit/b9c872e69148023f594b70aef86ca8d90879ab5f"
+        }
       }
     },
     {
@@ -702,13 +737,18 @@
           "player"
         ],
         "shots": [
-          "store/img/fitness.webp"
+          "store/shots/fitness-1.webp"
         ],
         "autoShots": [
           {
             "url": ""
           }
-        ]
+        ],
+        "latest": {
+          "d": "Nov 3, 2026",
+          "t": "Default the reminders to Mon Nov 2, the day he actually started",
+          "url": "https://github.com/natesteele888/fitness-hub/commit/d9abcd0778fcd10dbf026d48a794bbaeace6c799"
+        }
       }
     },
     {
@@ -775,8 +815,8 @@
           "player"
         ],
         "shots": [
-          "store/img/cube.webp",
-          "store/img/cube-b.webp"
+          "store/shots/cube-1.webp",
+          "store/shots/cube-2.webp"
         ],
         "autoShots": [
           {
@@ -787,7 +827,12 @@
           {
             "url": ""
           }
-        ]
+        ],
+        "latest": {
+          "d": "Oct 31, 2026",
+          "t": "Name the actual fix when the leaderboard cannot sign in",
+          "url": "https://github.com/natesteele888/cube-clock/commit/9111a64925f458e8a830982d735e6ed3f2b1b141"
+        }
       }
     },
     {
@@ -874,7 +919,12 @@
         "shots": [
           "store/img/sponsor-banners.webp"
         ],
-        "autoShots": []
+        "autoShots": [],
+        "latest": {
+          "d": "Nov 3, 2026",
+          "t": "Keep the sign-in check's errors readable in the app",
+          "url": "https://github.com/natesteele888/sponsor-banner-inventory/commit/516de481c2935a0162c277eddde7e5996a3fd494"
+        }
       }
     },
     {
