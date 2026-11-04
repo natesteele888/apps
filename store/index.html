@@ -329,6 +329,7 @@ const NUMW=["Zero","One","Two","Three","Four","Five","Six","Seven","Eight","Nine
 const SOON=[["💌","Steele Events","Invitations and RSVPs for any event: themes, custom questions, plus-ones, capacity and co-hosts. Built and tested; launching soon."],
             ["🏢","League Ops in a Box","A youth league platform any organization can set up for itself, with document compliance that coaches can check without ever seeing the paperwork."]];
 const ROLES={player:"I'm a player",parent:"I'm a parent",coach:"I coach",board:"I run a league",curious:"Just curious"};
+const ROLE_E={player:"🏃",parent:"👪",coach:"📋",board:"🏛️"};
 
 /* ===== helpers ===== */
 const $=s=>document.querySelector(s);
@@ -452,8 +453,12 @@ function renderBig(){
     <div class="stat"><b>${APPS.filter(a=>a.install).length}</b><span>install on a phone</span></div>
     <div class="stat"><b>2</b><span>leagues served</span></div>
     <div class="stat"><b>${SOON.length}</b><span>on the workbench</span></div></div></section>
+  <section class="bp"><h3>What's new</h3><p>Recent ships across the system, straight from each app's own changelog.</p>
+    ${APPS.filter(a=>a.news).map(a=>`<button class="part" data-app="${a.id}" style="width:100%;text-align:left;margin-bottom:8px">${icon(a,"em")}<span><b>${esc(a.name)} · ${esc(a.news.d)}</b><span>${esc(a.news.t)}</span></span></button>`).join("")}</section>
   <section class="bp"><h3>Shared building blocks</h3><p>Solve it once, reuse it everywhere. Each block below shows up in several apps.</p>
     <div class="parts">${top.map(([k,n])=>{const p=PARTS[k];const who=APPS.filter(a=>a.parts.includes(k));return `<div class="part"><span class="em">${p.e}</span><span><b>${esc(p.n)}</b><span>${esc(p.d)}</span></span><span class="count">${n}<small>app${n>1?"s":""}</small></span></div>`}).join("")}</div></section>
+  <section class="bp"><h3>Who it's for</h3><p>Every app points at someone specific. Tap one to see which apps fit.</p>
+    <div class="parts">${Object.entries(ROLES).filter(([k])=>k!=="curious").map(([k,n])=>{const xs=APPS.filter(a=>a.for.includes(k));if(!xs.length)return"";return `<div class="part"><span class="em">${ROLE_E[k]||"⭐"}</span><span><b>${esc(n)}</b><span>${xs.map(a=>esc(a.name)).join(", ")}</span></span><span class="count">${xs.length}<small>app${xs.length>1?"s":""}</small></span></div>`}).join("")}</div></section>
   <section class="bp"><h3>How an idea becomes an app</h3><p>The same loop, every time, with Claude as the development partner.</p>
     <div class="flow">
       <div><b>Spot a real problem</b>A coach, a parent or the league board needs something a spreadsheet can't do.</div>
