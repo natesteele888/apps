@@ -1,5 +1,5 @@
 // Network first, so updates show up right away; falls back to the last saved copy when offline.
-const CACHE = "situations-v12";
+const CACHE = "situations-v13";
 self.addEventListener("install", e => self.skipWaiting());
 self.addEventListener("activate", e => e.waitUntil(
   caches.keys().then(ks => Promise.all(ks.filter(k => k.startsWith("situations-") && k !== CACHE).map(k => caches.delete(k))))
