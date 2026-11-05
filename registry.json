@@ -255,9 +255,9 @@
         ],
         "autoShots": [],
         "latest": {
-          "d": "Nov 2, 2026",
-          "t": "Gameday Picks: a real installable app with Google sign-in and invite codes",
-          "url": "https://github.com/natesteele888/apps/commit/41ccaf649fd9a590fd6f943b5978536ead73d697"
+          "d": "Nov 5, 2026",
+          "t": "Gameday Picks: keep your scroll position after making a pick",
+          "url": "https://github.com/natesteele888/apps/commit/19f8a37e7732170dce7baa555d4d5fbf1ab85927"
         }
       }
     },
@@ -746,8 +746,8 @@
         ],
         "latest": {
           "d": "Nov 5, 2026",
-          "t": "Mirror progress to a Sheet so a parent can see sessions without asking",
-          "url": "https://github.com/natesteele888/fitness-hub/commit/d49190565ade9097f4de2eb2c232e5710d3ed81a"
+          "t": "Drop autoplay from the exercise demo embed",
+          "url": "https://github.com/natesteele888/fitness-hub/commit/b2c98c364e647d78429be082e80e48598c04aff1"
         }
       }
     },
