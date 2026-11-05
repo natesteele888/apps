@@ -1,6 +1,6 @@
 {
   "about": "The one list of Nathan's apps. Live links, which apps show where, and each app's App Store listing (text, highlights, screenshots) all come from here. Edit listings and icons in the Toolbox; the sync job copies them here. Don't hand-edit text in store/index.html.",
-  "updated": "2026-11-04",
+  "updated": "2026-11-05",
   "toolbox": "https://natesteele888.github.io/apps/toolbox/",
   "store": "https://natesteele888.github.io/apps/store/",
   "apps": [
@@ -745,9 +745,9 @@
           }
         ],
         "latest": {
-          "d": "Nov 4, 2026",
-          "t": "Add a Backup/Restore Progress feature for lost local data",
-          "url": "https://github.com/natesteele888/fitness-hub/commit/e55433631d7a710661f862df98cd1563dbf9e997"
+          "d": "Nov 5, 2026",
+          "t": "Mirror progress to a Sheet so a parent can see sessions without asking",
+          "url": "https://github.com/natesteele888/fitness-hub/commit/d49190565ade9097f4de2eb2c232e5710d3ed81a"
         }
       }
     },
