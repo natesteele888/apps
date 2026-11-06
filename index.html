@@ -10,16 +10,34 @@ h1{font-size:24px;margin:0 0 4px}p{color:var(--muted);margin:0 0 16px}
 .app img{width:48px;height:48px;border-radius:11px;flex:none}.app b{display:block}.app small{color:var(--muted)}
 .app span{flex:1;min-width:0}.app a{color:var(--text);text-decoration:none}
 .go{flex:none;font-weight:700;font-size:14px;padding:8px 14px;border-radius:999px;border:1.5px solid var(--ac);color:var(--ac)!important}
-ol{color:var(--muted);padding-left:20px;font-size:14px}
+.prog{display:flex;align-items:center;gap:10px;margin:0 0 12px;font-size:14px;color:var(--muted)}.bar{flex:1;height:8px;border-radius:9px;background:var(--line);overflow:hidden}.bar i{display:block;height:100%;width:0;background:var(--ac);transition:width .3s}
+.next{display:block;text-align:center;font-weight:800;padding:14px;border-radius:14px;background:var(--ac);color:var(--bg);text-decoration:none;margin:0 0 8px}.next[aria-disabled="true"]{opacity:.5;pointer-events:none}
+.tip{font-size:13.5px}.app.ok{opacity:.6}.app.ok .go{border-color:var(--line);color:var(--muted)!important}
 </style></head><body>
 <h1>Nate's Apps</h1>
-<p>Open each one on your phone and install it. They all open full screen, like real apps.</p>
-<ol><li>Tap <b>Install</b> next to an app.</li><li>In Chrome, tap <b>Install</b> on the banner (or ⋮ → <b>Install app</b>).</li><li>Long-press the new icon and drag it onto another to make a folder.</li></ol>
+<p>Phones only let each app install itself, one tap each. Tap <b>Install next app</b>, tap <b>Install</b> on the pop-up, then come back here with Back. About 10 seconds an app.</p>
+<div class="prog"><div class="bar"><i id="fill"></i></div><span id="count"></span></div>
+<a class="next" id="next" href="#">Install next app</a>
+<p class="tip">Then long-press an icon and drop it on another to make a folder.</p>
 <div id="list">Loading…</div>
 <script>
-fetch("registry.json",{cache:"no-store"}).then(r=>r.json()).then(j=>{
+const K="nate.install.done";let done=[];try{done=JSON.parse(localStorage.getItem(K)||"[]")}catch(e){}
+const save=()=>{try{localStorage.setItem(K,JSON.stringify(done))}catch(e){}};
+const url=a=>a.live+(a.live.includes("?")?"&":"?")+"install";
+let apps=[];
+function draw(){
   const e=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
-  document.getElementById("list").innerHTML=j.apps.filter(a=>!a.retired).map(a=>`<div class="app"><img src="icons/${e(a.id)}-192.png" alt=""><span><a href="${e(a.live)}"><b>${e(a.name)}</b></a><small>${e(a.live.replace(/^https:\/\//,""))}</small></span><a class="go" href="${e(a.live)}${a.live.includes("?")?"&":"?"}install">Install</a></div>`).join("");
-}).catch(()=>{document.getElementById("list").textContent="Couldn't load the app list. Check your connection."});
+  document.getElementById("list").innerHTML=apps.map(a=>{const ok=done.includes(a.id);return `<div class="app${ok?" ok":""}"><img src="icons/${e(a.id)}-192.png" alt=""><span><a href="${e(a.live)}"><b>${e(a.name)}</b></a><small>${ok?"Done":e(a.live.replace(/^https:\/\//,""))}</small></span><a class="go" data-id="${e(a.id)}" href="${e(url(a))}">${ok?"Again":"Install"}</a></div>`}).join("");
+  const n=apps.filter(a=>done.includes(a.id)).length;
+  document.getElementById("count").textContent=n+" of "+apps.length+" done";
+  document.getElementById("fill").style.width=(apps.length?100*n/apps.length:0)+"%";
+  const nx=apps.find(a=>!done.includes(a.id)),b=document.getElementById("next");
+  if(nx){b.href=url(nx);b.dataset.id=nx.id;b.textContent="Install next app: "+nx.name;b.removeAttribute("aria-disabled")}
+  else{b.textContent="All set";b.setAttribute("aria-disabled","true");b.removeAttribute("href")}
+}
+document.addEventListener("click",ev=>{const a=ev.target.closest("[data-id]");if(a&&!done.includes(a.dataset.id)){done.push(a.dataset.id);save()}});
+addEventListener("pageshow",()=>{if(apps.length)draw()});
+fetch("registry.json",{cache:"no-store"}).then(r=>r.json()).then(j=>{apps=j.apps.filter(a=>!a.retired&&a.live);draw()})
+ .catch(()=>{document.getElementById("list").textContent="Couldn't load the app list. Check your connection."});
 </script>
 </body></html>

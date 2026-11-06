@@ -30,6 +30,7 @@
 <script src="https://www.gstatic.com/firebasejs/11.6.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/11.6.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/11.6.0/firebase-firestore-compat.js"></script>
+<script src="https://natesteele888.github.io/apps/install.js" defer></script>
 </head>
 <body>
 <div id="gate"><div class="box"><img src="icons/icon-192.png" width="88" height="88" alt="" style="border-radius:22px"><h1>Toolbox</h1><p id="gateMsg">Loading…</p><button id="gateBtn" hidden>Sign in with Google</button></div></div>
@@ -903,7 +904,7 @@ function renderHome(){
   const hasIdeas=P().some(p=>p.status!=="done"&&openIdeas(p).length);
   $("#main").innerHTML=`<div class="vh"><div><h1>Now</h1><p>Where you left off and what's next.</p></div></div>
   <div class="dash">
-   <section class="panel span-12 quick"><a class="btn" href="${STORE_URL}" target="_blank" rel="noopener">🛍️ App Store</a><a class="btn" href="../" target="_blank" rel="noopener">📲 Install my apps</a><a class="btn" href="https://lybs-dashboard.web.app/" target="_blank" rel="noopener">📊 LYBS Dashboard</a><a class="btn" href="#home" data-jump="actHome">✅ Claude's review</a><a class="btn" href="https://claude.ai/artifact/3us7d3hyQGdnA9VtJJ56dr" target="_blank" rel="noopener">🗺️ App Map</a></section>
+   <section class="panel span-12 quick"><a class="btn" href="${STORE_URL}" target="_blank" rel="noopener">🛍️ App Store</a><a class="btn" href="../" target="_blank" rel="noopener">📲 Install all my apps</a><a class="btn" href="https://lybs-dashboard.web.app/" target="_blank" rel="noopener">📊 LYBS Dashboard</a><a class="btn" href="#home" data-jump="actHome">✅ Claude's review</a><a class="btn" href="https://claude.ai/artifact/3us7d3hyQGdnA9VtJJ56dr" target="_blank" rel="noopener">🗺️ App Map</a></section>
    ${linkBanner()}
    ${top?`<section class="panel span-12 nowcard area-${top.area}"><div class="eyebrow2">Pick up here</div><h2 class="nowname">${esc(top.name)}</h2>
      ${top.leftOff?`<p class="nowleft">${esc(top.leftOff)}</p>`:""}
@@ -2022,7 +2023,7 @@ document.addEventListener("click",e=>{
    the item's `nate` field only; the bridge carries it back to state/decisions.json,
    and the reviewer and builder pick it up on their next run. */
 const BRIDGE_URL="https://github.com/natesteele888/nate-brain/actions/workflows/toolbox-bridge.yml";
-const ACT_ST={proposed:"Waiting for your OK",approved:"Approved · Claude builds it overnight",working:"Claude is working on it",review:"Ready for you to check",needs_you:"Needs you",answered:"Answered · Claude plans the next step",done:"Done",failed:"Didn't finish",declined:"Not now"};
+const ACT_ST={proposed:"Waiting for your OK",approved:"Approved · Claude starts within the hour",working:"Claude is working on it",review:"Ready for you to check",needs_you:"Needs you",answered:"Answered · Claude plans the next step",done:"Done",failed:"Didn't finish",declined:"Not now"};
 const NATE_DO={approve:"approved",retry:"approved",decline:"declined",answer:"answered",done:"done"};
 const NATE_SAID={approve:"Approved",retry:"Sent back to try again",decline:"Not now",answer:"Answer sent",done:"Marked done"};
 const actPending=a=>!!(a.nate&&a.nate.at&&a.nate.at!==a.phoneAt);
@@ -2047,7 +2048,7 @@ function actCard(a,showApp){
     ${a.result&&st!=="proposed"?`<details><summary>What Claude did · next step</summary><div class="jres">${mdLite(a.result)}</div></details>`:""}
     ${a.answer&&dec?`<small><b>You chose:</b> ${esc(a.answer)}</small>`:""}
     ${a.prUrl&&st!=="done"?`<a class="btn small" href="${esc(a.prUrl)}" target="_blank" rel="noopener">Open the pull request ↗</a>`:""}
-    ${pend?`<p class="pend">✓ ${NATE_SAID[a.nate.do]||"Sent"}${a.nate.answer?": "+esc(a.nate.answer):""}. Claude picks it up on its next run.</p>`:""}
+    ${pend?`<p class="pend">✓ ${NATE_SAID[a.nate.do]||"Sent"}${a.nate.answer?": "+esc(a.nate.answer):""}. Claude picks it up within the hour.</p>`:""}
     ${btns}</div>`;
 }
 function actGroups(list){
@@ -2069,7 +2070,7 @@ function actionsHome(){
     ${g.failed.length?`<details class="failgrp"><summary class="acth">Didn't finish · ${g.failed.length}</summary><p class="prog" style="margin:4px 0 8px">Most of these stopped because the builder couldn't reach the repo. That's fixed, so they can run again.</p>${S.canWrite?`<button type="button" class="btn small primary" data-actretryall="1">↻ Try all ${g.failed.length} again</button>`:""}<div class="acts" style="margin-top:8px">${g.failed.map(a=>actCard(a,true)).join("")}</div></details>`:""}
     ${g.going.length?`<div class="acth">In progress · ${g.going.length}</div>${actMini(g.going)}`:""}
     ${g.done.length?`<details style="margin-top:12px"><summary class="acth" style="cursor:pointer;display:inline">Done · ${g.done.length}</summary>${actMini(g.done.slice(0,15))}</details>`:""}
-    <p class="prog" style="margin:12px 0 0">Approve here and Claude builds it overnight (about 2:30am), then opens a pull request for you to check. New suggestions arrive after the morning review.</p></section>`;
+    <p class="prog" style="margin:12px 0 0">Claude works through approved items every hour from 7am to 10pm and merges them when its checks pass. Anything that needs you lands in Ready for you.</p></section>`;
 }
 function actionsBlock(p,compact){
   const xs=actsOf(p.id);if(!xs.length)return"";const g=actGroups(xs);const live=[...g.ok,...g.you,...g.failed];
