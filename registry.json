@@ -1,6 +1,6 @@
 {
   "about": "The one list of Nathan's apps. Live links, which apps show where, and each app's App Store listing (text, highlights, screenshots) all come from here. Edit listings and icons in the Toolbox; the sync job copies them here. Don't hand-edit text in store/index.html.",
-  "updated": "2026-11-05",
+  "updated": "2026-11-06",
   "toolbox": "https://natesteele888.github.io/apps/toolbox/",
   "store": "https://natesteele888.github.io/apps/store/",
   "apps": [
@@ -340,9 +340,9 @@
           }
         ],
         "latest": {
-          "d": "Nov 4, 2026",
-          "t": "Opponent Offense notice: \"making changes on defense\"",
-          "url": "https://github.com/natesteele888/ASL-Bengals/commit/7786a6363f41eb61afeba388a8123f9ec504c124"
+          "d": "Nov 6, 2026",
+          "t": "Make scout coverage pills easier to read",
+          "url": "https://github.com/natesteele888/ASL-Bengals/commit/5e798081586e3e52edcde8017de265e88dc4cbab"
         }
       }
     },
