@@ -597,7 +597,7 @@
     {
       "id": "cards",
       "name": "Steele Cards",
-      "live": "https://natesteele888.github.io/lybs-cards/",
+      "live": "https://lybs-cards.web.app/",
       "repo": "natesteele888/lybs-cards",
       "path": "",
       "toolboxIds": [
@@ -665,9 +665,9 @@
           }
         ],
         "latest": {
-          "d": "Nov 2, 2026",
-          "t": "Point Claude sessions at the shared nate-brain memory",
-          "url": "https://github.com/natesteele888/lybs-cards/commit/b9c872e69148023f594b70aef86ca8d90879ab5f"
+          "d": "Nov 6, 2026",
+          "t": "Moved to its own home at lybs-cards.web.app; old links redirect",
+          "url": "https://lybs-cards.web.app/"
         }
       }
     },
