@@ -1,7 +1,7 @@
 // App shell only: the page, icons, fonts and the Firebase code it needs to open with no
 // signal. Never caches your data: that stays in Firestore's own private cache on this
 // phone, behind your sign-in (Firestore calls go to googleapis.com, which this skips).
-const CACHE = "toolbox-v8";
+const CACHE = "toolbox-v9";
 self.addEventListener("install", () => self.skipWaiting());
 self.addEventListener("activate", e => e.waitUntil(
   caches.keys().then(ks => Promise.all(ks.filter(k => k.startsWith("toolbox-") && k !== CACHE).map(k => caches.delete(k))))
