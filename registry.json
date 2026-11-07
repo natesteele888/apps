@@ -798,22 +798,7 @@
             "url": ""
           }
         ],
-        "latest": {
-          "d": "Nov 7, 2026",
-          "t": "Remove the one-time cleanup job",
-          "url": "https://github.com/natesteele888/lybs-cards/commit/ef706db03e38330112d1dfa976049d80596fc5c8"
-        },
-        "version": "1.0.3",
-        "history": [
-          {
-            "v": "1.0.3",
-            "t": "Remove the one-time cleanup job"
-          },
-          {
-            "v": "1.0.2",
-            "t": "One-time cleanup: delete the old branch that still holds card photos"
-          }
-        ]
+        "changes": false
       }
     },
     {

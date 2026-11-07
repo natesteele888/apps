@@ -125,6 +125,11 @@ def version_for(repo, path):
 for a in reg["apps"]:
     if not a.get("repo") or a.get("retired") or "listing" not in a:
         continue
+    if a["listing"].get("changes") is False:
+        # "changes": false = don't show this repo's commits (e.g. a stub that only redirects to a private app)
+        for k in ("latest", "version", "history"):
+            a["listing"].pop(k, None)
+        continue
     path = a.get("path", "")
     url = f"https://api.github.com/repos/{a['repo']}/commits?per_page=30" + (f"&path={path}" if path else "")
     try:
@@ -142,7 +147,7 @@ for a in reg["apps"]:
     hist = []
     for i, c in enumerate(commits):
         msg = c["commit"]["message"].split("\n")[0].strip()
-        if re.match(r"^(Merge|Icons from the Toolbox|Sync the App Store|Update .* app icon|CLAUDE\.md)", msg) or re.search(r"shared app icon|app directory|registry\.json|only redirects old links", msg, re.I):
+        if re.match(r"^(Merge|Icons from the Toolbox|Sync the App Store|Update .* app icon|CLAUDE\.md)", msg) or re.search(r"shared app icon|app directory|registry\.json|only redirects old links|one-time cleanup|cleanup job", msg, re.I):
             continue
         when = datetime.datetime.fromisoformat(c["commit"]["author"]["date"].replace("Z", "+00:00"))
         msg = re.sub(r"\s*\(#\d+\)$", "", msg)

@@ -7,9 +7,13 @@
 <meta name="description" content="Apps designed and built by Nathan Steele with Claude, for youth football and baseball, coaches, families and everyday use.">
 <meta property="og:title" content="Steele App Store">
 <meta property="og:description" content="Live apps for youth sports and everyday life, built by Nathan Steele with AI as a development partner.">
-<meta property="og:image" content="https://natesteele888.github.io/apps/store/img/share.jpg">
+<meta property="og:image" content="https://natesteele888.github.io/apps/store/img/share-v2.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="Steele App Store: icons of every app, with the line Real apps, one builder.">
 <meta property="og:type" content="website">
 <meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://natesteele888.github.io/apps/store/img/share-v2.jpg">
 <meta name="theme-color" content="#f2f2f7" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
 <link rel="manifest" href="manifest.json">
@@ -80,7 +84,7 @@ h1{font-size:34px;line-height:1.1;margin:2px 0 0;letter-spacing:-.02em;font-weig
 .picker{padding:22px}
 .picker .kick{color:var(--blue);opacity:1}
 .roles{display:flex;flex-wrap:wrap;gap:8px;margin:14px 0 4px}
-.role{background:var(--pill);border-radius:999px;padding:8px 14px;font-weight:600;font-size:14.5px}
+.role{background:var(--pill);border-radius:999px;padding:8px 16px;min-height:44px;display:inline-flex;align-items:center;font-weight:600;font-size:14.5px}
 .role[aria-pressed="true"]{background:var(--blue);color:#fff}
 .picks{display:grid;gap:4px;margin-top:10px}
 
@@ -103,7 +107,7 @@ h1{font-size:34px;line-height:1.1;margin:2px 0 0;letter-spacing:-.02em;font-weig
 .sect span{color:var(--muted);font-size:14px}
 .cats{display:flex;gap:8px;overflow-x:auto;padding:12px 0 4px;scrollbar-width:none}
 .cats::-webkit-scrollbar{display:none}
-.cat{background:var(--card);border:1px solid var(--line);border-radius:999px;padding:7px 14px;font-weight:600;font-size:14px;white-space:nowrap}
+.cat{background:var(--card);border:1px solid var(--line);border-radius:999px;padding:7px 14px;min-height:44px;display:inline-flex;align-items:center;font-weight:600;font-size:14px;white-space:nowrap}
 .cat[aria-pressed="true"]{background:var(--text);color:var(--bg);border-color:var(--text)}
 .grid2{display:grid;gap:0 32px;grid-template-columns:minmax(0,1fr)}
 @media(min-width:760px){.grid2{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}.grid2 .row+.row{border-top:0}.grid2 .row{border-bottom:1px solid var(--line)}}
@@ -164,15 +168,15 @@ h1{font-size:34px;line-height:1.1;margin:2px 0 0;letter-spacing:-.02em;font-weig
 .sheet{position:fixed;inset:0;z-index:40;background:var(--bg);overflow-y:auto;overscroll-behavior:contain;transform:translateY(100%);transition:transform .35s cubic-bezier(.2,.8,.2,1);visibility:hidden}
 .sheet.open{transform:none;visibility:visible}
 .sh-nav{position:sticky;top:0;z-index:2;display:flex;align-items:center;justify-content:space-between;padding:calc(10px + env(safe-area-inset-top)) 16px 10px;background:var(--glass);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px)}
-.sh-nav button{color:var(--blue);font-weight:600;font-size:16px;display:flex;align-items:center;gap:4px;padding:6px 4px}
+.sh-nav button{color:var(--blue);font-weight:600;font-size:16px;display:flex;align-items:center;gap:4px;padding:6px 8px 6px 4px;min-height:44px}
 .dhead{display:flex;gap:16px;align-items:flex-start;padding:10px 0 4px}
 .dhead .ic{width:118px;height:118px;border-radius:26px;box-shadow:0 0 0 1px var(--line);flex:none}
 .dhead h2{margin:0;font-size:24px;line-height:1.15;letter-spacing:-.01em}
 .dhead .s{color:var(--muted);font-size:14.5px;margin-top:2px}
 .dhead .acts{display:flex;gap:10px;align-items:center;margin-top:12px}
-.openbtn{background:var(--blue);color:#fff;font-weight:800;padding:8px 22px;border-radius:999px;font-size:15px}
+.openbtn{background:var(--blue);color:#fff;font-weight:800;padding:8px 22px;min-height:44px;display:inline-flex;align-items:center;justify-content:center;border-radius:999px;font-size:15px}
 .openbtn.lock{background:var(--pill);color:var(--muted)}
-.iconbtn{width:34px;height:34px;border-radius:50%;background:var(--pill);color:var(--blue);display:grid;place-items:center}
+.iconbtn{width:44px;height:44px;border-radius:50%;background:var(--pill);color:var(--blue);display:grid;place-items:center}
 .iconbtn svg{width:18px;height:18px}
 .info{display:flex;overflow-x:auto;margin:16px 0 4px;border-top:1px solid var(--line);border-bottom:1px solid var(--line);scrollbar-width:none}
 .info::-webkit-scrollbar{display:none}
@@ -209,7 +213,7 @@ h1{font-size:34px;line-height:1.1;margin:2px 0 0;letter-spacing:-.02em;font-weig
 .qr .code{flex:none;width:132px;height:132px;border-radius:10px;overflow:hidden;line-height:0;background:#fff}
 .qr .code svg{width:100%;height:100%;display:block}
 .qr p{margin:0 0 10px;font-size:14px;color:var(--muted)}
-.qr button{background:var(--pill);color:var(--blue);font-weight:700;font-size:14px;padding:8px 16px;border-radius:999px}
+.qr button{min-height:44px;background:var(--pill);color:var(--blue);font-weight:700;font-size:14px;padding:8px 16px;border-radius:999px}
 
 /* toolbox mock screen */
 .mock{position:relative;overflow:hidden;background:radial-gradient(120% 80% at 20% 0%,#2a2f45,#0d0f17 70%);padding:46px 16px 16px;color:#fff}
@@ -225,6 +229,8 @@ h1{font-size:34px;line-height:1.1;margin:2px 0 0;letter-spacing:-.02em;font-weig
 .mock .dock img{width:40px;height:40px;border-radius:22%}
 
 footer{color:var(--muted);font-size:13px;text-align:center;padding:30px 0 10px}
+/* text links get a 44px tap area without moving anything */
+footer a,footer button,#main p a,#main p button,#sheet p a,#sheet p button{display:inline-block;padding:13px 6px;margin:-13px 0}
 .toast{position:fixed;left:50%;bottom:calc(96px + env(safe-area-inset-bottom));transform:translateX(-50%) translateY(20px);opacity:0;background:var(--text);color:var(--bg);padding:10px 16px;border-radius:12px;font-weight:600;font-size:14px;z-index:60;transition:.25s;pointer-events:none}
 .toast.on{opacity:1;transform:translateX(-50%)}
 [hidden]{display:none!important}
@@ -321,6 +327,7 @@ function renderToday(){
       ${SOON.map(([e,n,d])=>`<div class="soonrow"><span class="ic">${e}</span><span><b>${esc(n)}</b><span>${esc(d)}</span></span></div>`).join("")}
     </div>`:""}
   </div>
+  ${newsFeed().length?`<div class="sect"><h3>What's new</h3><button data-tab-go="big" style="color:var(--blue);font-weight:600;padding:12px 0">See all</button></div><div>${newsFeed().slice(0,3).map(newsRow).join("")}</div>`:""}
   <div class="sect"><h3>Collect the set</h3><span>Tap a card to flip it</span></div>
   <div class="cardset" id="cardset">${APPS.map((x,i)=>tradingCard(x,i)).join("")}</div>`;
 }
@@ -377,6 +384,9 @@ function newsFeed(){
   const out=[];rows.forEach(r=>{const g=out.find(o=>o.t===r.t);g?g.apps.push(r.a):out.push({t:r.t,apps:[r.a]})});
   return out;
 }
+function newsRow(g){return g.apps.length>1
+  ?`<div class="part" style="margin-bottom:8px">${icon(g.apps[0],"em")}<span><b>${esc(g.apps.map(a=>a.name).join(", "))}</b><span>${esc(g.t)}</span></span></div>`
+  :`<button class="part" data-app="${g.apps[0].id}" style="width:100%;text-align:left;margin-bottom:8px">${icon(g.apps[0],"em")}<span><b>${esc(g.apps[0].name)}${g.apps[0].ver?` · v${esc(g.apps[0].ver)}`:""}</b><span>${esc(g.t)}</span></span></button>`}
 function renderBig(){
   const used={};APPS.forEach(a=>a.parts.forEach(p=>used[p]=(used[p]||0)+1));
   const top=Object.entries(used).sort((a,b)=>b[1]-a[1]);
@@ -388,9 +398,7 @@ function renderBig(){
     <div class="stat"><b>${top.length}</b><span>shared building blocks</span></div>
     <div class="stat"><b>${APPS.filter(a=>a.cat==="baseball").length}</b><span>league apps</span></div></div></section>
   <section class="bp"><h3>What's new</h3><p>Recent changes across the system, straight from each app's own changelog.</p>
-    ${newsFeed().map(g=>g.apps.length>1
-      ?`<div class="part" style="margin-bottom:8px">${icon(g.apps[0],"em")}<span><b>${esc(g.apps.map(a=>a.name).join(", "))}</b><span>${esc(g.t)}</span></span></div>`
-      :`<button class="part" data-app="${g.apps[0].id}" style="width:100%;text-align:left;margin-bottom:8px">${icon(g.apps[0],"em")}<span><b>${esc(g.apps[0].name)}${g.apps[0].ver?` · v${esc(g.apps[0].ver)}`:""}</b><span>${esc(g.t)}</span></span></button>`).join("")}</section>
+    ${newsFeed().map(newsRow).join("")}</section>
   <section class="bp"><h3>Shared building blocks</h3><p>Solve it once, reuse it everywhere. Each block below shows up in several apps.</p>
     <div class="parts">${top.map(([k,n])=>{const p=PARTS[k];const who=APPS.filter(a=>a.parts.includes(k));return `<div class="part"><span class="em">${p.e}</span><span><b>${esc(p.n)}</b><span>${esc(p.d)}</span></span><span class="count">${n}<small>app${n>1?"s":""}</small></span></div>`}).join("")}</div></section>
   <section class="bp"><h3>Who it's for</h3><p>Every app points at someone specific. Tap one to see which apps fit.</p>
