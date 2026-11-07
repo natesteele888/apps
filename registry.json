@@ -1231,6 +1231,87 @@
           }
         ]
       }
+    },
+    {
+      "id": "eightcount",
+      "name": "Eight Count",
+      "live": "https://natesteele888.github.io/apps/eightcount/",
+      "repo": "natesteele888/apps",
+      "path": "eightcount/",
+      "toolboxIds": [],
+      "listing": {
+        "sub": "Cheer and dance counts that lock the team together",
+        "cat": "family",
+        "ac": "#ff3d8b",
+        "install": true,
+        "access": "Open",
+        "desc": "Write a cheer or dance routine in 8-counts, then practice it with a big count on screen and the next move coming up. Slow it to 50% to learn it, add your own song, lock every phone onto the same clock so the whole team counts off together, and record a take with the count on top.",
+        "feats": [
+          [
+            "🔢",
+            "Big, steady count",
+            "A click that stays perfectly even and a number you can read across the gym."
+          ],
+          [
+            "👥",
+            "Lock in together",
+            "Every phone starts on the same clock, so the whole team counts off at once."
+          ],
+          [
+            "🎥",
+            "Record and review",
+            "Film a take, then see which count each moment landed on."
+          ]
+        ],
+        "facts": [
+          [
+            "Counts",
+            "8",
+            "per row"
+          ],
+          [
+            "Practice speed",
+            "50-100%",
+            "to learn it"
+          ],
+          [
+            "Works",
+            "Offline",
+            "no account"
+          ]
+        ],
+        "news": {
+          "d": "Nov 2026",
+          "t": "New: write routines in 8-counts, lock phones together, record takes."
+        },
+        "parts": [
+          "pwa",
+          "offline",
+          "share"
+        ],
+        "tie": "Built for cheer and dance teams, and any group that has to move on the same count. Routines, songs and videos stay on the phone.",
+        "rel": [
+          "fitness",
+          "situations"
+        ],
+        "for": [
+          "coach",
+          "player",
+          "parent"
+        ],
+        "shots": [],
+        "autoShots": [
+          {
+            "url": "",
+            "wait": 2000
+          },
+          {
+            "url": "",
+            "click": "Sample: game-day cheer",
+            "wait": 1500
+          }
+        ]
+      }
     }
   ],
   "comingSoon": []
