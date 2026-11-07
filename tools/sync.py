@@ -1,15 +1,17 @@
 """Keep the App Store, icons and app catalog in sync. Runs from .github/workflows/sync.yml.
 
-One run does four things, and commits only what really changed:
+One run does five things, and commits only what really changed:
   1. Icons      Toolbox icon changes (Firestore public_icons)   -> icons/<id>-192/512/maskable.png
   2. Listings   Toolbox store-listing edits (public_listings)    -> registry.json apps[].listing
   3. Latest     newest commit for each app on GitHub             -> registry.json apps[].listing.latest
-                and a version from how many commits the app has   -> registry.json apps[].listing.version
-  4. Shots      fresh screenshots of each app's vetted public screens -> store/shots/<id>-<n>.webp
+                a version from how many commits the app has       -> registry.json apps[].listing.version
+                and its last 5 changes by version (no dates)      -> registry.json apps[].listing.history
+  4. Health     is each live app up, and does it really install?  -> listing.status ("down" only) and listing.install
+  5. Shots      fresh screenshots of each app's vetted public screens -> store/shots/<id>-<n>.webp
 
 registry.json is the app catalog: the App Store, the Toolbox and the install page all read it.
 """
-import base64, io, json, os, re, sys, datetime, urllib.request, urllib.error
+import base64, io, json, os, re, sys, time, datetime, urllib.parse, urllib.request, urllib.error
 from PIL import Image, ImageChops, ImageStat
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
@@ -108,6 +110,10 @@ if TOKEN:
     hdr["Authorization"] = f"Bearer {TOKEN}"
 
 
+def fmt_version(n):
+    return f"1.{n // 10}.{n % 10}"
+
+
 def version_for(repo, path):
     """How many commits the app has; its version is 1.<tens>.<ones> of that, so it rises as the app changes."""
     url = f"https://api.github.com/repos/{repo}/commits?per_page=1" + (f"&path={path}" if path else "")
@@ -120,7 +126,7 @@ for a in reg["apps"]:
     if not a.get("repo") or a.get("retired") or "listing" not in a:
         continue
     path = a.get("path", "")
-    url = f"https://api.github.com/repos/{a['repo']}/commits?per_page=8" + (f"&path={path}" if path else "")
+    url = f"https://api.github.com/repos/{a['repo']}/commits?per_page=30" + (f"&path={path}" if path else "")
     try:
         commits = get_json(url, hdr)
     except urllib.error.HTTPError as e:
@@ -133,22 +139,83 @@ for a in reg["apps"]:
     except Exception as e:
         print(f"version: {a['id']} {e}"); n = 0
     found = False
-    for c in commits:
+    hist = []
+    for i, c in enumerate(commits):
         msg = c["commit"]["message"].split("\n")[0].strip()
         if re.match(r"^(Merge|Icons from the Toolbox|Sync the App Store|Update .* app icon|CLAUDE\.md)", msg) or re.search(r"shared app icon|app directory|registry\.json|only redirects old links", msg, re.I):
             continue
         when = datetime.datetime.fromisoformat(c["commit"]["author"]["date"].replace("Z", "+00:00"))
-        msg = re.sub(r"\s*\(#\d+\)$", "", msg)[:180]
-        a["listing"]["latest"] = {"d": when.strftime("%b %-d, %Y"), "t": msg, "url": c["html_url"]}
-        found = True
-        break
+        msg = re.sub(r"\s*\(#\d+\)$", "", msg)
+        msg = re.sub(r"\s*\((?:from|on|via) the [^)]*\)$", "", msg)[:180]  # "(from the iMac)" is about my desk, not the app
+        if not found:
+            a["listing"]["latest"] = {"d": when.strftime("%b %-d, %Y"), "t": msg, "url": c["html_url"]}
+            found = True
+        if n > i and len(hist) < 5 and msg not in [h["t"] for h in hist]:
+            hist.append({"v": fmt_version(n - i), "t": msg})  # this commit's own version, so the list reads v1.5.3, v1.5.1, ...
     if n:
-        a["listing"]["version"] = f"1.{n // 10}.{n % 10}"
+        a["listing"]["version"] = fmt_version(n)
+    if hist:
+        a["listing"]["history"] = hist
     if not found and 0 < n <= len(commits):
         # every commit is housekeeping (e.g. a repo that now only redirects): nothing real to show
-        a["listing"].pop("latest", None); a["listing"].pop("version", None)
+        for k in ("latest", "version", "history"):
+            a["listing"].pop(k, None)
 
-# 4. Screenshots of each app's vetted public screens -------------------------
+# 4. Health: is each live app up, and does it really install? ------------------
+def fetch_page(url, tries=3):
+    """(status, html, final_url). Retries so one hiccup doesn't mark an app down."""
+    last = (0, "", url)
+    for t in range(tries):
+        try:
+            req = urllib.request.Request(url, headers={"User-Agent": "app-catalog-sync"})
+            with urllib.request.urlopen(req, timeout=20) as r:
+                return r.status, r.read(500000).decode("utf-8", "replace"), r.geturl()
+        except urllib.error.HTTPError as e:
+            last = (e.code, "", url)
+        except Exception:
+            last = (0, "", url)
+        if t < tries - 1:
+            time.sleep(4)
+    return last
+
+
+def installable(html, base):
+    """A web app manifest that loads as JSON, plus a service worker or the shared install pop-up (a manifest alone isn't an install)."""
+    cands = []
+    for tag in re.findall(r"<link\b[^>]*>", html, re.I):
+        if re.search(r"rel=[\"']manifest[\"']", tag, re.I):
+            m = re.search(r"href=[\"']([^\"']+)[\"']", tag, re.I)
+            if m:
+                cands.append(urllib.parse.urljoin(base, m.group(1)))
+    cands += [urllib.parse.urljoin(base, "manifest.json"), urllib.parse.urljoin(base, "manifest.webmanifest")]
+    ok = False
+    for u in cands:
+        st, body, _ = fetch_page(u, tries=1)
+        if st == 200:
+            try:
+                ok = bool(json.loads(body))
+            except ValueError:
+                pass
+        if ok:
+            break
+    if not ok:
+        return False
+    return "serviceWorker" in html or "install.js" in html or fetch_page(urllib.parse.urljoin(base, "sw.js"), tries=1)[0] == 200
+
+
+for a in reg["apps"]:
+    if a.get("private") or a.get("retired") or "listing" not in a or not a.get("live"):
+        continue
+    L = a["listing"]
+    st, html, final = fetch_page(a["live"])
+    if st != 200:
+        L["status"] = "down"
+        print(f"::warning::{a['id']} did not answer ({st}) at {a['live']}")
+        continue
+    L.pop("status", None)
+    L["install"] = installable(html, final)
+
+# 5. Screenshots of each app's vetted public screens -------------------------
 def shots():
     try:
         from playwright.sync_api import sync_playwright
@@ -159,8 +226,8 @@ def shots():
         b = pw.chromium.launch()
         for a in reg["apps"]:
             plan = (a.get("listing") or {}).get("autoShots") or []
-            if not plan or a.get("retired"):
-                continue
+            if not plan or a.get("retired") or a["listing"].get("status") == "down":
+                continue  # never replace a good screenshot with an error page
             paths = []
             for n, s in enumerate(plan, 1):
                 ctx = b.new_context(viewport={"width": 390, "height": 844}, device_scale_factor=2, is_mobile=True, has_touch=True)

@@ -200,6 +200,16 @@ h1{font-size:34px;line-height:1.1;margin:2px 0 0;letter-spacing:-.02em;font-weig
 .new{background:var(--card);border-radius:14px;padding:12px 14px}
 .new small{color:var(--muted)}
 .notice{font-size:13.5px;color:var(--muted);background:var(--card);border-radius:12px;padding:10px 12px}
+.new details{margin-top:10px;border-top:1px solid var(--line);padding-top:8px}
+.new summary{cursor:pointer;color:var(--blue);font-weight:600;font-size:14px}
+.hist{list-style:none;margin:8px 0 0;padding:0;display:grid;gap:8px}
+.hist li{display:flex;gap:10px;font-size:14px}
+.hist b{flex:none;min-width:62px;color:var(--muted);font-variant-numeric:tabular-nums}
+.qr{display:flex;gap:16px;align-items:center;background:var(--card);border-radius:16px;padding:14px}
+.qr .code{flex:none;width:132px;height:132px;border-radius:10px;overflow:hidden;line-height:0;background:#fff}
+.qr .code svg{width:100%;height:100%;display:block}
+.qr p{margin:0 0 10px;font-size:14px;color:var(--muted)}
+.qr button{background:var(--pill);color:var(--blue);font-weight:700;font-size:14px;padding:8px 16px;border-radius:999px}
 
 /* toolbox mock screen */
 .mock{position:relative;overflow:hidden;background:radial-gradient(120% 80% at 20% 0%,#2a2f45,#0d0f17 70%);padding:46px 16px 16px;color:#fff}
@@ -227,6 +237,7 @@ footer{color:var(--muted);font-size:13px;text-align:center;padding:30px 0 10px}
 <nav class="tabbar" aria-label="Store sections"><div class="in" id="tabs"></div></nav>
 <section class="sheet" id="sheet" role="dialog" aria-modal="true" aria-label="App details"></section>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
+<script src="qr.js"></script>
 <script>
 /* ===== The catalog. Public copy only: no data, no names of kids, no schedules. ===== */
 const CATS={football:{n:"Football",e:"🏈",c:"var(--football)"},baseball:{n:"Baseball & League",e:"⚾",c:"var(--baseball)"},family:{n:"Everyday",e:"🧩",c:"var(--family)"},builder:{n:"Builder tools",e:"🧰",c:"var(--builder)"}};
@@ -327,8 +338,10 @@ function tradingCard(a,i){
 /* ===== Apps ===== */
 function renderApps(){
   const list=CAT==="all"?Object.keys(CATS):[CAT];
+  const mine=ROLE&&ROLE!=="curious"&&CAT==="all"?APPS.filter(x=>x.for.includes(ROLE)):[];
   return header("Apps",`${APPS.filter(a=>a.url).length} live apps, ${APPS.filter(a=>a.install).length} install on your phone.`)+
   `<div class="cats" role="group" aria-label="Category"><button class="cat" data-cat="all" aria-pressed="${CAT==="all"}">All</button>${Object.entries(CATS).map(([k,c])=>`<button class="cat" data-cat="${k}" aria-pressed="${CAT===k}">${c.e} ${esc(c.n)}</button>`).join("")}</div>`+
+  (mine.length?`<div class="sect"><h3>⭐ Picked for you</h3><span>${esc(ROLES[ROLE])}</span></div><div class="grid2">${mine.map(appRow).join("")}</div>`:"")+
   list.map(k=>{const xs=APPS.filter(a=>a.cat===k);if(!xs.length)return"";return `<div class="sect"><h3>${CATS[k].e} ${esc(CATS[k].n)}</h3><span>${xs.length} app${xs.length>1?"s":""}</span></div><div class="grid2">${xs.map(appRow).join("")}</div>`}).join("")+
   (SOON.length?`<div class="sect"><h3>🛠️ Coming soon</h3></div><div class="grid2">${SOON.map(([e,n,d])=>`<div class="row"><span class="ic" style="display:grid;place-items:center;font-size:28px;background:var(--card)">${e}</span><span class="txt"><b>${esc(n)}</b><small>${esc(d)}</small></span><span class="getbtn lock">SOON</span></div>`).join("")}</div>`:"");
 }
@@ -427,6 +440,22 @@ function renderAbout(){
   <section class="bp"><h3>How it fits together</h3><p>See which apps hand off to each other and which pieces they share.</p><p><button data-tab-go="big" style="color:var(--blue);font-weight:600">Open the Big Picture</button> · <a href="https://github.com/natesteele888" target="_blank" rel="noopener" style="color:var(--blue);font-weight:600">GitHub</a></p></section>`;
 }
 
+/* ===== QR codes: scan to open an app (flyers, team pages, the side of a bag) ===== */
+function qrModules(url){const q=qrcode(0,"M");q.addData(url);q.make();const n=q.getModuleCount();return{n,dark:(r,c)=>q.isDark(r,c)}}
+function qrSVG(url,label){const{n,dark}=qrModules(url),pad=4,t=n+pad*2;let d="";
+  for(let r=0;r<n;r++)for(let c=0;c<n;c++)if(dark(r,c))d+=`M${c+pad} ${r+pad}h1v1h-1z`;
+  return `<svg viewBox="0 0 ${t} ${t}" role="img" aria-label="${esc(label)}" shape-rendering="crispEdges"><rect width="${t}" height="${t}" fill="#fff"/><path d="${d}" fill="#000"/></svg>`}
+function qrSection(a){let svg="";try{svg=qrSVG(a.url,"QR code that opens "+a.name)}catch(_){return""}
+  return `<div class="dsec"><h3>Scan to open</h3><div class="qr"><div class="code">${svg}</div><div><p>Point a phone camera at this to open ${esc(a.name)}. Save the image for a flyer or a team page.</p><button data-qr="${a.id}">Save image</button></div></div></div>`}
+async function saveQR(id){const a=byId(id);if(!a||!window.qrcode)return;
+  const{n,dark}=qrModules(a.url),pad=4,sc=Math.ceil(1024/(n+pad*2)),size=(n+pad*2)*sc,cv=document.createElement("canvas");cv.width=cv.height=size;
+  const x=cv.getContext("2d");x.fillStyle="#fff";x.fillRect(0,0,size,size);x.fillStyle="#000";
+  for(let r=0;r<n;r++)for(let c=0;c<n;c++)if(dark(r,c))x.fillRect((c+pad)*sc,(r+pad)*sc,sc,sc);
+  const blob=await new Promise(res=>cv.toBlob(res,"image/png"));if(!blob){toast("Couldn't make the image");return}
+  const file=new File([blob],`${a.id}-qr.png`,{type:"image/png"});
+  try{if(navigator.canShare&&navigator.canShare({files:[file]})){await navigator.share({files:[file],title:a.name+" QR code"});return}}catch(e){if(e&&e.name==="AbortError")return}
+  const u=URL.createObjectURL(blob),l=document.createElement("a");l.href=u;l.download=file.name;document.body.appendChild(l);l.click();l.remove();setTimeout(()=>URL.revokeObjectURL(u),4000);toast("QR image saved")}
+
 /* ===== Detail ===== */
 function mockScreen(){
   const ics=APPS.filter(a=>a.id!=="toolbox");
@@ -450,10 +479,11 @@ function openApp(id,fromHash){
       <div><small>Access</small><b>${a.access==="Open"?"🔓":"🔑"}</b><span>${esc(a.access)}</span></div>
     </div>
     <div class="shots" aria-label="Screenshots">${a.shots.map(s=>s==="mock"?mockScreen():`<img src="${s}" alt="${esc(a.name)} screenshot" loading="lazy">`).join("")}</div>
-    <div class="dsec"><p>${esc(a.desc)}</p>${a.access!=="Open"&&a.url?`<p class="notice">🔑 Some screens need a ${esc(a.access.toLowerCase())} so team and family info stays private.</p>`:""}${!a.url?`<p class="notice">🔒 This one is just for me. The code is public; the data stays behind sign-in.</p>`:""}</div>
-    ${a.news||a.ver?`<div class="dsec"><h3>What's new</h3><div class="new">${a.ver?`<small>Version ${esc(a.ver)}</small>`:""}${a.news?`<div>${esc(a.news.t)}</div>`:""}</div></div>`:""}
+    <div class="dsec"><p>${esc(a.desc)}</p>${a.status==="down"?`<p class="notice">⚠️ ${esc(a.name)} isn't answering right now. It's usually back in a few minutes.</p>`:""}${a.access!=="Open"&&a.url?`<p class="notice">🔑 Some screens need a ${esc(a.access.toLowerCase())} so team and family info stays private.</p>`:""}${!a.url?`<p class="notice">🔒 This one is just for me. The code is public; the data stays behind sign-in.</p>`:""}</div>
+    ${a.news||a.ver?`<div class="dsec"><h3>What's new</h3><div class="new">${a.ver?`<small>Version ${esc(a.ver)}</small>`:""}${a.news?`<div>${esc(a.news.t)}</div>`:""}${(e=>e.length?`<details><summary>Version history</summary><ul class="hist">${e.map(h=>`<li><b>v${esc(h.v)}</b><span>${esc(h.t)}</span></li>`).join("")}</ul></details>`:"")(a.hist.filter(h=>!a.news||h.t!==a.news.t))}</div></div>`:""}
     ${a.feats.length?`<div class="dsec"><h3>Highlights</h3><div class="feat">${a.feats.map(([e,t,d])=>`<div><span class="e">${e}</span><span><b>${esc(t)}</b><span>${esc(d)}</span></span></div>`).join("")}</div></div>`:""}
     ${a.tie?`<div class="dsec"><h3>Part of the big picture</h3><div class="tie"><p style="margin:0">${esc(a.tie)}</p>${a.rel.filter(byId).map(r=>appRow(byId(r))).join("")}</div></div>`:""}
+    ${a.url&&window.qrcode?qrSection(a):""}
     <div class="dsec"><h3>Built with</h3><div class="chips">${a.parts.map(p=>`<span class="chip">${PARTS[p].e} ${esc(PARTS[p].n)}</span>`).join("")}<span class="chip">🤖 Built with Claude</span></div></div>
     <div class="dsec"><h3>More from Nathan</h3><div class="grid2">${more.map(appRow).join("")}</div></div>
     <footer>© Nathan Steele · <a href="https://github.com/natesteele888" target="_blank" rel="noopener">GitHub</a></footer>
@@ -481,6 +511,7 @@ function render(){
   shine();
 }
 document.addEventListener("click",e=>{
+  const qb=e.target.closest("[data-qr]");if(qb){saveQR(qb.dataset.qr);return}
   const ap=e.target.closest("[data-app]");if(ap&&!e.target.closest("a")){e.preventDefault();openApp(ap.dataset.app);return}
   const tg=e.target.closest("[data-tab-go]");if(tg){location.hash=tg.dataset.tabGo;return}
   const rl=e.target.closest("[data-role]");if(rl){ROLE=ROLE===rl.dataset.role?"":rl.dataset.role;store("store.role",ROLE);const y=scrollY;render();scrollTo(0,y);return}
@@ -498,7 +529,7 @@ function fromCatalog(j){
     out.push({id:x.id,name:x.name,sub:L.sub||x.sub||"",cat:CATS[L.cat]?L.cat:"family",ac:L.ac||"#2f6df6",icon:`../icons/${x.id}-192.png`,
       url:x.private?"":x.live,install:L.install!==false,access:x.private?"Private":(L.access||"Open"),
       shots:(L.shots||[]).map(s=>s==="mock"?s:"../"+s),desc:L.desc||"",feats:L.feats||[],facts:L.facts||[],
-      ver:L.version||"",news:L.latest||L.news||null,parts:(L.parts||[]).filter(p=>PARTS[p]),tie:L.tie||"",rel:L.rel||[],for:L.for&&L.for.length?L.for:["curious"]})});
+      ver:L.version||"",hist:L.history||[],status:L.status||"",news:(L.news&&L.news.pin)?L.news:(L.latest||L.news||null),parts:(L.parts||[]).filter(p=>PARTS[p]),tie:L.tie||"",rel:L.rel||[],for:L.for&&L.for.length?L.for:["curious"]})});
   const ids=new Set(out.map(a=>a.id));out.forEach(a=>a.rel=a.rel.filter(r=>ids.has(r)));
   return out;
 }
