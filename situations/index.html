@@ -135,7 +135,8 @@ nav.tabs button.on{color:var(--amber);border-top-color:var(--amber)}
 .score{display:flex;gap:16px;font-family:'Barlow Condensed',sans-serif;font-size:13px;color:var(--mute);letter-spacing:.08em}
 .score b{color:var(--chalk);font-size:19px;display:block}
 </style>
-<title>Where Do I Go? — Baseball Situations</title><meta name="theme-color" content="#0c1512"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="Where Do I Go"><link rel="manifest" href="manifest.json"><link rel="icon" type="image/png" sizes="192x192" href="/apps/icons/situations-192.png"><link rel="apple-touch-icon" href="/apps/icons/situations-512.png"></head>
+<title>Where Do I Go? — Baseball Situations</title><meta name="theme-color" content="#0c1512"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="Where Do I Go"><link rel="manifest" href="manifest.json"><link rel="icon" type="image/png" sizes="192x192" href="/apps/icons/situations-192.png"><link rel="apple-touch-icon" href="/apps/icons/situations-512.png"><script src="https://natesteele888.github.io/apps/install.js" defer></script>
+</head>
 <body>
 <div class="wrap">
 
@@ -1247,8 +1248,8 @@ const ROLES={
 /* ------------------------------ state ------------------------------ */
 const LS='wdig.v1.';
 const store={get(k,d){try{const v=localStorage.getItem(k);return v===null?d:v;}catch(e){return d;}},
-             set(k,v){try{store.set(k,v);}catch(e){}},
-             del(k){try{store.del(k);}catch(e){}}};
+             set(k,v){try{localStorage.setItem(k,v);}catch(e){}},
+             del(k){try{localStorage.removeItem(k);}catch(e){}}};
 let SITS=parseCSV(SITUATIONS_CSV);
 let BASE_RULES=parseCSV(RESP_CSV);
 let MYRULES=JSON.parse(store.get(LS+'rules','[]'));
@@ -1900,5 +1901,5 @@ document.getElementById('legendBox').innerHTML=Object.keys(ROLES).map(r=>
 
 applyCfg(); buildPicker(); buildMeChips(); buildTypeChips(); buildEditor(); drawTeam(); drawPlay();
 </script>
-<script>if("serviceWorker" in navigator){addEventListener("load",()=>navigator.serviceWorker.register("sw.js").catch(()=>{}))}</script><script src="install.js"></script></body>
+<script>if("serviceWorker" in navigator){addEventListener("load",()=>navigator.serviceWorker.register("sw.js").catch(()=>{}))}</script></body>
 </html>
