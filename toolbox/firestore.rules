@@ -1,0 +1,59 @@
+// Firestore rules for the nates-toolbox Firebase project (Toolbox + Gameday Picks).
+// Copy of the live rules from the Firebase console, saved 2026-11-06.
+// OWNER_EMAIL stands in for Nate's sign-in email (this repo is public, so the
+// real address is not committed). Put the real address back before pasting
+// this into the console. Test: cd toolbox && npm install && npm test
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /{document=**} {
+      allow read, write: if request.auth != null && request.auth.token.email == 'OWNER_EMAIL' && request.auth.token.email_verified == true;
+    }
+    // ---------- App icons: public so every app and the App Store can show them ----------
+    match /public_icons/{id} {
+      allow read: if true;
+    }
+    // ---------- Store listings: public so the App Store sync can read them ----------
+    match /public_listings/{id} {
+      allow read: if true;
+    }
+    // ---------- Gameday Picks (apps/picks) ----------
+    function gpOwner() {
+      return request.auth != null && request.auth.token.email == "OWNER_EMAIL"
+        && request.auth.token.email_verified == true;
+    }
+    function gpPlayer() {
+      return request.auth != null && exists(/databases/$(database)/documents/gp_players/$(request.auth.uid));
+    }
+    function gpName(d) { return d.name is string && d.name.size() > 0 && d.name.size() <= 24; }
+    match /gp_codes/{code} {
+      allow read, write: if gpOwner();
+    }
+    match /gp_players/{uid} {
+      allow get: if request.auth != null && request.auth.uid == uid;
+      allow read: if gpPlayer() || gpOwner();
+      allow create: if request.auth != null && request.auth.uid == uid
+        && request.resource.data.keys().hasOnly(['name', 'code', 'joinedAt'])
+        && gpName(request.resource.data) && request.resource.data.code is string
+        && ((request.resource.data.code == "OWNER" && gpOwner())
+            || (request.resource.data.code != "OWNER"
+                && exists(/databases/$(database)/documents/gp_codes/$(request.resource.data.code))
+                && get(/databases/$(database)/documents/gp_codes/$(request.resource.data.code)).data.active == true));
+      allow update: if request.auth != null && request.auth.uid == uid
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name'])
+        && gpName(request.resource.data);
+      allow delete: if gpOwner();
+    }
+    match /gp_picks/{id} {
+      allow read: if gpPlayer();
+      allow create, update: if gpPlayer() && request.resource.data.uid == request.auth.uid
+        && id == request.auth.uid + "_" + request.resource.data.week
+        && request.resource.data.picks is map && request.resource.data.picks.size() <= 40;
+      allow delete: if gpOwner();
+    }
+    match /gp_weeks/{key} {
+      allow read, write: if gpPlayer();
+    }
+  }
+}
