@@ -1312,6 +1312,155 @@
           }
         ]
       }
+    },
+    {
+      "id": "playboard",
+      "name": "Play Board",
+      "live": "https://natesteele888.github.io/apps/playboard/",
+      "repo": "natesteele888/apps",
+      "path": "playboard/",
+      "toolboxIds": [],
+      "listing": {
+        "sub": "Draw a play, step through it, watch it run",
+        "cat": "family",
+        "ac": "#ff7a1a",
+        "install": true,
+        "access": "Open",
+        "desc": "Draw a play on a basketball court, a baseball or softball diamond, a football, soccer or volleyball field. Move the players, draw their paths one step at a time, then press play and watch every player move. Save your plays on your phone and share one as a link or a picture.",
+        "feats": [
+          [
+            "✏️",
+            "Draw it",
+            "Drag players, then draw runs, passes, dribbles and screens."
+          ],
+          [
+            "▶️",
+            "Watch it move",
+            "Play, slow down and scrub through every step."
+          ],
+          [
+            "🔗",
+            "Share a play",
+            "Send a link or a picture to the team chat."
+          ]
+        ],
+        "facts": [
+          [
+            "Sports",
+            "6",
+            "courts and fields"
+          ],
+          [
+            "Steps",
+            "Any",
+            "per play"
+          ],
+          [
+            "Works",
+            "Offline",
+            "no account"
+          ]
+        ],
+        "news": {
+          "d": "Nov 2026",
+          "t": "New: draw plays and watch them animate."
+        },
+        "parts": [
+          "pwa",
+          "offline",
+          "share"
+        ],
+        "tie": "The plays side of the family: football formations live in the Bengals app, baseball situations in Where Do I Go?, and this one covers the rest.",
+        "rel": [
+          "situations",
+          "bengals"
+        ],
+        "for": [
+          "coach",
+          "player"
+        ],
+        "shots": [],
+        "autoShots": [
+          {
+            "url": "",
+            "wait": 2500
+          }
+        ]
+      }
+    },
+    {
+      "id": "locker",
+      "name": "Locker",
+      "live": "https://natesteele888.github.io/apps/locker/",
+      "repo": "natesteele888/apps",
+      "path": "locker/",
+      "toolboxIds": [],
+      "listing": {
+        "sub": "Your sports notebook, in your pocket",
+        "cat": "family",
+        "ac": "#c6ff3d",
+        "install": true,
+        "access": "Open",
+        "desc": "A young athlete's notebook: daily practice reps with streaks, a game log with season stats, an arm-care pitch tracker with rest-day math, saved video links and a one-page athlete card. Everything stays on the phone.",
+        "feats": [
+          [
+            "🔥",
+            "Daily reps",
+            "Set a drill, tap it off, keep the streak alive."
+          ],
+          [
+            "📒",
+            "Game log",
+            "Batting, pitching and basketball stats add up to a season."
+          ],
+          [
+            "🛡️",
+            "Arm care",
+            "Pitch counts and the rest days that go with them."
+          ]
+        ],
+        "facts": [
+          [
+            "Sports",
+            "6",
+            "to track"
+          ],
+          [
+            "Data",
+            "On phone",
+            "never uploaded"
+          ],
+          [
+            "Works",
+            "Offline",
+            "no account"
+          ]
+        ],
+        "news": {
+          "d": "Nov 2026",
+          "t": "New: a sports notebook with daily reps and a season log."
+        },
+        "parts": [
+          "pwa",
+          "offline"
+        ],
+        "tie": "The notebook that grows up with the athlete: first phone now, athlete card for high school later.",
+        "rel": [
+          "fitness",
+          "ballclub"
+        ],
+        "for": [
+          "player",
+          "parent"
+        ],
+        "shots": [],
+        "autoShots": [
+          {
+            "url": "",
+            "wait": 2500
+          }
+        ]
+      }
     }
   ],
   "comingSoon": []
