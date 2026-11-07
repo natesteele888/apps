@@ -6,7 +6,7 @@
 <title>Steele App Store</title>
 <meta name="description" content="Apps designed and built by Nathan Steele with Claude, for youth football and baseball, coaches, families and everyday use.">
 <meta property="og:title" content="Steele App Store">
-<meta property="og:description" content="Ten live apps for youth sports and everyday life, built by Nathan Steele with AI as a development partner.">
+<meta property="og:description" content="Live apps for youth sports and everyday life, built by Nathan Steele with AI as a development partner.">
 <meta property="og:image" content="https://natesteele888.github.io/apps/store/img/share.jpg">
 <meta property="og:type" content="website">
 <meta name="twitter:card" content="summary_large_image">
@@ -337,7 +337,7 @@ function renderApps(){
 const GROUPS=[
   {k:"football",n:"ASL Bengals football",ids:["bengals","gridiron"],x:150,y:110},
   {k:"baseball",n:"LYBS baseball & softball",ids:["dashboard","ballclub","situations","cards","sponsor-banners"],x:450,y:110},
-  {k:"family",n:"Everyday",ids:["fitness","cube","picks"],x:150,y:370},
+  {k:"family",n:"Everyday",ids:["fitness","cube","picks","events"],x:150,y:370},
   {k:"builder",n:"Behind the scenes",ids:["toolbox"],x:450,y:370}
 ];
 const LINKS=[["situations","ballclub","trainer moving into"],["bengals","gridiron","team → organization"],["dashboard","ballclub","board ↔ families"],["cards","ballclub","same teams"],["sponsor-banners","dashboard","same board sign-in"],["fitness","bengals","off-season"],["toolbox","bengals",""],["toolbox","dashboard",""],["toolbox","situations",""],["toolbox","cube",""]];
@@ -358,6 +358,12 @@ function webSVG(){
     <text x="${p.x}" y="${p.y+42}" text-anchor="middle" font-size="11.5" font-weight="600" fill="currentColor">${esc(a.name.replace("Offseason ","").replace(" Coaching App",""))}</text></g>`});
   return s+`</svg>`;
 }
+/* newest change first (the date only orders the list, it is never shown); identical changes across apps become one row */
+function newsFeed(){
+  const rows=APPS.filter(a=>a.news).map(a=>({a,t:a.news.t,w:Date.parse(a.news.d)||0})).sort((x,y)=>y.w-x.w);
+  const out=[];rows.forEach(r=>{const g=out.find(o=>o.t===r.t);g?g.apps.push(r.a):out.push({t:r.t,apps:[r.a]})});
+  return out;
+}
 function renderBig(){
   const used={};APPS.forEach(a=>a.parts.forEach(p=>used[p]=(used[p]||0)+1));
   const top=Object.entries(used).sort((a,b)=>b[1]-a[1]);
@@ -366,10 +372,12 @@ function renderBig(){
   <section class="bp"><h3>By the numbers</h3><div class="stats">
     <div class="stat"><b>${APPS.filter(a=>a.url).length}</b><span>live apps</span></div>
     <div class="stat"><b>${APPS.filter(a=>a.install).length}</b><span>install on a phone</span></div>
-    <div class="stat"><b>2</b><span>leagues served</span></div>
+    <div class="stat"><b>${top.length}</b><span>shared building blocks</span></div>
     <div class="stat"><b>${APPS.filter(a=>a.cat==="baseball").length}</b><span>league apps</span></div></div></section>
-  <section class="bp"><h3>What's new</h3><p>Recent ships across the system, straight from each app's own changelog.</p>
-    ${APPS.filter(a=>a.news).map(a=>`<button class="part" data-app="${a.id}" style="width:100%;text-align:left;margin-bottom:8px">${icon(a,"em")}<span><b>${esc(a.name)} · ${esc(a.news.d)}</b><span>${esc(a.news.t)}</span></span></button>`).join("")}</section>
+  <section class="bp"><h3>What's new</h3><p>Recent changes across the system, straight from each app's own changelog.</p>
+    ${newsFeed().map(g=>g.apps.length>1
+      ?`<div class="part" style="margin-bottom:8px">${icon(g.apps[0],"em")}<span><b>${esc(g.apps.map(a=>a.name).join(", "))}</b><span>${esc(g.t)}</span></span></div>`
+      :`<button class="part" data-app="${g.apps[0].id}" style="width:100%;text-align:left;margin-bottom:8px">${icon(g.apps[0],"em")}<span><b>${esc(g.apps[0].name)}${g.apps[0].ver?` · v${esc(g.apps[0].ver)}`:""}</b><span>${esc(g.t)}</span></span></button>`).join("")}</section>
   <section class="bp"><h3>Shared building blocks</h3><p>Solve it once, reuse it everywhere. Each block below shows up in several apps.</p>
     <div class="parts">${top.map(([k,n])=>{const p=PARTS[k];const who=APPS.filter(a=>a.parts.includes(k));return `<div class="part"><span class="em">${p.e}</span><span><b>${esc(p.n)}</b><span>${esc(p.d)}</span></span><span class="count">${n}<small>app${n>1?"s":""}</small></span></div>`}).join("")}</div></section>
   <section class="bp"><h3>Who it's for</h3><p>Every app points at someone specific. Tap one to see which apps fit.</p>
@@ -443,7 +451,7 @@ function openApp(id,fromHash){
     </div>
     <div class="shots" aria-label="Screenshots">${a.shots.map(s=>s==="mock"?mockScreen():`<img src="${s}" alt="${esc(a.name)} screenshot" loading="lazy">`).join("")}</div>
     <div class="dsec"><p>${esc(a.desc)}</p>${a.access!=="Open"&&a.url?`<p class="notice">🔑 Some screens need a ${esc(a.access.toLowerCase())} so team and family info stays private.</p>`:""}${!a.url?`<p class="notice">🔒 This one is just for me. The code is public; the data stays behind sign-in.</p>`:""}</div>
-    ${a.news?`<div class="dsec"><h3>What's new</h3><div class="new"><small>${esc(a.news.d)}</small><div>${esc(a.news.t)}</div></div></div>`:""}
+    ${a.news||a.ver?`<div class="dsec"><h3>What's new</h3><div class="new">${a.ver?`<small>Version ${esc(a.ver)}</small>`:""}${a.news?`<div>${esc(a.news.t)}</div>`:""}</div></div>`:""}
     ${a.feats.length?`<div class="dsec"><h3>Highlights</h3><div class="feat">${a.feats.map(([e,t,d])=>`<div><span class="e">${e}</span><span><b>${esc(t)}</b><span>${esc(d)}</span></span></div>`).join("")}</div></div>`:""}
     ${a.tie?`<div class="dsec"><h3>Part of the big picture</h3><div class="tie"><p style="margin:0">${esc(a.tie)}</p>${a.rel.filter(byId).map(r=>appRow(byId(r))).join("")}</div></div>`:""}
     <div class="dsec"><h3>Built with</h3><div class="chips">${a.parts.map(p=>`<span class="chip">${PARTS[p].e} ${esc(PARTS[p].n)}</span>`).join("")}<span class="chip">🤖 Built with Claude</span></div></div>
@@ -490,7 +498,7 @@ function fromCatalog(j){
     out.push({id:x.id,name:x.name,sub:L.sub||x.sub||"",cat:CATS[L.cat]?L.cat:"family",ac:L.ac||"#2f6df6",icon:`../icons/${x.id}-192.png`,
       url:x.private?"":x.live,install:L.install!==false,access:x.private?"Private":(L.access||"Open"),
       shots:(L.shots||[]).map(s=>s==="mock"?s:"../"+s),desc:L.desc||"",feats:L.feats||[],facts:L.facts||[],
-      news:L.latest||L.news||null,parts:(L.parts||[]).filter(p=>PARTS[p]),tie:L.tie||"",rel:L.rel||[],for:L.for&&L.for.length?L.for:["curious"]})});
+      ver:L.version||"",news:L.latest||L.news||null,parts:(L.parts||[]).filter(p=>PARTS[p]),tie:L.tie||"",rel:L.rel||[],for:L.for&&L.for.length?L.for:["curious"]})});
   const ids=new Set(out.map(a=>a.id));out.forEach(a=>a.rel=a.rel.filter(r=>ids.has(r)));
   return out;
 }

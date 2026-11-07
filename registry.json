@@ -82,7 +82,8 @@
           "d": "Nov 7, 2026",
           "t": "Save the Toolbox Firestore rules in the repo, with emulator tests",
           "url": "https://github.com/natesteele888/apps/commit/2fb8ff4a17eb92b4daac5732e3219b56f5afa709"
-        }
+        },
+        "version": "1.1.6"
       }
     },
     {
@@ -176,7 +177,8 @@
           "d": "Nov 7, 2026",
           "t": "Where Do I Go: saved rules, team and quiz scores now stick; shared install pop-up",
           "url": "https://github.com/natesteele888/apps/commit/57a5c4bfd41008e78c6b57c08d7a91aaca9f7662"
-        }
+        },
+        "version": "1.1.6"
       }
     },
     {
@@ -258,7 +260,8 @@
           "d": "Nov 6, 2026",
           "t": "Install pop-up for every app, and a one-tap-each install checklist",
           "url": "https://github.com/natesteele888/apps/commit/b3e0178fb10f73aad39b22196c5f9e7b37e97aa2"
-        }
+        },
+        "version": "1.0.3"
       }
     },
     {
@@ -343,7 +346,8 @@
           "d": "Nov 7, 2026",
           "t": "Stat Keeper: load the roster after coach sign-in instead of from the code",
           "url": "https://github.com/natesteele888/ASL-Bengals/commit/ec25c268acc197f5e561eb86ef02679a94063244"
-        }
+        },
+        "version": "1.48.5"
       }
     },
     {
@@ -359,14 +363,14 @@
         "sub": "Every team, one home field",
         "cat": "football",
         "ac": "#ff6a1a",
-        "install": false,
+        "install": true,
         "access": "Open",
         "desc": "A full website any youth football and cheer organization can run, with the ASL Bengals as the first. Schedules, results, programs and rosters for every team, built for families who show up on Friday night, not people who track spreadsheets.",
         "feats": [
           [
-            "🏟️",
-            "Multi-org ready",
-            "One codebase, each organization gets its own space."
+            "📋",
+            "RSVPs & team board",
+            "Practice RSVPs and a two-way message board on every team's page."
           ],
           [
             "👥",
@@ -382,7 +386,7 @@
         "facts": [
           [
             "Teams",
-            "6",
+            "8",
             "flag, tackle, cheer"
           ],
           [
@@ -397,8 +401,8 @@
           ]
         ],
         "news": {
-          "d": "In progress",
-          "t": "Building toward a demo for the organization: role-based visibility, RSVPs, read receipts and a two-way team message board."
+          "d": "Nov 2026",
+          "t": "Every team now has practice RSVPs and a two-way message board with “seen by” receipts, enforced by role on the server."
         },
         "parts": [
           "signin",
@@ -426,9 +430,10 @@
         ],
         "latest": {
           "d": "Nov 7, 2026",
-          "t": "Add the shared install pop-up",
-          "url": "https://github.com/natesteele888/ASL-Bengals/commit/a8309be6329d80e54480897b816fcd8fe6f7eb1a"
-        }
+          "t": "Gridiron Hub: account page and team photo rules (from the iMac)",
+          "url": "https://github.com/natesteele888/ASL-Bengals/commit/ead538c871ef9e0f90675a66edcfcbf19b0879ea"
+        },
+        "version": "1.5.3"
       }
     },
     {
@@ -591,7 +596,8 @@
           "d": "Nov 7, 2026",
           "t": "Add the shared install pop-up",
           "url": "https://github.com/natesteele888/lybs-ballclub/commit/3f3b52c530508e8c9e58e75b88160c3604cd7513"
-        }
+        },
+        "version": "1.22.3"
       }
     },
     {
@@ -663,12 +669,7 @@
           {
             "url": ""
           }
-        ],
-        "latest": {
-          "d": "Nov 6, 2026",
-          "t": "Steele Cards moved to lybs-cards.web.app; this repo only redirects old links",
-          "url": "https://github.com/natesteele888/lybs-cards/commit/e99ba335bf53963b726e9545d3e8584b31f465a9"
-        }
+        ]
       }
     },
     {
@@ -748,7 +749,8 @@
           "d": "Nov 7, 2026",
           "t": "Add the shared install pop-up",
           "url": "https://github.com/natesteele888/fitness-hub/commit/38adde60b34cbc3cac476e524797e52deb84279e"
-        }
+        },
+        "version": "1.2.7"
       }
     },
     {
@@ -832,7 +834,8 @@
           "d": "Nov 7, 2026",
           "t": "Add the shared install pop-up",
           "url": "https://github.com/natesteele888/cube-clock/commit/7deb25aec4749e2ac13b2a79af7d669c9fa4a37e"
-        }
+        },
+        "version": "1.2.1"
       }
     },
     {
@@ -924,7 +927,8 @@
           "d": "Nov 7, 2026",
           "t": "Add the shared install pop-up",
           "url": "https://github.com/natesteele888/sponsor-banner-inventory/commit/eda108abca8703fed928070f7685a74e3f9823e8"
-        }
+        },
+        "version": "1.0.8"
       }
     },
     {
@@ -1006,7 +1010,8 @@
           "d": "Nov 7, 2026",
           "t": "Add the shared install pop-up",
           "url": "https://github.com/natesteele888/events/commit/bc82d43da3436a41ae49075027f86c82ee0ead7f"
-        }
+        },
+        "version": "1.1.3"
       }
     }
   ],

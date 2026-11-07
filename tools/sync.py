@@ -4,6 +4,7 @@ One run does four things, and commits only what really changed:
   1. Icons      Toolbox icon changes (Firestore public_icons)   -> icons/<id>-192/512/maskable.png
   2. Listings   Toolbox store-listing edits (public_listings)    -> registry.json apps[].listing
   3. Latest     newest commit for each app on GitHub             -> registry.json apps[].listing.latest
+                and a version from how many commits the app has   -> registry.json apps[].listing.version
   4. Shots      fresh screenshots of each app's vetted public screens -> store/shots/<id>-<n>.webp
 
 registry.json is the app catalog: the App Store, the Toolbox and the install page all read it.
@@ -101,10 +102,20 @@ for d in fs_docs("public_listings"):
         else:
             apps[id_]["store"] = False
 
-# 3. Latest change per app, straight from GitHub -----------------------------
+# 3. Latest change and version per app, straight from GitHub -------------------
 hdr = {"Accept": "application/vnd.github+json", "User-Agent": "app-catalog-sync"}
 if TOKEN:
     hdr["Authorization"] = f"Bearer {TOKEN}"
+
+
+def version_for(repo, path):
+    """How many commits the app has; its version is 1.<tens>.<ones> of that, so it rises as the app changes."""
+    url = f"https://api.github.com/repos/{repo}/commits?per_page=1" + (f"&path={path}" if path else "")
+    with urllib.request.urlopen(urllib.request.Request(url, headers=hdr), timeout=30) as r:
+        m = re.search(r'[?&]page=(\d+)>; rel="last"', r.headers.get("Link", ""))
+        n = int(m.group(1)) if m else len(json.load(r))
+    return n
+
 for a in reg["apps"]:
     if not a.get("repo") or a.get("retired") or "listing" not in a:
         continue
@@ -117,14 +128,25 @@ for a in reg["apps"]:
         continue
     except Exception as e:
         print(f"latest: {a['id']} {e}"); continue
+    try:
+        n = version_for(a["repo"], path)
+    except Exception as e:
+        print(f"version: {a['id']} {e}"); n = 0
+    found = False
     for c in commits:
         msg = c["commit"]["message"].split("\n")[0].strip()
-        if re.match(r"^(Merge|Icons from the Toolbox|Sync the App Store|Update .* app icon|CLAUDE\.md)", msg) or re.search(r"shared app icon|app directory|registry\.json", msg, re.I):
+        if re.match(r"^(Merge|Icons from the Toolbox|Sync the App Store|Update .* app icon|CLAUDE\.md)", msg) or re.search(r"shared app icon|app directory|registry\.json|only redirects old links", msg, re.I):
             continue
         when = datetime.datetime.fromisoformat(c["commit"]["author"]["date"].replace("Z", "+00:00"))
         msg = re.sub(r"\s*\(#\d+\)$", "", msg)[:180]
         a["listing"]["latest"] = {"d": when.strftime("%b %-d, %Y"), "t": msg, "url": c["html_url"]}
+        found = True
         break
+    if n:
+        a["listing"]["version"] = f"1.{n // 10}.{n % 10}"
+    if not found and 0 < n <= len(commits):
+        # every commit is housekeeping (e.g. a repo that now only redirects): nothing real to show
+        a["listing"].pop("latest", None); a["listing"].pop("version", None)
 
 # 4. Screenshots of each app's vetted public screens -------------------------
 def shots():
