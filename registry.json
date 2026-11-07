@@ -1,6 +1,6 @@
 {
   "about": "The one list of Nathan's apps. Live links, which apps show where, and each app's App Store listing (text, highlights, screenshots) all come from here. Edit listings and icons in the Toolbox; the sync job copies them here. Don't hand-edit text in store/index.html.",
-  "updated": "2026-11-06",
+  "updated": "2026-11-07",
   "toolbox": "https://natesteele888.github.io/apps/toolbox/",
   "store": "https://natesteele888.github.io/apps/store/",
   "apps": [
@@ -79,9 +79,9 @@
         ],
         "autoShots": [],
         "latest": {
-          "d": "Nov 4, 2026",
-          "t": "Toolbox: Claude's review on Now and in every app",
-          "url": "https://github.com/natesteele888/apps/commit/c226074b15dec2882a44634953cb520202a52489"
+          "d": "Nov 7, 2026",
+          "t": "Save the Toolbox Firestore rules in the repo, with emulator tests",
+          "url": "https://github.com/natesteele888/apps/commit/2fb8ff4a17eb92b4daac5732e3219b56f5afa709"
         }
       }
     },
@@ -173,9 +173,9 @@
           }
         ],
         "latest": {
-          "d": "Nov 4, 2026",
-          "t": "Line up the cut on a single to right with a runner on first",
-          "url": "https://github.com/natesteele888/apps/commit/476b0629311deaaa589e54a33eb5ea49428a6c88"
+          "d": "Nov 7, 2026",
+          "t": "Where Do I Go: saved rules, team and quiz scores now stick; shared install pop-up",
+          "url": "https://github.com/natesteele888/apps/commit/57a5c4bfd41008e78c6b57c08d7a91aaca9f7662"
         }
       }
     },
@@ -255,9 +255,9 @@
         ],
         "autoShots": [],
         "latest": {
-          "d": "Nov 5, 2026",
-          "t": "Gameday Picks: keep your scroll position after making a pick",
-          "url": "https://github.com/natesteele888/apps/commit/19f8a37e7732170dce7baa555d4d5fbf1ab85927"
+          "d": "Nov 6, 2026",
+          "t": "Install pop-up for every app, and a one-tap-each install checklist",
+          "url": "https://github.com/natesteele888/apps/commit/b3e0178fb10f73aad39b22196c5f9e7b37e97aa2"
         }
       }
     },
@@ -340,9 +340,9 @@
           }
         ],
         "latest": {
-          "d": "Nov 6, 2026",
-          "t": "Keep every scout quiz line inside the picture",
-          "url": "https://github.com/natesteele888/ASL-Bengals/commit/8c04769bd53c9628e8228b4973133a1bb9066c34"
+          "d": "Nov 7, 2026",
+          "t": "Stat Keeper: load the roster after coach sign-in instead of from the code",
+          "url": "https://github.com/natesteele888/ASL-Bengals/commit/ec25c268acc197f5e561eb86ef02679a94063244"
         }
       }
     },
@@ -425,9 +425,9 @@
           }
         ],
         "latest": {
-          "d": "Nov 4, 2026",
-          "t": "Gridiron Hub: unlock the already-built RSVP/roster/message board, make messages two-way, add read receipts",
-          "url": "https://github.com/natesteele888/ASL-Bengals/commit/89e58575201e4f96b70c4f93aa97aeb4f4ef14a4"
+          "d": "Nov 7, 2026",
+          "t": "Add the shared install pop-up",
+          "url": "https://github.com/natesteele888/ASL-Bengals/commit/a8309be6329d80e54480897b816fcd8fe6f7eb1a"
         }
       }
     },
@@ -588,9 +588,9 @@
           }
         ],
         "latest": {
-          "d": "Nov 4, 2026",
-          "t": "Add import-archive-team.mjs: fetch a team's season game list from GameChanger",
-          "url": "https://github.com/natesteele888/lybs-ballclub/commit/2709d0009530b1ee9c2767763f548f34a29d0221"
+          "d": "Nov 7, 2026",
+          "t": "Add the shared install pop-up",
+          "url": "https://github.com/natesteele888/lybs-ballclub/commit/3f3b52c530508e8c9e58e75b88160c3604cd7513"
         }
       }
     },
@@ -666,8 +666,8 @@
         ],
         "latest": {
           "d": "Nov 6, 2026",
-          "t": "Moved to its own home at lybs-cards.web.app; old links redirect",
-          "url": "https://lybs-cards.web.app/"
+          "t": "Steele Cards moved to lybs-cards.web.app; this repo only redirects old links",
+          "url": "https://github.com/natesteele888/lybs-cards/commit/e99ba335bf53963b726e9545d3e8584b31f465a9"
         }
       }
     },
@@ -745,9 +745,9 @@
           }
         ],
         "latest": {
-          "d": "Nov 5, 2026",
-          "t": "Drop autoplay from the exercise demo embed",
-          "url": "https://github.com/natesteele888/fitness-hub/commit/b2c98c364e647d78429be082e80e48598c04aff1"
+          "d": "Nov 7, 2026",
+          "t": "Add the shared install pop-up",
+          "url": "https://github.com/natesteele888/fitness-hub/commit/38adde60b34cbc3cac476e524797e52deb84279e"
         }
       }
     },
@@ -829,9 +829,9 @@
           }
         ],
         "latest": {
-          "d": "Oct 31, 2026",
-          "t": "Name the actual fix when the leaderboard cannot sign in",
-          "url": "https://github.com/natesteele888/cube-clock/commit/9111a64925f458e8a830982d735e6ed3f2b1b141"
+          "d": "Nov 7, 2026",
+          "t": "Add the shared install pop-up",
+          "url": "https://github.com/natesteele888/cube-clock/commit/7deb25aec4749e2ac13b2a79af7d669c9fa4a37e"
         }
       }
     },
@@ -921,9 +921,9 @@
         ],
         "autoShots": [],
         "latest": {
-          "d": "Nov 3, 2026",
-          "t": "Keep the sign-in check's errors readable in the app",
-          "url": "https://github.com/natesteele888/sponsor-banner-inventory/commit/516de481c2935a0162c277eddde7e5996a3fd494"
+          "d": "Nov 7, 2026",
+          "t": "Add the shared install pop-up",
+          "url": "https://github.com/natesteele888/sponsor-banner-inventory/commit/eda108abca8703fed928070f7685a74e3f9823e8"
         }
       }
     },
@@ -1003,9 +1003,9 @@
           }
         ],
         "latest": {
-          "d": "Nov 4, 2026",
-          "t": "Ignore Firebase deploy cache",
-          "url": "https://github.com/natesteele888/events/commit/2d0e9dba4e2d3c0317df43a6ec08d8d5a449db3b"
+          "d": "Nov 7, 2026",
+          "t": "Add the shared install pop-up",
+          "url": "https://github.com/natesteele888/events/commit/bc82d43da3436a41ae49075027f86c82ee0ead7f"
         }
       }
     }
