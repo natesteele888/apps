@@ -400,7 +400,9 @@ D3K_TAG,"Strike three in the dirt, ball at your feet",Dropped third strike,loose
 D3K_THROW,"Strike three in the dirt, throw to first",Dropped third strike,loose,302,448,"Step around the batter and throw from OUTSIDE the baseline, or you'll hit him in the back.",no,PLATE,_,,force
 D3K_BACKSTOP,Strike three gets all the way to the backstop,Dropped third strike,loose,298,462,Now it's a wild pitch AND a dropped third strike. Look at the other runners before you look at the batter.,no,PLATE,_,,contact
 D3K_LOADED,"Strike three in the dirt, bases loaded, two outs",Dropped third strike,loose,268,430,"Everybody is forced, including the batter. Step on the plate — do not throw anywhere.",no,PLATE,123,2,force
-SQUEEZE,Squeeze bunt with a runner on third,Bunts,bunt,246,386,"You have about two seconds. Everybody charges, the catcher clears a lane, nobody panics.",no,PLATE,3,,contact`;
+SQUEEZE,Squeeze bunt with a runner on third,Bunts,bunt,246,386,"You have about two seconds. Everybody charges, the catcher clears a lane, nobody panics.",no,PLATE,3,,contact
+TRIPLE_LF,Ball into the left field corner for a triple,Cutoffs & relays,gap,42,169,"The relay throw still goes to third — a throw to second here just lets him walk into it anyway.",yes,PLATE,,,triple
+TRIPLE_RF,Ball into the right field corner for a triple,Cutoffs & relays,gap,478,169,,yes,PLATE,,,triple`;
 const RESP_CSV = `ball_id,bases,outs,context,pos,role,target,cue,throw
 GB_P,*,*,*,P,FIELD,BALL,"Field it clean. Look it into your glove, then throw.",BASE_1
 GB_P,*,*,*,1B,COVER,BASE_1,"Beat the ball to the bag. Stretch after you see the throw, not before.",
@@ -433,7 +435,6 @@ GB_C,1|12|13|123,0|1,*,C,FIELD,BALL,Force at second. Feed it firm and chest-high
 GB_C,1|12|13|123,0|1,*,SS,COVER,BASE_2,"Turn two. Beat the ball to the bag, catch, clear the runner, throw.",
 GB_C,1|12|13|123,0|1,*,2B,BACKUP,BU_2_R,Back up the bag behind your partner. A missed feed here is two bases.,
 GB_C,3|13|23|123,0|1,INF_IN,C,FIELD,BALL,"Infield in. Look the runner back, then decide: home if he broke, first if he held.",PLATE
-GB_C,123,0|1,*,C,FIELD,BALL,"Bases loaded — everybody's forced. Home is the easy out, then first for two.",PLATE>BASE_1
 GB_C,123,0|1,*,C,FIELD,BALL,"Force at home and you're standing on it. Step on the plate, then throw to first.",PLATE>BASE_1
 GB_C,*,2,*,C,FIELD,BALL,Two outs — take the easiest out you have. Usually first.,BASE_1
 GB_C,3|13|23|123,*,*,P,COVER,PLATE,"Catcher came out front, so home is yours. Get to the plate.",
@@ -1164,7 +1165,25 @@ FLY_RF,2,0|1,*,P,BACKUP,BU_3,"Runner may tag. Back up third, deep behind the bag
 FLY_RF,2,0|1,*,LF,BACKUP,BU_3_IN,"Come in toward third, in front of the pitcher, in case the throw gets through.",
 FLY_RF,3|13|23|123,0|1,*,LF,BACKUP,BU_3,Back up third in case the play goes there.,
 FLY_RF,12,0|1,*,P,BACKUP,BU_3,"Runner may tag. Back up third, deep behind the bag.",
-FLY_RF,12,0|1,*,LF,BACKUP,BU_3_IN,"Come in toward third, in front of the pitcher, in case the throw gets through.",`;
+FLY_RF,12,0|1,*,LF,BACKUP,BU_3_IN,"Come in toward third, in front of the pitcher, in case the throw gets through.",
+TRIPLE_LF,*,*,*,LF,FIELD,BALL,Get to it and get rid of it. The runner's not stopping at second — every throw goes to third.,RELAY_CORNER_L>BASE_3
+TRIPLE_LF,*,*,*,CF,BACKUP,BALL,"Go with him. If it kicks off the fence, you're the one who saves the run.",
+TRIPLE_LF,*,*,*,RF,BACKUP,BU_2,"All the way across behind second, in case this ball ever comes back that far.",
+TRIPLE_LF,*,*,*,SS,RELAY,RELAY_CORNER_L,Sprint out and get in a line with him. Wave your arms and yell your name so he can find you.,
+TRIPLE_LF,*,*,*,2B,TRAIL,TRAIL_LF,"Stay behind the relay man. If it gets past him, it is yours.",
+TRIPLE_LF,*,*,*,3B,COVER,BASE_3,Straddle the bag. This throw is coming to you — he isn't stopping before here.,
+TRIPLE_LF,*,*,*,1B,COVER,BASE_2,"See him touch first, then trail him to second.",
+TRIPLE_LF,*,*,*,C,PLATE,PLATE,"Call it: 'Cut 3!' if you want it cut, or 'Let it go!' to third. Then stay alert in case he tries for home.",
+TRIPLE_LF,*,*,*,P,BACKUP,BU_3,Back up third. That's the whole play here.,
+TRIPLE_RF,*,*,*,RF,FIELD,BALL,Get to it and get rid of it. The runner's not stopping at second — every throw goes to third.,RELAY_CORNER_R>BASE_3
+TRIPLE_RF,*,*,*,CF,BACKUP,BALL,"Go with him. If it kicks off the fence, you're the one who saves the run.",
+TRIPLE_RF,*,*,*,LF,BACKUP,BU_2,"All the way across behind second, in case this ball ever comes back that far.",
+TRIPLE_RF,*,*,*,2B,RELAY,RELAY_CORNER_R,Sprint out and get in a line with him. Wave your arms and yell your name so he can find you.,
+TRIPLE_RF,*,*,*,SS,COVER,BASE_2,"Cover the bag — 2B went out for the relay, so this one's yours now.",
+TRIPLE_RF,*,*,*,3B,COVER,BASE_3,Straddle the bag. This throw is coming to you — he isn't stopping before here.,
+TRIPLE_RF,*,*,*,1B,TRAIL,TRAIL_RF,"See him touch first, then trail the relay man. If the throw gets past him, it is yours.",
+TRIPLE_RF,*,*,*,C,PLATE,PLATE,"Call it: 'Cut 3!' if you want it cut, or 'Let it go!' to third. Then stay alert in case he tries for home.",
+TRIPLE_RF,*,*,*,P,BACKUP,BU_3,Back up third. That's the whole play here.,`;
 
 /* ------------------------------ CSV ------------------------------ */
 function parseCSV(text){
@@ -1477,6 +1496,9 @@ function runnerPlan(sit,bases,outs,catchT){
   } else if(code==='double'){
     add('H',2,TIME.react);
     if(has('1'))add('1',2,0); if(has('2'))add('2',2,0); if(has('3'))add('3',1,0);
+  } else if(code==='triple'){
+    add('H',3,TIME.react);
+    if(has('1'))add('1',3,0); if(has('2'))add('2',2,0); if(has('3'))add('3',1,0);
   } else if(code==='tag'){
     if(outs<2){ if(has('3'))add('3',1,catchT+.12,TIME.rounding); if(has('2'))add('2',1,catchT+.12,TIME.rounding); }
   } else if(code==='wp'){
