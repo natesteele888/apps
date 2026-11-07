@@ -2145,7 +2145,15 @@ function maybeApply(){
 
 /* ---------- full-screen app viewer: your own apps open inside the Toolbox, no browser bar ---------- */
 const VIEW_HOSTS=/^https:\/\/(natesteele888\.github\.io|[a-z0-9-]+\.web\.app|[a-z0-9-]+\.firebaseapp\.com)\//i;
-function canView(u){return VIEW_HOSTS.test(u)&&!/[?&]install\b/.test(u)&&!/\/apps\/toolbox\//.test(u)}
+function isInstallLink(u){try{const x=new URL(u,location.href);return /[?&#]install\b/.test(x.search+x.hash)||/^\/apps\/(index\.html)?$/.test(x.pathname)}catch(_){return false}}
+function canView(u){return VIEW_HOSTS.test(u)&&!isInstallLink(u)&&!/\/apps\/toolbox\//.test(u)}
+/* Installing only works in the phone's real browser, not in the mini-browser an installed app opens.
+   From the installed Toolbox on Android, send install links to Chrome itself. */
+const IN_APP=matchMedia("(display-mode: standalone)").matches||matchMedia("(display-mode: fullscreen)").matches;
+function inChrome(u){const x=new URL(u,location.href);const pkg=/SamsungBrowser/.test(navigator.userAgent)?"com.sec.android.app.sbrowser":"com.android.chrome";
+  return `intent://${x.host}${x.pathname}${x.search}#Intent;scheme=https;package=${pkg};S.browser_fallback_url=${encodeURIComponent(x.href)};end`}
+document.addEventListener("click",e=>{const a=e.target.closest("a[href]");if(!a||!isInstallLink(a.href))return;
+  if(IN_APP&&/Android/i.test(navigator.userAgent)){e.preventDefault();e.stopPropagation();location.href=inChrome(a.href)}},true);
 function openViewer(url){
   closeViewer(true);
   const v=document.createElement("div");v.id="viewer";v.setAttribute("role","dialog");v.setAttribute("aria-label","App");

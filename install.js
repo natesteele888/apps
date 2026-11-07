@@ -77,7 +77,20 @@
     setTimeout(hide, 6000);
   });
   /* Opened from the install page but Chrome hasn't offered to install yet: tell how. */
+  /* No Install offer usually means: already installed, or this page is open in an app's mini-browser
+     (Android hides Install there). On Android, offer a one-tap jump into the real browser. */
   if (asked) setTimeout(function () {
-    if (!deferred && !host && document.body) show(["Install " + appName(), "Tap ⋮ in Chrome, then Install app (or Add to home screen)."], false);
+    if (deferred || host || !document.body) return;
+    var android = /Android/i.test(navigator.userAgent);
+    show(["Install " + appName(), android ? "Already installed? It's in your app drawer. If not, open this page in your browser and tap Install." : "Tap ⋮ in Chrome, then Install app (or Add to home screen)."], false);
+    if (android && host) {
+      var root = host.shadowRoot || host, x = root.querySelector(".x"), b = document.createElement("button");
+      b.className = "go"; b.type = "button"; b.textContent = "Open in browser";
+      b.onclick = function () {
+        var pkg = /SamsungBrowser/.test(navigator.userAgent) ? "com.sec.android.app.sbrowser" : "com.android.chrome";
+        location.href = "intent://" + location.host + location.pathname + location.search + "#Intent;scheme=https;package=" + pkg + ";S.browser_fallback_url=" + encodeURIComponent(location.href) + ";end";
+      };
+      x.parentNode.insertBefore(b, x);
+    }
   }, 4000);
 })();
