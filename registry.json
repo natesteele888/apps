@@ -432,7 +432,8 @@
             "t": "Save every Bengals script for offline use"
           }
         ]
-      }
+      },
+      "inUse": true
     },
     {
       "id": "gridiron",
