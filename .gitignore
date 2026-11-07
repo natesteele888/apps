@@ -7,3 +7,5 @@ data/
 private/
 toolbox-backup*.json
 *toolbox-export*.json
+node_modules/
+*-debug.log
