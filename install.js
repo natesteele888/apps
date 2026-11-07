@@ -77,9 +77,17 @@
     setTimeout(hide, 6000);
   });
   /* Opened from the install page but Chrome hasn't offered to install yet: tell how. */
+  /* iPhone and iPad never offer an Install pop-up: show how to add it with the Share button instead. */
+  var ios = /iP(hone|ad|od)/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+  if (ios && (asked || !later())) setTimeout(function () {
+    if (host || !document.body) return;
+    var chromeIOS = /CriOS/.test(navigator.userAgent);
+    show(["Add " + appName() + " to your home screen", chromeIOS ? "Tap the Share button (top right), then Add to Home Screen." : "Tap the Share button (square with an arrow), then Add to Home Screen."], false);
+  }, 2500);
+
   /* No Install offer usually means: already installed, or this page is open in an app's mini-browser
      (Android hides Install there). On Android, offer a one-tap jump into the real browser. */
-  if (asked) setTimeout(function () {
+  if (asked && !ios) setTimeout(function () {
     if (deferred || host || !document.body) return;
     var android = /Android/i.test(navigator.userAgent);
     show(["Install " + appName(), android ? "Already installed? It's in your app drawer. If not, open this page in your browser and tap Install." : "Tap ⋮ in Chrome, then Install app (or Add to home screen)."], false);
