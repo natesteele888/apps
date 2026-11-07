@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Play Board</title>
+<meta name="description" content="Draw a play, step through it and watch it move. Basketball, baseball, softball, football, soccer and volleyball. Everything stays on your phone.">
+<meta name="theme-color" content="#0d1624">
+<meta name="application-name" content="Play Board">
+<meta name="apple-mobile-web-app-title" content="Play Board">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="/apps/icons/playboard-192.png">
+<link rel="icon" type="image/png" sizes="192x192" href="/apps/icons/playboard-192.png">
+<script src="https://natesteele888.github.io/apps/install.js" defer></script>
+<!-- Optional heading font. If it can't load (offline), the system font is used. -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Saira+Condensed:wght@600;700&display=swap" media="print" onload="this.media='all'">
+<link rel="stylesheet" href="style.css">
+</head>
+<body class="v-lib">
+<noscript><p style="padding:24px;font-family:sans-serif;color:#eaf0f9">Play Board needs JavaScript turned on.</p></noscript>
+
+<div id="app">
+  <header class="appbar" id="appbar"><div class="appbar-in" id="appbarIn"></div></header>
+
+  <!-- ============ board (editor / player) ============ -->
+  <main class="page" id="boardView" hidden>
+    <div class="banner" id="banner" hidden></div>
+    <div class="stepbar">
+      <div class="chips" id="chips" role="group" aria-label="Steps"></div>
+      <div id="courtToggle"></div>
+    </div>
+    <div class="boardwrap" id="boardWrap" tabindex="0" role="group" aria-label="Play board. Select a player, then use the arrow keys to move them.">
+      <svg id="board" viewBox="0 0 500 470" role="img" aria-label="Court diagram"></svg>
+    </div>
+    <p class="sr" id="liveSel" aria-live="polite"></p>
+    <div class="firsthint" id="firstHint" hidden>
+      <div>
+        <strong>Quick start</strong>
+        <p>Drag players to place them. Pick Cut, Pass, Dribble or Screen, then drag from a player to draw a move. Tap <b>+</b> for the next step, then press Play.</p>
+      </div>
+      <button class="btn small" id="hintOk">Got it</button>
+    </div>
+    <div class="ctx" id="ctx"></div>
+    <div class="tools" id="tools" role="group" aria-label="Drawing tool"></div>
+    <div class="actions" id="actions"></div>
+    <div class="notebox">
+      <label for="note" id="noteLabel">Step note</label>
+      <textarea id="note" rows="2" maxlength="200" placeholder="What happens in this step? (example: 5 sets the screen, 1 uses it)"></textarea>
+    </div>
+  </main>
+
+  <!-- ============ library ============ -->
+  <main class="page" id="libView">
+    <div class="libfilter" id="libFilter" role="group" aria-label="Filter by sport"></div>
+    <div class="grid" id="libGrid"></div>
+    <div class="empty" id="libEmpty" hidden>
+      <svg viewBox="0 0 120 80" width="120" height="80" aria-hidden="true"><rect x="2" y="2" width="116" height="76" rx="8" fill="none" stroke="#3d5a85" stroke-width="3" stroke-dasharray="6 6"/><circle cx="36" cy="46" r="9" fill="#ff7a1a"/><path d="M48 40C66 22 78 30 90 24" fill="none" stroke="#e8eef7" stroke-width="3" stroke-dasharray="6 5"/><path d="M92 22l-9 0 4 8z" fill="#e8eef7"/></svg>
+      <h2>No plays yet</h2>
+      <p>Make your first play. Pick a sport, place your players and draw how they move.</p>
+    </div>
+  </main>
+</div>
+
+<button class="fab" id="fab"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg><span>New play</span></button>
+
+<!-- ============ player bar ============ -->
+<div class="playerbar" id="playerbar" hidden>
+  <div class="pb-in">
+    <div class="prow">
+      <button class="icon-btn" id="btnRestart" aria-label="Restart from the beginning"></button>
+      <button class="playbtn" id="btnPlay" aria-label="Play"></button>
+      <div class="stepinfo" id="stepInfo" aria-live="off">Step 1 of 1</div>
+      <div class="speeds" id="speeds" role="group" aria-label="Speed"></div>
+    </div>
+    <input type="range" id="scrub" min="0" max="1000" step="1" value="0" aria-label="Playback position, drag to scrub through the steps">
+  </div>
+</div>
+
+<div id="toasts" aria-live="polite" aria-atomic="false"></div>
+<div id="sheets"></div>
+<div id="printRoot" aria-hidden="true"></div>
+
+<script src="engine.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
