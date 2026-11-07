@@ -293,10 +293,11 @@ async function share(code){const url=inviteLink(code);const text=`Join my NFL pi
 /* ---------- boot ---------- */
 (function boot(){
   const c=new URLSearchParams(location.search).get("code");if(c)store("gp.code",c.toUpperCase());
+  // register first, so even a visit where Firebase failed to load sets up the offline copy for next time
+  if("serviceWorker" in navigator)addEventListener("load",()=>navigator.serviceWorker.register("sw.js").catch(()=>{}));
   if(!window.firebase){$("#app").innerHTML=`<div class="gate"><div class="box"><h1>Gameday Picks</h1><p>Couldn't load. Check your connection and reopen the app.</p></div></div>`;return}
   firebase.initializeApp(FIREBASE_CONFIG);db=firebase.firestore();try{db.enablePersistence({synchronizeTabs:true}).catch(()=>{})}catch(_){}
   firebase.auth().onAuthStateChanged(u=>{unsubs.forEach(f=>f());unsubs=[];S.user=u;S.me=null;S.players={};S.picks={};S.weeks={};if(u)startData();render()});
-  if("serviceWorker" in navigator)addEventListener("load",()=>navigator.serviceWorker.register("sw.js").catch(()=>{}));
 })();
 </script>
 </body>
