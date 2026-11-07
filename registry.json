@@ -406,11 +406,15 @@
         ],
         "latest": {
           "d": "Nov 7, 2026",
-          "t": "Bengals app: keep the Help button's NEW tag small so the ? stays visible",
-          "url": "https://github.com/natesteele888/ASL-Bengals/commit/6c04d9cd68cb9fc11a4c17271c0b98498f8b5bf2"
+          "t": "Film Room: escape a note's time and stop telling coaches to open the rule to everyone",
+          "url": "https://github.com/natesteele888/ASL-Bengals/commit/9db61ce5e4ab2d61ccafbb347a1815f7751acf22"
         },
-        "version": "1.49.5",
+        "version": "1.49.6",
         "history": [
+          {
+            "v": "1.49.6",
+            "t": "Film Room: escape a note's time and stop telling coaches to open the rule to everyone"
+          },
           {
             "v": "1.49.5",
             "t": "Bengals app: keep the Help button's NEW tag small so the ? stays visible"
@@ -426,10 +430,6 @@
           {
             "v": "1.49.2",
             "t": "Film Room: open every film here, scouting report, NEW badge"
-          },
-          {
-            "v": "1.49.1",
-            "t": "Add Film Room: in-app film with team notes and points"
           }
         ]
       },
@@ -701,30 +701,30 @@
         ],
         "latest": {
           "d": "Nov 7, 2026",
-          "t": "Brain pointer: start each session from the current code, not an old copy",
-          "url": "https://github.com/natesteele888/lybs-ballclub/commit/d2c0dc407f5eb51c621a83e41086beab58dcd587"
+          "t": "team-registry: say plainly that Select's codes have not been replaced yet",
+          "url": "https://github.com/natesteele888/lybs-ballclub/commit/f86b8ba5191c8f8b431bbb17ff6a424378cd6324"
         },
-        "version": "1.22.9",
+        "version": "1.23.7",
         "history": [
           {
-            "v": "1.22.9",
+            "v": "1.23.7",
+            "t": "team-registry: say plainly that Select's codes have not been replaced yet"
+          },
+          {
+            "v": "1.23.6",
+            "t": "Gate sign-in: move an old-password account over instead of locking the team out"
+          },
+          {
+            "v": "1.23.3",
+            "t": "responsibilities.csv: keep this data file's CRLF line endings"
+          },
+          {
+            "v": "1.23.2",
+            "t": "Situations trainer: don't throw home with a runner already in from third"
+          },
+          {
+            "v": "1.23.1",
             "t": "Brain pointer: start each session from the current code, not an old copy"
-          },
-          {
-            "v": "1.22.8",
-            "t": "Add a radius-token scale and a visible keyboard-focus ring"
-          },
-          {
-            "v": "1.22.7",
-            "t": "Stop telling families to add a game they can't add"
-          },
-          {
-            "v": "1.22.6",
-            "t": "Show a letter tile when a team badge can't load"
-          },
-          {
-            "v": "1.22.5",
-            "t": "Open the Situations trainer, Rules and League info with no signal"
           }
         ]
       }
@@ -984,11 +984,15 @@
         ],
         "latest": {
           "d": "Nov 7, 2026",
-          "t": "Cube Clock: show just the cube mark on narrow phones instead of a lone C",
-          "url": "https://github.com/natesteele888/cube-clock/commit/45ccff41256434b2cba8125a563a663edb4afcde"
+          "t": "Tutorial cards: bottom sheet on a phone instead of a floating box",
+          "url": "https://github.com/natesteele888/cube-clock/commit/1fb47770b8da05827c1e43d7ddf97683561c0847"
         },
-        "version": "1.2.3",
+        "version": "1.2.4",
         "history": [
+          {
+            "v": "1.2.4",
+            "t": "Tutorial cards: bottom sheet on a phone instead of a floating box"
+          },
           {
             "v": "1.2.3",
             "t": "Cube Clock: show just the cube mark on narrow phones instead of a lone C"
@@ -1004,10 +1008,6 @@
           {
             "v": "1.2.0",
             "t": "Only clear Cube Clock's own old caches on update"
-          },
-          {
-            "v": "1.1.8",
-            "t": "Name the actual fix when the leaderboard cannot sign in"
           }
         ]
       }
@@ -1207,26 +1207,26 @@
           "t": "Show a check-your-signal card instead of an endless Loading when Firebase can't load",
           "url": "https://github.com/natesteele888/events/commit/531489e583a49118be5cdfc0dbf3172f50240bcf"
         },
-        "version": "1.1.8",
+        "version": "1.2.1",
         "history": [
           {
-            "v": "1.1.8",
+            "v": "1.2.0",
             "t": "Show a check-your-signal card instead of an endless Loading when Firebase can't load"
           },
           {
-            "v": "1.1.7",
+            "v": "1.1.9",
             "t": "Publish job: skip quietly until a Firebase key is added"
           },
           {
-            "v": "1.1.6",
+            "v": "1.1.8",
             "t": "Publish to steele-events.web.app automatically after tests pass"
           },
           {
-            "v": "1.1.5",
+            "v": "1.1.7",
             "t": "Brain pointer: start each session from the current code, not an old copy"
           },
           {
-            "v": "1.1.4",
+            "v": "1.1.6",
             "t": "Save the Events page at install so it opens with no signal"
           }
         ]
@@ -1299,7 +1299,10 @@
           "player",
           "parent"
         ],
-        "shots": [],
+        "shots": [
+          "store/shots/eightcount-1.webp",
+          "store/shots/eightcount-2.webp"
+        ],
         "autoShots": [
           {
             "url": "",
@@ -1309,6 +1312,18 @@
             "url": "",
             "click": "Sample: game-day cheer",
             "wait": 1500
+          }
+        ],
+        "latest": {
+          "d": "Nov 7, 2026",
+          "t": "Add Eight Count: cheer and dance counts, lock in together, record and review",
+          "url": "https://github.com/natesteele888/apps/commit/eec8574b42926c58c39794a6f2950994482088c3"
+        },
+        "version": "1.0.1",
+        "history": [
+          {
+            "v": "1.0.1",
+            "t": "Add Eight Count: cheer and dance counts, lock in together, record and review"
           }
         ]
       }
@@ -1379,11 +1394,25 @@
           "coach",
           "player"
         ],
-        "shots": [],
+        "shots": [
+          "store/shots/playboard-1.webp"
+        ],
         "autoShots": [
           {
             "url": "",
             "wait": 2500
+          }
+        ],
+        "latest": {
+          "d": "Nov 7, 2026",
+          "t": "Play Board: draw plays and watch them move",
+          "url": "https://github.com/natesteele888/apps/commit/a233cca14adad3e101fe7881d93fb5b7891f49ea"
+        },
+        "version": "1.0.1",
+        "history": [
+          {
+            "v": "1.0.1",
+            "t": "Play Board: draw plays and watch them move"
           }
         ]
       }
@@ -1453,11 +1482,25 @@
           "player",
           "parent"
         ],
-        "shots": [],
+        "shots": [
+          "store/shots/locker-1.webp"
+        ],
         "autoShots": [
           {
             "url": "",
             "wait": 2500
+          }
+        ],
+        "latest": {
+          "d": "Nov 7, 2026",
+          "t": "Locker: a sports notebook for daily reps, games and arm care",
+          "url": "https://github.com/natesteele888/apps/commit/623b3a595a2edd626797dce9b90ca4db72bfe00b"
+        },
+        "version": "1.0.1",
+        "history": [
+          {
+            "v": "1.0.1",
+            "t": "Locker: a sports notebook for daily reps, games and arm care"
           }
         ]
       }
