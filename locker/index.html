@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Locker: Your Sports Notebook</title>
+<meta name="description" content="Locker is your sports notebook, in your pocket. Daily reps and streaks, game log, arm care, clips and an athlete card. Everything stays on your phone.">
+<meta name="theme-color" content="#0a1512">
+<meta name="color-scheme" content="dark">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Locker">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" type="image/png" sizes="192x192" href="/apps/icons/locker-192.png">
+<link rel="apple-touch-icon" href="/apps/icons/locker-192.png">
+<script src="https://natesteele888.github.io/apps/install.js" defer></script>
+<!-- Optional fonts. Loaded without blocking the page; offline or blocked just means the system fonts are used. -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Barlow:wght@400;500;600;700;800&display=swap" media="print" onload="this.media='all'">
+<link rel="stylesheet" href="locker.css">
+</head>
+<body>
+<div id="app">
+  <header class="top" id="top" hidden></header>
+  <main id="view" tabindex="-1" aria-live="off"></main>
+  <nav class="nav" id="nav" aria-label="Sections" hidden></nav>
+</div>
+<div id="sheets"></div>
+<div id="toasts"></div>
+<div class="print-only" id="printbox"><img id="printimg" alt="Athlete card"></div>
+<noscript><p style="padding:24px;font-family:sans-serif;color:#eef7f1">Locker needs JavaScript turned on to work.</p></noscript>
+<script src="core.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
