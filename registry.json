@@ -80,11 +80,15 @@
         "autoShots": [],
         "latest": {
           "d": "Nov 7, 2026",
-          "t": "Toolbox: actually keep the Firebase code so the app opens with no signal",
-          "url": "https://github.com/natesteele888/apps/commit/d11ac14e1dd8d8d64480f387ffae9420cbf563d3"
+          "t": "Installs: never start them inside the Toolbox",
+          "url": "https://github.com/natesteele888/apps/commit/d69f0fe9050c4f34600cb63fe4e96bad7b88349a"
         },
-        "version": "1.1.7",
+        "version": "1.1.8",
         "history": [
+          {
+            "v": "1.1.8",
+            "t": "Installs: never start them inside the Toolbox"
+          },
           {
             "v": "1.1.7",
             "t": "Toolbox: actually keep the Firebase code so the app opens with no signal"
@@ -100,10 +104,6 @@
           {
             "v": "1.1.4",
             "t": "Toolbox: Claude's review on Now and in every app"
-          },
-          {
-            "v": "1.1.3",
-            "t": "Toolbox: App Map shortcut on Now"
           }
         ]
       }
@@ -197,11 +197,15 @@
         ],
         "latest": {
           "d": "Nov 7, 2026",
-          "t": "Where Do I Go: bigger runner, outs and Infield-in buttons",
-          "url": "https://github.com/natesteele888/apps/commit/534ee76b4aa46fd4e1152c8e885376f2435e56d6"
+          "t": "Where Do I Go?: don't throw home with a runner already in from third",
+          "url": "https://github.com/natesteele888/apps/commit/ef13779470d6f0e07c52fefea9beb1996f0b7f2d"
         },
-        "version": "1.1.8",
+        "version": "1.1.9",
         "history": [
+          {
+            "v": "1.1.9",
+            "t": "Where Do I Go?: don't throw home with a runner already in from third"
+          },
           {
             "v": "1.1.8",
             "t": "Where Do I Go: bigger runner, outs and Infield-in buttons"
@@ -217,10 +221,6 @@
           {
             "v": "1.1.5",
             "t": "Where Do I Go: add Ballclub's triple plays and drop a dead rule"
-          },
-          {
-            "v": "1.1.4",
-            "t": "Line up the cut on a single to right with a runner on first"
           }
         ]
       }
@@ -406,30 +406,30 @@
         ],
         "latest": {
           "d": "Nov 7, 2026",
-          "t": "Bengals app: shrink the five images every phone loads first (1.9 MB -> 0.6 MB)",
-          "url": "https://github.com/natesteele888/ASL-Bengals/commit/8e7153cdf46e05be3634ddf294d39123783b019e"
+          "t": "Bengals app: keep the Help button's NEW tag small so the ? stays visible",
+          "url": "https://github.com/natesteele888/ASL-Bengals/commit/6c04d9cd68cb9fc11a4c17271c0b98498f8b5bf2"
         },
-        "version": "1.48.7",
+        "version": "1.49.5",
         "history": [
           {
-            "v": "1.48.7",
-            "t": "Bengals app: shrink the five images every phone loads first (1.9 MB -> 0.6 MB)"
+            "v": "1.49.5",
+            "t": "Bengals app: keep the Help button's NEW tag small so the ? stays visible"
           },
           {
-            "v": "1.48.6",
-            "t": "Bengals app: open with the last saved plays when there's no signal"
+            "v": "1.49.4",
+            "t": "Bengals app: easier taps on the Play Calls i, ball-carrier filter and standings team names"
           },
           {
-            "v": "1.48.5",
-            "t": "Stat Keeper: load the roster after coach sign-in instead of from the code"
+            "v": "1.49.3",
+            "t": "How-To Guide: screenshot tutorials for players, parents and coaches"
           },
           {
-            "v": "1.48.4",
-            "t": "Add the shared install pop-up"
+            "v": "1.49.2",
+            "t": "Film Room: open every film here, scouting report, NEW badge"
           },
           {
-            "v": "1.48.3",
-            "t": "Save every Bengals script for offline use"
+            "v": "1.49.1",
+            "t": "Add Film Room: in-app film with team notes and points"
           }
         ]
       },
@@ -701,11 +701,19 @@
         ],
         "latest": {
           "d": "Nov 7, 2026",
-          "t": "Stop telling families to add a game they can't add",
-          "url": "https://github.com/natesteele888/lybs-ballclub/commit/dea9ae9961c54a959c229a55bd17e46faeadc983"
+          "t": "Brain pointer: start each session from the current code, not an old copy",
+          "url": "https://github.com/natesteele888/lybs-ballclub/commit/d2c0dc407f5eb51c621a83e41086beab58dcd587"
         },
-        "version": "1.22.7",
+        "version": "1.22.9",
         "history": [
+          {
+            "v": "1.22.9",
+            "t": "Brain pointer: start each session from the current code, not an old copy"
+          },
+          {
+            "v": "1.22.8",
+            "t": "Add a radius-token scale and a visible keyboard-focus ring"
+          },
           {
             "v": "1.22.7",
             "t": "Stop telling families to add a game they can't add"
@@ -717,14 +725,6 @@
           {
             "v": "1.22.5",
             "t": "Open the Situations trainer, Rules and League info with no signal"
-          },
-          {
-            "v": "1.22.4",
-            "t": "Keep the error/sync toasts clear of the home indicator"
-          },
-          {
-            "v": "1.22.3",
-            "t": "Add the shared install pop-up"
           }
         ]
       }
@@ -877,11 +877,19 @@
         ],
         "latest": {
           "d": "Nov 7, 2026",
-          "t": "Power Program: open offline right after the first visit",
-          "url": "https://github.com/natesteele888/fitness-hub/commit/fc6db0b9c745bdfaf35c4a18602a64325763b3f6"
+          "t": "Brain pointer: start each session from the current code, not an old copy",
+          "url": "https://github.com/natesteele888/fitness-hub/commit/32551a8782f48c9670967a9c22c074bc96551d47"
         },
-        "version": "1.2.8",
+        "version": "1.3.0",
         "history": [
+          {
+            "v": "1.3.0",
+            "t": "Brain pointer: start each session from the current code, not an old copy"
+          },
+          {
+            "v": "1.2.9",
+            "t": "Toast the Power Program's sync failures instead of only updating a quiet line"
+          },
           {
             "v": "1.2.8",
             "t": "Power Program: open offline right after the first visit"
@@ -893,14 +901,6 @@
           {
             "v": "1.2.6",
             "t": "Power Program: keep the sync link off the public repo"
-          },
-          {
-            "v": "1.2.5",
-            "t": "Take the name out of the public README"
-          },
-          {
-            "v": "1.2.4",
-            "t": "Say when an exercise video needs signal instead of loading a broken player"
           }
         ]
       }
@@ -984,11 +984,19 @@
         ],
         "latest": {
           "d": "Nov 7, 2026",
-          "t": "Add the shared install pop-up",
-          "url": "https://github.com/natesteele888/cube-clock/commit/7deb25aec4749e2ac13b2a79af7d669c9fa4a37e"
+          "t": "Cube Clock: show just the cube mark on narrow phones instead of a lone C",
+          "url": "https://github.com/natesteele888/cube-clock/commit/45ccff41256434b2cba8125a563a663edb4afcde"
         },
-        "version": "1.2.1",
+        "version": "1.2.3",
         "history": [
+          {
+            "v": "1.2.3",
+            "t": "Cube Clock: show just the cube mark on narrow phones instead of a lone C"
+          },
+          {
+            "v": "1.2.2",
+            "t": "Cube Clock: make the small buttons and home link easier to tap"
+          },
           {
             "v": "1.2.1",
             "t": "Add the shared install pop-up"
@@ -1000,14 +1008,6 @@
           {
             "v": "1.1.8",
             "t": "Name the actual fix when the leaderboard cannot sign in"
-          },
-          {
-            "v": "1.1.6",
-            "t": "Switch the shared leaderboard on"
-          },
-          {
-            "v": "1.1.5",
-            "t": "Do not reload on the service worker's first install"
           }
         ]
       }
@@ -1099,11 +1099,23 @@
         "autoShots": [],
         "latest": {
           "d": "Nov 7, 2026",
-          "t": "Add the shared install pop-up",
-          "url": "https://github.com/natesteele888/sponsor-banner-inventory/commit/eda108abca8703fed928070f7685a74e3f9823e8"
+          "t": "Make the filter chips, Close button and checkboxes easy to tap",
+          "url": "https://github.com/natesteele888/sponsor-banner-inventory/commit/0b77775ae1fede56349e5faad56ca865a0cf96b6"
         },
-        "version": "1.0.8",
+        "version": "1.1.1",
         "history": [
+          {
+            "v": "1.1.1",
+            "t": "Make the filter chips, Close button and checkboxes easy to tap"
+          },
+          {
+            "v": "1.1.0",
+            "t": "Show a no-signal message instead of a blank screen"
+          },
+          {
+            "v": "1.0.9",
+            "t": "Brain pointer: start each session from the current code, not an old copy"
+          },
           {
             "v": "1.0.8",
             "t": "Add the shared install pop-up"
@@ -1111,18 +1123,6 @@
           {
             "v": "1.0.7",
             "t": "Serve only banner photos from getImage and check lat/lng on upload"
-          },
-          {
-            "v": "1.0.6",
-            "t": "Use roles instead of people's names in the README"
-          },
-          {
-            "v": "1.0.5",
-            "t": "Keep the sign-in check's errors readable in the app"
-          },
-          {
-            "v": "1.0.4",
-            "t": "Require LYBS Dashboard board sign-in instead of a public token"
           }
         ]
       }
@@ -1204,30 +1204,30 @@
         ],
         "latest": {
           "d": "Nov 7, 2026",
-          "t": "Add the shared install pop-up",
-          "url": "https://github.com/natesteele888/events/commit/bc82d43da3436a41ae49075027f86c82ee0ead7f"
+          "t": "Show a check-your-signal card instead of an endless Loading when Firebase can't load",
+          "url": "https://github.com/natesteele888/events/commit/531489e583a49118be5cdfc0dbf3172f50240bcf"
         },
-        "version": "1.1.3",
+        "version": "1.1.8",
         "history": [
           {
-            "v": "1.1.3",
-            "t": "Add the shared install pop-up"
+            "v": "1.1.8",
+            "t": "Show a check-your-signal card instead of an endless Loading when Firebase can't load"
           },
           {
-            "v": "1.1.2",
-            "t": "Blocking a host also freezes their existing events and stops their reminders"
+            "v": "1.1.7",
+            "t": "Publish job: skip quietly until a Firebase key is added"
           },
           {
-            "v": "1.1.1",
-            "t": "Cap reminder emails per event and per run"
+            "v": "1.1.6",
+            "t": "Publish to steele-events.web.app automatically after tests pass"
           },
           {
-            "v": "1.1.0",
-            "t": "Headcount changes must match the RSVP saved with them and respect the deadline"
+            "v": "1.1.5",
+            "t": "Brain pointer: start each session from the current code, not an old copy"
           },
           {
-            "v": "1.0.9",
-            "t": "Add npm test commands for the rule checks and browser run"
+            "v": "1.1.4",
+            "t": "Save the Events page at install so it opens with no signal"
           }
         ]
       }
