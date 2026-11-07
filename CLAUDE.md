@@ -10,6 +10,10 @@ Everything in this repo is public. Nathan's rule: no data, personal info or sens
   and stop if anything personal shows up.
 - If personal data does get pushed, rewrite history to remove it (a force-push of a cleaned branch) and tell Nathan.
 
+## Tests
+Eight Count, Play Board and Locker have browser tests in `tests/` (see `tests/README.md`). Run
+`NODE_PATH=<node_modules with playwright> tests/run.sh` (or `tests/run.sh locker`) before changing them.
+
 ## Nate AI Brain (shared memory)
 This app is one of several that share parts and lessons through the private
 `natesteele888/nate-brain` repo.
