@@ -8,7 +8,11 @@
 (function () {
   if (window.__nateInstall) return; window.__nateInstall = true;
   var standalone = matchMedia("(display-mode: standalone)").matches || matchMedia("(display-mode: fullscreen)").matches || navigator.standalone;
-  if (standalone) return;
+  /* Remember real installs so the install page (natesteele888.github.io/apps/) can show what's actually on this phone.
+     Key = this app's folder, e.g. "nate.installed:/apps/situations/". Only a timestamp is stored. */
+  var DIR = location.pathname.replace(/[^/]*\.[a-z0-9]+$/i, "").replace(/([^/])$/, "$1/");
+  function markInstalled() { try { localStorage.setItem("nate.installed:" + DIR, String(Date.now())); } catch (e) {} }
+  if (standalone) { markInstalled(); return; }
   var KEY = "nate.install.later:" + location.pathname.split("/").slice(0, 3).join("/");
   var asked = /(^|[?&#])install\b/.test(location.search + location.hash);
   function later() { try { return Date.now() - (+localStorage.getItem(KEY) || 0) < 7 * 864e5; } catch (e) { return false; } }
@@ -68,7 +72,7 @@
     }
   });
   window.addEventListener("appinstalled", function () {
-    deferred = null;
+    deferred = null; markInstalled();
     show([appName() + " is on your home screen", "Long-press its icon and drop it on another to make a folder."], false);
     setTimeout(hide, 6000);
   });

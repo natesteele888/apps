@@ -13,25 +13,33 @@ h1{font-size:24px;margin:0 0 4px}p{color:var(--muted);margin:0 0 16px}
 .prog{display:flex;align-items:center;gap:10px;margin:0 0 12px;font-size:14px;color:var(--muted)}.bar{flex:1;height:8px;border-radius:9px;background:var(--line);overflow:hidden}.bar i{display:block;height:100%;width:0;background:var(--ac);transition:width .3s}
 .next{display:block;text-align:center;font-weight:800;padding:14px;border-radius:14px;background:var(--ac);color:var(--bg);text-decoration:none;margin:0 0 8px}.next[aria-disabled="true"]{opacity:.5;pointer-events:none}
 .tip{font-size:13.5px}.app.ok{opacity:.6}.app.ok .go{border-color:var(--line);color:var(--muted)!important}
+.st{font-size:12px;font-weight:700;margin-left:4px}.st.y{color:var(--ac)}.st.q{color:#E2B32C}
 </style></head><body>
 <h1>Nate's Apps</h1>
-<p>Phones only let each app install itself, one tap each. Tap <b>Install next app</b>, tap <b>Install</b> on the pop-up, then come back here with Back. About 10 seconds an app.</p>
+<p>Phones only let each app install itself, one tap each. Tap <b>Install next app</b>, tap <b>Install</b> on the pop-up, wait for <b>"installed"</b>, then come back here with Back. A green ✓ means it's really on this phone.</p>
 <div class="prog"><div class="bar"><i id="fill"></i></div><span id="count"></span></div>
 <a class="next" id="next" href="#">Install next app</a>
-<p class="tip">Then long-press an icon and drop it on another to make a folder.</p>
+<p class="tip">Already installed but no ✓? Open it once from your home screen and it checks itself off. Then long-press an icon and drop it on another to make a folder.</p>
 <div id="list">Loading…</div>
 <script>
 const K="nate.install.done";let done=[];try{done=JSON.parse(localStorage.getItem(K)||"[]")}catch(e){}
+const SAME=location.origin;
+const dirOf=u=>{try{const x=new URL(u);return x.pathname.replace(/[^/]*\.[a-z0-9]+$/i,"").replace(/([^/])$/,"$1/")}catch(e){return ""}};
+/* "yes" = this phone has it (the app checked itself off), "maybe" = tapped but can't be confirmed from here, "" = not yet */
+function stateOf(a){
+  if(new URL(a.live).origin===SAME){let t=null;try{t=localStorage.getItem("nate.installed:"+dirOf(a.live))}catch(e){}return t?"yes":(done.includes(a.id)?"tried":"")}
+  return done.includes(a.id)?"maybe":"";
+}
 const save=()=>{try{localStorage.setItem(K,JSON.stringify(done))}catch(e){}};
 const url=a=>a.live+(a.live.includes("?")?"&":"?")+"install";
 let apps=[];
 function draw(){
   const e=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
-  document.getElementById("list").innerHTML=apps.map(a=>{const ok=done.includes(a.id);return `<div class="app${ok?" ok":""}"><img src="icons/${e(a.id)}-192.png" alt=""><span><a href="${e(a.live)}"><b>${e(a.name)}</b></a><small>${ok?"Done":e(a.live.replace(/^https:\/\//,""))}</small></span><a class="go" data-id="${e(a.id)}" href="${e(url(a))}">${ok?"Again":"Install"}</a></div>`}).join("");
-  const n=apps.filter(a=>done.includes(a.id)).length;
-  document.getElementById("count").textContent=n+" of "+apps.length+" done";
+  document.getElementById("list").innerHTML=apps.map(a=>{const st=stateOf(a),ok=st==="yes";const lab={yes:'<span class="st y">✓ On this phone</span>',maybe:'<span class="st q">Tapped · check your home screen</span>',tried:'<span class="st q">Not installed yet · try again</span>'}[st]||"";return `<div class="app${ok?" ok":""}"><img src="icons/${e(a.id)}-192.png" alt=""><span><a href="${e(a.live)}"><b>${e(a.name)}</b></a><small>${lab||e(a.live.replace(/^https:\/\//,""))}</small></span><a class="go" data-id="${e(a.id)}" href="${e(url(a))}">${ok?"Again":st?"Retry":"Install"}</a></div>`}).join("");
+  const n=apps.filter(a=>{const s=stateOf(a);return s==="yes"||s==="maybe"}).length;
+  document.getElementById("count").textContent=n+" of "+apps.length+" on this phone";
   document.getElementById("fill").style.width=(apps.length?100*n/apps.length:0)+"%";
-  const nx=apps.find(a=>!done.includes(a.id)),b=document.getElementById("next");
+  const nx=apps.find(a=>stateOf(a)==="")||apps.find(a=>stateOf(a)==="tried"),b=document.getElementById("next");
   if(nx){b.href=url(nx);b.dataset.id=nx.id;b.textContent="Install next app: "+nx.name;b.removeAttribute("aria-disabled")}
   else{b.textContent="All set";b.setAttribute("aria-disabled","true");b.removeAttribute("href")}
 }
