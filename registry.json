@@ -1,6 +1,6 @@
 {
   "about": "The one list of Nathan's apps. Live links, which apps show where, and each app's App Store listing (text, highlights, screenshots) all come from here. Edit listings and icons in the Toolbox; the sync job copies them here. Don't hand-edit text in store/index.html.",
-  "updated": "2026-11-06",
+  "updated": "2026-11-07",
   "toolbox": "https://natesteele888.github.io/apps/toolbox/",
   "store": "https://natesteele888.github.io/apps/store/",
   "apps": [
@@ -80,11 +80,15 @@
         "autoShots": [],
         "latest": {
           "d": "Nov 7, 2026",
-          "t": "Save the Toolbox Firestore rules in the repo, with emulator tests",
-          "url": "https://github.com/natesteele888/apps/commit/2fb8ff4a17eb92b4daac5732e3219b56f5afa709"
+          "t": "Toolbox: actually keep the Firebase code so the app opens with no signal",
+          "url": "https://github.com/natesteele888/apps/commit/d11ac14e1dd8d8d64480f387ffae9420cbf563d3"
         },
-        "version": "1.1.6",
+        "version": "1.1.7",
         "history": [
+          {
+            "v": "1.1.7",
+            "t": "Toolbox: actually keep the Firebase code so the app opens with no signal"
+          },
           {
             "v": "1.1.6",
             "t": "Save the Toolbox Firestore rules in the repo, with emulator tests"
@@ -100,10 +104,6 @@
           {
             "v": "1.1.3",
             "t": "Toolbox: App Map shortcut on Now"
-          },
-          {
-            "v": "1.1.2",
-            "t": "One app catalog drives the App Store; one sync job keeps it current"
           }
         ]
       }
@@ -197,11 +197,19 @@
         ],
         "latest": {
           "d": "Nov 7, 2026",
-          "t": "Where Do I Go: saved rules, team and quiz scores now stick; shared install pop-up",
-          "url": "https://github.com/natesteele888/apps/commit/57a5c4bfd41008e78c6b57c08d7a91aaca9f7662"
+          "t": "Where Do I Go: bigger runner, outs and Infield-in buttons",
+          "url": "https://github.com/natesteele888/apps/commit/534ee76b4aa46fd4e1152c8e885376f2435e56d6"
         },
-        "version": "1.1.6",
+        "version": "1.1.8",
         "history": [
+          {
+            "v": "1.1.8",
+            "t": "Where Do I Go: bigger runner, outs and Infield-in buttons"
+          },
+          {
+            "v": "1.1.7",
+            "t": "Where Do I Go: open offline right after the first visit"
+          },
           {
             "v": "1.1.6",
             "t": "Where Do I Go: saved rules, team and quiz scores now stick; shared install pop-up"
@@ -213,14 +221,6 @@
           {
             "v": "1.1.4",
             "t": "Line up the cut on a single to right with a runner on first"
-          },
-          {
-            "v": "1.1.3",
-            "t": "Fix play timing and catcher throws found by running every play"
-          },
-          {
-            "v": "1.1.2",
-            "t": "Keep third covered on singles with first and third"
           }
         ]
       }
@@ -301,12 +301,16 @@
         ],
         "autoShots": [],
         "latest": {
-          "d": "Nov 6, 2026",
-          "t": "Install pop-up for every app, and a one-tap-each install checklist",
-          "url": "https://github.com/natesteele888/apps/commit/b3e0178fb10f73aad39b22196c5f9e7b37e97aa2"
+          "d": "Nov 7, 2026",
+          "t": "Gameday Picks: open with no signal",
+          "url": "https://github.com/natesteele888/apps/commit/4b76ca76c7e9ac1c147b28ffccdfe499b0eb78c7"
         },
-        "version": "1.0.3",
+        "version": "1.0.4",
         "history": [
+          {
+            "v": "1.0.4",
+            "t": "Gameday Picks: open with no signal"
+          },
           {
             "v": "1.0.3",
             "t": "Install pop-up for every app, and a one-tap-each install checklist"
@@ -402,11 +406,19 @@
         ],
         "latest": {
           "d": "Nov 7, 2026",
-          "t": "Stat Keeper: load the roster after coach sign-in instead of from the code",
-          "url": "https://github.com/natesteele888/ASL-Bengals/commit/ec25c268acc197f5e561eb86ef02679a94063244"
+          "t": "Bengals app: shrink the five images every phone loads first (1.9 MB -> 0.6 MB)",
+          "url": "https://github.com/natesteele888/ASL-Bengals/commit/8e7153cdf46e05be3634ddf294d39123783b019e"
         },
-        "version": "1.48.5",
+        "version": "1.48.7",
         "history": [
+          {
+            "v": "1.48.7",
+            "t": "Bengals app: shrink the five images every phone loads first (1.9 MB -> 0.6 MB)"
+          },
+          {
+            "v": "1.48.6",
+            "t": "Bengals app: open with the last saved plays when there's no signal"
+          },
           {
             "v": "1.48.5",
             "t": "Stat Keeper: load the roster after coach sign-in instead of from the code"
@@ -418,14 +430,6 @@
           {
             "v": "1.48.3",
             "t": "Save every Bengals script for offline use"
-          },
-          {
-            "v": "1.48.2",
-            "t": "Only delete Bengals caches when the service worker updates"
-          },
-          {
-            "v": "1.48.1",
-            "t": "Take the coach code out of code comments"
           }
         ]
       }
@@ -510,11 +514,15 @@
         ],
         "latest": {
           "d": "Nov 7, 2026",
-          "t": "Gridiron Hub: account page and team photo rules",
-          "url": "https://github.com/natesteele888/ASL-Bengals/commit/ead538c871ef9e0f90675a66edcfcbf19b0879ea"
+          "t": "Gridiron Hub: show the Milford logo, point three stray pages at the real ones",
+          "url": "https://github.com/natesteele888/ASL-Bengals/commit/4622f80cdf3f7023be4633631c7ec056e1ada975"
         },
-        "version": "1.5.3",
+        "version": "1.5.4",
         "history": [
+          {
+            "v": "1.5.4",
+            "t": "Gridiron Hub: show the Milford logo, point three stray pages at the real ones"
+          },
           {
             "v": "1.5.3",
             "t": "Gridiron Hub: account page and team photo rules"
@@ -530,10 +538,6 @@
           {
             "v": "1.5.0",
             "t": "Gridiron Hub: unlock the already-built RSVP/roster/message board, make messages two-way, add read receipts"
-          },
-          {
-            "v": "1.4.9",
-            "t": "Gridiron Hub: fix nav overflow for signed-in admins at laptop widths"
           }
         ]
       }
@@ -696,30 +700,30 @@
         ],
         "latest": {
           "d": "Nov 7, 2026",
-          "t": "Add the shared install pop-up",
-          "url": "https://github.com/natesteele888/lybs-ballclub/commit/3f3b52c530508e8c9e58e75b88160c3604cd7513"
+          "t": "Stop telling families to add a game they can't add",
+          "url": "https://github.com/natesteele888/lybs-ballclub/commit/dea9ae9961c54a959c229a55bd17e46faeadc983"
         },
-        "version": "1.22.3",
+        "version": "1.22.7",
         "history": [
+          {
+            "v": "1.22.7",
+            "t": "Stop telling families to add a game they can't add"
+          },
+          {
+            "v": "1.22.6",
+            "t": "Show a letter tile when a team badge can't load"
+          },
+          {
+            "v": "1.22.5",
+            "t": "Open the Situations trainer, Rules and League info with no signal"
+          },
+          {
+            "v": "1.22.4",
+            "t": "Keep the error/sync toasts clear of the home indicator"
+          },
           {
             "v": "1.22.3",
             "t": "Add the shared install pop-up"
-          },
-          {
-            "v": "1.22.2",
-            "t": "Validator: run the five checks on Ballclub's copy of the trainer"
-          },
-          {
-            "v": "1.22.1",
-            "t": "Stop any visitor from changing pitch counts, rules and season history"
-          },
-          {
-            "v": "1.22.0",
-            "t": "Stop browsers from overwriting the league standings"
-          },
-          {
-            "v": "1.21.9",
-            "t": "Service worker: only delete Ballclub's own caches on update"
           }
         ]
       }
@@ -792,6 +796,22 @@
         "autoShots": [
           {
             "url": ""
+          }
+        ],
+        "latest": {
+          "d": "Nov 7, 2026",
+          "t": "Remove the one-time cleanup job",
+          "url": "https://github.com/natesteele888/lybs-cards/commit/ef706db03e38330112d1dfa976049d80596fc5c8"
+        },
+        "version": "1.0.3",
+        "history": [
+          {
+            "v": "1.0.3",
+            "t": "Remove the one-time cleanup job"
+          },
+          {
+            "v": "1.0.2",
+            "t": "One-time cleanup: delete the old branch that still holds card photos"
           }
         ]
       }
@@ -871,11 +891,15 @@
         ],
         "latest": {
           "d": "Nov 7, 2026",
-          "t": "Add the shared install pop-up",
-          "url": "https://github.com/natesteele888/fitness-hub/commit/38adde60b34cbc3cac476e524797e52deb84279e"
+          "t": "Power Program: open offline right after the first visit",
+          "url": "https://github.com/natesteele888/fitness-hub/commit/fc6db0b9c745bdfaf35c4a18602a64325763b3f6"
         },
-        "version": "1.2.7",
+        "version": "1.2.8",
         "history": [
+          {
+            "v": "1.2.8",
+            "t": "Power Program: open offline right after the first visit"
+          },
           {
             "v": "1.2.7",
             "t": "Add the shared install pop-up"
@@ -891,10 +915,6 @@
           {
             "v": "1.2.4",
             "t": "Say when an exercise video needs signal instead of loading a broken player"
-          },
-          {
-            "v": "1.2.3",
-            "t": "Drop autoplay from the exercise demo embed"
           }
         ]
       }
