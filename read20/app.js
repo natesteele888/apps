@@ -76,9 +76,9 @@
     chime();
     const o = document.createElement("div"); o.className = "overlay"; o.id = "party";
     o.innerHTML = `<div class="card party" role="dialog" aria-label="Twenty minutes done"><div class="big">🎉⭐🎉</div><h2>${S.goal} minutes!</h2><p>${S.name ? esc(S.name) + ", you" : "You"} did your reading tonight. Great job!</p><button class="btn" id="keep">Keep reading</button><button class="btn alt" id="stop">I'm done tonight</button></div>`;
-    document.body.appendChild(o);
-    $("#keep").onclick = () => { o.remove(); touch(); };
-    $("#stop").onclick = () => { o.remove(); go(""); };
+    document.body.appendChild(o); trackOverlay(o);
+    $("#keep").onclick = () => { closeOverlay(o); touch(); };
+    $("#stop").onclick = () => closeOverlay(o, () => go(""));
   }
 
   /* ---------- shelf ---------- */
@@ -222,18 +222,48 @@
   /* ---------- sheets ---------- */
   function sheet(html) {
     const o = document.createElement("div"); o.className = "overlay"; o.innerHTML = `<div class="card sheet" role="dialog" aria-modal="true">${html}</div>`;
-    o.addEventListener("pointerdown", e => { if (e.target === o) o.remove(); });
-    document.body.appendChild(o); return o;
+    o.addEventListener("pointerdown", e => { if (e.target === o) closeOverlay(o); });
+    document.body.appendChild(o); trackOverlay(o); return o;
   }
+  /* Android Back (and the browser's Back) closes the top pop-up instead of leaving the app, same as Locker.
+     Each open pop-up owns one history entry; entries are added and given back a moment after the pop-ups change,
+     so a tap that closes one and moves on costs nothing, and the entry we land on says how many should be open. */
+  const overlays = [];
+  let histDepth = 0, traveling = false, syncTimer = 0, afterTrip = null;
+  function trackOverlay(o) { overlays.push(o); syncHistory(); }
+  /* "then" runs once the pop-up's history entry is given back, so a page change can't land on top of it. */
+  function closeOverlay(o, then) { const i = overlays.indexOf(o); if (i >= 0) overlays.splice(i, 1); o.remove(); if (then) afterTrip = then; syncHistory(); }
+  function syncHistory() { clearTimeout(syncTimer); syncTimer = setTimeout(reconcileHistory, 0); }
+  function reconcileHistory() {
+    if (traveling) return; // the popstate handler tidies up when our own trip back lands
+    const want = overlays.length;
+    try {
+      if (want > histDepth) { while (histDepth < want) history.pushState({ r20Sheets: ++histDepth }, ""); }
+      else if (want < histDepth) {
+        const n = histDepth - want; histDepth = want; traveling = true;
+        history.go(-n);
+        setTimeout(() => { if (traveling) { traveling = false; reconcileHistory(); } }, 600);
+      }
+    } catch (e) { traveling = false; }
+    if (!traveling && afterTrip) { const f = afterTrip; afterTrip = null; f(); }
+  }
+  try { if (history.state && history.state.r20Sheets) history.replaceState(null, ""); } catch (e) { /* ignore */ }
+  window.addEventListener("popstate", e => {
+    const at = (e.state && e.state.r20Sheets) || 0;
+    histDepth = at;
+    if (traveling) traveling = false;
+    else while (overlays.length > at) closeOverlay(overlays[overlays.length - 1]);
+    reconcileHistory();
+  });
   function openManual() {
     const o = sheet(`<h2>Log a book from home</h2><p class="fine">A paper book counts too.</p>
       <label>Book title<input id="mt" maxlength="60" autocomplete="off" placeholder="Title"></label>
       <label>Minutes read<input id="mm" type="number" inputmode="numeric" min="1" max="240" value="10"></label>
       <label>Day<input id="md" type="date" value="${today()}" max="${today()}"></label>
       <div class="row"><button class="btn alt" id="mc">Cancel</button><button class="btn" id="ms">Save</button></div>`);
-    $("#mc").onclick = () => o.remove();
+    $("#mc").onclick = () => closeOverlay(o);
     $("#ms").onclick = () => {
-      if (C.addManual(S, $("#md").value || today(), $("#mt").value, $("#mm").value)) { save(); o.remove(); route(); }
+      if (C.addManual(S, $("#md").value || today(), $("#mt").value, $("#mm").value)) { save(); closeOverlay(o); route(); }
       else $("#mm").focus();
     };
   }
@@ -246,8 +276,8 @@
       <button class="btn danger" id="se">Erase the reading log</button>
       <div class="row"><button class="btn" id="sd">Done</button></div>`);
     $("#sz").value = String(S.size);
-    $("#se").onclick = () => { if (confirm("Erase every night in the reading log? This cannot be undone.")) { S.days = {}; save(); o.remove(); route(); } };
-    $("#sd").onclick = () => { S.name = $("#sn").value.replace(/[\u0000-\u001f]/g, "").trim().slice(0, 20); S.goal = +$("#sg").value; S.size = +$("#sz").value; S.say = $("#ss").checked; save(); o.remove(); route(); };
+    $("#se").onclick = () => { if (confirm("Erase every night in the reading log? This cannot be undone.")) { S.days = {}; save(); closeOverlay(o); route(); } };
+    $("#sd").onclick = () => { S.name = $("#sn").value.replace(/[\u0000-\u001f]/g, "").trim().slice(0, 20); S.goal = +$("#sg").value; S.size = +$("#sz").value; S.say = $("#ss").checked; save(); closeOverlay(o); route(); };
   }
 
   /* ---------- bottom bar ---------- */
