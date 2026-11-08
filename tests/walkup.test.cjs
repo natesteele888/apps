@@ -1029,8 +1029,8 @@ const dbKeys = page => page.evaluate(() => window.WalkupApp.WU.db.keys());
 
   await test('Offline: the service worker keeps the app, and a reload with no network still works with the team in place', async () => {
     const { page, errors, ctx } = await open({ sw: true });
-    await sample(page); await page.evaluate(() => navigator.serviceWorker.ready); await page.waitForFunction(async () => (await caches.keys()).includes('walkup-v1') && (await (await caches.open('walkup-v1')).keys()).length >= 15, null, { timeout: 10000 });
-    const cached = await page.evaluate(async () => (await (await caches.open('walkup-v1')).keys()).map(r => new URL(r.url).pathname.split('/').pop() || 'index'));
+    await sample(page); await page.evaluate(() => navigator.serviceWorker.ready); const cacheName = await page.evaluate(async () => (await (await fetch('sw.js')).text()).match(/CACHE\s*=\s*"([^"]+)"/)[1]); await page.waitForFunction(async n => (await caches.keys()).includes(n) && (await (await caches.open(n)).keys()).length >= 15, cacheName, { timeout: 10000 });
+    const cached = await page.evaluate(async n => (await (await caches.open(n)).keys()).map(r => new URL(r.url).pathname.split('/').pop() || 'index'), cacheName);
     for (const f of ['core.js', 'engine.js', 'app.js', 'walkup.css', 'manifest.json', 'walkup-192.png', 'walkup-512.png']) assert.ok(cached.includes(f), f + ' is saved: ' + cached.join(','));
     await page.reload(); await page.waitForSelector('#gPlay'); await page.waitForFunction(() => !!navigator.serviceWorker.controller);
     await ctx.setOffline(true); await page.reload(); await page.waitForSelector('#gPlay', { timeout: 10000 });

@@ -1,6 +1,6 @@
 // Walk-Up "Ask a parent for the song" tests. Run:
 //   cd <newapps> && NODE_PATH=<pr/events/tests/node_modules> node tests/walkup-requests.test.cjs
-// Needs Google Chrome at /Applications/Google Chrome.app. Starts its own static server on a free port.
+// Uses Google Chrome on the Mac, Playwright's Chromium elsewhere (lib.cjs CHROME). Starts its own static server on a free port.
 // ONLY=<regex> runs just the tests whose name matches (handy while working).
 // The phone's share sheet, clipboard and Messages app cannot be driven from here, so navigator.share, navigator.canShare and
 // navigator.clipboard are replaced by recording stubs. Those stubs prove WHAT Walk-Up hands to the phone (file name, type, text, link),
@@ -171,7 +171,7 @@ const waitReq = (page, i, fn) => page.waitForFunction(([i, f]) => { const p = wi
 
 (async () => {
   srv = await startServer('walkup');
-  br = await chromium.launch({ executablePath: '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome', args: ['--no-sandbox', '--autoplay-policy=no-user-gesture-required'] });
+  br = await chromium.launch({ executablePath: require("./lib.cjs").CHROME, args: ['--no-sandbox', '--autoplay-policy=no-user-gesture-required'] });
   console.log('Serving ' + srv.url);
 
   /* ============ pure logic (node) ============ */
@@ -949,7 +949,7 @@ const waitReq = (page, i, fn) => page.waitForFunction(([i, f]) => { const p = wi
 
   await test('Privacy: the app files, the listing and these tests hold no email addresses or phone numbers, and a request link carries only a first name, a number, a team label and a code', async () => {
     const files = []; const walk = d => { for (const f of fs.readdirSync(d, { withFileTypes: true })) { if (f.isDirectory()) walk(path.join(d, f.name)); else if (/\.(js|html|css|json)$/.test(f.name)) files.push(path.join(d, f.name)); } }; walk(path.join(__dirname, '../apps/walkup'));
-    files.push(path.join(__dirname, '../listings/walkup.json'), __filename);
+    files.push(path.join(__dirname, '../apps/registry.json'), __filename);
     for (const f of files) { const t = fs.readFileSync(f, 'utf8'); eq(/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/.test(t), false, path.basename(f) + ' has an email address in it'); eq(/\b[0-9]{3}[-. )][0-9]{3}[-. ][0-9]{4}\b/.test(t), false, path.basename(f) + ' has a phone number in it'); }
     const link = C.buildRequestLink('http://h/send.html', { t: 'abc1234', n: 'Pat Sample Extra Words Here Too', u: '7', c: 'Tigers', email: 'a' + ch(64) + 'b.test', phone: ['555', '123', '4567'].join('-') });
     deep(Object.keys(JSON.parse(Buffer.from(link.split('#r=')[1], 'base64url').toString('utf8'))), ['v', 't', 'n', 'u', 'c'], 'only those five fields travel in a link');
