@@ -641,4 +641,5 @@
   TP.initStorage();
   try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist(); } catch (e) { /* best effort */ }
   render();
+  if ("serviceWorker" in navigator) window.addEventListener("load", function () { navigator.serviceWorker.register("sw.js").catch(function () { /* the app works without offline copies */ }); });
 })();
