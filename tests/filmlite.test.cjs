@@ -231,7 +231,7 @@ async function pngCount(page, file, rgb, tol) {
     assert.ok(refs.length >= 8, refs.join());
     refs.forEach(r => assert.ok(shell.includes(r), r + ' is in SHELL'));
     ['./', 'manifest.json', '/apps/icons/filmlite-192.png', '/apps/icons/filmlite-512.png'].forEach(r => assert.ok(shell.includes(r), r));
-    assert.ok(/const CACHE = "filmlite-v1"/.test(sw) && /startsWith\("filmlite-"\)/.test(sw) && /ignoreSearch: ?true/.test(sw));
+    assert.ok(/const CACHE = "filmlite-v2"/.test(sw) && /startsWith\("filmlite-"\)/.test(sw) && /ignoreSearch: ?true/.test(sw));
     const man = JSON.parse(fs.readFileSync(path.join(APPDIR, 'manifest.json'), 'utf8'));
     eq(man.id, './'); eq(man.start_url, './'); eq(man.scope, './'); eq(man.display, 'standalone'); eq(man.orientation, 'any'); eq(man.icons.length, 3); eq(man.icons[2].purpose, 'maskable');
     man.icons.forEach(i => assert.ok(fs.existsSync(path.join(APPDIR, '..', i.src.replace('/apps/', '')))));
@@ -654,8 +654,8 @@ async function pngCount(page, file, rgb, tol) {
     await page.addInitScript(() => { if (!sessionStorage.getItem('__c')) { sessionStorage.setItem('__c', '1'); caches.open('locker-v99').then(c => c.put('/x', new Response('x'))); caches.open('filmlite-v0').then(c => c.put('/y', new Response('y'))); } });
     await page.goto(srv.url); await page.waitForSelector('.home');
     await page.evaluate(() => navigator.serviceWorker.ready.then(() => 1));
-    await page.waitForFunction(async () => { const k = await caches.keys(); return k.includes('filmlite-v1') && !k.includes('filmlite-v0') && (await (await caches.open('filmlite-v1')).keys()).length >= 8; }, null, { timeout: 8000 });
-    const cached = await page.evaluate(async () => (await (await caches.open('filmlite-v1')).keys()).map(r => new URL(r.url).pathname));
+    await page.waitForFunction(async () => { const k = await caches.keys(); return k.includes('filmlite-v2') && !k.includes('filmlite-v0') && (await (await caches.open('filmlite-v2')).keys()).length >= 8; }, null, { timeout: 8000 });
+    const cached = await page.evaluate(async () => (await (await caches.open('filmlite-v2')).keys()).map(r => new URL(r.url).pathname));
     for (const f of ['/apps/filmlite/', '/apps/filmlite/app.js', '/apps/filmlite/core.js', '/apps/filmlite/base.js', '/apps/filmlite/player.js', '/apps/filmlite/tags.js', '/apps/filmlite/draw.js', '/apps/filmlite/example.js', '/apps/filmlite/filmlite.css', '/apps/filmlite/manifest.json']) assert.ok(cached.includes(f), 'cached ' + f);
     await page.reload(); await page.waitForTimeout(300); assert.ok(await page.evaluate(() => !!navigator.serviceWorker.controller), 'page is controlled by the worker');
     await ctx.setOffline(true);
