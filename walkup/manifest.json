@@ -7,8 +7,8 @@
   "scope": "./",
   "display": "standalone",
   "orientation": "portrait",
-  "background_color": "#0e0919",
-  "theme_color": "#0e0919",
+  "background_color": "#0A0D12",
+  "theme_color": "#0A0D12",
   "icons": [
     {
       "src": "/apps/icons/walkup-192.png",

@@ -389,7 +389,7 @@ const waitReq = (page, i, fn) => page.waitForFunction(([i, f]) => { const p = wi
     deep(await page.$$eval('.s-step h2', els => els.map(e => e.textContent.replace(/\s+/g, ' ').trim())), ['Choose the song', 'Name it (optional)', 'Send it back']);
     eq(await page.getAttribute('#song', 'accept'), C.AUDIO_ACCEPT, 'the file chooser offers audio and every extension on the list');
     assert.ok(/Sam hears when they walk up to bat/.test(await page.textContent('#lead')), await page.textContent('#lead'));
-    assert.ok(await page.evaluate(() => { const c = getComputedStyle(document.body); return c.backgroundColor === 'rgb(14, 9, 25)' && c.colorScheme.includes('dark'); }), 'the same dark purple as the app');
+    assert.ok(await page.evaluate(() => { const c = getComputedStyle(document.body); return c.backgroundColor === 'rgb(10, 13, 18)' && c.colorScheme.includes('dark'); }), 'the same dark colour as the app');
     eq(await page.$$eval('input[type=password], input[type=email], form', e => e.length), 0, 'no sign-in, no form');
     await pickSong(page, mem('Slow Jam.wav', SONG_A)); await waitMeta(page);
     await page.fill('#title', 'Sweet Caroline'); await page.fill('#artist', 'Neil Diamond');

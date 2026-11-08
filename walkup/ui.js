@@ -199,11 +199,11 @@
     if (cv.width !== pw || cv.height !== ph) { cv.width = pw; cv.height = ph; }
     var g = cv.getContext("2d");
     g.setTransform(dpr, 0, 0, dpr, 0, 0);
-    g.fillStyle = cssVar(cv, "--wave-bg", "#150f22"); g.fillRect(0, 0, w, h);
+    g.fillStyle = cssVar(cv, "--wave-bg", "#0F141B"); g.fillRect(0, 0, w, h);
     var p = o.peaks, n = p ? p.length : 0, mx = 0.05, i;
     for (i = 0; i < n; i++) if (p[i] > mx) mx = p[i];
-    var hi = o.hi || cssVar(cv, "--accent", "#b46bff"), lo = o.lo || cssVar(cv, "--wave-dim", "#4b3a73"), step = n ? w / n : w, bw = Math.max(1, step - 1);
-    g.fillStyle = cssVar(cv, "--line2", "#4a3a7e"); g.fillRect(0, Math.round(h / 2), w, 1);
+    var hi = o.hi || cssVar(cv, "--accent", "#C6FF3D"), lo = o.lo || cssVar(cv, "--wave-dim", "#3A4658"), step = n ? w / n : w, bw = Math.max(1, step - 1);
+    g.fillStyle = cssVar(cv, "--line2", "#46536A"); g.fillRect(0, Math.round(h / 2), w, 1);
     for (i = 0; i < n; i++) {
       var t = o.v0 + (i + 0.5) / n * (o.v1 - o.v0), bh = Math.max(2, p[i] / mx * h * 0.92);
       g.fillStyle = t >= o.s0 && t <= o.s1 ? hi : lo;

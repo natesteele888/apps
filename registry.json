@@ -1822,10 +1822,10 @@
       "listing": {
         "sub": "Record, polish and play every player's walk-up",
         "cat": "team",
-        "ac": "#b46bff",
+        "ac": "#c6ff3d",
         "install": true,
         "access": "Open",
-        "desc": "Record each player's name and number on your phone, polish it with an equalizer, compressor and room reverb, and pick the song the player chose. Balance the voice against the music, choose when each one starts, and play the whole walk-up with one big button on game day. Everything stays on your phone, works offline, and backs up to a single file. Ask a parent for a song by text or email: they pick it on their phone and send it back, and it lands on the right player.",
+        "desc": "Record each player's name and number on your phone, polish it with an equalizer, compressor and room reverb, and pick the song the player chose. Balance the voice against the music with one slider, choose when the voice starts, and play the whole walk-up with one big button on game day. Everything stays on your phone, works offline, and backs up to a single file. Ask a parent for a song by text or email: they pick it on their phone and send it back, and it lands on the right player.",
         "feats": [
           [
             "🎙️",
@@ -1835,7 +1835,7 @@
           [
             "🎚️",
             "Mix voice and music",
-            "Balance them with one scrubber, set when the voice and the song start, and let the music dip under the voice."
+            "Pick Even, Louder voice or Louder music with one slider, nudge when the voice starts a tenth of a second at a time, and let the music soften under the voice."
           ],
           [
             "▶️",
@@ -1867,7 +1867,7 @@
         ],
         "news": {
           "d": "Nov 2026",
-          "t": "New: ask a parent for a player's song and it drops into the lineup."
+          "t": "New: a simpler mixer. One relative-volume slider, a nudge for when the voice starts, and the fine controls tucked under More."
         },
         "parts": [
           "pwa",

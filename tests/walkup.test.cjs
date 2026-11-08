@@ -384,7 +384,7 @@ const dbKeys = page => page.evaluate(() => window.WalkupApp.WU.db.keys());
     const { page, errors, ctx } = await open();
     assert.ok((await page.title()).startsWith('Walk-Up:'), await page.title());
     eq(await page.$eval('meta[name=viewport]', m => m.content), 'width=device-width, initial-scale=1, viewport-fit=cover');
-    eq(await page.$eval('meta[name=theme-color]', m => m.content), '#0e0919'); eq(await page.$eval('meta[name=color-scheme]', m => m.content), 'dark');
+    eq(await page.$eval('meta[name=theme-color]', m => m.content), '#0A0D12'); eq(await page.$eval('meta[name=color-scheme]', m => m.content), 'dark');
     assert.ok(await page.$('link[rel=manifest]')); eq(await page.$eval('link[rel=apple-touch-icon]', l => l.getAttribute('href')), '/apps/icons/walkup-192.png');
     const srcs = await page.$$eval('script[src]', s => s.map(x => x.getAttribute('src'))); assert.ok(srcs.includes('https://natesteele888.github.io/apps/install.js'));
     const css = await page.$$eval('link[rel=stylesheet]', l => l.map(x => x.getAttribute('href')));
@@ -762,7 +762,7 @@ const dbKeys = page => page.evaluate(() => window.WalkupApp.WU.db.keys());
     const tl = await page.textContent('#mxTl'); assert.ok(/Music/.test(tl) && /Voice/.test(tl) && /1s|2s/.test(tl), tl); eq(await page.textContent('#mxTotal'), 'Total 10.0 s');
     const vx = () => page.$eval('#tlVoice rect.tl-voice', r => parseFloat(r.getAttribute('x')));
     approx(await vx(), 12 + 1 / 10.4 * 316, 0.05, 'voice bar starts at 1 s on a 10.4 s axis');
-    await shot(page, '11-mix-390');
+    await shot(page, '11-mix-390'); await page.click(sheetSel + ' #mxMore > summary'); await settle(page, 300); await shot(page, '11-mixmore-390');
     // balance +50: music -5.33 dB, voice untouched
     await page.$eval('#mxBal', el => { el.value = '50'; el.dispatchEvent(new Event('input', { bubbles: true })); });
     eq(await page.textContent('#mxLM'), 'Music -5.3 dB'); eq(await page.textContent('#mxLV'), 'Voice 0 dB'); eq((await state(page)).roster.slice(-1)[0].mix.bal, 50);
@@ -797,7 +797,7 @@ const dbKeys = page => page.evaluate(() => window.WalkupApp.WU.db.keys());
 
   await test('Mix: drag or key the voice bar on the timeline, stepper buttons, ducking depth; the same plan plays in Game', async () => {
     const { page, errors, ctx } = await open();
-    await rich(page); await page.waitForSelector('#gPlay'); await page.click('[data-act=g-mix]'); await page.waitForSelector(sheetSel + ' #tlVoice'); await settle(page, 500);
+    await rich(page); await page.waitForSelector('#gPlay'); await page.click('[data-act=g-mix]'); await page.waitForSelector(sheetSel + ' #tlVoice'); await settle(page, 500); await page.click(sheetSel + ' #mxMore > summary'); await settle(page, 200);
     const vd = () => state(page).then(s => s.roster.slice(-1)[0].mix.vd);
     eq(await vd(), 1); await page.focus('#tlVoice'); await page.keyboard.press('ArrowRight'); eq(await vd(), 1.1); await page.keyboard.press('Shift+ArrowRight'); eq(await vd(), 2.1); await page.keyboard.press('ArrowLeft'); eq(await vd(), 2);
     await page.keyboard.press('Shift+ArrowLeft'); await page.keyboard.press('Shift+ArrowLeft'); await page.keyboard.press('Shift+ArrowLeft'); eq(await vd(), 0, 'cannot go before Play');
@@ -817,6 +817,40 @@ const dbKeys = page => page.evaluate(() => window.WalkupApp.WU.db.keys());
     deep(errors, []); await ctx.close();
   });
 
+  await test('Mix, the simple controls: readout, tenth-second nudges (hold to repeat), five-stop relative volume, and More controls stays open', async () => {
+    const { page, errors, ctx } = await open();
+    await rich(page); await page.waitForSelector('#gPlay'); await page.click('[data-act=g-mix]'); await page.waitForSelector(sheetSel + ' #mxRel'); await settle(page, 500);
+    const mixOf = () => state(page).then(s => s.roster.slice(-1)[0].mix), vd = () => mixOf().then(m => m.vd), bal = () => mixOf().then(m => m.bal);
+    const txt = sel => page.textContent(sheetSel + ' ' + sel), on = () => page.$$eval(sheetSel + ' #mxRelL button.on', bs => bs.map(b => b.dataset.rel));
+    assert.ok(await page.$eval(sheetSel + ' #mxMore', d => !d.open), 'More controls starts closed');
+    assert.ok(/Music\s*0\.0\s*[–-]\s*10\.0 s/.test(await txt('#mxRead')) && /Voice\s*1\.0\s*[–-]\s*\d+\.\d s/.test(await txt('#mxRead')), 'readout: ' + await txt('#mxRead'));
+    eq(await txt('#mxVd'), '1.0 s'); eq(await page.getAttribute(sheetSel + ' #mxRel', 'aria-valuetext'), 'Even'); deep(await on(), ['2']);
+    // the five stops: tap a word or move the slider
+    await page.click(sheetSel + ' [data-rel="3"]'); eq(await bal(), 35); deep(await on(), ['3']); eq(await page.$eval(sheetSel + ' #mxRel', r => r.value), '3'); eq(await page.$eval(sheetSel + ' #mxBal', r => r.value), '35', 'the fine slider follows');
+    await resetSpies(page); await page.click(sheetSel + ' #mxPrev'); await page.waitForFunction(() => window.__starts.length >= 2, null, { timeout: 8000 });
+    let run = await lastRun(page); approx(run.nodes.find(n => n.track === 'music').gain[1][1], Math.SQRT2 * Math.cos((0.35 + 1) / 2 * Math.PI / 2), 1e-6, 'Louder voice: music about -3.2 dB, voice untouched'); approx(run.nodes.find(n => n.track === 'voice').gain[1][1], 1, 1e-9);
+    await page.click(sheetSel + ' #mxPrev'); await page.waitForFunction(() => !window.WalkupApp.eng.playing());
+    await page.$eval(sheetSel + ' #mxRel', r => { r.value = '0'; r.dispatchEvent(new Event('input', { bubbles: true })); }); eq(await bal(), -70); deep(await on(), ['0']); eq(await page.getAttribute(sheetSel + ' #mxRel', 'aria-valuetext'), 'Loudest music');
+    // a balance set by hand under More controls is honest about not being a preset
+    await page.click(sheetSel + ' #mxMore > summary'); await page.$eval(sheetSel + ' #mxBal', r => { r.value = '20'; r.dispatchEvent(new Event('input', { bubbles: true })); });
+    eq(await bal(), 20); deep(await on(), []); assert.ok(/fine-tuned/i.test(await page.getAttribute(sheetSel + ' #mxRel', 'aria-valuetext')) && await page.$eval(sheetSel + ' #mxRelNote', n => !n.hidden), 'says it is fine-tuned');
+    await page.click(sheetSel + ' [data-rel="2"]'); eq(await bal(), 0); assert.ok(await page.$eval(sheetSel + ' #mxRelNote', n => n.hidden));
+    // More controls stays open when the sheet redraws from new data
+    await page.evaluate(() => window.WalkupApp.WU.emit('data')); await settle(page, 200); assert.ok(await page.$eval(sheetSel + ' #mxMore', d => d.open), 'still open after a redraw');
+    await page.click(sheetSel + ' #mxMore > summary'); assert.ok(await page.$eval(sheetSel + ' #mxMore', d => !d.open));
+    // nudges: a tenth of a second a tap, never below 0
+    await page.click(sheetSel + ' [data-nudge="0.1"]'); eq(await vd(), 1.1); eq(await txt('#mxVd'), '1.1 s'); assert.ok(/Voice\s*1\.1/.test(await txt('#mxRead')));
+    for (let i = 0; i < 2; i++) await page.click(sheetSel + ' [data-nudge="-0.1"]'); eq(await vd(), 0.9);
+    for (let i = 0; i < 11; i++) await page.click(sheetSel + ' [data-nudge="-0.1"]'); eq(await vd(), 0, 'cannot go before Play'); eq(await txt('#mxVd'), '0.0 s');
+    // hold to repeat; letting go does not add one more step
+    const bb = await page.locator(sheetSel + ' [data-nudge="0.1"]').boundingBox(), cx = bb.x + bb.width / 2, cy = bb.y + bb.height / 2;
+    await page.mouse.move(cx, cy); await page.mouse.down(); await settle(page, 900); const mid = await vd(); assert.ok(mid >= 0.3, 'holding keeps stepping: ' + mid);
+    await page.mouse.up(); await settle(page, 100); const after = await vd(); assert.ok(after - mid < 0.15, 'the click that ends a hold is not another step: ' + mid + ' -> ' + after);
+    await settle(page, 300); eq(await vd(), after, 'it stops when you let go');
+    await page.click(sheetSel + ' [data-nudge="0.1"]'); approx(await vd(), after + 0.1, 1e-9, 'a plain tap works again right after a hold');
+    deep(errors, []); await ctx.close();
+  });
+
   await test('Mix: a player with a song but no voice, or a voice but no song, plays what there is; the timeline says so', async () => {
     const { page, errors, ctx } = await open({ query: '?noSpeech' });
     await sample(page);
@@ -824,7 +858,7 @@ const dbKeys = page => page.evaluate(() => window.WalkupApp.WU.db.keys());
     await resetSpies(page); await page.click('#gPlay'); await page.waitForFunction(() => window.__starts.length >= 1);
     eq((await lastRun(page)).plan.tracks.length, 1); await page.click('#gPlay');
     await page.click('[data-act=g-mix]'); await page.waitForSelector(sheetSel + ' #mxTl'); assert.ok(/No voice/.test(await page.textContent('#mxTl')));
-    eq(await page.$('#tlVoice'), null); await page.keyboard.press('Escape'); await noSheets(page);
+    eq(await page.$('#tlVoice'), null); eq(await page.$('[data-nudge]'), null); eq(await page.$('#mxRel'), null); assert.ok(/no voice yet/.test(await page.textContent(sheetSel + ' .small-note')), 'says why there is nothing to balance'); await page.keyboard.press('Escape'); await noSheets(page);
     await page.click('[data-act=g-song]'); await page.click(sheetSel + ' [data-do=use][data-id=""]'); await noSheets(page);
     assert.ok(/Nothing to play yet/.test(await page.textContent('.now .hint'))); await page.click('#gPlay'); assert.ok(/Nothing to play yet/.test(await toastText(page)));
     eq(await page.evaluate(() => window.WalkupApp.eng.playing()), null);
@@ -1050,7 +1084,7 @@ const dbKeys = page => page.evaluate(() => window.WalkupApp.WU.db.keys());
     await page.click('[data-act=g-song]'); await page.waitForFunction(() => history.state && history.state.wuSheets === 1); await page.click(sheetSel + ' .x'); await noSheets(page); await page.waitForFunction(() => history.state === null);
     await page.click('[data-act=g-song]'); await page.waitForFunction(() => history.state && history.state.wuSheets === 1); await page.keyboard.press('Escape'); await noSheets(page); await page.waitForFunction(() => history.state === null);
     // two sheets stacked: Back closes one at a time
-    const R = await rich(page); await page.click('[data-act=g-mix]'); await page.waitForSelector(sheetSel + ' [data-do=trim]'); await page.waitForFunction(() => history.state && history.state.wuSheets === 1);
+    const R = await rich(page); await page.click('[data-act=g-mix]'); await page.waitForSelector(sheetSel + ' #mxMore'); await page.click(sheetSel + ' #mxMore > summary'); await page.waitForSelector(sheetSel + ' [data-do=trim]'); await page.waitForFunction(() => history.state && history.state.wuSheets === 1);
     await page.click(sheetSel + ' [data-do=trim]'); await page.waitForFunction(() => history.state && history.state.wuSheets === 2); eq(await page.$$eval('.sheet-wrap', w => w.length), 2);
     await page.goBack(); await page.waitForFunction(() => document.querySelectorAll('.sheet-wrap').length === 1); await page.waitForFunction(() => history.state && history.state.wuSheets === 1); assert.ok(/Mix/.test(await page.textContent('.sheet h2')), 'the mix is still open');
     await page.goBack(); await noSheets(page); eq(await page.evaluate(() => history.state), null);
@@ -1099,7 +1133,8 @@ const dbKeys = page => page.evaluate(() => window.WalkupApp.WU.db.keys());
         ['voice', async () => { await page.click('[data-act=g-voice]'); }],
         ['recorder', async () => { await page.click('[data-act=g-voice]'); await page.click(sheetSel + ' [data-do=rerecord]'); await page.waitForSelector('#vsRecBtn'); }],
         ['mix', async () => { await page.click('[data-act=g-mix]'); }],
-        ['trim', async () => { await page.click('[data-act=g-mix]'); await page.click(sheetSel + ' [data-do=trim]'); await page.waitForSelector('.sheet.trim #trMain:not([hidden])'); }],
+        ['mix, more controls', async () => { await page.click('[data-act=g-mix]'); await page.click(sheetSel + ' #mxMore > summary'); }],
+        ['trim', async () => { await page.click('[data-act=g-mix]'); await page.click(sheetSel + ' #mxMore > summary'); await page.click(sheetSel + ' [data-do=trim]'); await page.waitForSelector('.sheet.trim #trMain:not([hidden])'); }],
         ['player', async () => { await page.click('[data-act=edit-player]'); }],
         ['bluetooth help', async () => { await tab(page, 'settings'); await page.click('[data-act=bt-help]'); }],
         ['backup everything', async () => { await tab(page, 'settings'); await page.click('[data-act=backup-all]'); }],
@@ -1121,7 +1156,7 @@ const dbKeys = page => page.evaluate(() => window.WalkupApp.WU.db.keys());
 
   await test('Sheets: never taller than 85% of the screen, the inside scrolls, the page behind does not', async () => {
     const { page, errors, ctx } = await open();
-    await sample(page); await rich(page); await page.click('[data-act=g-mix]'); await page.waitForSelector(sheetSel + ' #mxTl'); await settle(page, 700);
+    await sample(page); await rich(page); await page.click('[data-act=g-mix]'); await page.waitForSelector(sheetSel + ' #mxTl'); await page.click(sheetSel + ' #mxMore > summary'); await settle(page, 700);
     const m = await page.evaluate(() => { const s = document.querySelector('.sheet-wrap.open .sheet'), b = s.querySelector('.sh-body'), cs = getComputedStyle(b); return { sh: s.getBoundingClientRect().height, vh: innerHeight, scroll: b.scrollHeight, client: b.clientHeight, oy: cs.overflowY, lock: document.documentElement.classList.contains('wu-lock'), bodyOv: getComputedStyle(document.documentElement).overflow }; });
     assert.ok(m.sh <= m.vh * 0.85 + 1, JSON.stringify(m)); assert.ok(m.scroll > m.client + 20 && /auto|scroll/.test(m.oy), 'the inside scrolls: ' + JSON.stringify(m)); eq(m.lock, true);
     const y0 = await page.evaluate(() => window.scrollY); await page.mouse.move(195, 500); await page.mouse.wheel(0, 400); await settle(page, 200);
@@ -1204,7 +1239,7 @@ const dbKeys = page => page.evaluate(() => window.WalkupApp.WU.db.keys());
       const n = sfx === '768' ? ['24', '25', '26', '27', '28'] : ['34', '35', '36', '37', '38'];
       await tab(page, 'songs'); await settle(page, 300); await shot(page, n[0] + '-songs-' + sfx); eq(await overflow(page) <= 0, true);
       await tab(page, 'settings'); await page.evaluate(() => window.scrollTo(0, 0)); await settle(page, 300); await shot(page, n[1] + '-settings-' + sfx); eq(await overflow(page) <= 0, true);
-      await tab(page, 'game'); await page.click('[data-act=g-mix]'); await page.waitForSelector(sheetSel + ' #mxTl svg'); await settle(page, 700); await shot(page, n[2] + '-mix-' + sfx); await page.keyboard.press('Escape'); await noSheets(page);
+      await tab(page, 'game'); await page.click('[data-act=g-mix]'); await page.waitForSelector(sheetSel + ' #mxTl svg'); await settle(page, 700); await shot(page, n[2] + '-mix-' + sfx); await page.click(sheetSel + ' #mxMore > summary'); await settle(page, 300); await shot(page, n[2] + '-mixmore-' + sfx); await page.keyboard.press('Escape'); await noSheets(page);
       await page.click('[data-act=g-voice]'); await page.waitForSelector(sheetSel + ' #vsDetail'); await settle(page, 900); await shot(page, n[3] + '-voice-' + sfx); await page.keyboard.press('Escape'); await noSheets(page);
       await page.click('[data-act=g-song]'); await page.waitForSelector(sheetSel); await settle(page, 700); await shot(page, n[4] + '-picker-' + sfx); await page.keyboard.press('Escape'); await noSheets(page);
     }
