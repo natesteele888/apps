@@ -196,12 +196,16 @@
           }
         ],
         "latest": {
-          "d": "Nov 7, 2026",
-          "t": "Where Do I Go?: don't throw home with a runner already in from third",
-          "url": "https://github.com/natesteele888/apps/commit/ef13779470d6f0e07c52fefea9beb1996f0b7f2d"
+          "d": "Nov 8, 2026",
+          "t": "Where Do I Go?: make the Slow button and play scrubber easier to tap",
+          "url": "https://github.com/natesteele888/apps/commit/9e56bdfebbb05013ddade466d342f485e6a55736"
         },
-        "version": "1.1.9",
+        "version": "1.2.0",
         "history": [
+          {
+            "v": "1.2.0",
+            "t": "Where Do I Go?: make the Slow button and play scrubber easier to tap"
+          },
           {
             "v": "1.1.9",
             "t": "Where Do I Go?: don't throw home with a runner already in from third"
@@ -217,10 +221,6 @@
           {
             "v": "1.1.6",
             "t": "Where Do I Go: saved rules, team and quiz scores now stick; shared install pop-up"
-          },
-          {
-            "v": "1.1.5",
-            "t": "Where Do I Go: add Ballclub's triple plays and drop a dead rule"
           }
         ]
       }
@@ -1792,11 +1792,15 @@
         ],
         "latest": {
           "d": "Nov 8, 2026",
-          "t": "Tournament Pack: works offline after the first visit",
-          "url": "https://github.com/natesteele888/apps/commit/154f2d2c33ac79929b86435459cd68e5e2e0fedf"
+          "t": "Tournament Pack: keep game times inside their column",
+          "url": "https://github.com/natesteele888/apps/commit/4822d93dd687d14ff68b41127b2a3c9cfed45c6c"
         },
-        "version": "1.0.2",
+        "version": "1.0.3",
         "history": [
+          {
+            "v": "1.0.3",
+            "t": "Tournament Pack: keep game times inside their column"
+          },
           {
             "v": "1.0.2",
             "t": "Tournament Pack: works offline after the first visit"
@@ -2097,11 +2101,15 @@
         ],
         "latest": {
           "d": "Nov 8, 2026",
-          "t": "Film Lite: step through a clip, tag the moments and share the notes",
-          "url": "https://github.com/natesteele888/apps/commit/180161eef78075f7b0dc1169b05e45af950e5b9f"
+          "t": "Film Lite: leave the tag list its full room on small phones",
+          "url": "https://github.com/natesteele888/apps/commit/6882608a8c965cb6ecf9c3774b34c71a8772cf7c"
         },
-        "version": "1.0.1",
+        "version": "1.0.2",
         "history": [
+          {
+            "v": "1.0.2",
+            "t": "Film Lite: leave the tag list its full room on small phones"
+          },
           {
             "v": "1.0.1",
             "t": "Film Lite: step through a clip, tag the moments and share the notes"
@@ -2173,13 +2181,18 @@
         "shots": [
           "mock"
         ],
-        "version": "1.0.0",
+        "version": "1.0.1",
         "history": [
           {
-            "v": "1.0.0",
-            "t": "Read 20: first-grade story shelf, tap-to-highlight words and a 20-minute nightly timer"
+            "v": "1.0.1",
+            "t": "Add Read 20: first-grade story shelf, tap-to-highlight words, 20-minute nightly timer and reading log"
           }
-        ]
+        ],
+        "latest": {
+          "d": "Nov 8, 2026",
+          "t": "Add Read 20: first-grade story shelf, tap-to-highlight words, 20-minute nightly timer and reading log",
+          "url": "https://github.com/natesteele888/apps/commit/e72aeb5328c2d5afd59f00b2abb1d6a4e1960195"
+        }
       }
     }
   ],
