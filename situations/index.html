@@ -50,7 +50,7 @@ header.top{display:flex;align-items:center;gap:10px;padding:14px 4px 10px}
 .outs button{width:32px;height:32px;border-radius:50%;border:1.5px solid #5d7a6f;background:transparent;transition:background .15s}
 .outs button.on{background:var(--rose);border-color:var(--rose);box-shadow:0 0 9px rgba(255,123,114,.5)}
 .board .grow{flex:1}
-.board .pill{min-height:36px}
+.board .pill,.transport .pill{min-height:36px}
 .pill{border:1px solid var(--line);background:var(--panel2);border-radius:999px;padding:5px 11px;font-size:12px;
   font-family:'Barlow Condensed',sans-serif;letter-spacing:.06em;color:var(--mute)}
 .pill.on{background:var(--amber);color:#111;border-color:var(--amber);font-weight:700}
@@ -73,7 +73,7 @@ svg.field{display:block;width:100%;height:auto;touch-action:manipulation}
 .transport{display:flex;align-items:center;gap:9px;margin-bottom:8px}
 #btnPP{background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:8px 12px;
   font-family:'Barlow Condensed',sans-serif;font-size:15px;min-width:62px}
-#scrub{flex:1;accent-color:var(--amber);min-width:0}
+#scrub{flex:1;accent-color:var(--amber);min-width:0;height:32px}
 #clock{font-family:'Barlow Condensed',sans-serif;font-size:13px;color:var(--mute);min-width:36px;text-align:right}
 .calls{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px}
 .call{font-family:'Barlow Condensed',sans-serif;font-size:14px;padding:5px 11px;border-radius:999px}
