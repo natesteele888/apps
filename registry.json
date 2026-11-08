@@ -1768,7 +1768,7 @@
         "ac": "#b46bff",
         "install": true,
         "access": "Open",
-        "desc": "Record each player's name and number on your phone, polish it with an equalizer, compressor and room reverb, and pick the song the player chose. Balance the voice against the music, choose when each one starts, and play the whole walk-up with one big button on game day. Everything stays on your phone, works offline, and backs up to a single file.",
+        "desc": "Record each player's name and number on your phone, polish it with an equalizer, compressor and room reverb, and pick the song the player chose. Balance the voice against the music, choose when each one starts, and play the whole walk-up with one big button on game day. Everything stays on your phone, works offline, and backs up to a single file. Ask a parent for a song by text or email: they pick it on their phone and send it back, and it lands on the right player.",
         "feats": [
           [
             "🎙️",
@@ -1784,6 +1784,11 @@
             "▶️",
             "Play it at the plate",
             "One big Play button runs the batting order, shows who is on deck, and fades out smoothly on Stop."
+          ],
+          [
+            "📨",
+            "Ask a parent for the song",
+            "Send a link by text or email. The parent picks the song on their phone and sends it back, and Walk-Up matches it to the player. No account, no server."
           ]
         ],
         "facts": [
@@ -1805,7 +1810,7 @@
         ],
         "news": {
           "d": "Nov 2026",
-          "t": "New: Walk-Up, record, polish and play each player's walk-up music"
+          "t": "New: ask a parent for a player's song and it drops into the lineup."
         },
         "parts": [
           "pwa",

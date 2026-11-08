@@ -1,0 +1,43 @@
+/* The parent page (send.html). It reuses walkup.css for the colours, buttons, fields and cards; this file only lays the page out. */
+body.sendpage { min-height: 100vh; min-height: 100dvh; }
+.send { width: 100%; max-width: 560px; margin: 0 auto; padding: calc(var(--sa-t) + 18px) calc(16px + var(--sa-r)) calc(var(--sa-b) + 36px) calc(16px + var(--sa-l)); }
+.send:focus { outline: none; }
+.s-brand { font: 700 26px/1.1 "Barlow Condensed", "Barlow", system-ui, sans-serif; letter-spacing: 0.02em; color: var(--accent2); margin-bottom: 6px; }
+.s-head h1 { font: 700 38px/1.05 "Barlow Condensed", "Barlow", system-ui, sans-serif; letter-spacing: 0.01em; overflow-wrap: anywhere; word-break: break-word; text-wrap: balance; }
+.s-team { margin-top: 6px; font-size: 14px; color: var(--mute); overflow-wrap: anywhere; }
+.s-lead { margin: 12px 0 6px; font-size: 17px; line-height: 1.45; }
+.s-steps { list-style: none; margin: 14px 0 0; padding: 0; display: flex; flex-direction: column; gap: 14px; }
+.s-step { display: flex; gap: 12px; align-items: flex-start; background: var(--panel); border: 1px solid var(--line); border-radius: 16px; padding: 14px; }
+.s-n { flex: 0 0 36px; width: 36px; height: 36px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; background: var(--accent); color: var(--ink); font: 700 22px/1 "Barlow Condensed", "Barlow", system-ui, sans-serif; margin-top: 2px; }
+.s-body { flex: 1 1 auto; min-width: 0; }
+.s-body h2 { font: 700 24px/1.15 "Barlow Condensed", "Barlow", system-ui, sans-serif; letter-spacing: 0.02em; margin-bottom: 4px; }
+.s-body h2 .opt { font: 500 15px/1 "Barlow", system-ui, sans-serif; color: var(--mute); letter-spacing: 0; }
+.s-body .btn.big { margin-top: 10px; }
+.s-file { margin-top: 10px; padding: 10px 12px; border-radius: 12px; background: var(--panel2); border: 1px solid var(--line2); font-size: 15px; overflow-wrap: anywhere; }
+.s-file b { display: block; font-size: 16px; }
+.s-file span { color: var(--mute); font-size: 14px; }
+.s-clip { margin-top: 8px; padding-top: 6px; border-top: 1px solid var(--line); }
+.s-two { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; align-items: end; }
+.s-msg { margin-top: 12px; padding: 10px 12px; border-radius: 12px; font-size: 15px; background: var(--panel2); border: 1px solid var(--line2); overflow-wrap: anywhere; }
+.s-msg.warn { border-color: #7a5a14; background: rgba(251, 191, 36, 0.1); color: #ffe3a0; }
+.s-msg.ok { border-color: #1f6b3d; background: rgba(74, 222, 128, 0.1); color: var(--ok); }
+.s-fallback { margin-top: 12px; }
+.s-fallback textarea { min-height: 84px; }
+.s-done { text-align: center; padding: 26px 18px; margin-top: 18px; }
+.s-done h2 { font: 700 40px/1.1 "Barlow Condensed", "Barlow", system-ui, sans-serif; margin: 6px 0 8px; }
+.s-done p { margin: 6px auto; max-width: 34ch; }
+.s-done .btn { margin-top: 16px; }
+.s-check { width: 64px; height: 64px; margin: 0 auto; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 34px; background: rgba(74, 222, 128, 0.14); border: 2px solid #1f6b3d; color: var(--ok); }
+.s-bad { margin-top: 18px; padding: 22px 18px; }
+.s-bad h1 { font: 700 34px/1.1 "Barlow Condensed", "Barlow", system-ui, sans-serif; margin-bottom: 10px; }
+.s-bad p { margin: 8px 0; }
+.s-foot { margin-top: 18px; text-align: center; }
+@media (max-width: 340px) {
+  .s-step { padding: 12px; gap: 10px; }
+  .s-head h1 { font-size: 32px; }
+  .s-two { grid-template-columns: 1fr; gap: 0; }
+}
+@media (min-width: 700px) {
+  .send { padding-top: 40px; }
+  .s-head h1 { font-size: 46px; }
+}

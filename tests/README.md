@@ -15,6 +15,7 @@ NODE_PATH=/path/to/node_modules tests/run.sh locker    # one app
 - `whoswhere`: the clash engine (kids, drivers, drive time, midnight, the November clock change), repeats, .ics parsed back, week text.
 - `tournamentpack`: 18 hand-worked standings cases with every tiebreaker, brackets of 4, 6 and 8, .ics, the packing list.
 - `walkup`: the mix plan and ducking math, the voice polish chain rendered offline and measured, fake-microphone recording, the song library, backup with audio.
+- `walkup-requests`: asking a parent for a song (request links, the parent page with a stubbed share sheet, file names that carry a code, matching a received file to its player, the Android share target through the real service worker, audio formats: real WAV, MP3 and webm decodes plus a name-and-type table for the rest).
 - `scoreboard`: the game engine (baseball count and innings, basketball fouls and bonus, football downs, clock math, undo all the way back) and the board screens.
 - `filmlite`: frame stepping, loops, tags, drawing and angle math, a video recorded in the page, notes that come back for the same file.
 - `live-smoke.cjs <app> <text>`: opens the published page and checks the service worker, manifest icons, offline reload and console errors.

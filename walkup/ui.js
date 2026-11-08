@@ -31,16 +31,23 @@
   };
 
   /* ---------- toasts and the screen-reader line ---------- */
-  U.toast = function (msg, kind, ms) {
+  /* act (optional): { text, fn } adds a button to the toast, for things like Undo; the toast stays a little longer */
+  U.toast = function (msg, kind, ms, act) {
     var host = $("#wuToasts"); if (!host) return null;
     var t = document.createElement("div");
-    t.className = "toast " + (kind || "");
+    t.className = "toast " + (kind || "") + (act ? " has-act" : "");
     t.setAttribute("role", kind === "error" ? "alert" : "status");
     var tx = document.createElement("span"); tx.className = "tx"; tx.textContent = msg; t.appendChild(tx);
+    function hide() { t.classList.remove("in"); setTimeout(function () { t.remove(); }, U.reduced() ? 0 : 260); }
+    if (act && act.fn) {
+      var b = document.createElement("button"); b.type = "button"; b.className = "tact"; b.textContent = act.text || "Undo";
+      b.addEventListener("click", function () { hide(); try { act.fn(); } catch (e) { console.error(e); } });
+      t.appendChild(b);
+    }
     host.appendChild(t);
     while (host.children.length > 3) host.removeChild(host.firstChild);
     requestAnimationFrame(function () { requestAnimationFrame(function () { t.classList.add("in"); }); });
-    setTimeout(function () { t.classList.remove("in"); setTimeout(function () { t.remove(); }, U.reduced() ? 0 : 260); }, ms || (kind === "error" ? 6000 : 3200));
+    setTimeout(hide, ms || (act ? 7000 : kind === "error" ? 6000 : 3200));
     return t;
   };
   /* a message that stays until done() - for slow jobs like adding songs */
@@ -179,7 +186,7 @@
 
   /* file chooser styled as a button. o: text, cls, accept, multiple, attr (extra attributes on the input), label */
   U.fileBtn = function (o) {
-    return '<label class="btn file-btn ' + (o.cls || "") + '"><span>' + (o.text) + '</span><input type="file" accept="' + (o.accept || "audio/*") + '"' + (o.multiple ? " multiple" : "") + " " + (o.attr || "") + ' aria-label="' + esc(o.label || o.textPlain || "Choose a file") + '"></label>';
+    return '<label class="btn file-btn ' + (o.cls || "") + '"><span>' + (o.text) + '</span><input type="file" accept="' + (o.accept || (window.WalkupCore && window.WalkupCore.AUDIO_ACCEPT) || "audio/*") + '"' + (o.multiple ? " multiple" : "") + " " + (o.attr || "") + ' aria-label="' + esc(o.label || o.textPlain || "Choose a file") + '"></label>';
   };
 
   /* ---------- waveform painter ---------- */

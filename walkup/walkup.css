@@ -301,6 +301,35 @@ input[type="range"].rng.bal::-webkit-slider-runnable-track { background: linear-
 .toast.busy::before { content: ""; display: inline-block; width: 14px; height: 14px; margin-right: 10px; vertical-align: -2px; border-radius: 50%; border: 2.5px solid var(--line2); border-top-color: var(--accent2); animation: spin 0.8s linear infinite; }
 html.wu-lock .wu-toasts { top: calc(var(--sa-t) + 10px); bottom: auto; }
 
+/* ---------- asking parents for songs ---------- */
+.toast.has-act { display: flex; align-items: center; gap: 12px; }
+.toast.has-act .tx { flex: 1 1 auto; min-width: 0; }
+.toast .tact { flex: 0 0 auto; min-height: 44px; min-width: 64px; padding: 0 14px; border-radius: 10px; border: 1.5px solid var(--accent2); background: transparent; color: var(--accent2); font-weight: 700; font-size: 15px; cursor: pointer; }
+.linkbtn { display: inline; min-height: 44px; padding: 0; background: none; border: 0; color: var(--accent2); font: inherit; text-decoration: underline; cursor: pointer; text-align: left; }
+.card.ask { margin-top: 12px; }
+.rq-btns { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; }
+.rq-btns .btn { padding: 0 8px; }
+.card.ask textarea { min-height: 150px; font-size: 15px; line-height: 1.4; }
+.meta.wants { color: var(--warn); max-width: 100%; overflow-wrap: anywhere; }
+.chip.needfile { max-width: 100%; }
+.rq-prog { margin: 4px 0 10px; }
+.rq-prog b { font: 700 24px/1.15 "Barlow Condensed", "Barlow", system-ui, sans-serif; letter-spacing: 0.02em; }
+.bar { height: 10px; margin-top: 8px; border-radius: 999px; background: var(--bg); border: 1px solid var(--line2); overflow: hidden; }
+.bar i { display: block; height: 100%; background: var(--ok); border-radius: 999px; }
+.seg { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 8px 0 12px; }
+.segb { min-height: 48px; padding: 0 8px; border-radius: 12px; border: 1.5px solid var(--line2); background: transparent; color: var(--text); font-weight: 700; font-size: 15px; cursor: pointer; }
+.segb[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--ink); }
+.rqrow { padding: 12px 0; border-bottom: 1px solid var(--line); }
+.rqrow:last-child { border-bottom: 0; }
+.rqrow .field { margin: 8px 0; }
+.rqname { min-width: 0; overflow-wrap: anywhere; }
+.rqact .btn { flex: 1 1 80px; }
+.sheet.rq-in .sh-foot { flex-direction: column; }
+.sheet.rq-in .sh-foot .btn { flex: 0 0 auto; width: 100%; }
+.sheet.rq-help .rq-h { font: 700 20px/1.2 "Barlow Condensed", "Barlow", system-ui, sans-serif; letter-spacing: 0.02em; margin: 14px 0 4px; }
+.sheet.rq-help .rq-list { margin: 4px 0 8px; padding-left: 20px; }
+.sheet.rq-help .rq-list li { margin: 8px 0; }
+
 @keyframes spin { to { transform: rotate(360deg); } }
 @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.62; } }
 

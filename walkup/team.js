@@ -6,13 +6,13 @@
   var T = WU.team = {};
 
   /* ---------- little pieces ---------- */
-  T.chip = function (p) { var s = WU.status(p); return '<span class="chip ' + WU.chipClass(s.code) + '">' + esc(s.text) + "</span>"; };
+  T.chip = function (p) { var s = WU.status(p); return '<span class="chip ' + WU.chipClass(s.code) + '">' + esc(s.text) + "</span>" + (WU.req ? WU.req.cardChip(p) : ""); };
   T.nameHTML = function (p) {
     return (p.num ? '<b class="num jn">#' + esc(p.num) + "</b> " : "") + '<span class="nm">' + (p.name ? esc(p.name) : '<i class="mute">No name</i>') + "</span>" + (p.pos ? ' <em class="pos">' + esc(p.pos) + "</em>" : "");
   };
   T.sub = function (p) {
     var s = p.songId ? WU.song(p.songId) : null;
-    return '<span class="meta">' + U.I.note + " " + esc(s ? s.title : p.songId ? "Song missing" : "No song") + '</span><span class="meta">' + U.I.mic + " " + esc(WU.voiceLabel(p)) + "</span>";
+    return '<span class="meta">' + U.I.note + " " + esc(s ? s.title : p.songId ? "Song missing" : "No song") + '</span><span class="meta">' + U.I.mic + " " + esc(WU.voiceLabel(p)) + "</span>" + (WU.req ? WU.req.cardWants(p) : "");
   };
   function lineupIdx(id) { return S.st.lineup.indexOf(id); }
 
@@ -24,7 +24,7 @@
         '<div class="stack"><button type="button" class="btn block" data-act="sample">Add a sample lineup</button><button type="button" class="btn ghost block" data-act="add-player">Add a player</button><button type="button" class="btn ghost block" data-act="paste-list">Paste a list of players</button></div></div>';
     }
     h += '<div class="sec-title"><h2>Batting order</h2><span class="sub">' + n + (n === 1 ? " player" : " players") + "</span></div>";
-    h += '<div class="row wrap tools"><button type="button" class="btn small" data-act="add-player">Add a player</button><button type="button" class="btn ghost small" data-act="paste-list">Paste a list</button></div>';
+    h += '<div class="row wrap tools"><button type="button" class="btn small" data-act="add-player">Add a player</button><button type="button" class="btn ghost small" data-act="paste-list">Paste a list</button><button type="button" class="btn ghost small" data-act="rq-list">Song requests</button></div>';
     if (!n) h += '<p class="mute pad">Nobody is in the batting order. Add players from the bench below.</p>';
     st.lineup.forEach(function (id, i) {
       var p = WU.player(id); if (!p) return;
@@ -122,7 +122,7 @@
       title: isNew ? "New player" : "Player", cls: "player tall", autofocus: isNew ? "#plName" : null,
       html: '<div class="cols3"><label class="field name"><span class="label">Name</span><input type="text" id="plName" maxlength="' + C.LIM.name + '" autocomplete="off" autocapitalize="words" value="' + esc(pl.name) + '" placeholder="Player name"></label>' +
         '<label class="field"><span class="label">Number</span><input type="text" id="plNum" maxlength="' + C.LIM.num + '" autocomplete="off" value="' + esc(pl.num) + '" placeholder="7"></label>' +
-        '<label class="field"><span class="label">Position</span><input type="text" id="plPos" maxlength="' + C.LIM.pos + '" autocomplete="off" value="' + esc(pl.pos) + '" placeholder="SS"></label></div><div id="plCards"></div>',
+        '<label class="field"><span class="label">Position</span><input type="text" id="plPos" maxlength="' + C.LIM.pos + '" autocomplete="off" value="' + esc(pl.pos) + '" placeholder="SS"></label></div><div id="plCards"></div><div id="plAsk"></div>',
       footer: '<button type="button" class="btn danger" data-do="delete">Delete player</button><button type="button" class="btn" data-close>Done</button>',
       onClose: function () {
         if (off) off();
@@ -143,11 +143,12 @@
       q("#plCards").innerHTML =
         '<div class="row sp statusrow"><span class="label">Status</span>' + T.chip(p) + "</div>" +
         '<section class="card"><div class="row sp"><h3>Voice</h3>' + (p.voice ? '<span class="chip ' + (p.voice.kind === "tts" ? "warn" : "ok") + '">' + (p.voice.kind === "tts" ? "Second choice" : "Recorded") + "</span>" : "") + '</div><p class="msg" id="plVoiceTx">' + esc(vtxt) + '</p><div class="row wrap"><button type="button" class="btn' + (p.voice ? " ghost" : "") + '" data-do="voice">' + U.I.mic + " " + (p.voice ? "Voice and polish" : "Record the announcement") + "</button></div></section>" +
-        '<section class="card"><h3>Song</h3><p class="msg" id="plSongTx">' + esc(stxt) + '</p><div class="row wrap"><button type="button" class="btn" data-do="song">' + U.I.note + " Change song</button>" + (s ? '<button type="button" class="btn ghost" data-do="ptrim">Trim for ' + esc(p.name || "this player") + "</button>" : "") + "</div></section>" +
+        '<section class="card"><h3>Song</h3><p class="msg" id="plSongTx">' + esc(stxt) + '</p><div class="row wrap"><button type="button" class="btn" data-do="song">' + U.I.note + " Change song</button>" + (s ? '<button type="button" class="btn ghost" data-do="ptrim">Trim for ' + esc(p.name || "this player") + "</button>" : "") + (WU.req && !C.hasSongFile(p, S.st.songs) ? '<button type="button" class="btn ghost" data-do="ask">Ask a parent</button>' : "") + "</div></section>" +
         '<section class="card"><h3>Mix</h3><div class="tlwrap static" id="plTl">' + WU.timeline(plan, { label: WU.timelineLabel(p, plan) }) + '</div><p class="mute small-note" id="plMixTx">' + esc(WU.mixSummary(p)) + '</p><div class="row wrap"><button type="button" class="btn" data-do="mix">Open the mixer</button></div></section>' +
         '<section class="card"><h3>Batting order</h3><p class="msg">' + (inLu ? "Batting number " + (lineupIdx(pid) + 1) + "." : "On the bench.") + '</p><button type="button" class="btn ghost" data-do="bench">' + (inLu ? "Move to the bench" : "Add to the batting order") + "</button></section>";
     }
     paintCards();
+    var ask = WU.req ? WU.req.mountAsk(api, q("#plAsk"), pid) : null;
     off = WU.on(function (what) { if (!api.closed && what === "data") paintCards(); });
     function field(id, key, max) { q(id).addEventListener("input", function (e) { pl[key] = C.str(e.target.value, max); WU.save(); api.setTitle(pl.name || "Player"); var t = q("#plVoiceTx"); if (t && pl.voice && pl.voice.kind === "tts") t.textContent = "Computer voice: your phone reads \"" + C.announceText(pl) + "\"."; }); }
     field("#plName", "name", C.LIM.name); field("#plNum", "num", C.LIM.num); field("#plPos", "pos", C.LIM.pos);
@@ -157,6 +158,7 @@
       var a = b.dataset.do;
       if (a === "voice") V_open();
       else if (a === "song") WU.songs.openPicker(pid);
+      else if (a === "ask" && ask) ask.focus();
       else if (a === "ptrim") WU.songs.openPlayerTrim(pl);
       else if (a === "mix") WU.openMix(pid);
       else if (a === "bench") { setLineup(lineupIdx(pid) >= 0 ? C.toBench(S.st.lineup, pid) : C.toLineup(S.st.lineup, pid)); }

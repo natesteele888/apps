@@ -63,7 +63,7 @@
     }
     function sourceHTML(hasOld) {
       return '<div class="or"><span>or</span></div><div class="stack">' +
-        U.fileBtn({ text: "Use a voice file", cls: "ghost block", accept: "audio/*", attr: 'data-file="voice-file" data-pid="' + pid + '"', label: "Choose a voice file" }) +
+        U.fileBtn({ text: "Use a voice file", cls: "ghost block", attr: 'data-file="voice-file" data-pid="' + pid + '"', label: "Choose a voice file" }) +
         '<button type="button" class="btn ghost block" data-do="tts"><span>Use the computer voice</span><small>Second choice</small></button></div>' +
         '<p class="mute small-note">The computer voice is your phone reading "' + esc(C.announceText(pl)) + '". It can\'t be polished with EQ or reverb. A recorded voice sounds much better.</p>';
     }
@@ -91,7 +91,7 @@
         '<div class="row wrap"><button type="button" class="btn ghost small" data-do="autotrim">Auto-trim silence</button><button type="button" class="btn ghost small" data-do="untrim"' + (trimmed ? "" : " disabled") + ">Undo trim</button></div>" +
         '<label class="chk"><input type="checkbox" data-tg="norm"' + (v.norm ? " checked" : "") + "> <span>Normalize (loudest point to -1 dBFS)</span></label>" +
         '<div class="row wrap"><button type="button" class="btn ghost small" data-do="rerecord">' + U.I.mic + " Re-record</button>" +
-        U.fileBtn({ text: "Replace with a file", cls: "ghost small", accept: "audio/*", attr: 'data-file="voice-file" data-pid="' + pid + '"', label: "Replace with a voice file" }) +
+        U.fileBtn({ text: "Replace with a file", cls: "ghost small", attr: 'data-file="voice-file" data-pid="' + pid + '"', label: "Replace with a voice file" }) +
         '<button type="button" class="btn danger small" data-do="delete">Delete voice</button></div></section>';
     }
     function ttsHTML() {

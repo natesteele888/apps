@@ -27,7 +27,7 @@
         var id = C.uid();
         try { await WU.putAudio("s:" + id, f); } catch (e) { failed.push(e.plain || "Couldn't save \"" + f.name + "\"."); if (e.message === "quota") break; continue; }
         var t = C.defaultTrim(buf.duration, { len: C.LIM.defLen, fade: C.LIM.defFade });
-        var song = { id: id, kind: "file", title: C.fileTitle(f.name), name: C.str(f.name, C.LIM.file), dur: round3(buf.duration), size: f.size, mime: C.str(f.type, 60), start: t.start, len: t.len, fade: t.fade };
+        var song = { id: id, kind: "file", title: C.libraryTitle(f.name), name: C.str(f.name, C.LIM.file), dur: round3(buf.duration), size: f.size, mime: C.str(f.type, 60), start: t.start, len: t.len, fade: t.fade };
         S.st.songs.push(song);
         try { E.putSongBuffer(song, buf, t); } catch (e) { /* the cache is only a speed-up */ }
         added.push(song);
@@ -89,6 +89,7 @@
     return '<div class="sec-title"><h2>Songs</h2><span class="sub">' + n + " saved</span></div>" +
       '<p class="mute lead">Add each song once. Then choose it for any player. Two players can share one song.</p>' +
       U.fileBtn({ text: "Add songs", cls: "block", multiple: true, attr: 'data-file="songs-add"', label: "Add song files" }) +
+      '<button type="button" class="btn ghost block top" data-act="rq-list">' + U.I.team + " Ask parents for songs</button>" +
       '<div class="card slist" id="songList">' + (n ? S.st.songs.map(function (s) {
         return '<div class="srow tall" data-sid="' + s.id + '"><button type="button" class="pbtn" data-act="song-preview" data-id="' + s.id + '" data-title="' + esc(s.title) + '" aria-label="Play ' + esc(s.title) + '">' + U.I.play + "</button>" +
           '<div class="smain"><b>' + esc(s.title) + "</b><small>" + subtitle(s) + '</small></div><div class="sacts">' +
@@ -104,6 +105,7 @@
   WU.act["song-rename"] = function (el) { var s = WU.song(el.dataset.id); if (s) SG.openRename(s); };
   WU.act["song-delete"] = function (el) { var s = WU.song(el.dataset.id); if (s) SG.askDelete(s); };
   WU.onFile["songs-add"] = async function (files) {
+    if (WU.req) return WU.req.importSongs(files); /* songs that came back from a parent are matched to their player there */
     var r = await SG.addFiles(files);
     if (r.added.length === 1) { U.toast("Added \"" + r.added[0].title + "\".", "ok"); SG.openSongTrim(r.added[0]); }
     else if (r.added.length > 1) U.toast("Added " + r.added.length + " songs.", "ok");

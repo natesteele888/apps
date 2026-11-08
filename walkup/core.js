@@ -365,7 +365,7 @@
   }
   function newPlayer(o) {
     o = o || {};
-    return { id: o.id || uid(), name: str(o.name, LIM.name), num: str(o.num, LIM.num), pos: str(o.pos, LIM.pos), songId: o.songId || null, trim: null, voice: o.voice || null, mix: defaultMix() };
+    return { id: o.id || uid(), name: str(o.name, LIM.name), num: str(o.num, LIM.num), pos: str(o.pos, LIM.pos), songId: o.songId || null, trim: null, voice: o.voice || null, mix: defaultMix(), req: null, want: "" };
   }
   function playerLabel(p) { return (p.num ? "#" + p.num + " " : "") + (p.name || "Player"); }
 
@@ -455,10 +455,249 @@
     return { players: out, skipped: skipped, capped: capped };
   }
 
+  /* ---------- asking a parent for a song ----------
+     The loop has no server: the coach's message carries a link with a token, the parent's page names the file
+     "WU-<token>-<title>.<ext>", and the coach app matches the token when the attachment comes back. */
+  var REQ = { tokLen: 7, tokRe: /^[a-z0-9]{6,8}$/, tpl: 600, team: 30, name: 24, num: 4, want: 80, hash: 1500, file: 80, via: ["text", "email", "share", "copy"], st: ["asked", "got", "text"] };
+  var DEFAULT_TPL = "Hi! We're putting together walk-up music for the team. Could you pick the song {first} wants for their walk-up (about 10 seconds is plenty) and send it back? Tap this link, choose the song on your phone, then pick this chat or email to send it: {link} Thank you!";
+  /* Any common audio file is welcome. A phone often sends an empty type, application/octet-stream, audio/x-m4a or video/mp4 for an .m4a,
+     so a file is accepted when its extension OR its type says audio. The real check is whether the phone can decode it. */
+  var AUDIO_EXTS = ["mp3", "wav", "wave", "m4a", "aac", "mp4", "ogg", "oga", "opus", "flac", "aif", "aiff", "caf", "webm", "3gp", "amr"];
+  var AUDIO_ACCEPT = "audio/*," + AUDIO_EXTS.map(function (e) { return "." + e; }).join(",");
+  function isAudioFile(name, type) {
+    var t = String(type == null ? "" : type).toLowerCase().split(";")[0].replace(/\s/g, ""), m = /\.([A-Za-z0-9]{1,5})$/.exec(String(name == null ? "" : name));
+    return /^audio\//.test(t) || !!(m && AUDIO_EXTS.indexOf(m[1].toLowerCase()) >= 0);
+  }
+  var MIME_EXT = { "audio/x-m4a": "m4a", "audio/mp4a-latm": "m4a", "audio/3gpp": "3gp", "audio/amr": "amr", "audio/aiff": "aiff", "audio/x-aiff": "aiff", "audio/x-caf": "caf", "audio/mpeg": "mp3", "audio/mp3": "mp3", "audio/mp4": "m4a", "audio/x-m4a": "m4a", "audio/m4a": "m4a", "audio/aac": "aac", "audio/x-aac": "aac", "audio/wav": "wav", "audio/x-wav": "wav", "audio/wave": "wav", "audio/ogg": "ogg", "audio/opus": "opus", "audio/flac": "flac", "audio/x-flac": "flac", "audio/webm": "webm" };
+  /* control, direction-override and zero-width characters, which have no place in a name or a file name */
+  var HIDDEN_RE = /[\u0000-\u001f\u007f-\u009f\u200b-\u200f\u2028-\u202e\u2060-\u2069\ufeff\ufff0-\uffff]/g;
+
+  /* a short label: no hidden characters, single spaces, cut by whole characters */
+  function cleanLabel(x, max) {
+    var s = typeof x === "string" ? x : (typeof x === "number" && isFinite(x) ? String(x) : "");
+    s = s.replace(HIDDEN_RE, " ").replace(/\s+/g, " ").replace(/^ | $/g, "");
+    return Array.from(s).slice(0, max).join("").replace(/ $/, "");
+  }
+  function firstWord(name) { return cleanLabel(String(name == null ? "" : name).replace(/^\s+/, "").split(/\s+/)[0] || "", REQ.name); }
+
+  /* UTF-8 and base64url written by hand so the same code runs in every browser and in node */
+  function utf8Bytes(s) {
+    var out = [];
+    s = String(s);
+    for (var i = 0; i < s.length; i++) {
+      var c = s.charCodeAt(i);
+      if (c >= 0xd800 && c < 0xdc00 && i + 1 < s.length && s.charCodeAt(i + 1) >= 0xdc00 && s.charCodeAt(i + 1) < 0xe000) { c = 0x10000 + ((c - 0xd800) << 10) + (s.charCodeAt(i + 1) - 0xdc00); i++; }
+      else if (c >= 0xd800 && c < 0xe000) c = 0xfffd;
+      if (c < 0x80) out.push(c);
+      else if (c < 0x800) out.push(0xc0 | (c >> 6), 0x80 | (c & 63));
+      else if (c < 0x10000) out.push(0xe0 | (c >> 12), 0x80 | ((c >> 6) & 63), 0x80 | (c & 63));
+      else out.push(0xf0 | (c >> 18), 0x80 | ((c >> 12) & 63), 0x80 | ((c >> 6) & 63), 0x80 | (c & 63));
+    }
+    return out;
+  }
+  /* strict: returns null for anything that is not well-formed UTF-8 */
+  function utf8Str(b) {
+    var s = "", i = 0;
+    while (i < b.length) {
+      var c = b[i++], n = c < 0x80 ? 0 : c >= 0xc2 && c < 0xe0 ? 1 : c >= 0xe0 && c < 0xf0 ? 2 : c >= 0xf0 && c < 0xf5 ? 3 : -1, min = n === 2 ? 0x800 : n === 3 ? 0x10000 : 0;
+      if (n < 0) return null;
+      if (n) c = c & (n === 1 ? 0x1f : n === 2 ? 0x0f : 0x07);
+      for (var k = 0; k < n; k++) { var d = b[i++]; if (d === undefined || (d & 0xc0) !== 0x80) return null; c = (c << 6) | (d & 63); }
+      if (c < min || c > 0x10ffff || (c >= 0xd800 && c < 0xe000)) return null;
+      s += c < 0x10000 ? String.fromCharCode(c) : String.fromCharCode(0xd800 + ((c - 0x10000) >> 10), 0xdc00 + ((c - 0x10000) & 1023));
+    }
+    return s;
+  }
+  var B64 = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
+  function b64urlEncode(bytes) {
+    var o = "";
+    for (var i = 0; i < bytes.length; i += 3) {
+      var a = bytes[i], b = bytes[i + 1], c = bytes[i + 2], n = (a << 16) | ((b || 0) << 8) | (c || 0);
+      o += B64[(n >> 18) & 63] + B64[(n >> 12) & 63] + (b === undefined ? "" : B64[(n >> 6) & 63]) + (c === undefined ? "" : B64[n & 63]);
+    }
+    return o;
+  }
+  function b64urlDecode(s) {
+    s = String(s).replace(/=+$/, "").replace(/\+/g, "-").replace(/\//g, "_");
+    if (!/^[A-Za-z0-9_-]*$/.test(s) || s.length % 4 === 1) return null;
+    var out = [], acc = 0, bits = 0;
+    for (var i = 0; i < s.length; i++) {
+      acc = (acc << 6) | B64.indexOf(s[i]); bits += 6;
+      if (bits >= 8) { bits -= 8; out.push((acc >> bits) & 255); acc &= (1 << bits) - 1; }
+    }
+    return out;
+  }
+
+  /* random token of 7 characters [a-z0-9], not in `taken` (an array or a set object). `rnd(n)` may supply bytes for tests. */
+  function newToken(taken, rnd) {
+    var used = Object.create(null), ALPHA = "0123456789abcdefghijklmnopqrstuvwxyz";
+    if (Array.isArray(taken)) taken.forEach(function (t) { used[t] = 1; }); else if (isObj(taken)) Object.keys(taken).forEach(function (t) { used[t] = 1; });
+    for (var tries = 0; tries < 200; tries++) {
+      var tok = "", b;
+      try {
+        if (rnd) b = rnd(REQ.tokLen * 2); else { b = new Uint8Array(REQ.tokLen * 2); root.crypto.getRandomValues(b); }
+      } catch (e) { b = null; }
+      for (var i = 0; i < REQ.tokLen * 2 && tok.length < REQ.tokLen; i++) {
+        var v = b ? b[i] : Math.floor(Math.random() * 256);
+        if (v < 252) tok += ALPHA[v % 36];
+      }
+      while (tok.length < REQ.tokLen) tok += ALPHA[Math.floor(Math.random() * 36)];
+      if (!used[tok]) return tok;
+    }
+    return uid().replace(/[^a-z0-9]/g, "a").slice(0, REQ.tokLen);
+  }
+
+  /* where the parent page lives: the folder this page is in, plus send.html (works on the real site, localhost and file:) */
+  function sendPageUrl(href) {
+    var u = String(href == null ? "" : href).replace(/[?#].*$/, "");
+    u = /\/[^\/]*\.[^\/]*$/.test(u) ? u.replace(/[^\/]*$/, "") : u.replace(/\/?$/, "/");
+    return u + "send.html";
+  }
+  /* The note travels in the part of the link after #, which a browser never sends to any server. */
+  function buildRequestLink(base, o) {
+    o = o || {};
+    var t = typeof o.t === "string" ? o.t.toLowerCase() : "";
+    if (!REQ.tokRe.test(t)) return "";
+    var j = { v: 1, t: t, n: cleanLabel(o.n, REQ.name), u: cleanLabel(o.u, REQ.num) }, c = cleanLabel(o.c, REQ.team);
+    if (c) j.c = c;
+    return String(base == null ? "" : base).replace(/#.*$/, "") + "#r=" + b64urlEncode(utf8Bytes(JSON.stringify(j)));
+  }
+  /* Takes a whole link, "#r=..." or "r=...". Returns { ok:true, t, n, u, c } or { ok:false, why } and never throws. */
+  function parseRequestLink(input) {
+    try {
+      var s = typeof input === "string" ? input : "";
+      if (!s) return { ok: false, why: "missing" };
+      var h = s.indexOf("#") >= 0 ? s.slice(s.indexOf("#") + 1) : s;
+      if (h.length > 4 * REQ.hash) return { ok: false, why: "big" };
+      var val = "";
+      h.split("&").forEach(function (kv) { if (!val && kv.slice(0, 2) === "r=") val = kv.slice(2); });
+      val = val.replace(/[.,;:!?)\]'"]+$/, "");
+      if (!val) return { ok: false, why: "missing" };
+      if (val.length > REQ.hash) return { ok: false, why: "big" };
+      var bytes = b64urlDecode(val), text = bytes ? utf8Str(bytes) : null;
+      if (text === null) return { ok: false, why: "bad" };
+      var j = JSON.parse(text);
+      if (!isObj(j) || j.v !== 1) return { ok: false, why: "bad" };
+      var t = typeof j.t === "string" ? j.t.toLowerCase() : "";
+      if (!REQ.tokRe.test(t)) return { ok: false, why: "bad" };
+      return { ok: true, t: t, n: cleanLabel(j.n, REQ.name), u: cleanLabel(j.u, REQ.num), c: cleanLabel(j.c, REQ.team) };
+    } catch (e) { return { ok: false, why: "bad" }; }
+  }
+
+  /* "Sam #7", "Sam" or "#7" (empty when both are missing) */
+  function whoLabel(n, u) {
+    n = cleanLabel(n, REQ.name); u = cleanLabel(u, REQ.num).replace(/^#\s*/, "");
+    return n + (n && u ? " " : "") + (u ? "#" + u : "");
+  }
+  /* {first} {number} {team} {link}; a missing value leaves no stray gap */
+  function fillTemplate(tpl, v) {
+    v = v || {};
+    var vals = { first: v.first ? String(v.first) : "your player", number: v.number ? String(v.number).replace(/^#\s*/, "") : "", team: v.team ? String(v.team) : "", link: v.link ? String(v.link) : "" };
+    var out = String(tpl == null ? "" : tpl).replace(/\{(first|number|team|link)\}/gi, function (m, k) { return vals[k.toLowerCase()]; });
+    return out.replace(/[ \t]{2,}/g, " ").replace(/[ \t]+([,.!?;:])/g, "$1").replace(/[ \t]+\n/g, "\n").replace(/^\s+|\s+$/g, "");
+  }
+  /* the filled-in message, with the link added at the end if an edited template forgot {link} */
+  function requestMessage(tpl, v) {
+    var t = sanitizeTemplate(tpl) || DEFAULT_TPL, msg = fillTemplate(t, v);
+    return v && v.link && msg.indexOf(String(v.link)) < 0 ? msg + "\n" + v.link : msg;
+  }
+  function requestSubject(v) {
+    v = v || {};
+    var who = whoLabel(v.first, v.number);
+    return "Walk-up song" + (who ? " for " + who : "") + (v.team ? " (" + v.team + ")" : "");
+  }
+  function sanitizeTemplate(x) {
+    return (typeof x === "string" ? x : "").replace(/\r\n?/g, "\n").replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/g, "").replace(/^\s+|\s+$/g, "").slice(0, REQ.tpl);
+  }
+  function smsHref(body) { return "sms:?&body=" + encodeURIComponent(String(body == null ? "" : body)); }
+  function mailtoHref(subject, body) { return "mailto:?subject=" + encodeURIComponent(String(subject == null ? "" : subject)) + "&body=" + encodeURIComponent(String(body == null ? "" : body)); }
+
+  /* WU-<token>-<title>.<ext>: safe in any chat or mail app, at most 80 characters, real extension kept */
+  function songExt(name, mime) {
+    var m = /\.([A-Za-z0-9]{1,5})$/.exec(String(name || "")), e = m ? m[1].toLowerCase() : "", byType = MIME_EXT[String(mime || "").toLowerCase().split(";")[0].replace(/\s/g, "")] || "";
+    return AUDIO_EXTS.indexOf(e) >= 0 ? e : byType || e;
+  }
+  function fileSafe(x) {
+    var s = String(x == null ? "" : x);
+    try { s = s.normalize("NFC"); } catch (e) { /* old browser: leave as is */ }
+    s = s.replace(HIDDEN_RE, " ");
+    try { s = s.replace(/[\p{Extended_Pictographic}\p{Regional_Indicator}\u{1f3fb}-\u{1f3ff}︎️\u200d⃣]/gu, " ").replace(/[^\p{L}\p{N}\p{M} ._,'()!-]/gu, " "); }
+    catch (e) { s = s.replace(/[\ud800-\udfff]/g, " ").replace(/[\\\/:*?"<>|#%&+~^`{}\[\];=$@]/g, " "); }
+    return s.replace(/\s+/g, " ").replace(/\.{2,}/g, ".").replace(/^[ ._-]+|[ ._-]+$/g, "");
+  }
+  function buildSongFileName(token, title, origName, mime) {
+    var tok = typeof token === "string" ? token.toLowerCase() : "";
+    if (!REQ.tokRe.test(tok)) tok = "";
+    var ext = songExt(origName, mime), extPart = ext ? "." + ext : "";
+    var base = fileSafe(title);
+    if (!base) base = fileSafe(String(origName == null ? "" : origName).replace(/^.*[\\\/]/, "").replace(/\.[A-Za-z0-9]{1,5}$/, ""));
+    var prefix = tok ? "WU-" + tok + "-" : "", room = Math.max(1, REQ.file - prefix.length - extPart.length);
+    base = Array.from(base.replace(/ /g, "_")).slice(0, room).join("").replace(/[._-]+$/, "") || "song";
+    return prefix + base + extPart;
+  }
+  /* { token, title } when the name starts with WU-<token> (any capitals), otherwise null; the title is tidied for the library */
+  function parseSongFileName(name) {
+    var s = String(name == null ? "" : name).replace(/^.*[\\\/]/, "").replace(/\.[A-Za-z0-9]{1,5}$/, "");
+    var m = /^wu-([a-z0-9]{6,8})(?:-(.*))?$/i.exec(s);
+    if (!m) return null;
+    var rest = m[2] || "";
+    try { rest = decodeURIComponent(rest); } catch (e) { rest = rest.replace(/%20/g, " "); }
+    rest = rest.replace(/[_\-]+/g, " ").replace(/\s+/g, " ").replace(/^ | $/g, "");
+    return { token: m[1].toLowerCase(), title: str(rest, LIM.title) || "Song" };
+  }
+  /* "Walk-up song for Sam #7: Title - Artist [WU-abc1234]" typed back as text -> { token, want } */
+  function parseReplyText(text) {
+    var s = String(text == null ? "" : text), m = /\[WU-([a-z0-9]{6,8})\]/i.exec(s);
+    if (!m) return null;
+    var body = s.replace(/\s*\[WU-[a-z0-9]{6,8}\]\s*/i, " ").replace(/^\s*walk-?up song for[^:\n]*:\s*/i, "");
+    return { token: m[1].toLowerCase(), want: sanitizeWant(body) };
+  }
+
+  function sanitizeWant(x) { return cleanLabel(typeof x === "string" ? x : "", REQ.want); }
+  function sanitizeReq(r, seenTok) {
+    if (!isObj(r) || typeof r.t !== "string") return null;
+    var t = r.t.toLowerCase();
+    if (!REQ.tokRe.test(t) || (seenTok && seenTok[t])) return null;
+    if (seenTok) seenTok[t] = 1;
+    return { t: t, at: isYMD(r.at) ? r.at : "", via: REQ.via.indexOf(r.via) >= 0 ? r.via : "copy", st: REQ.st.indexOf(r.st) >= 0 ? r.st : "asked" };
+  }
+  /* The request to store when the coach sends one: the same token while one is still open, otherwise a new unique one. */
+  function startRequest(roster, p, via, today, tok) {
+    var open = p && p.req && p.req.st === "asked" ? p.req.t : "";
+    var taken = roster.filter(function (x) { return x !== p && x.req; }).map(function (x) { return x.req.t; });
+    var t = open || (tok && REQ.tokRe.test(tok) && taken.indexOf(tok) < 0 ? tok : newToken(taken));
+    return { t: t, at: isYMD(today) ? today : todayStr(), via: REQ.via.indexOf(via) >= 0 ? via : "copy", st: "asked" };
+  }
+  function playerByToken(roster, tok) {
+    tok = String(tok || "").toLowerCase();
+    for (var i = 0; i < roster.length; i++) if (roster[i].req && roster[i].req.t === tok) return roster[i];
+    return null;
+  }
+  /* a real song file in the library (the built-in sounds do not count as a song that was asked for) */
+  function hasSongFile(p, songs) { var s = p && p.songId ? songById(songs, p.songId) : null; return !!(s && s.kind === "file"); }
+  /* the name a song gets in the library: a parent's WU-<token>-<title> file shows just the title */
+  function libraryTitle(name) { var p = parseSongFileName(name); return p ? p.title : fileTitle(name); }
+  /* "got" (has a file), "inlib" (the file came back but is not chosen yet), "text" (answered with a title only), "asked", or "none" */
+  function requestCode(p, songs) {
+    if (hasSongFile(p, songs)) return "got";
+    if (p && p.req && p.req.st === "got") return "inlib";
+    if (p && (p.want || (p.req && p.req.st === "text"))) return "text";
+    return p && p.req ? "asked" : "none";
+  }
+  function requestProgress(roster, songs) {
+    var have = roster.filter(function (p) { return hasSongFile(p, songs); }).length;
+    return { have: have, total: roster.length, text: have + " of " + roster.length + " have a song" };
+  }
+  function findDuplicateSong(songs, name, size) {
+    var nm = str(name, LIM.file);
+    for (var i = 0; i < songs.length; i++) if (songs[i].kind === "file" && songs[i].name === nm && songs[i].size === size) return songs[i];
+    return null;
+  }
+
   /* ---------- sanitising saved data and backups ---------- */
   function sanitizeSettings(r) {
     r = isObj(r) ? r : {};
-    return { master: int(r.master, 0, 100, 100), wake: r.wake !== false, countIn: r.countIn !== false, thr: int(r.thr, -70, -20, -45), tvoice: str(r.tvoice, 200), trate: clamp(q1(num(r.trate, 1)), 0.5, 1.5), tvol: int(r.tvol, 0, 100, 100) };
+    return { master: int(r.master, 0, 100, 100), wake: r.wake !== false, countIn: r.countIn !== false, thr: int(r.thr, -70, -20, -45), tvoice: str(r.tvoice, 200), trate: clamp(q1(num(r.trate, 1)), 0.5, 1.5), tvol: int(r.tvol, 0, 100, 100), reqTpl: sanitizeTemplate(r.reqTpl), team: cleanLabel(r.team, REQ.team) };
   }
   function sanitizeSong(r, seen) {
     if (!isObj(r) || r.kind !== "file") return null;
@@ -477,19 +716,19 @@
     if (dur >= 0.1 && te - ts < 0.1) { ts = 0; te = dur; }
     return { kind: r.kind, id: id, name: str(r.name, LIM.file) || (r.kind === "rec" ? "Recording" : "Voice file"), dur: dur, size: int(r.size, 0, 1e12, 0), mime: str(r.mime, 60), ts: Math.round(ts * 1000) / 1000, te: Math.round(te * 1000) / 1000, norm: r.norm === true, thr: int(r.thr, -70, -20, -45), polish: sanitizePolish(r.polish) };
   }
-  function sanitizePlayer(r, seenIds, seenVoice, songs) {
+  function sanitizePlayer(r, seenIds, seenVoice, songs, seenTok) {
     if (!isObj(r)) return null;
     var id = typeof r.id === "string" && ID_RE.test(r.id) && !seenIds[r.id] ? r.id : uid();
     seenIds[id] = 1;
     var songId = typeof r.songId === "string" && songById(songs, r.songId) ? r.songId : null, song = songId ? songById(songs, songId) : null;
-    return { id: id, name: str(r.name, LIM.name), num: str(r.num, LIM.num), pos: str(r.pos, LIM.pos), songId: songId, trim: song && isObj(r.trim) ? clampTrim(song.dur, r.trim) : null, voice: sanitizeVoice(r.voice, seenVoice), mix: sanitizeMix(r.mix) };
+    return { id: id, name: str(r.name, LIM.name), num: str(r.num, LIM.num), pos: str(r.pos, LIM.pos), songId: songId, trim: song && isObj(r.trim) ? clampTrim(song.dur, r.trim) : null, voice: sanitizeVoice(r.voice, seenVoice), mix: sanitizeMix(r.mix), req: sanitizeReq(r.req, seenTok), want: sanitizeWant(r.want) };
   }
   function emptyState() { return { v: 1, roster: [], lineup: [], batter: 0, songs: [], announcer: factoryAnnouncer(), settings: sanitizeSettings({}) }; }
   function sanitizeState(raw) {
     var r = isObj(raw) ? raw : {}, st = emptyState();
-    var seenS = Object.create(null), seenP = Object.create(null), seenV = Object.create(null);
+    var seenS = Object.create(null), seenP = Object.create(null), seenV = Object.create(null), seenT = Object.create(null);
     st.songs = (Array.isArray(r.songs) ? r.songs.slice(0, 500) : []).map(function (s) { return sanitizeSong(s, seenS); }).filter(Boolean);
-    st.roster = (Array.isArray(r.roster) ? r.roster.slice(0, LIM.roster) : []).map(function (p) { return sanitizePlayer(p, seenP, seenV, st.songs); }).filter(Boolean);
+    st.roster = (Array.isArray(r.roster) ? r.roster.slice(0, LIM.roster) : []).map(function (p) { return sanitizePlayer(p, seenP, seenV, st.songs, seenT); }).filter(Boolean);
     var ids = Object.create(null), lu = [];
     st.roster.forEach(function (p) { ids[p.id] = 1; });
     (Array.isArray(r.lineup) ? r.lineup : []).forEach(function (id) { if (typeof id === "string" && ids[id] && lu.indexOf(id) < 0) lu.push(id); });
@@ -562,6 +801,11 @@
     announceText: announceText, statusOf: statusOf,
     nextIndex: nextIndex, prevIndex: prevIndex, roles: roles, moveItem: moveItem, benchIds: benchIds, toBench: toBench, toLineup: toLineup, swapBench: swapBench, reindexBatter: reindexBatter,
     parseLine: parseLine, parsePasted: parsePasted,
+    AUDIO_EXTS: AUDIO_EXTS, AUDIO_ACCEPT: AUDIO_ACCEPT, isAudioFile: isAudioFile, REQ: REQ, DEFAULT_TPL: DEFAULT_TPL, cleanLabel: cleanLabel, firstWord: firstWord, utf8Bytes: utf8Bytes, utf8Str: utf8Str, b64urlEncode: b64urlEncode, b64urlDecode: b64urlDecode,
+    newToken: newToken, sendPageUrl: sendPageUrl, buildRequestLink: buildRequestLink, parseRequestLink: parseRequestLink, whoLabel: whoLabel, fillTemplate: fillTemplate,
+    requestMessage: requestMessage, requestSubject: requestSubject, sanitizeTemplate: sanitizeTemplate, smsHref: smsHref, mailtoHref: mailtoHref, songExt: songExt,
+    buildSongFileName: buildSongFileName, parseSongFileName: parseSongFileName, parseReplyText: parseReplyText, sanitizeWant: sanitizeWant, sanitizeReq: sanitizeReq,
+    libraryTitle: libraryTitle, startRequest: startRequest, playerByToken: playerByToken, hasSongFile: hasSongFile, requestCode: requestCode, requestProgress: requestProgress, findDuplicateSong: findDuplicateSong,
     sanitizeSettings: sanitizeSettings, sanitizeSong: sanitizeSong, sanitizeVoice: sanitizeVoice, sanitizeState: sanitizeState, emptyState: emptyState,
     audioKeys: audioKeys, counts: counts, makeBackup: makeBackup, validateBackup: validateBackup, sampleState: sampleState
   };

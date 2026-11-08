@@ -294,7 +294,7 @@
     WU.refreshHave().then(function () {
       if (S.loadFailed || S.mem) return 0;
       return WU.gc();
-    }).then(function () { return WU.refreshHave(); }).then(function () { clearTimeout(slow); if (done) A.render(); else go(); });
+    }).then(function () { return WU.refreshHave(); }).then(function () { clearTimeout(slow); if (done) A.render(); else go(); if (WU.req) WU.req.start(); });
     if (S.st.settings.wake) syncWake();
     if ("serviceWorker" in navigator && /^https?:$/.test(location.protocol)) window.addEventListener("load", function () { navigator.serviceWorker.register("sw.js").catch(function () { /* the app works without it */ }); });
     window.WalkupApp = { S: S, eng: E, WU: WU, core: C, wakeActive: A.wakeActive, lastPlay: function () { return A.lastPlay; }, warmed: function () { return A.warmedAt || 0; } };
