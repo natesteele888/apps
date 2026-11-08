@@ -1,0 +1,32 @@
+{
+  "name": "Film Lite: Review a clip, tag the moments",
+  "short_name": "Film Lite",
+  "description": "Pick a video from your phone, step through it frame by frame, slow it down, tag the moments that matter and share the notes. The video never leaves your phone.",
+  "id": "./",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#0d0c1a",
+  "theme_color": "#0d0c1a",
+  "icons": [
+    {
+      "src": "/apps/icons/filmlite-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/apps/icons/filmlite-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/apps/icons/filmlite-maskable.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}
