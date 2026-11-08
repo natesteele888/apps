@@ -21,6 +21,7 @@ const app = process.argv[2], want = process.argv[3];
   await new Promise(r => setTimeout(r, 1500));
   await ctx.setOffline(true);
   await page.reload({ waitUntil: "load" });
+  await page.waitForTimeout(1500); // some apps draw after reading saved data (IndexedDB), a moment after load
   console.log("offline reload shows app:", (await page.evaluate(() => document.body.innerText)).includes(want));
   console.log("console errors:", JSON.stringify(errs.filter(e => !/Failed to load resource/.test(e))), "| failed requests:", JSON.stringify(failed.filter(u => !/fonts/.test(u))));
   await browser.close();
