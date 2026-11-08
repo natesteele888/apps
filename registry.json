@@ -1,6 +1,6 @@
 {
   "about": "The one list of Nathan's apps. Live links, which apps show where, and each app's App Store listing (text, highlights, screenshots) all come from here. Edit listings and icons in the Toolbox; the sync job copies them here. Don't hand-edit text in store/index.html.",
-  "updated": "2026-11-07",
+  "updated": "2026-11-08",
   "toolbox": "https://natesteele888.github.io/apps/toolbox/",
   "store": "https://natesteele888.github.io/apps/store/",
   "apps": [
@@ -406,11 +406,15 @@
         ],
         "latest": {
           "d": "Nov 7, 2026",
-          "t": "Film Room: escape a note's time and stop telling coaches to open the rule to everyone",
-          "url": "https://github.com/natesteele888/ASL-Bengals/commit/9db61ce5e4ab2d61ccafbb347a1815f7751acf22"
+          "t": "Sign-in: stop the published code hashes from working as Firebase passwords",
+          "url": "https://github.com/natesteele888/ASL-Bengals/commit/77b6471b91367745442eb737d5d5064ed45fdbce"
         },
-        "version": "1.49.6",
+        "version": "1.49.7",
         "history": [
+          {
+            "v": "1.49.7",
+            "t": "Sign-in: stop the published code hashes from working as Firebase passwords"
+          },
           {
             "v": "1.49.6",
             "t": "Film Room: escape a note's time and stop telling coaches to open the rule to everyone"
@@ -426,10 +430,6 @@
           {
             "v": "1.49.3",
             "t": "How-To Guide: screenshot tutorials for players, parents and coaches"
-          },
-          {
-            "v": "1.49.2",
-            "t": "Film Room: open every film here, scouting report, NEW badge"
           }
         ]
       },
@@ -702,11 +702,15 @@
         ],
         "latest": {
           "d": "Nov 7, 2026",
-          "t": "team-registry: say plainly that Select's codes have not been replaced yet",
-          "url": "https://github.com/natesteele888/lybs-ballclub/commit/f86b8ba5191c8f8b431bbb17ff6a424378cd6324"
+          "t": "Replace Select's login codes",
+          "url": "https://github.com/natesteele888/lybs-ballclub/commit/0143d80763b6a535324b446bf39151e666595793"
         },
-        "version": "1.23.7",
+        "version": "1.23.8",
         "history": [
+          {
+            "v": "1.23.8",
+            "t": "Replace Select's login codes"
+          },
           {
             "v": "1.23.7",
             "t": "team-registry: say plainly that Select's codes have not been replaced yet"
@@ -722,10 +726,6 @@
           {
             "v": "1.23.2",
             "t": "Situations trainer: don't throw home with a runner already in from third"
-          },
-          {
-            "v": "1.23.1",
-            "t": "Brain pointer: start each session from the current code, not an old copy"
           }
         ]
       }
@@ -1496,12 +1496,16 @@
           }
         ],
         "latest": {
-          "d": "Nov 7, 2026",
-          "t": "Locker: a sports notebook for daily reps, games and arm care",
-          "url": "https://github.com/natesteele888/apps/commit/623b3a595a2edd626797dce9b90ca4db72bfe00b"
+          "d": "Nov 8, 2026",
+          "t": "Locker: size season numbers to the screen so they never overlap",
+          "url": "https://github.com/natesteele888/apps/commit/2598442edf151912caf2cb425a309c7d5485ac47"
         },
-        "version": "1.0.1",
+        "version": "1.0.2",
         "history": [
+          {
+            "v": "1.0.2",
+            "t": "Locker: size season numbers to the screen so they never overlap"
+          },
           {
             "v": "1.0.1",
             "t": "Locker: a sports notebook for daily reps, games and arm care"
@@ -1576,7 +1580,10 @@
           "coach",
           "parent"
         ],
-        "shots": [],
+        "shots": [
+          "store/shots/practiceclock-1.webp",
+          "store/shots/practiceclock-2.webp"
+        ],
         "autoShots": [
           {
             "url": "",
@@ -1586,6 +1593,18 @@
             "url": "",
             "click": "Start with a baseball template",
             "wait": 1500
+          }
+        ],
+        "latest": {
+          "d": "Nov 8, 2026",
+          "t": "Practice Clock: run practice by the minute with a big countdown",
+          "url": "https://github.com/natesteele888/apps/commit/89f382c9ae5da8e56965eb1fb646a8ccb091222f"
+        },
+        "version": "1.0.1",
+        "history": [
+          {
+            "v": "1.0.1",
+            "t": "Practice Clock: run practice by the minute with a big countdown"
           }
         ]
       }
@@ -1658,7 +1677,10 @@
           "parent",
           "coach"
         ],
-        "shots": [],
+        "shots": [
+          "store/shots/whoswhere-1.webp",
+          "store/shots/whoswhere-2.webp"
+        ],
         "autoShots": [
           {
             "url": "",
@@ -1668,6 +1690,18 @@
             "url": "",
             "click": "Fill in a sample week",
             "wait": 1500
+          }
+        ],
+        "latest": {
+          "d": "Nov 8, 2026",
+          "t": "Who's Where: the family sports week, with conflicts flagged",
+          "url": "https://github.com/natesteele888/apps/commit/adb88b0e5ff06b44531ee7f9af32dc442eca3b2a"
+        },
+        "version": "1.0.1",
+        "history": [
+          {
+            "v": "1.0.1",
+            "t": "Who's Where: the family sports week, with conflicts flagged"
           }
         ]
       }
@@ -1741,7 +1775,10 @@
           "parent",
           "player"
         ],
-        "shots": [],
+        "shots": [
+          "store/shots/tournamentpack-1.webp",
+          "store/shots/tournamentpack-2.webp"
+        ],
         "autoShots": [
           {
             "url": "",
@@ -1751,6 +1788,22 @@
             "url": "",
             "click": "Load a sample tournament",
             "wait": 1500
+          }
+        ],
+        "latest": {
+          "d": "Nov 8, 2026",
+          "t": "Tournament Pack: works offline after the first visit",
+          "url": "https://github.com/natesteele888/apps/commit/154f2d2c33ac79929b86435459cd68e5e2e0fedf"
+        },
+        "version": "1.0.2",
+        "history": [
+          {
+            "v": "1.0.2",
+            "t": "Tournament Pack: works offline after the first visit"
+          },
+          {
+            "v": "1.0.1",
+            "t": "Tournament Pack: schedule, standings with real tiebreakers, bracket and packing list"
           }
         ]
       }
@@ -1827,7 +1880,10 @@
           "parent",
           "player"
         ],
-        "shots": [],
+        "shots": [
+          "store/shots/walkup-1.webp",
+          "store/shots/walkup-2.webp"
+        ],
         "autoShots": [
           {
             "url": "",
@@ -1837,6 +1893,22 @@
             "url": "",
             "click": "Add a sample lineup",
             "wait": 4200
+          }
+        ],
+        "latest": {
+          "d": "Nov 8, 2026",
+          "t": "Walk-Up: ask a parent for a player's song by text or email",
+          "url": "https://github.com/natesteele888/apps/commit/bd5c5d0d84d069665c7fc39b18e1d6955840a4cd"
+        },
+        "version": "1.0.2",
+        "history": [
+          {
+            "v": "1.0.2",
+            "t": "Walk-Up: ask a parent for a player's song by text or email"
+          },
+          {
+            "v": "1.0.1",
+            "t": "Walk-Up: record, polish and play every player's walk-up music"
           }
         ]
       }
@@ -1908,7 +1980,10 @@
           "coach",
           "parent"
         ],
-        "shots": [],
+        "shots": [
+          "store/shots/scoreboard-1.webp",
+          "store/shots/scoreboard-2.webp"
+        ],
         "autoShots": [
           {
             "url": "",
@@ -1918,6 +1993,22 @@
             "url": "",
             "click": "Start a basketball game",
             "wait": 1500
+          }
+        ],
+        "latest": {
+          "d": "Nov 8, 2026",
+          "t": "Scoreboard: cast to a TV, plus an on-deck lower third",
+          "url": "https://github.com/natesteele888/apps/commit/604bc99c4fd659d8bf950943c7c17054fb154dd2"
+        },
+        "version": "1.0.2",
+        "history": [
+          {
+            "v": "1.0.2",
+            "t": "Scoreboard: cast to a TV, plus an on-deck lower third"
+          },
+          {
+            "v": "1.0.1",
+            "t": "Scoreboard: big-number scoring for basketball, baseball and football"
           }
         ]
       }
@@ -1989,7 +2080,10 @@
           "player",
           "parent"
         ],
-        "shots": [],
+        "shots": [
+          "store/shots/filmlite-1.webp",
+          "store/shots/filmlite-2.webp"
+        ],
         "autoShots": [
           {
             "url": "",
@@ -1999,6 +2093,18 @@
             "url": "",
             "click": "See an example",
             "wait": 1500
+          }
+        ],
+        "latest": {
+          "d": "Nov 8, 2026",
+          "t": "Film Lite: step through a clip, tag the moments and share the notes",
+          "url": "https://github.com/natesteele888/apps/commit/180161eef78075f7b0dc1169b05e45af950e5b9f"
+        },
+        "version": "1.0.1",
+        "history": [
+          {
+            "v": "1.0.1",
+            "t": "Film Lite: step through a clip, tag the moments and share the notes"
           }
         ]
       }
