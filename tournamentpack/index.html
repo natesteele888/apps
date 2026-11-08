@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Tournament Pack: Everything for tournament weekend</title>
+<meta name="description" content="Tournament Pack keeps tournament weekend straight: the game schedule with arrive-by times, pool standings with the real tiebreakers, the bracket, and what to pack. Everything stays on your phone.">
+<meta name="theme-color" content="#08130f">
+<meta name="color-scheme" content="dark">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Tournament Pack">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" type="image/png" sizes="192x192" href="/apps/icons/tournamentpack-192.png">
+<link rel="apple-touch-icon" href="/apps/icons/tournamentpack-192.png">
+<script src="https://natesteele888.github.io/apps/install.js" defer></script>
+<!-- Optional fonts. Loaded without blocking the page; offline or blocked just means the system fonts are used. -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Barlow:wght@400;500;600;700;800&display=swap" media="print" onload="this.media='all'">
+<link rel="stylesheet" href="tpack.css">
+</head>
+<body>
+<div id="app">
+  <header class="top" id="top"></header>
+  <main id="view" tabindex="-1"></main>
+  <nav class="nav" id="nav" aria-label="Tournament sections" hidden></nav>
+</div>
+<div id="sheets"></div>
+<div id="toasts" aria-live="polite"></div>
+<noscript><p style="padding:24px;font-family:sans-serif;color:#ecf8f2">Tournament Pack needs JavaScript turned on to work.</p></noscript>
+<script src="core.js"></script>
+<script src="ui.js"></script>
+<script src="views.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

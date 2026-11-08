@@ -1,0 +1,32 @@
+{
+  "name": "Tournament Pack: Everything for tournament weekend",
+  "short_name": "Tournament Pack",
+  "description": "The game schedule, pool standings with the real tiebreakers, the bracket and what to pack for tournament weekend. Everything stays on your phone.",
+  "id": "./",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#08130f",
+  "theme_color": "#08130f",
+  "icons": [
+    {
+      "src": "/apps/icons/tournamentpack-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/apps/icons/tournamentpack-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/apps/icons/tournamentpack-maskable.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}
