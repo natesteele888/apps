@@ -1360,10 +1360,10 @@ const ranks = (res) => res.rows.map(r => r.team + ':' + r.rank + (r.tied ? 't' :
       // the app registers its own worker (install.js does not); wait for that, never register it from the test
       await page.evaluate(() => navigator.serviceWorker.ready.then(() => true));
       await page.waitForFunction(async () => {
-        const c = await caches.open('tournamentpack-v1'), keys = (await c.keys()).map(k => new URL(k.url).pathname);
+        const c = await caches.open(await (await fetch('sw.js')).text().then(t => t.match(/CACHE\s*=\s*"([^"]+)"/)[1])), keys = (await c.keys()).map(k => new URL(k.url).pathname);
         return ['core.js', 'ui.js', 'views.js', 'app.js', 'tpack.css', 'manifest.json'].every(f => keys.some(k => k.endsWith('/' + f))) && keys.some(k => k.endsWith('/tournamentpack/'));
       }, null, { timeout: 10000 });
-      assert.deepStrictEqual(await page.evaluate(() => caches.keys()), ['tournamentpack-v1']);
+      assert.deepStrictEqual(await page.evaluate(() => caches.keys()), [fs.readFileSync(path.join(__dirname, '..', 'serve', 'apps', 'tournamentpack', 'sw.js'), 'utf8').match(/CACHE\s*=\s*"([^"]+)"/)[1]]);
       await ctx.setOffline(true);
       await page.reload(); await page.waitForSelector('#view > *');
       eq(await txt(page, 'h2.tagline'), 'Everything for tournament weekend');
