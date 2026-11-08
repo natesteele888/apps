@@ -351,27 +351,52 @@ html.wu-lock .wu-toasts { top: calc(var(--sa-t) + 10px); bottom: auto; }
   *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
 }
 
-/* ---------- the simple mixer: readout, nudge, relative volume ---------- */
-.mx-read { display: flex; flex-direction: column; gap: 2px; margin: 4px 0 10px; font-size: 17px; font-variant-numeric: tabular-nums; }
+/* ---------- the mixer: picture and readouts that always show, then one short tab at a time (no scrolling on a phone) ---------- */
+.sheet.mix .tlwrap { margin: 0 0 4px; }
+.mx-read { display: flex; justify-content: space-between; gap: 12px; font-size: 15px; line-height: 1.3; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .mx-read .rd-m { color: #FF9A78; }
 .mx-read .rd-v { color: #C6FF3D; }
-.mx-nudge { display: flex; align-items: center; gap: 10px; margin: 6px 0 12px; }
-.mx-nudge .btn { flex: 0 0 auto; width: 80px; padding: 0; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; touch-action: manipulation; }
-.mx-nudge .btn svg { width: 30px; height: 30px; }
-.mx-vd { flex: 1 1 auto; text-align: center; }
+.mx-tot { display: flex; justify-content: space-between; gap: 12px; font-size: 14px; line-height: 1.3; margin-top: 2px; }
+.mx-tabs { display: flex; gap: 6px; margin: 8px 0; }
+.mx-tabs button { flex: 1 1 0; min-width: 0; min-height: 44px; padding: 0 2px; border-radius: 999px; border: 1.5px solid var(--line2); background: transparent; color: var(--mute); font: 700 14px/1 "Barlow", system-ui, sans-serif; letter-spacing: 0.02em; cursor: pointer; touch-action: manipulation; }
+.mx-tabs button[aria-selected="true"] { background: var(--accent); border-color: var(--accent); color: var(--ink); }
+.mx-tabs button:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+.mx-panels { min-height: 252px; }
+.mx-panel .stepper { margin: 4px 0 8px; }
+.mx-panel .stepper .nm { font-size: 15px; }
+.mx-panel .slide { margin: 2px 0; }
+.mx-h { font: 700 17px/1.2 "Barlow Condensed", "Barlow", system-ui, sans-serif; letter-spacing: 0.02em; }
+.mx-nudge { display: flex; align-items: center; gap: 10px; margin: 0 0 8px; }
+.mx-nudge .btn { flex: 0 0 auto; width: 76px; min-height: 48px; padding: 0; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; touch-action: manipulation; }
+.mx-nudge .btn svg { width: 26px; height: 26px; }
+.mx-vd { flex: 1 1 auto; text-align: center; line-height: 1.15; }
 .mx-vd small { display: block; color: var(--mute); }
-.mx-vd b { font-size: 26px; font-variant-numeric: tabular-nums; }
+.mx-vd b { font-size: 24px; font-variant-numeric: tabular-nums; }
+.mx-soft { min-height: 48px; margin-top: 6px; }
 /* the five stops sit under the centres of the five words: the thumb is 30px wide, so the track runs 15px past each end */
 input[type="range"].rng.rel { width: calc(80% + 30px); margin: 0 calc(10% - 15px); }
-.rel-lbls { display: flex; gap: 2px; margin-top: 2px; }
-.rel-lbls button { flex: 1 1 0; min-width: 0; min-height: 52px; padding: 4px 2px; background: transparent; border: 0; border-radius: 10px; color: var(--mute); font-size: 13px; line-height: 1.2; font-weight: 700; cursor: pointer; touch-action: manipulation; }
+.rel-lbls { display: flex; gap: 2px; }
+.rel-lbls button { flex: 1 1 0; min-width: 0; min-height: 48px; padding: 4px 2px; background: transparent; border: 0; border-radius: 10px; color: var(--mute); font-size: 13px; line-height: 1.2; font-weight: 700; cursor: pointer; touch-action: manipulation; }
 .rel-lbls button.on { color: var(--text); background: var(--panel2); box-shadow: inset 0 0 0 2px var(--accent); }
 .rel-lbls button:focus-visible { outline: 3px solid var(--focus); outline-offset: 1px; }
-details.more { padding: 0; }
-details.more > summary { display: flex; align-items: center; justify-content: space-between; min-height: 56px; padding: 0 14px; font: 700 19px/1.2 "Barlow Condensed", "Barlow", system-ui, sans-serif; letter-spacing: 0.02em; cursor: pointer; list-style: none; }
-details.more > summary::-webkit-details-marker { display: none; }
-details.more > summary::after { content: ""; width: 10px; height: 10px; margin-right: 4px; border-right: 3px solid var(--mute); border-bottom: 3px solid var(--mute); transform: rotate(45deg); transition: transform 0.15s; }
-details.more[open] > summary::after { transform: rotate(-135deg); }
-.more-in { padding: 0 14px 14px; }
-.more-in h3 { margin-top: 16px; }
-.more-in h3:first-child { margin-top: 0; }
+/* a short phone (or a browser with its toolbars showing): shrink the picture before anything has to scroll */
+@media (max-height: 740px) {
+  .sheet.mix .tlwrap svg.tl { max-height: 78px; margin: 0 auto; }
+  .mx-panels { min-height: 0; }
+  .mx-tabs { margin: 4px 0; }
+  .mx-panel .stepper { margin: 2px 0 4px; }
+  .mx-panel:not([data-panel="mix"]) > .small-note { display: none; }
+}
+@media (max-height: 700px) {
+  .sheet.mix .grab { margin-top: 4px; }
+  .sheet.mix .sh-head { padding-top: 2px; padding-bottom: 2px; }
+  .sheet.mix .sh-head h2 { font-size: 20px; }
+  .sheet.mix .sh-body { padding-top: 0; padding-bottom: 8px; }
+  .sheet.mix .sh-foot { padding-top: 8px; padding-bottom: calc(8px + var(--sa-b)); }
+  .sheet.mix .tlwrap svg.tl { max-height: 64px; }
+  .mx-read { font-size: 14px; }
+  .mx-tot { font-size: 13px; margin-top: 0; }
+  .mx-nudge { margin-bottom: 4px; }
+  .mx-soft { margin-top: 0; }
+  .mx-panel .slide .row.sp { margin-bottom: -4px; }
+}
