@@ -12,6 +12,7 @@ NODE_PATH=/path/to/node_modules tests/run.sh locker    # one app
 - `playboard`: every sport, drag by mouse and touch, paths, animation, share links, picture and print, offline.
 - `locker`, `locker-back`: hand-checked stat math, streaks, pitch rest days, backup and restore, the card picture, the Back button.
 - `practiceclock`: block and station schedule math across pauses, sleep and skips, the runner on a fake clock, share links, print, backup.
+- `read20`: the story library (levels, page lengths), day, streak and month math, damaged saves, tap-to-highlight, the nightly timer on a fake clock across two stories, idle pause, the log, offline.
 - `whoswhere`: the clash engine (kids, drivers, drive time, midnight, the November clock change), repeats, .ics parsed back, week text.
 - `tournamentpack`: 18 hand-worked standings cases with every tiebreaker, brackets of 4, 6 and 8, .ics, the packing list.
 - `walkup`: the mix plan and ducking math, the voice polish chain rendered offline and measured, fake-microphone recording, the song library, backup with audio.
