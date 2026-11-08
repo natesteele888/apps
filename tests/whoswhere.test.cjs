@@ -1035,7 +1035,7 @@ const evByTitle = (st, title, date) => st.events.filter(e => e.title === title &
     // real clock, no override
     const r = await newPage(br, {}); await r.page.goto(srv.url); await r.page.waitForSelector('.welcome'); await r.page.click('[data-act=sample]'); await r.page.waitForSelector('#top:not([hidden])');
     const now = new Date(), y = now.getFullYear(), m = String(now.getMonth() + 1).padStart(2, '0'), d = String(now.getDate()).padStart(2, '0'); const real = y + '-' + m + '-' + d;
-    await r.page.click('[data-act=go-today]'); eq(await r.page.evaluate(() => window.WhosWhereCore.todayStr()), real); assert.ok(await r.page.isVisible('.day.today'), 'today is highlighted with the real clock'); eq(await r.page.getAttribute('.day.today h3', 'id'), 'dh-' + real);
+    await goToday(r.page); eq(await r.page.evaluate(() => window.WhosWhereCore.todayStr()), real); assert.ok(await r.page.isVisible('.day.today'), 'today is highlighted with the real clock'); eq(await r.page.getAttribute('.day.today h3', 'id'), 'dh-' + real);
     deq(r.errors, []); await r.ctx.close(); deq(errors, []); await page.context().close();
   });
 
