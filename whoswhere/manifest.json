@@ -1,0 +1,32 @@
+{
+  "name": "Who's Where: The Family Sports Week",
+  "short_name": "Who's Where",
+  "description": "A week planner for busy sports families: who plays when and where, who drives, who brings the snack, and a warning when the week does not work. Everything stays on your phone.",
+  "id": "./",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0a0f1f",
+  "theme_color": "#0a0f1f",
+  "icons": [
+    {
+      "src": "/apps/icons/whoswhere-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/apps/icons/whoswhere-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/apps/icons/whoswhere-maskable.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}
