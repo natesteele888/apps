@@ -124,6 +124,18 @@ const TODAY = '2026-11-08';
     await page.screenshot({ path: SHOTS + '/read20-log.png' });
     await page.locator('#pm').click(); assert.ok(/October 2026/.test(await page.locator('.mhead h2').innerText()));
   });
+  await test('layout: no sideways overflow on a narrow phone; calendar is 7 even columns that do not overlap', async () => {
+    for (const w of [320, 360, 412]) {
+      const o = await newPage(br, { today: TODAY, ctx: { viewport: { width: w, height: 800 } } }); const { page } = o;
+      await page.clock.install({ time: new Date('2026-11-08T19:00:00') }); await page.goto(srv.url + '#log'); await page.waitForSelector('.cal');
+      const m = await page.evaluate(() => { const r = [...document.querySelectorAll('.day[data-d]')].map(e => e.getBoundingClientRect()), c = document.querySelector('.cal').getBoundingClientRect();
+        return { sw: document.documentElement.scrollWidth, cw: document.documentElement.clientWidth, right: Math.max(...r.map(x => x.right)), cr: c.right, w0: r[0].width, w1: r[1].width, d1: r[0].bottom, d8: r[7].top, det: document.querySelector('#detail').getBoundingClientRect().top, calb: c.bottom }; });
+      assert.ok(m.sw <= m.cw, w + ': page scrolls sideways ' + m.sw + ' > ' + m.cw); assert.ok(m.right <= m.cr + 1, w + ': day past the grid'); assert.ok(Math.abs(m.w0 - m.w1) < 1.5, w + ': uneven columns');
+      assert.ok(m.d8 >= m.d1, w + ': rows overlap'); eq(await page.evaluate(() => { const t = [...document.querySelectorAll('.day[data-d]')].map(e => Math.round(e.getBoundingClientRect().top)); return t[7] === t[8] && t[8] === t[13]; }), true, w + ': today cell sits in line with its row'); assert.ok(m.det >= m.calb - 1, w + ': detail overlaps the calendar');
+      await page.screenshot({ path: SHOTS + '/read20-log-' + w + '.png' });
+      await page.goto(srv.url); await page.waitForSelector('.cover'); eq(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth), true, w + ' shelf');
+    }
+  });
   await test('log from home + settings: minutes count, goal changes, name shows; survives reload', async () => {
     const { page, ctx } = await mk(); await page.locator('#manual').click();
     await page.fill('#mt', 'Paper Book'); await page.fill('#mm', '12'); await page.locator('#ms').click(); await page.waitForSelector('.cover');
