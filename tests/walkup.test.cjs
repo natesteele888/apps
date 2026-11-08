@@ -1,6 +1,6 @@
 // Walk-Up tests. Run:
 //   cd <newapps> && NODE_PATH=<pr/events/tests/node_modules> node tests/walkup.test.cjs
-// Needs Google Chrome at /Applications/Google Chrome.app. Starts its own static server on a free port.
+// Uses Google Chrome on the Mac, Playwright's Chromium elsewhere (lib.cjs CHROME). Starts its own static server on a free port.
 // ONLY=<regex> runs just the tests whose name matches (handy while working).
 // Chrome runs with a fake microphone that plays a generated "voice" WAV, and with a stub for the computer voice (speechSynthesis),
 // so the tests are the same on every machine. Nothing here proves how it sounds: see the report for what needs a real phone.
@@ -162,7 +162,7 @@ const dbKeys = page => page.evaluate(() => window.WalkupApp.WU.db.keys());
 
 (async () => {
   srv = await startServer('walkup');
-  br = await chromium.launch({ executablePath: '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome', args: ['--no-sandbox', '--use-fake-device-for-media-stream', '--use-fake-ui-for-media-stream', '--use-file-for-fake-audio-capture=' + fx('mic.wav'), '--autoplay-policy=no-user-gesture-required'] });
+  br = await chromium.launch({ executablePath: require("./lib.cjs").CHROME, args: ['--no-sandbox', '--use-fake-device-for-media-stream', '--use-fake-ui-for-media-stream', '--use-file-for-fake-audio-capture=' + fx('mic.wav'), '--autoplay-policy=no-user-gesture-required'] });
   console.log('Serving ' + srv.url);
 
   /* ============ pure logic (node) ============ */

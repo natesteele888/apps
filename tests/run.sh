@@ -1,7 +1,7 @@
 #!/bin/bash
 # Runs the browser tests for Eight Count, Play Board, Locker, Practice Clock, Who's Where, Tournament Pack, Walk-Up,
 # Scoreboard and Film Lite against the files in this repo.
-# Needs: Google Chrome (the macOS path is hard-coded in lib.cjs), python3, and Node with the `playwright` package
+# Needs: Google Chrome on the Mac, or Playwright's own Chromium anywhere else (see CHROME in lib.cjs), python3, and Node with the `playwright` package
 # (point NODE_PATH at a node_modules that has it).
 #   NODE_PATH=/path/to/node_modules tests/run.sh            # everything
 #   NODE_PATH=/path/to/node_modules tests/run.sh locker     # only test files whose name contains "locker"

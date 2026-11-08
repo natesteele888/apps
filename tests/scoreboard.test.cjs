@@ -1,6 +1,6 @@
 // Scoreboard tests. Run:
 //   cd <newapps> && NODE_PATH=<pr/events/tests/node_modules> node tests/scoreboard.test.cjs
-// Needs Google Chrome at /Applications/Google Chrome.app. Starts its own static server on a free port.
+// Uses Google Chrome on the Mac, Playwright's Chromium elsewhere (lib.cjs CHROME). Starts its own static server on a free port.
 // Part 1 tests core.js on its own (hand-computed expectations + a replay/undo property test).
 // Part 2 drives the real page: every screen, the flows, storage, backup, XSS, offline, the Back button, layout.
 const assert = require('assert');

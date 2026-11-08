@@ -9,7 +9,7 @@ const path = require('path');
 const BASE = process.env.PB_URL || 'http://localhost:8765/apps/playboard/';
 const ROOT = path.resolve(__dirname, '..');
 const SHOTS = path.join(ROOT, 'shots') + '/';
-const CHROME = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
+const CHROME = require("./lib.cjs").CHROME;
 fs.mkdirSync(SHOTS, { recursive: true });
 
 let pass = 0, fail = 0;

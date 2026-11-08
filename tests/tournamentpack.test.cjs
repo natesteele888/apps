@@ -1,6 +1,6 @@
 // Tournament Pack tests. Run:
 //   cd <newapps> && NODE_PATH=<pr/events/tests/node_modules> node tests/tournamentpack.test.cjs
-// Needs Google Chrome at /Applications/Google Chrome.app. Starts its own static server on a free port.
+// Uses Google Chrome on the Mac, Playwright's Chromium elsewhere (lib.cjs CHROME). Starts its own static server on a free port.
 // Part 1 tests core.js on its own (numbers worked out by hand in the comments). Part 2 drives the real app in Chrome.
 const assert = require('assert');
 const fs = require('fs');
