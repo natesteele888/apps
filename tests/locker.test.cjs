@@ -845,8 +845,8 @@ function streakDoc(opts) {
     await page.addInitScript(() => { if (!sessionStorage.getItem('__c')) { sessionStorage.setItem('__c', '1'); caches.open('situations-v99').then(c => c.put('/x', new Response('x'))); caches.open('locker-v0').then(c => c.put('/y', new Response('y'))); } });
     await page.goto(srv.url); await page.waitForSelector('#streak-n');
     await page.evaluate(() => navigator.serviceWorker.ready.then(() => 1));
-    await page.waitForFunction(async () => { const k = await caches.keys(); return k.includes('locker-v1') && !k.includes('locker-v0') && (await (await caches.open('locker-v1')).keys()).length >= 4; }, null, { timeout: 8000 });
-    const cached = await page.evaluate(async () => (await (await caches.open('locker-v1')).keys()).map(r => new URL(r.url).pathname));
+    await page.waitForFunction(async () => { const k = await caches.keys(); return k.includes('locker-v2') && !k.includes('locker-v0') && (await (await caches.open('locker-v2')).keys()).length >= 4; }, null, { timeout: 8000 });
+    const cached = await page.evaluate(async () => (await (await caches.open('locker-v2')).keys()).map(r => new URL(r.url).pathname));
     for (const f of ['/apps/locker/', '/apps/locker/app.js', '/apps/locker/core.js', '/apps/locker/locker.css', '/apps/locker/manifest.json']) assert.ok(cached.includes(f), 'cached ' + f + ' in ' + cached.join());
     await page.reload(); await page.waitForTimeout(300);   // now controlled by the worker
     assert.ok(await page.evaluate(() => !!navigator.serviceWorker.controller), 'page is controlled by the worker before going offline');
