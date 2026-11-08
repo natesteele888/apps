@@ -11,7 +11,7 @@ Everything in this repo is public. Nathan's rule: no data, personal info or sens
 - If personal data does get pushed, rewrite history to remove it (a force-push of a cleaned branch) and tell Nathan.
 
 ## Tests
-Eight Count, Play Board and Locker have browser tests in `tests/` (see `tests/README.md`). Run
+Eight Count, Play Board, Locker, Practice Clock, Who's Where, Tournament Pack, Walk-Up, Scoreboard and Film Lite have browser tests in `tests/` (see `tests/README.md`). Each app registers its own service worker in its own code (install.js does not), and the live-smoke check catches an app that forgot. Run
 `NODE_PATH=<node_modules with playwright> tests/run.sh` (or `tests/run.sh locker`) before changing them.
 
 ## Nate AI Brain (shared memory)

@@ -1,4 +1,4 @@
-// Shared helpers for the Locker tests: static server, browser launch, small utilities.
+// Shared helpers for the app tests: static server, browser launch, small utilities.
 const { chromium } = require('playwright');
 const { spawn } = require('child_process');
 const path = require('path');
@@ -6,14 +6,14 @@ const net = require('net');
 const ROOT = path.resolve(__dirname, '..');
 const SHOTS = path.join(ROOT, 'shots');
 function freePort() { return new Promise(res => { const s = net.createServer(); s.listen(0, () => { const p = s.address().port; s.close(() => res(p)); }); }); }
-async function startServer() {
+async function startServer(app = 'locker') {
   const port = await freePort();
   const proc = spawn('python3', ['-m', 'http.server', String(port), '--bind', '127.0.0.1'], { cwd: path.join(ROOT, 'serve'), stdio: 'ignore' });
   for (let i = 0; i < 50; i++) {
-    try { const r = await fetch(`http://127.0.0.1:${port}/apps/locker/core.js`); if (r.ok) break; } catch (e) {}
+    try { const r = await fetch(`http://127.0.0.1:${port}/apps/${app}/manifest.json`); if (r.ok) break; } catch (e) {}
     await new Promise(r => setTimeout(r, 100));
   }
-  return { port, url: `http://localhost:${port}/apps/locker/`, stop: () => proc.kill() };
+  return { port, url: `http://localhost:${port}/apps/${app}/`, stop: () => proc.kill() };
 }
 async function launch() {
   return chromium.launch({ executablePath: '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome', args: ['--no-sandbox'] });
