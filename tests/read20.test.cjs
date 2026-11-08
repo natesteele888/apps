@@ -142,8 +142,34 @@ const TODAY = '2026-11-08';
     assert.ok(/12/.test(await page.locator('.rtxt b').innerText()));
     await page.locator('#gear').click(); await page.fill('#sn', 'Pat'); await page.selectOption('#sg', '10'); await page.locator('#sd').click();
     assert.ok(/done/i.test(await page.locator('.today h2').innerText()), '12 >= 10 minute goal');
+    await page.waitForTimeout(500); // the closed sheet hands its history entry back first
     await page.reload(); await page.waitForSelector('.cover'); assert.ok(/Read 10/.test(await page.locator('h1').innerText()));
     await page.locator('#nav button[data-go="log"]').click(); assert.ok(/Paper Book/.test(await page.locator('#detail').innerText()));
+  });
+  const settle = page => page.waitForTimeout(500);
+  const overlays = page => page.$$eval('.overlay', o => o.length);
+  await test('Back closes a pop-up and stays in the app; Cancel gives its history entry back', async () => {
+    const { page, errors } = await mk();
+    await page.locator('#gear').click(); await page.waitForSelector('.sheet'); await settle(page);
+    await page.goBack(); await settle(page); eq(await overlays(page), 0, 'settings closed'); assert.ok(page.url().startsWith(srv.url), 'still in the app: ' + page.url());
+    await page.locator('#manual').click(); await page.waitForSelector('.sheet'); await settle(page);
+    await page.locator('#mc').click(); await settle(page); eq(await overlays(page), 0, 'cancel closed it');
+    await page.locator('#gear').click(); await page.waitForSelector('.sheet'); await settle(page);
+    await page.goBack(); await settle(page); eq(await overlays(page), 0); assert.ok(page.url().startsWith(srv.url), 'no stray entry');
+    await page.goBack(); await settle(page); assert.ok(!page.url().startsWith(srv.url), 'a second Back leaves: ' + page.url());
+    eq(errors.length, 0, errors.join('|'));
+  });
+  await test('celebration: Back keeps reading; "stop" lands on the shelf and not back in the story', async () => {
+    const seed = async page => {
+      await page.evaluate(k => { R20App._state().days[k] = { sec: 1198, done: 0, books: {}, extra: [] }; }, TODAY);
+      await page.locator('.cover', { hasText: 'Sam the Cat' }).click(); await page.waitForSelector('.reader');
+      await page.clock.runFor(4000); await page.locator('#party').waitFor(); await settle(page);
+    };
+    const a = await mk(); await seed(a.page);
+    await a.page.goBack(); await settle(a.page); eq(await overlays(a.page), 0, 'party closed'); assert.ok(await a.page.locator('.reader').count(), 'still reading');
+    const b = await mk(); await seed(b.page);
+    await b.page.locator('#stop').click(); await settle(b.page); eq(await overlays(b.page), 0); await b.page.waitForSelector('.cover'); eq(await b.page.locator('.reader').count(), 0, 'on the shelf');
+    eq(b.errors.length, 0, b.errors.join('|'));
   });
   await test('offline: the service worker caches the app and it reopens with no network', async () => {
     const o = await newPage(br, { sw: true, today: TODAY }); const { page, ctx } = o;
