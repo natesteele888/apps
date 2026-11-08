@@ -5,7 +5,9 @@
   const SB = window.SB, C = SB.C, $ = SB.$, $$ = SB.$$, esc = SB.esc, ACT = SB.ACT;
   SB.game = null;      // the game in progress (also saved after every action)
   SB.view = "home";    // "home" or "board"
-  const B = { lock: false, tick: 0, prevScore: null, flashTimer: 0, holdTimer: 0, awakeNoted: false };
+  const storedTV = SB.store.get("tvMode");
+  const B = { lock: false, tick: 0, prevScore: null, flashTimer: 0, holdTimer: 0, awakeNoted: false, tv: { mode: (storedTV === "full" || storedTV === "overlay") ? storedTV : "off" }, tvReveal: false };
+  const TV_LABELS = { off: "Off", full: "Full board", overlay: "Broadcast overlay" };
 
   const svg = (d, extra) => '<svg viewBox="0 0 24 24" aria-hidden="true" ' + (extra || 'fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"') + ">" + d + "</svg>";
   const IC = {
@@ -192,8 +194,12 @@
     const cnt = (k, n, max, cls) => '<div class="cnt ' + cls + '"><span class="k">' + k + '</span><span class="dots" role="img" aria-label="' + n + " " + (k === "B" ? "balls" : k === "S" ? "strikes" : "outs") + '">' + dots(n, max) + "</span></div>";
     const banners = (g.final ? '<div class="end-banner" role="status"><span>FINAL</span><button type="button" class="reopen" data-act="a" data-t="reopen">Not over? Reopen</button></div>' : "") +
       (C.mercy(g) ? '<div class="end-banner mercy" role="status">Mercy rule reached</div>' : "");
+    const od = g.onDeck || { name: "", num: "" };
+    const onDeckBtn = '<button type="button" class="ondeck-set' + (od.name ? " has" : "") + '" data-act="b-ondeck" aria-label="' +
+      (od.name ? "On deck: " + esc(od.name) + (od.num ? ", number " + esc(od.num) : "") + ". Tap to change." : "Add the on-deck batter's name and number") + '">' +
+      '<span class="od-k">ON DECK</span><span class="od-v">' + (od.name ? esc(od.name) + (od.num ? ' <b>#' + esc(od.num) + "</b>" : "") : "Tap to add") + "</span></button>";
     const mid = '<section class="mid" aria-label="Inning and count"><div class="inn" role="img" aria-label="' + (top ? "Top" : "Bottom") + " of the " + C.ordinal(g.inning) + '"><i class="tri ' + (top ? "up" : "down") + '"></i><b>' + g.inning + "</b></div>" +
-      '<div class="count">' + cnt("B", g.balls, 3, "b") + cnt("S", g.strikes, 2, "s") + cnt("O", g.outs, 2, "o") + "</div>" + banners + "</section>";
+      '<div class="count">' + cnt("B", g.balls, 3, "b") + cnt("S", g.strikes, 2, "s") + cnt("O", g.outs, 2, "o") + "</div>" + onDeckBtn + banners + "</section>";
     const dis = g.final;
     const pb = (txt, t, extra, o) => cb(txt, Object.assign({ data: Object.assign({ act: "a", t: t }, extra || {}), dis: dis && !o.live }, o));
     const sub = (main, i) => "<span>" + main + '</span><small style="color:' + esc(g.teams[i].c) + '">' + esc(g.teams[i].n) + "</small>";
@@ -228,14 +234,18 @@
   function boardHTML(g) {
     const t = Date.now();
     const parts = g.sport === "basketball" ? bbBoard(g, t) : g.sport === "football" ? fbBoard(g, t) : g.sport === "baseball" ? bsBoard(g) : gnBoard(g);
-    return '<div class="board sp-' + g.sport + (B.lock ? " locked" : "") + '" id="board">' +
+    const tv = B.tv.mode, od = g.sport === "baseball" ? (g.onDeck || { name: "", num: "" }) : { name: "", num: "" };
+    const lowerThird = (tv !== "off" && od.name) ?
+      '<div class="lower-third" aria-hidden="true"><span class="lt-k">ON DECK</span><span class="lt-name">' + esc(od.name) + "</span>" + (od.num ? '<span class="lt-num">#' + esc(od.num) + "</span>" : "") + "</div>" : "";
+    const revealTab = tv !== "off" ? '<button type="button" class="tv-reveal" data-act="tv-reveal" aria-label="' + (B.tvReveal ? "Hide scoring controls" : "Show scoring controls") + '" aria-pressed="' + B.tvReveal + '">' + IC.dots + "</button>" : "";
+    return '<div class="board sp-' + g.sport + (B.lock ? " locked" : "") + (tv !== "off" ? " tv-" + tv + (B.tvReveal ? " tv-reveal-on" : "") : "") + (lowerThird ? " has-lt" : "") + '" id="board">' +
       '<header class="b-top"><button type="button" class="tb" data-act="b-home" aria-label="Back to the home screen (the game stays saved)">' + IC.back + "</button>" +
       '<div class="b-title">' + esc(C.sportInfo(g.sport).label.split(" ")[0]) + "</div>" +
       '<button type="button" class="tb" data-act="b-log" aria-label="Undo log">' + IC.log + "</button>" +
       '<button type="button" class="tb" data-act="b-lock" aria-label="Lock controls" aria-pressed="' + B.lock + '">' + IC.lock + "</button>" +
       '<button type="button" class="tb" data-act="b-menu" aria-label="Game menu">' + IC.dots + "</button></header>" +
       '<main class="b-face" id="face" aria-label="Scoreboard">' + parts.face + "</main>" +
-      '<footer class="b-ctl" aria-label="Score controls">' + parts.ctl + "</footer></div>";
+      '<footer class="b-ctl" aria-label="Score controls">' + parts.ctl + "</footer>" + lowerThird + revealTab + "</div>";
   }
 
   SB.renderBoard = function () {
@@ -258,7 +268,7 @@
     if (!SB.game) return;
     SB.view = "board"; SB.boardDepth = 1; SB.syncHistory();
     SB.store.set("view", "board");
-    B.prevScore = SB.game.score.slice(); B.lock = false;
+    B.prevScore = SB.game.score.slice(); B.lock = false; B.tvReveal = false;
     SB.renderBoard();
     startTick(); SB.wakeOn().then(() => { if (SB.wake.state !== "on" && !B.awakeNoted && SB.view === "board") { B.awakeNoted = true; SB.toast(wakeNote(), "", 6000); } });
     tick();
@@ -384,6 +394,48 @@
     });
   };
 
+  /* ----- on-deck batter (baseball only): a quick name/number for the TV lower third ----- */
+  ACT["b-ondeck"] = () => {
+    const g = SB.game; if (!g || g.sport !== "baseball") return;
+    const od = g.onDeck || { name: "", num: "" };
+    SB.openSheet({
+      title: "On deck", autofocus: "#od-name",
+      html: '<label class="field"><span class="label">Batter’s name</span><input type="text" id="od-name" maxlength="24" autocomplete="off" placeholder="For example Jake T." value="' + esc(od.name) + '"></label>' +
+        '<label class="field"><span class="label">Number (optional)</span><input type="text" inputmode="numeric" id="od-num" maxlength="4" autocomplete="off" placeholder="For example 7" value="' + esc(od.num) + '"></label>' +
+        '<p class="hint">Shows as a lower third on the TV display while this sheet is closed.</p>',
+      footer: '<button type="button" class="btn ghost" data-clear>Clear</button><button type="button" class="btn" data-save>Save</button>',
+      onOpen(api) {
+        const save = () => { const nm = $("#od-name", api.el).value, nu = $("#od-num", api.el).value; api.close(); dispatch({ type: "onDeck", name: nm, num: nu }); };
+        $("[data-save]", api.el).addEventListener("click", save);
+        $("[data-clear]", api.el).addEventListener("click", () => { api.close(); dispatch({ type: "onDeck", name: "", num: "" }); });
+        $("#od-name", api.el).addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); save(); } });
+      }
+    });
+  };
+
+  /* ----- TV display: cast/mirror this phone to a bigger screen ----- */
+  function setTVMode(mode) {
+    if (!(mode in TV_LABELS)) return;
+    B.tv.mode = mode; B.tvReveal = false; SB.store.set("tvMode", mode);
+    SB.renderBoard();
+  }
+  ACT["tv-reveal"] = () => { B.tvReveal = !B.tvReveal; SB.renderBoard(); };
+  ACT["b-tv"] = () => {
+    const g = SB.game; if (!g) return;
+    SB.openSheet({
+      title: "Cast to TV", cls: "tall",
+      html: '<p class="msg mute" style="margin-bottom:10px">Mirror this phone to a TV (AirPlay, screen mirroring or an HDMI cable), then pick how it should look there. Tap the small dot in the corner any time to bring the scoring controls back for a moment.</p>' +
+        SB.pills("tvmode", [["off", "Off"], ["full", "Full board"], ["overlay", "Broadcast overlay"]], B.tv.mode, "TV display style") +
+        '<p class="hint" style="margin-top:10px">Full board fills the whole screen with no buttons showing — best when the TV IS the scoreboard. Broadcast overlay shrinks it into a corner, for when something else is sharing the screen.</p>',
+      footer: '<button type="button" class="btn" data-close>Done</button>',
+      onOpen(api) {
+        api.el.addEventListener("click", e => {
+          const b = e.target.closest('[data-pills="tvmode"] button'); if (b) setTVMode(b.dataset.v);
+        });
+      }
+    });
+  };
+
   /* ----- generic period label ----- */
   ACT["b-label"] = () => {
     const g = SB.game; if (!g) return;
@@ -462,7 +514,7 @@
     const li = (act, t, sub, danger) => '<button type="button" class="list-btn' + (danger ? " danger" : "") + '" data-act="' + act + '"><span class="t">' + t + (sub ? "<small>" + sub + "</small>" : "") + "</span>" + IC.next + "</button>";
     SB.openSheet({
       title: "Game menu", cls: "tall",
-      html: '<div class="list">' + li("b-edit", "Teams &amp; rules", "Names, colors, period length, innings...") + (g.clock ? li("b-clock", "Set the clock", "Type a minutes and seconds time") : "") + li("b-fix", "Fix numbers", "Change a score, foul, timeout or run directly") + li("b-log", "Undo log", "See and take back recent actions") + "</div>" +
+      html: '<div class="list">' + li("b-edit", "Teams &amp; rules", "Names, colors, period length, innings...") + (g.clock ? li("b-clock", "Set the clock", "Type a minutes and seconds time") : "") + li("b-fix", "Fix numbers", "Change a score, foul, timeout or run directly") + li("b-log", "Undo log", "See and take back recent actions") + li("b-tv", "Cast to TV", TV_LABELS[B.tv.mode]) + "</div>" +
         (g.clock ? '<div class="menu-sec">' + SB.toggle("sound", "Buzzer sound", SB.prefs.sound, "Plays when the clock reaches zero.") + SB.toggle("loud", "Loud buzzer", SB.prefs.loud, "Longer and louder.") +
           '<button type="button" class="btn ghost small" data-act="test-buzz" style="margin-top:6px">Test the buzzer</button></div>' : "") +
         '<div class="list" style="margin-top:12px">' + li("share-text", "Share result", "Copies the score as text") + li("share-pic", "Share picture", "A picture of the board") + "</div>" +

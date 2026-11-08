@@ -155,7 +155,7 @@
       else { g.down = 1; g.togo = cfg.firstDown; g.ballOn = ""; }
     } else if (sport === "baseball") {
       g.inning = 1; g.half = "top"; g.balls = 0; g.strikes = 0; g.outs = 0;
-      g.inn = [[0], [0]]; g.hits = [0, 0]; g.errs = [0, 0]; g.pitches = [0, 0]; g.final = false;
+      g.inn = [[0], [0]]; g.hits = [0, 0]; g.errs = [0, 0]; g.pitches = [0, 0]; g.final = false; g.onDeck = { name: "", num: "" };
     } else { g.label = ""; }
     return g;
   }
@@ -235,7 +235,7 @@
   }
   function bsApply(g, a) {
     var T = a.type;
-    if (g.final && T !== "run" && T !== "set" && T !== "reopen" && T !== "setInning") return g;
+    if (g.final && T !== "run" && T !== "set" && T !== "reopen" && T !== "setInning" && T !== "onDeck") return g;
     var n = assign({}, g), B = batIdx(g), F = 1 - B;
     var pitchUp = function () { if (g.cfg.pitch) n.pitches = pair(n.pitches, F, Math.min(999, n.pitches[F] + 1)); };
     var tm = a.team === 0 || a.team === 1 ? a.team : null;
@@ -261,6 +261,11 @@
       }
       case "reopen": if (!g.final) return g; n.final = false; return n;
       case "set": return setApply(g, a);
+      case "onDeck": {
+        var nm = str(a.name, 24).trim(), nu = str(a.num, 4).trim();
+        if (nm === g.onDeck.name && nu === g.onDeck.num) return g;
+        return set(g, { onDeck: { name: nm, num: nu } });
+      }
     }
     return g;
   }
@@ -523,6 +528,8 @@
       g.score = sums(g.inn);
       g.hits = intPair(raw.hits, 0, 99, 0, 0); g.errs = intPair(raw.errs, 0, 99, 0, 0); g.pitches = intPair(raw.pitches, 0, 999, 0, 0);
       g.final = raw.final === true;
+      var od = isObj(raw.onDeck) ? raw.onDeck : {};
+      g.onDeck = { name: str(od.name, 24).trim(), num: str(od.num, 4).trim() };
     } else { g.label = str(raw.label, 24).trim(); }
     g.u = sanitizeUndo(raw.u);
     return g;
