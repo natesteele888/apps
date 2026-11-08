@@ -326,7 +326,7 @@ main#view { outline: none; }
   .hero .tagline { font-size: 26px; }
   .tb { min-width: 48px; }
   .pl-time .cur { font-size: 26px; }
-  .pl-act { gap: 6px; padding-left: calc(10px + env(safe-area-inset-left)); padding-right: calc(10px + env(safe-area-inset-right)); }
+  .pl-act { gap: 6px; padding-top: 2px; padding-bottom: 4px; padding-left: calc(10px + env(safe-area-inset-left)); padding-right: calc(10px + env(safe-area-inset-right)); }
   .pl-act .btn { padding: 0 12px; gap: 6px; }
   .pl-act .tag-btn { font-size: 17px; }
   .pl-act .btn svg { width: 20px; height: 20px; }
