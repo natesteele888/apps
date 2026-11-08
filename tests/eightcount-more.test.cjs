@@ -4,7 +4,7 @@ const assert = require("assert");
 const fs = require("fs"), path = require("path");
 const SP = path.resolve(__dirname, "..");
 const URL = "http://127.0.0.1:8791/apps/eightcount/";
-const CHROME = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome";
+const CHROME = require("./lib.cjs").CHROME;
 let passed = 0;
 const wait = (ms) => new Promise(r => setTimeout(r, ms));
 async function step(m, fn) { try { await fn(); passed++; console.log("ok  ", m); } catch (e) { process.exitCode = 1; console.log("FAIL", m, "\n    ", e && e.message || e); } }

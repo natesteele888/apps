@@ -1,6 +1,6 @@
 // Practice Clock tests. Run:
 //   cd <newapps> && NODE_PATH=<pr/events/tests/node_modules> node tests/practiceclock.test.cjs
-// Needs Google Chrome at /Applications/Google Chrome.app. Starts its own static server on a free port.
+// Uses Google Chrome on the Mac, Playwright's Chromium elsewhere (lib.cjs CHROME). Starts its own static server on a free port.
 // Part 1: core.js logic with hand-computed numbers. Part 2: the app in a real browser (fake clock for anything timed).
 const assert = require('assert');
 const fs = require('fs');

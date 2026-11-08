@@ -1,6 +1,6 @@
 // Film Lite tests. Run:
 //   cd <newapps> && NODE_PATH=<pr/events/tests/node_modules> node tests/filmlite.test.cjs
-// Needs Google Chrome at /Applications/Google Chrome.app. Starts its own static server on a free port.
+// Uses Google Chrome on the Mac, Playwright's Chromium elsewhere (lib.cjs CHROME). Starts its own static server on a free port.
 // The video used by the browser tests is made by the app's own example generator (a real MediaRecorder webm
 // whose header says "duration unknown", which also exercises the seek-to-end duration fix).
 const assert = require('assert');

@@ -2,7 +2,7 @@
 const { chromium } = require("playwright");
 const app = process.argv[2], want = process.argv[3];
 (async () => {
-  const browser = await chromium.launch({ executablePath: "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" });
+  const browser = await chromium.launch({ executablePath: require("./lib.cjs").CHROME });
   const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
   const page = await ctx.newPage(); const errs = [], failed = [];
   page.on("console", m => { if (m.type() === "error") errs.push(m.text()); });

@@ -1,6 +1,6 @@
 // Who's Where tests. Run:
 //   cd <newapps> && NODE_PATH=<pr/events/tests/node_modules> node tests/whoswhere.test.cjs
-// Needs Google Chrome at /Applications/Google Chrome.app. Starts its own static server on a free port.
+// Uses Google Chrome on the Mac, Playwright's Chromium elsewhere (lib.cjs CHROME). Starts its own static server on a free port.
 // ONLY=<text> runs just the tests whose name contains that text.
 const assert = require('assert');
 const fs = require('fs');

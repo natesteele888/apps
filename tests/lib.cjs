@@ -5,6 +5,9 @@ const path = require('path');
 const net = require('net');
 const ROOT = path.resolve(__dirname, '..');
 const SHOTS = path.join(ROOT, 'shots');
+// Google Chrome on the Mac; anywhere else (a cloud session, CI) Playwright's own Chromium.
+const MAC_CHROME = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
+const CHROME = require('fs').existsSync(MAC_CHROME) ? MAC_CHROME : undefined;
 function freePort() { return new Promise(res => { const s = net.createServer(); s.listen(0, () => { const p = s.address().port; s.close(() => res(p)); }); }); }
 async function startServer(app = 'locker') {
   const port = await freePort();
@@ -16,7 +19,7 @@ async function startServer(app = 'locker') {
   return { port, url: `http://localhost:${port}/apps/${app}/`, stop: () => proc.kill() };
 }
 async function launch() {
-  return chromium.launch({ executablePath: '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome', args: ['--no-sandbox'] });
+  return chromium.launch({ executablePath: CHROME, args: ['--no-sandbox'] });
 }
 // New context at phone size. install.js and fonts are blocked (they are external); icons 404 and are ignored.
 async function newPage(browser, opts = {}) {
@@ -30,4 +33,4 @@ async function newPage(browser, opts = {}) {
   if (opts.today) await page.addInitScript(d => { window.__today = d; }, opts.today);
   return { ctx, page, errors };
 }
-module.exports = { chromium, launch, startServer, newPage, SHOTS, ROOT };
+module.exports = { chromium, launch, startServer, newPage, SHOTS, ROOT, CHROME };

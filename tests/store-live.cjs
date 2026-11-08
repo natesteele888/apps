@@ -1,7 +1,7 @@
 const { chromium } = require("playwright");
 const SP = require("path").resolve(__dirname, "..");
 (async () => {
-  const b = await chromium.launch({ executablePath: "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" });
+  const b = await chromium.launch({ executablePath: require("./lib.cjs").CHROME });
   const ctx = await b.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true });
   const page = await ctx.newPage(); const errs = [];
   page.on("pageerror", e => errs.push(e.message));
