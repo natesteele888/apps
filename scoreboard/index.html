@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Scoreboard: A Scoreboard for Any Gym or Field</title>
+<meta name="description" content="Prop up a phone or tablet and run a scoreboard people can read from the bleachers. Basketball, baseball and softball, football, or just keep score. Everything stays on your phone.">
+<meta name="theme-color" content="#000000">
+<meta name="color-scheme" content="dark">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Scoreboard">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" type="image/png" sizes="192x192" href="/apps/icons/scoreboard-192.png">
+<link rel="apple-touch-icon" href="/apps/icons/scoreboard-192.png">
+<script src="https://natesteele888.github.io/apps/install.js" defer></script>
+<!-- Optional fonts. Loaded without blocking the page; offline or blocked just means the system fonts are used. -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Barlow:wght@400;500;600;700;800&display=swap" media="print" onload="this.media='all'">
+<link rel="stylesheet" href="scoreboard.css">
+</head>
+<body>
+<div id="app"><main id="view" tabindex="-1" aria-live="off"></main></div>
+<div id="flash" class="flash" aria-hidden="true" hidden></div>
+<button type="button" id="unlock" class="unlock" hidden aria-label="Hold for one second to unlock the controls"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 018 0v3"/></svg><span>Hold to unlock</span></button>
+<div id="sheets"></div>
+<div id="toasts"></div>
+<div class="sr" id="live" role="status" aria-live="polite"></div>
+<noscript><p style="padding:24px;font-family:sans-serif;color:#f2f6fa">Scoreboard needs JavaScript turned on to work.</p></noscript>
+<script src="core.js"></script>
+<script src="ui.js"></script>
+<script src="rules.js"></script>
+<script src="share.js"></script>
+<script src="board.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
