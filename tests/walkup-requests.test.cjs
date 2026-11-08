@@ -816,7 +816,7 @@ const waitReq = (page, i, fn) => page.waitForFunction(([i, f]) => { const p = wi
     // not audio at all, with a code: "couldn't read", nothing added, the request is untouched
     const before = await state(page);
     await addInput(page, [{ name: 'WU-ta00001-Broken.mp3', mimeType: 'audio/mpeg', buffer: fs.readFileSync(fx('broken.mp3')) }]); await waitConfirm(page); await pick(page, 'use');
-    await waitToast(page, /couldn.t read "WU-ta00001-Broken\.mp3"/); await noSheets(page);
+    await waitToast(page, /couldn.t read "WU-ta00001-Broken\.mp3"/); assert.ok(/Ask Pat for an MP3, M4A or WAV file instead/.test(await toastText(page)), 'names the player: ' + await toastText(page)); await noSheets(page);
     const after = await state(page); deep([after.songs.length, after.roster[0].songId, after.roster[0].req, after.roster[0].voice], [0, null, before.roster[0].req, before.roster[0].voice], 'nothing added; Pat is still waiting, not Got it');
     // a file with no audio in it and no code
     await addInput(page, [{ name: 'notes.txt', mimeType: 'text/plain', buffer: Buffer.from('hello') }]); await waitToast(page, /couldn.t read "notes\.txt"/); eq((await state(page)).songs.length, 0);

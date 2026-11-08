@@ -7,7 +7,10 @@
   WU.onFile = WU.onFile || {};
 
   var round3 = function (x) { return Math.round(x * 1000) / 1000; };
+  /* A file that came back from a parent carries a WU-<code>- tag; when the code belongs to a player, say whose song it was. */
   SG.decodeMessage = function (name) {
+    var p = C.parseSongFileName(name), pl = p ? C.playerByToken(S.st.roster, p.token) : null, who = pl ? C.firstWord(pl.name) : "";
+    if (who) return "This phone couldn't read \"" + name + "\". Ask " + who + " for an MP3, M4A or WAV file instead.";
     return "This phone couldn't read \"" + name + "\". Try an MP3, M4A or WAV file. If it came from a video or a voice app, save or convert it to MP3 first.";
   };
 
