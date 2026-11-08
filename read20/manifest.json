@@ -1,0 +1,17 @@
+{
+  "name": "Read 20: Nightly reading for new readers",
+  "short_name": "Read 20",
+  "description": "Short, free stories for new readers with big tappable words and a timer for 20 minutes of reading every night. Everything stays on your phone.",
+  "id": "./",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#fff6e3",
+  "theme_color": "#fff6e3",
+  "icons": [
+    { "src": "/apps/icons/read20-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/apps/icons/read20-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/apps/icons/read20-maskable.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

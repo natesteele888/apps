@@ -2108,6 +2108,79 @@
           }
         ]
       }
+    },
+    {
+      "id": "read20",
+      "name": "Read 20",
+      "live": "https://natesteele888.github.io/apps/read20/",
+      "repo": "natesteele888/apps",
+      "path": "read20/",
+      "toolboxIds": [],
+      "listing": {
+        "sub": "Nightly reading for new readers",
+        "cat": "family",
+        "ac": "#6c4ff0",
+        "install": true,
+        "access": "Open",
+        "desc": "A book shop of short, free stories for first-grade readers, from easy to harder. Words are big, and tapping a word highlights it so a reader can keep her place. A timer starts when a story opens and carries across stories up to 20 minutes, and a calendar log keeps every night and every story. Everything stays on the phone.",
+        "feats": [
+          [
+            "📚",
+            "Book shop in 5 levels",
+            "45 short stories and old rhymes, from three-letter words up to fables."
+          ],
+          [
+            "👆",
+            "Tap to highlight",
+            "Big words; tap one to mark where you are. Tap again to clear."
+          ],
+          [
+            "⏱️",
+            "20-minute timer",
+            "Starts on the first story and carries into the next, with a cheer at 20."
+          ]
+        ],
+        "facts": [
+          [
+            "Stories",
+            "45",
+            "free to share, 5 levels"
+          ],
+          [
+            "Nightly goal",
+            "20",
+            "minutes, or pick 10 to 30"
+          ],
+          [
+            "Log",
+            "Calendar",
+            "nights, stories and streaks"
+          ]
+        ],
+        "news": {
+          "d": "Nov 2026",
+          "t": "New: Read 20, a nightly reading log with a story shelf"
+        },
+        "parts": [
+          "pwa",
+          "offline"
+        ],
+        "tie": "The reading-time screen of the family set: pick a story, read, and the nightly log fills itself in.",
+        "rel": [],
+        "for": [
+          "parent"
+        ],
+        "shots": [
+          "mock"
+        ],
+        "version": "1.0.0",
+        "history": [
+          {
+            "v": "1.0.0",
+            "t": "Read 20: first-grade story shelf, tap-to-highlight words and a 20-minute nightly timer"
+          }
+        ]
+      }
     }
   ],
   "comingSoon": []

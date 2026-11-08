@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Read 20: Nightly reading for new readers</title>
+<meta name="description" content="Read 20 is a book shop of short, free stories for new readers, with big words you can tap to highlight and a timer for 20 minutes of reading every night. Everything stays on your phone.">
+<meta name="theme-color" content="#fff6e3">
+<meta name="color-scheme" content="light">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Read 20">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" type="image/png" sizes="192x192" href="/apps/icons/read20-192.png">
+<link rel="apple-touch-icon" href="/apps/icons/read20-192.png">
+<script src="https://natesteele888.github.io/apps/install.js" defer></script>
+<!-- Optional font made for early readers. Loaded without blocking; offline just means the system font is used. -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Andika:wght@400;700&display=swap" media="print" onload="this.media='all'">
+<link rel="stylesheet" href="read20.css">
+</head>
+<body>
+<div id="app">
+  <main id="view" tabindex="-1"></main>
+  <nav class="nav" id="nav" aria-label="Sections" hidden></nav>
+</div>
+<noscript><p style="padding:24px;font-family:sans-serif">Read 20 needs JavaScript turned on to work.</p></noscript>
+<script src="core.js"></script>
+<script src="books.js"></script>
+<script src="app.js"></script>
+<script src="boot.js"></script>
+</body>
+</html>
