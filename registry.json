@@ -685,7 +685,8 @@
         "tie": "Where families meet the league. The Where Do I Go? trainer is being built into its situations tab.",
         "rel": [
           "dashboard",
-          "situations"
+          "situations",
+          "whoswhere"
         ],
         "for": [
           "parent",
@@ -1241,7 +1242,7 @@
       "toolboxIds": [],
       "listing": {
         "sub": "Cheer and dance counts that lock the team together",
-        "cat": "family",
+        "cat": "team",
         "ac": "#ff3d8b",
         "install": true,
         "access": "Open",
@@ -1291,8 +1292,9 @@
         ],
         "tie": "Built for cheer and dance teams, and any group that has to move on the same count. Routines, songs and videos stay on the phone.",
         "rel": [
-          "fitness",
-          "situations"
+          "practiceclock",
+          "walkup",
+          "locker"
         ],
         "for": [
           "coach",
@@ -1337,7 +1339,7 @@
       "toolboxIds": [],
       "listing": {
         "sub": "Draw a play, step through it, watch it run",
-        "cat": "family",
+        "cat": "team",
         "ac": "#ff7a1a",
         "install": true,
         "access": "Open",
@@ -1388,7 +1390,8 @@
         "tie": "The plays side of the family: football formations live in the Bengals app, baseball situations in Where Do I Go?, and this one covers the rest.",
         "rel": [
           "situations",
-          "bengals"
+          "bengals",
+          "filmlite"
         ],
         "for": [
           "coach",
@@ -1426,7 +1429,7 @@
       "toolboxIds": [],
       "listing": {
         "sub": "Your sports notebook, in your pocket",
-        "cat": "family",
+        "cat": "team",
         "ac": "#c6ff3d",
         "install": true,
         "access": "Open",
@@ -1476,7 +1479,8 @@
         "tie": "The notebook that grows up with the athlete: first phone now, athlete card for high school later.",
         "rel": [
           "fitness",
-          "ballclub"
+          "scoreboard",
+          "filmlite"
         ],
         "for": [
           "player",
@@ -1501,6 +1505,495 @@
           {
             "v": "1.0.1",
             "t": "Locker: a sports notebook for daily reps, games and arm care"
+          }
+        ]
+      }
+    },
+    {
+      "id": "practiceclock",
+      "name": "Practice Clock",
+      "live": "https://natesteele888.github.io/apps/practiceclock/",
+      "repo": "natesteele888/apps",
+      "path": "practiceclock/",
+      "toolboxIds": [],
+      "listing": {
+        "sub": "Timed practice plans with a big countdown",
+        "cat": "team",
+        "ac": "#ffb020",
+        "install": true,
+        "access": "Open",
+        "desc": "Build a practice out of timed blocks, then run it from the field with a big countdown that moves to the next block on its own. Station blocks flash and chime when it is time to rotate. Plans and recent practices stay on your phone.",
+        "feats": [
+          [
+            "⏱️",
+            "Big countdown clock",
+            "Block name, time left and what is next, readable from across the field."
+          ],
+          [
+            "🔁",
+            "Station rotations",
+            "Pick 2 to 8 stations and the clock flashes and chimes at every rotation."
+          ],
+          [
+            "🧮",
+            "Fit it to your window",
+            "Set a start time and a cutoff, see when practice ends, and trim blocks to fit."
+          ]
+        ],
+        "facts": [
+          [
+            "Templates",
+            "5",
+            "baseball, softball, basketball, cheer, football"
+          ],
+          [
+            "Longest block",
+            "180",
+            "minutes, or 2 to 8 stations per block"
+          ],
+          [
+            "Recent practices",
+            "20",
+            "kept on this phone"
+          ]
+        ],
+        "news": {
+          "d": "Nov 2026",
+          "t": "New: Practice Clock, a plan-and-run timer for practice"
+        },
+        "parts": [
+          "pwa",
+          "offline",
+          "share"
+        ],
+        "tie": "The practice-day screen of the set: plan the blocks at home, then run them from the field.",
+        "rel": [
+          "eightcount",
+          "scoreboard",
+          "tournamentpack"
+        ],
+        "for": [
+          "coach",
+          "parent"
+        ],
+        "shots": [],
+        "autoShots": [
+          {
+            "url": "",
+            "wait": 2500
+          },
+          {
+            "url": "",
+            "click": "Start with a baseball template",
+            "wait": 1500
+          }
+        ]
+      }
+    },
+    {
+      "id": "whoswhere",
+      "name": "Who's Where",
+      "live": "https://natesteele888.github.io/apps/whoswhere/",
+      "repo": "natesteele888/apps",
+      "path": "whoswhere/",
+      "toolboxIds": [],
+      "listing": {
+        "sub": "One week for every kid, driver and snack job",
+        "cat": "team",
+        "ac": "#3aa0ff",
+        "install": true,
+        "access": "Open",
+        "desc": "Put the family's practices, games and tournaments on one week view, with who is driving and who is bringing the snack. Who's Where warns you when a kid is booked twice or a driver can't get from one place to the next, and offers a fix you can apply with one tap. Everything stays on your phone, and you can share the week as text or a calendar file.",
+        "feats": [
+          [
+            "⚠️",
+            "Clash warnings",
+            "Flags a kid booked twice, or a grown-up who can't get from one place to the next in time."
+          ],
+          [
+            "🚗",
+            "Drivers and snacks",
+            "Shows who drives and who brings the snack, and lists every event that still needs someone."
+          ],
+          [
+            "📅",
+            "Share the week",
+            "Copy the week as text for the group chat, or save a calendar file with a reminder."
+          ]
+        ],
+        "facts": [
+          [
+            "Views",
+            "4",
+            "week, month, needs attention, people"
+          ],
+          [
+            "Calendar files",
+            "3",
+            "one event, this week, or everything"
+          ],
+          [
+            "Reminder",
+            "60",
+            "minutes before each event, in the calendar file"
+          ]
+        ],
+        "news": {
+          "d": "Nov 2026",
+          "t": "New: Who's Where, the family sports week with clash warnings"
+        },
+        "parts": [
+          "pwa",
+          "offline",
+          "calendar",
+          "engine"
+        ],
+        "tie": "The family-schedule screen of the set: it plans the week, then the other apps handle the practice and the game.",
+        "rel": [
+          "ballclub",
+          "tournamentpack",
+          "practiceclock"
+        ],
+        "for": [
+          "parent",
+          "coach"
+        ],
+        "shots": [],
+        "autoShots": [
+          {
+            "url": "",
+            "wait": 2500
+          },
+          {
+            "url": "",
+            "click": "Fill in a sample week",
+            "wait": 1500
+          }
+        ]
+      }
+    },
+    {
+      "id": "tournamentpack",
+      "name": "Tournament Pack",
+      "live": "https://natesteele888.github.io/apps/tournamentpack/",
+      "repo": "natesteele888/apps",
+      "path": "tournamentpack/",
+      "toolboxIds": [],
+      "listing": {
+        "sub": "Games, standings and a pack list for the weekend",
+        "cat": "team",
+        "ac": "#36c48a",
+        "install": true,
+        "access": "Open",
+        "desc": "Keep a whole tournament weekend in one place: every game with an arrive-by time, pool standings with tiebreakers you can reorder, and a bracket for 4, 6 or 8 teams. Check off a packing list, keep notes on where you are staying and eating, and download your games as a calendar file with reminders. Everything stays on your phone and it works without a signal once it has loaded.",
+        "feats": [
+          [
+            "⏰",
+            "Arrive by, next game",
+            "Each game shows when to be there, a countdown to the next one, and a warning when the gap between games is short."
+          ],
+          [
+            "📊",
+            "Standings that explain",
+            "Tiebreakers run in order and each step is shown, with an estimate of your seed if you win out or lose out."
+          ],
+          [
+            "🎒",
+            "Packing list",
+            "A starting list for your sport in four groups, with a bar that shows how much is packed."
+          ]
+        ],
+        "facts": [
+          [
+            "Tiebreakers",
+            "5",
+            "reorder or switch off each one"
+          ],
+          [
+            "Bracket sizes",
+            "3",
+            "4, 6 or 8 teams"
+          ],
+          [
+            "Pack list items",
+            "23",
+            "in the baseball starting list"
+          ]
+        ],
+        "news": {
+          "d": "Nov 2026",
+          "t": "New: Tournament Pack, games, standings, bracket and pack list"
+        },
+        "parts": [
+          "pwa",
+          "offline",
+          "calendar",
+          "engine"
+        ],
+        "tie": "The weekend planner of the set: schedule, standings, bracket and pack list in one place, with calendar reminders.",
+        "rel": [
+          "whoswhere",
+          "scoreboard",
+          "ballclub"
+        ],
+        "for": [
+          "coach",
+          "parent",
+          "player"
+        ],
+        "shots": [],
+        "autoShots": [
+          {
+            "url": "",
+            "wait": 2500
+          },
+          {
+            "url": "",
+            "click": "Load a sample tournament",
+            "wait": 1500
+          }
+        ]
+      }
+    },
+    {
+      "id": "walkup",
+      "name": "Walk-Up",
+      "live": "https://natesteele888.github.io/apps/walkup/",
+      "repo": "natesteele888/apps",
+      "path": "walkup/",
+      "toolboxIds": [],
+      "listing": {
+        "sub": "Record, polish and play every player's walk-up",
+        "cat": "team",
+        "ac": "#b46bff",
+        "install": true,
+        "access": "Open",
+        "desc": "Record each player's name and number on your phone, polish it with an equalizer, compressor and room reverb, and pick the song the player chose. Balance the voice against the music, choose when each one starts, and play the whole walk-up with one big button on game day. Everything stays on your phone, works offline, and backs up to a single file.",
+        "feats": [
+          [
+            "🎙️",
+            "Record and polish",
+            "Record the announcement, trim the silence, then shape it with a five-band equalizer, a compressor and a room reverb."
+          ],
+          [
+            "🎚️",
+            "Mix voice and music",
+            "Balance them with one scrubber, set when the voice and the song start, and let the music dip under the voice."
+          ],
+          [
+            "▶️",
+            "Play it at the plate",
+            "One big Play button runs the batting order, shows who is on deck, and fades out smoothly on Stop."
+          ]
+        ],
+        "facts": [
+          [
+            "Players",
+            "40",
+            "per team"
+          ],
+          [
+            "EQ bands",
+            "5",
+            "for every voice"
+          ],
+          [
+            "Backup",
+            "80",
+            "MB limit with audio"
+          ]
+        ],
+        "news": {
+          "d": "Nov 2026",
+          "t": "New: Walk-Up, record, polish and play each player's walk-up music"
+        },
+        "parts": [
+          "pwa",
+          "offline"
+        ],
+        "tie": "The game-day sound for the set: add each player's voice and song once, then play them from the dugout.",
+        "rel": [
+          "scoreboard",
+          "eightcount",
+          "practiceclock"
+        ],
+        "for": [
+          "coach",
+          "parent",
+          "player"
+        ],
+        "shots": [],
+        "autoShots": [
+          {
+            "url": "",
+            "wait": 2500
+          },
+          {
+            "url": "",
+            "click": "Add a sample lineup",
+            "wait": 4200
+          }
+        ]
+      }
+    },
+    {
+      "id": "scoreboard",
+      "name": "Scoreboard",
+      "live": "https://natesteele888.github.io/apps/scoreboard/",
+      "repo": "natesteele888/apps",
+      "path": "scoreboard/",
+      "toolboxIds": [],
+      "listing": {
+        "sub": "A scoreboard for any gym or field",
+        "cat": "team",
+        "ac": "#29d3e0",
+        "install": true,
+        "access": "Open",
+        "desc": "Keep score for basketball, baseball, football or anything else, with a big clock, fouls, timeouts and a baseball count. Lock the screen so a stray tap cannot change the score, and undo any mistake. Everything stays on your phone.",
+        "feats": [
+          [
+            "⏱️",
+            "A clock you can trust",
+            "The clock follows real time, so a sleeping phone does not lose seconds."
+          ],
+          [
+            "🔒",
+            "Lock the screen",
+            "Hold to unlock, so a bumped phone cannot change the score."
+          ],
+          [
+            "↩️",
+            "Undo any mistake",
+            "Step back through the last 100 changes, from a wrong basket to a wrong out."
+          ]
+        ],
+        "facts": [
+          [
+            "Sports",
+            "4",
+            "basketball, baseball, football, or any score"
+          ],
+          [
+            "Undo steps",
+            "100",
+            "per game"
+          ],
+          [
+            "Recent games",
+            "30",
+            "kept on this phone"
+          ]
+        ],
+        "news": {
+          "d": "Nov 2026",
+          "t": "New: Scoreboard, big numbers for basketball, baseball and football"
+        },
+        "parts": [
+          "pwa",
+          "offline",
+          "engine"
+        ],
+        "tie": "The game-day screen of the set: prop it up at the scorer's table or on the backstop.",
+        "rel": [
+          "walkup",
+          "tournamentpack",
+          "locker"
+        ],
+        "for": [
+          "coach",
+          "parent"
+        ],
+        "shots": [],
+        "autoShots": [
+          {
+            "url": "",
+            "wait": 2500
+          },
+          {
+            "url": "",
+            "click": "Start a basketball game",
+            "wait": 1500
+          }
+        ]
+      }
+    },
+    {
+      "id": "filmlite",
+      "name": "Film Lite",
+      "live": "https://natesteele888.github.io/apps/filmlite/",
+      "repo": "natesteele888/apps",
+      "path": "filmlite/",
+      "toolboxIds": [],
+      "listing": {
+        "sub": "Review a clip, tag the moments",
+        "cat": "team",
+        "ac": "#7a6cff",
+        "install": true,
+        "access": "Open",
+        "desc": "Pick a video from your phone and review it with frame stepping, slow motion and loops. Tag the moments that matter with a short note, draw circles, arrows and angles on the paused frame, then copy or share the notes. The video stays on your phone, and your notes come back when you pick the same file again.",
+        "feats": [
+          [
+            "🎞️",
+            "Frame by frame",
+            "Step one frame at a time, slow down to a quarter speed, or loop just the part you care about."
+          ],
+          [
+            "🚩",
+            "Tag the moments",
+            "Mark a moment or a stretch, pick Good, Fix, Question or Coach note, and add a short note."
+          ],
+          [
+            "✏️",
+            "Draw on the frame",
+            "Circle, point or measure an angle on the paused picture and save it with the tag."
+          ]
+        ],
+        "facts": [
+          [
+            "Speeds",
+            "5",
+            "0.25x up to 2x"
+          ],
+          [
+            "Drawing tools",
+            "5",
+            "pen, arrow, circle, line, angle"
+          ],
+          [
+            "Frame rates",
+            "3",
+            "24, 30 or 60 per second for frame steps"
+          ]
+        ],
+        "news": {
+          "d": "Nov 2026",
+          "t": "New: Film Lite, frame-by-frame video review with tags and drawing"
+        },
+        "parts": [
+          "pwa",
+          "offline"
+        ],
+        "tie": "The video-review screen of the set: watch the clip, tag what you see, then take the notes to practice.",
+        "rel": [
+          "playboard",
+          "locker",
+          "bengals"
+        ],
+        "for": [
+          "coach",
+          "player",
+          "parent"
+        ],
+        "shots": [],
+        "autoShots": [
+          {
+            "url": "",
+            "wait": 2500
+          },
+          {
+            "url": "",
+            "click": "See an example",
+            "wait": 1500
           }
         ]
       }

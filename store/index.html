@@ -23,7 +23,7 @@
 :root{
   --bg:#f2f2f7;--card:#ffffff;--card2:#f7f7fa;--text:#111114;--muted:#6e6e76;--line:rgba(60,60,67,.14);
   --blue:#0a73ff;--pill:#eceef3;--shadow:0 10px 30px rgba(0,0,0,.08);--glass:rgba(242,242,247,.82);
-  --football:#ff6a1a;--baseball:#2f6df6;--family:#8a5cf6;--builder:#e2a51b;
+  --football:#ff6a1a;--baseball:#2f6df6;--family:#8a5cf6;--team:#17b8a6;--builder:#e2a51b;
   --r:22px;--f:-apple-system,BlinkMacSystemFont,"SF Pro Display","Segoe UI",Roboto,Helvetica,Arial,sans-serif;
 }
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
@@ -246,7 +246,7 @@ footer a,footer button,#main p a,#main p button,#sheet p a,#sheet p button{displ
 <script src="qr.js"></script>
 <script>
 /* ===== The catalog. Public copy only: no data, no names of kids, no schedules. ===== */
-const CATS={football:{n:"Football",e:"🏈",c:"var(--football)"},baseball:{n:"Baseball & League",e:"⚾",c:"var(--baseball)"},family:{n:"Everyday",e:"🧩",c:"var(--family)"},builder:{n:"Builder tools",e:"🧰",c:"var(--builder)"}};
+const CATS={football:{n:"Football",e:"🏈",c:"var(--football)"},baseball:{n:"Baseball & League",e:"⚾",c:"var(--baseball)"},team:{n:"Team & player tools",e:"🏟️",c:"var(--team)"},family:{n:"Everyday",e:"🧩",c:"var(--family)"},builder:{n:"Builder tools",e:"🧰",c:"var(--builder)"}};
 const PARTS={
   signin:{e:"🔐",n:"Google sign-in",d:"One tap to get in, and private data stays private."},
   rules:{e:"🛡️",n:"Security rules",d:"The database itself decides who can see what."},
@@ -258,7 +258,7 @@ const PARTS={
   share:{e:"🔗",n:"Share by link",d:"No account needed for families to join in."}
 };
 let APPS=[]; /* filled from ../registry.json (the app catalog). Edit listings in the Toolbox, not here. */
-const NUMW=["Zero","One","Two","Three","Four","Five","Six","Seven","Eight","Nine","Ten","Eleven","Twelve","Thirteen","Fourteen","Fifteen","Sixteen"];
+const NUMW=["Zero","One","Two","Three","Four","Five","Six","Seven","Eight","Nine","Ten","Eleven","Twelve","Thirteen","Fourteen","Fifteen","Sixteen","Seventeen","Eighteen","Nineteen","Twenty","Twenty-one","Twenty-two","Twenty-three","Twenty-four","Twenty-five"];
 let SOON=[];
 const ROLES={player:"I'm a player",parent:"I'm a parent",coach:"I coach",board:"I run a league",curious:"Just curious"};
 const ROLE_E={player:"🏃",parent:"👪",coach:"📋",board:"🏛️"};
@@ -355,18 +355,20 @@ function renderApps(){
 
 /* ===== Big Picture ===== */
 const GROUPS=[
-  {k:"football",n:"ASL Bengals football",ids:["bengals","gridiron"],x:150,y:110},
-  {k:"baseball",n:"LYBS baseball & softball",ids:["dashboard","ballclub","situations","cards","sponsor-banners"],x:450,y:110},
-  {k:"family",n:"Everyday",ids:["fitness","cube","picks","events"],x:150,y:370},
-  {k:"builder",n:"Behind the scenes",ids:["toolbox"],x:450,y:370}
+  {k:"football",n:"ASL Bengals football",ids:["bengals","gridiron"],x:150,y:110,ny:120},
+  {k:"baseball",n:"LYBS baseball & softball",ids:["dashboard","ballclub","situations","cards","sponsor-banners"],x:450,y:110,ny:400},
+  {k:"family",n:"Everyday",ids:["fitness","cube","picks","events"],x:150,y:370,ny:680},
+  {k:"builder",n:"Behind the scenes",ids:["toolbox"],x:450,y:370,ny:1500},
+  {k:"team",n:"Practice & game day",ids:["practiceclock","scoreboard","tournamentpack","whoswhere","walkup"],x:150,y:630,ny:960},
+  {k:"team",n:"Player & team skills",ids:["eightcount","playboard","locker","filmlite"],x:450,y:630,ny:1240}
 ];
-const LINKS=[["situations","ballclub","trainer moving into"],["bengals","gridiron","team → organization"],["dashboard","ballclub","board ↔ families"],["cards","ballclub","same teams"],["sponsor-banners","dashboard","same board sign-in"],["fitness","bengals","off-season"],["toolbox","bengals",""],["toolbox","dashboard",""],["toolbox","situations",""],["toolbox","cube",""]];
+const LINKS=[["situations","ballclub","trainer moving into"],["bengals","gridiron","team → organization"],["dashboard","ballclub","board ↔ families"],["cards","ballclub","same teams"],["sponsor-banners","dashboard","same board sign-in"],["fitness","bengals","off-season"],["toolbox","bengals",""],["toolbox","dashboard",""],["toolbox","situations",""],["toolbox","cube",""],["practiceclock","eightcount",""],["practiceclock","scoreboard",""],["scoreboard","tournamentpack",""],["scoreboard","walkup",""],["whoswhere","tournamentpack",""],["tournamentpack","ballclub",""],["playboard","situations",""],["locker","fitness",""],["eightcount","walkup",""]];
 function webSVG(){
-  const narrow=innerWidth<620;const VW=narrow?380:600,VH=narrow?1000:480;
-  const G=narrow?GROUPS.map((g,i)=>({...g,x:190,y:[120,400,680,900][i]})):GROUPS;
+  const narrow=innerWidth<620;const VW=narrow?380:600,VH=narrow?1620:760;
+  const G=narrow?GROUPS.map(g=>({...g,x:190,y:g.ny})):GROUPS;
   const pos={};G.forEach(g=>{const n=g.ids.length;g.ids.forEach((id,i)=>{const t=n===1?0:(i/(n)*Math.PI*2)-Math.PI/2;const r=n===1?0:(n>2?78:62);pos[id]={x:g.x+r*Math.cos(t),y:g.y+r*Math.sin(t)+(n===1?0:8)}})});
   const col=k=>getComputedStyle(document.documentElement).getPropertyValue("--"+k).trim();
-  let s=`<svg class="web" viewBox="0 0 ${VW} ${VH}" role="img" aria-labelledby="webT"><title id="webT">How the apps connect: football, baseball, everyday and behind-the-scenes groups with links between apps</title>`;
+  let s=`<svg class="web" viewBox="0 0 ${VW} ${VH}" role="img" aria-labelledby="webT"><title id="webT">How the apps connect: football, baseball, practice and game day, player and team skills, everyday and behind-the-scenes groups with links between apps</title>`;
   G.forEach(g=>{s+=`<circle cx="${g.x}" cy="${g.y+8}" r="${g.ids.length>2?128:g.ids.length>1?108:62}" fill="${col(g.k)}" fill-opacity=".09" stroke="${col(g.k)}" stroke-opacity=".35" stroke-dasharray="4 6"/>
     <text x="${g.x}" y="${g.y-(g.ids.length>2?118:g.ids.length>1?98:56)}" text-anchor="middle" font-size="13" font-weight="700" fill="${col(g.k)}">${esc(g.n)}</text>`});
   LINKS.forEach(([a,b,l])=>{const p=pos[a],q=pos[b];const mx=(p.x+q.x)/2,my=(p.y+q.y)/2-18;
