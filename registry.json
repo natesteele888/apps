@@ -405,31 +405,31 @@
           }
         ],
         "latest": {
-          "d": "Nov 7, 2026",
-          "t": "Sign-in: stop the published code hashes from working as Firebase passwords",
-          "url": "https://github.com/natesteele888/ASL-Bengals/commit/77b6471b91367745442eb737d5d5064ed45fdbce"
+          "d": "Nov 8, 2026",
+          "t": "Banner: end with 'All of us coaches are proud of you.'",
+          "url": "https://github.com/natesteele888/ASL-Bengals/commit/042a29286c4387f2b6e3b0e126bd3fad4a0d8f63"
         },
-        "version": "1.49.7",
+        "version": "1.50.1",
         "history": [
+          {
+            "v": "1.50.1",
+            "t": "Banner: end with 'All of us coaches are proud of you.'"
+          },
+          {
+            "v": "1.50.0",
+            "t": "Banner: Proud of you, Bengals (2026 D1 Super Bowl Runner-Up)"
+          },
+          {
+            "v": "1.49.9",
+            "t": "Stat Keeper: make the small buttons easy to tap on the sideline"
+          },
+          {
+            "v": "1.49.8",
+            "t": "Super Bowl banner: Let's go Bengals, D1 Super Bowl vs Milford Hawks"
+          },
           {
             "v": "1.49.7",
             "t": "Sign-in: stop the published code hashes from working as Firebase passwords"
-          },
-          {
-            "v": "1.49.6",
-            "t": "Film Room: escape a note's time and stop telling coaches to open the rule to everyone"
-          },
-          {
-            "v": "1.49.5",
-            "t": "Bengals app: keep the Help button's NEW tag small so the ? stays visible"
-          },
-          {
-            "v": "1.49.4",
-            "t": "Bengals app: easier taps on the Play Calls i, ball-carrier filter and standings team names"
-          },
-          {
-            "v": "1.49.3",
-            "t": "How-To Guide: screenshot tutorials for players, parents and coaches"
           }
         ]
       },
@@ -984,12 +984,16 @@
           }
         ],
         "latest": {
-          "d": "Nov 7, 2026",
-          "t": "Tutorial cards: bottom sheet on a phone instead of a floating box",
-          "url": "https://github.com/natesteele888/cube-clock/commit/1fb47770b8da05827c1e43d7ddf97683561c0847"
+          "d": "Nov 8, 2026",
+          "t": "Cube Clock: keep the top buttons on screen on small phones",
+          "url": "https://github.com/natesteele888/cube-clock/commit/2d6ec2afc5bff1d18e47db14ed6ad60343c0ad9a"
         },
-        "version": "1.2.4",
+        "version": "1.2.5",
         "history": [
+          {
+            "v": "1.2.5",
+            "t": "Cube Clock: keep the top buttons on screen on small phones"
+          },
           {
             "v": "1.2.4",
             "t": "Tutorial cards: bottom sheet on a phone instead of a floating box"
@@ -1005,10 +1009,6 @@
           {
             "v": "1.2.1",
             "t": "Add the shared install pop-up"
-          },
-          {
-            "v": "1.2.0",
-            "t": "Only clear Cube Clock's own old caches on update"
           }
         ]
       }
@@ -1099,31 +1099,31 @@
         ],
         "autoShots": [],
         "latest": {
-          "d": "Nov 7, 2026",
-          "t": "Make the filter chips, Close button and checkboxes easy to tap",
-          "url": "https://github.com/natesteele888/sponsor-banner-inventory/commit/0b77775ae1fede56349e5faad56ca865a0cf96b6"
+          "d": "Nov 8, 2026",
+          "t": "Take the admin email out of the public sponsor backend file",
+          "url": "https://github.com/natesteele888/sponsor-banner-inventory/commit/089321da1f7ee1170c0822641db25884c38e8047"
         },
-        "version": "1.1.1",
+        "version": "1.1.6",
         "history": [
           {
-            "v": "1.1.1",
-            "t": "Make the filter chips, Close button and checkboxes easy to tap"
+            "v": "1.1.6",
+            "t": "Take the admin email out of the public sponsor backend file"
           },
           {
-            "v": "1.1.0",
-            "t": "Show a no-signal message instead of a blank screen"
+            "v": "1.1.5",
+            "t": "Offer Try again when the banner list can't load"
           },
           {
-            "v": "1.0.9",
-            "t": "Brain pointer: start each session from the current code, not an old copy"
+            "v": "1.1.4",
+            "t": "Make the Back gesture close a banner instead of leaving the app"
           },
           {
-            "v": "1.0.8",
-            "t": "Add the shared install pop-up"
+            "v": "1.1.3",
+            "t": "Show that a new banner was added"
           },
           {
-            "v": "1.0.7",
-            "t": "Serve only banner photos from getImage and check lat/lng on upload"
+            "v": "1.1.2",
+            "t": "Let Drop pin work on more than one banner per visit"
           }
         ]
       }
@@ -1204,31 +1204,31 @@
           }
         ],
         "latest": {
-          "d": "Nov 7, 2026",
-          "t": "Show a check-your-signal card instead of an endless Loading when Firebase can't load",
-          "url": "https://github.com/natesteele888/events/commit/531489e583a49118be5cdfc0dbf3172f50240bcf"
+          "d": "Nov 8, 2026",
+          "t": "Make the Directions link on the invitation easy to tap",
+          "url": "https://github.com/natesteele888/events/commit/4ba159ca854630ca3538a7e11a43dfcf8307c66b"
         },
-        "version": "1.2.1",
+        "version": "1.2.7",
         "history": [
           {
-            "v": "1.2.0",
-            "t": "Show a check-your-signal card instead of an endless Loading when Firebase can't load"
+            "v": "1.2.7",
+            "t": "Make the Directions link on the invitation easy to tap"
           },
           {
-            "v": "1.1.9",
-            "t": "Publish job: skip quietly until a Firebase key is added"
+            "v": "1.2.6",
+            "t": "Say check your signal instead of wrong code or event not found"
           },
           {
-            "v": "1.1.8",
-            "t": "Publish to steele-events.web.app automatically after tests pass"
+            "v": "1.2.5",
+            "t": "Fix Add to calendar for events that end after midnight"
           },
           {
-            "v": "1.1.7",
-            "t": "Brain pointer: start each session from the current code, not an old copy"
+            "v": "1.2.4",
+            "t": "Warn before leaving the event builder with unsaved changes"
           },
           {
-            "v": "1.1.6",
-            "t": "Save the Events page at install so it opens with no signal"
+            "v": "1.2.3",
+            "t": "Say check your signal instead of event gone when a read fails"
           }
         ]
       }
@@ -2181,8 +2181,16 @@
         "shots": [
           "mock"
         ],
-        "version": "1.0.1",
+        "version": "1.0.3",
         "history": [
+          {
+            "v": "1.0.3",
+            "t": "Read 20: the Back gesture closes a pop-up instead of leaving the app"
+          },
+          {
+            "v": "1.0.2",
+            "t": "Read 20: fix the log calendar stretching past the screen on phones"
+          },
           {
             "v": "1.0.1",
             "t": "Add Read 20: first-grade story shelf, tap-to-highlight words, 20-minute nightly timer and reading log"
@@ -2190,8 +2198,8 @@
         ],
         "latest": {
           "d": "Nov 8, 2026",
-          "t": "Add Read 20: first-grade story shelf, tap-to-highlight words, 20-minute nightly timer and reading log",
-          "url": "https://github.com/natesteele888/apps/commit/e72aeb5328c2d5afd59f00b2abb1d6a4e1960195"
+          "t": "Read 20: the Back gesture closes a pop-up instead of leaving the app",
+          "url": "https://github.com/natesteele888/apps/commit/7701bab49e3e8e390ffe4b0564a5cf0d93f2117e"
         }
       }
     }
