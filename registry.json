@@ -79,12 +79,24 @@
         ],
         "autoShots": [],
         "latest": {
-          "d": "Nov 7, 2026",
-          "t": "Installs: never start them inside the Toolbox",
-          "url": "https://github.com/natesteele888/apps/commit/d69f0fe9050c4f34600cb63fe4e96bad7b88349a"
+          "d": "Nov 9, 2026",
+          "t": "Add Photo Blueprint: a map pin and a blueprint sheet for every photo",
+          "url": "https://github.com/natesteele888/apps/commit/0703fc26a8adb30a49aac14e7fa196d02b876228"
         },
-        "version": "1.1.8",
+        "version": "1.2.2",
         "history": [
+          {
+            "v": "1.2.1",
+            "t": "Add Photo Blueprint: a map pin and a blueprint sheet for every photo"
+          },
+          {
+            "v": "1.2.0",
+            "t": "Get Ready: Google sign-in backup, and always load the freshest copy"
+          },
+          {
+            "v": "1.1.9",
+            "t": "Read 20: optional Google sign-in and cloud backup (a parent signs in once; reading never needs it)"
+          },
           {
             "v": "1.1.8",
             "t": "Installs: never start them inside the Toolbox"
@@ -92,18 +104,6 @@
           {
             "v": "1.1.7",
             "t": "Toolbox: actually keep the Firebase code so the app opens with no signal"
-          },
-          {
-            "v": "1.1.6",
-            "t": "Save the Toolbox Firestore rules in the repo, with emulator tests"
-          },
-          {
-            "v": "1.1.5",
-            "t": "Install pop-up for every app, and a one-tap-each install checklist"
-          },
-          {
-            "v": "1.1.4",
-            "t": "Toolbox: Claude's review on Now and in every app"
           }
         ]
       }
@@ -702,11 +702,23 @@
         ],
         "latest": {
           "d": "Nov 9, 2026",
-          "t": "Fix extra-base-hit/relay plays: stop sending a corner infielder to cover second",
-          "url": "https://github.com/natesteele888/lybs-ballclub/commit/ff4b38e42e65279bb2d981bf23ce77c8ef3e2ce3"
+          "t": "Where Do I Go: give extra-base hits a realistic roll instead of always reaching the fence",
+          "url": "https://github.com/natesteele888/lybs-ballclub/commit/b00edfedb4159d8b651a07abc135e6c428901e97"
         },
-        "version": "1.24.4",
+        "version": "1.24.8",
         "history": [
+          {
+            "v": "1.24.7",
+            "t": "Where Do I Go: give extra-base hits a realistic roll instead of always reaching the fence"
+          },
+          {
+            "v": "1.24.6",
+            "t": "Where Do I Go: stop sending two players to the same spot on a sure triple"
+          },
+          {
+            "v": "1.24.5",
+            "t": "Let a Google-signed-in coach open Ballclub with no signal"
+          },
           {
             "v": "1.24.3",
             "t": "Fix extra-base-hit/relay plays: stop sending a corner infielder to cover second"
@@ -714,18 +726,6 @@
           {
             "v": "1.24.2",
             "t": "Make Ballclub's small buttons and links easier to tap"
-          },
-          {
-            "v": "1.24.1",
-            "t": "Show the last-seen team data with no signal"
-          },
-          {
-            "v": "1.24.0",
-            "t": "Keep Google sign-in usable with no signal"
-          },
-          {
-            "v": "1.23.9",
-            "t": "Show a message and Try again when a tab can't load"
           }
         ]
       }
@@ -877,12 +877,20 @@
           }
         ],
         "latest": {
-          "d": "Nov 7, 2026",
-          "t": "Brain pointer: start each session from the current code, not an old copy",
-          "url": "https://github.com/natesteele888/fitness-hub/commit/32551a8782f48c9670967a9c22c074bc96551d47"
+          "d": "Nov 9, 2026",
+          "t": "Power Program: the Back gesture closes an exercise card instead of leaving the app",
+          "url": "https://github.com/natesteele888/fitness-hub/commit/3389d0f9936ca0024842b8a1cfb30bf90758e5fd"
         },
-        "version": "1.3.0",
+        "version": "1.3.2",
         "history": [
+          {
+            "v": "1.3.2",
+            "t": "Power Program: the Back gesture closes an exercise card instead of leaving the app"
+          },
+          {
+            "v": "1.3.1",
+            "t": "Power Program: make the exercise info buttons and Prev/Next easier to tap"
+          },
           {
             "v": "1.3.0",
             "t": "Brain pointer: start each session from the current code, not an old copy"
@@ -894,14 +902,6 @@
           {
             "v": "1.2.8",
             "t": "Power Program: open offline right after the first visit"
-          },
-          {
-            "v": "1.2.7",
-            "t": "Add the shared install pop-up"
-          },
-          {
-            "v": "1.2.6",
-            "t": "Power Program: keep the sync link off the public repo"
           }
         ]
       }
@@ -2193,25 +2193,33 @@
         "shots": [
           "mock"
         ],
-        "version": "1.0.3",
+        "version": "1.0.8",
         "history": [
           {
-            "v": "1.0.3",
-            "t": "Read 20: the Back gesture closes a pop-up instead of leaving the app"
+            "v": "1.0.8",
+            "t": "Read 20: keep the Next button on screen on small phones"
           },
           {
-            "v": "1.0.2",
-            "t": "Read 20: fix the log calendar stretching past the screen on phones"
+            "v": "1.0.7",
+            "t": "Read 20: press and hold a word to see its syllables and letter sounds"
           },
           {
-            "v": "1.0.1",
-            "t": "Add Read 20: first-grade story shelf, tap-to-highlight words, 20-minute nightly timer and reading log"
+            "v": "1.0.6",
+            "t": "Read 20: save from the Log screen, and fix the total (was minutes labeled hours)"
+          },
+          {
+            "v": "1.0.5",
+            "t": "Read 20: optional Google sign-in and cloud backup (a parent signs in once; reading never needs it)"
+          },
+          {
+            "v": "1.0.4",
+            "t": "Read 20: keep her reading time safe (second copy, permanent storage, backup file, save warning)"
           }
         ],
         "latest": {
-          "d": "Nov 8, 2026",
-          "t": "Read 20: the Back gesture closes a pop-up instead of leaving the app",
-          "url": "https://github.com/natesteele888/apps/commit/7701bab49e3e8e390ffe4b0564a5cf0d93f2117e"
+          "d": "Nov 9, 2026",
+          "t": "Read 20: keep the Next button on screen on small phones",
+          "url": "https://github.com/natesteele888/apps/commit/6205fa758d1fdc77d991d1574e9e72aef264efb2"
         }
       }
     },
@@ -2282,25 +2290,26 @@
         "shots": [
           "mock"
         ],
-        "version": "1.3.0",
+        "version": "1.0.3",
         "history": [
           {
-            "v": "1.3.0",
-            "t": "Get Ready: optional Google sign-in backs up lists, check marks, streaks and photos, and brings them to a new phone"
+            "v": "1.0.3",
+            "t": "Get Ready: Google sign-in backup, and always load the freshest copy"
           },
           {
-            "v": "1.2.0",
-            "t": "Get Ready: two new celebration dances, the twerk and the Griddy"
+            "v": "1.0.2",
+            "t": "Get Ready: separate lists for different days"
           },
           {
-            "v": "1.1.0",
-            "t": "Get Ready: separate lists for different days (weekend, Mon/Thu, Tue/Fri), copy a list, switch a day's list"
-          },
-          {
-            "v": "1.0.0",
-            "t": "Add Get Ready: school-morning checklist with photos, timers, reminders, streaks and a dance celebration"
+            "v": "1.0.1",
+            "t": "Add Get Ready: school-morning checklist with photos, timers, reminders and a dance celebration"
           }
-        ]
+        ],
+        "latest": {
+          "d": "Nov 9, 2026",
+          "t": "Get Ready: Google sign-in backup, and always load the freshest copy",
+          "url": "https://github.com/natesteele888/apps/commit/f384386b4bedb9185e203d8b269b84d1b1a84977"
+        }
       }
     },
     {
@@ -2371,6 +2380,18 @@
         ],
         "shots": [
           "mock"
+        ],
+        "latest": {
+          "d": "Nov 9, 2026",
+          "t": "Add Photo Blueprint: a map pin and a blueprint sheet for every photo",
+          "url": "https://github.com/natesteele888/apps/commit/0703fc26a8adb30a49aac14e7fa196d02b876228"
+        },
+        "version": "1.0.1",
+        "history": [
+          {
+            "v": "1.0.1",
+            "t": "Add Photo Blueprint: a map pin and a blueprint sheet for every photo"
+          }
         ]
       }
     }
