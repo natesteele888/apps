@@ -1,6 +1,6 @@
 // Lets the store install and open with a weak signal. Pages always load fresh when online.
 // Cache names are shared by every app on this address, so only touch the "store-" ones.
-const CACHE="store-v4";
+const CACHE="store-v5";
 const SHELL=["./","qr.js","manifest.json","../icons/store-192.png"];
 // Save the page at install: the first visit happens before this worker exists, so nothing else would be saved.
 self.addEventListener("install",e=>{self.skipWaiting();
