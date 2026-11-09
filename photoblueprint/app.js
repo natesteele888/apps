@@ -435,7 +435,7 @@
     if (wantsCloud) {
       if (user) {
         try { await S.cloud.publish(rec, state.image); stored.published = true; msg = d.public ? "Published to the map" : "Saved to this phone and your account"; }
-        catch (e) { stored.pending = true; msg = e && e.code === "permission-denied" ? "Saved on this phone. The cloud refused it (is the sheet too big?)" : "Saved on this phone. It'll publish when you have signal."; }
+        catch (e) { stored.pending = true; msg = e && e.code === "permission-denied" ? "Saved on this phone. The cloud refused it (is the sheet too big?)" : "Saved on this phone. It'll publish when you have signal."; if (window.nateHealth) window.nateHealth.note("sync", "Publish failed: " + (e && (e.code || e.message) || "unknown")); }
       } else { stored.pending = true; msg = "Saved on this phone. It publishes once you sign in."; }
     }
     await S.local.put(stored); S.local.persist();
@@ -455,6 +455,7 @@
     </section>
     <section class="panel"><h2>On your phone</h2>
       <div class="toggle"><div><b>Home screen</b><small>Opens full screen, works with no signal</small></div><button class="btn sm" id="install">Add to home screen</button></div>
+      <div class="toggle"><div><b>Something wrong?</b><small>A short report: saving, storage, recent errors. No names or pictures.</small></div><button class="btn sm" id="report" type="button" onclick="window.nateHealth&&nateHealth.report()">Send a report</button></div>
     </section>
     <section class="panel"><h2>Look</h2>
       <div class="toggle"><div><b>Sheet</b><small>White lines on blue, or blue ink on paper</small></div><div class="seg"><button type="button" data-theme="blueprint" aria-pressed="${state.theme === "blueprint"}">Blueprint</button><button type="button" data-theme="paper" aria-pressed="${state.theme === "paper"}">Paper</button></div></div>

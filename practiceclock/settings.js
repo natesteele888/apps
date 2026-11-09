@@ -35,6 +35,7 @@
         (canShareFiles() ? '<button type="button" class="btn ghost block" data-act="share-backup">Share backup file...</button>' : "") +
         '<label class="btn ghost block file-btn">Restore from a backup file<input type="file" accept="application/json,.json" data-restore aria-label="Choose a Practice Clock backup file"></label></div></section>';
       h += '<section class="card"><button type="button" class="list-btn" data-act="about"><span class="t">Help and about<small>' + esc(Core.VERSION) + '</small></span><span class="go">' + I.go + '</span></button>' +
+        '<button type="button" class="list-btn" style="margin-top:8px" onclick="window.nateHealth&&nateHealth.report()"><span class="t">Something wrong?<small>Send a problem report</small></span><span class="go">' + I.go + '</span></button>' +
         '<button type="button" class="list-btn warn" data-act="clear-all" style="margin-top:8px;margin-bottom:0"><span class="t">Clear everything<small>Deletes all plans, recent practices and settings</small></span><span class="go">' + I.go + "</span></button></section>";
       h += '<p class="ver">' + esc(Core.VERSION) + "</p>";
       el.innerHTML = h;

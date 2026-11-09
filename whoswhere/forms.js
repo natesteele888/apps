@@ -446,6 +446,7 @@
         '<p class="hint">Restoring replaces everything now in Who’s Where. Save the file somewhere you can find it (Files, Google Drive, or email it to yourself).</p>' +
         (S.memMode ? '<p class="errmsg">Can’t save on this browser. Anything you add will be lost when you close the app. Back up before you leave.</p>' : "") +
         '<h3>More</h3><button type="button" class="list-btn" data-act="about"><span class="t">Help &amp; about<small>' + esc(C.VERSION) + "</small></span>" + I.go + "</button>" +
+        '<button type="button" class="list-btn" onclick="window.nateHealth&&nateHealth.report()"><span class="t">Something wrong?<small>Send a problem report</small></span>' + I.go + "</button>" +
         '<div class="game-sec"><button type="button" class="btn danger block" data-act="clear-all">Clear everything</button></div>',
       onOpen(api) {
         const root = api.el;

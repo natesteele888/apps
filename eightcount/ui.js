@@ -320,7 +320,7 @@
       '<label class="lab" for="vol">Click volume</label><input type="range" id="vol" min="0.1" max="1" step="0.1" value="' + st.volume + '">' +
       '<div class="list tog"><button data-t="flash" aria-pressed="' + st.flash + '">Flash the screen on the beat <i></i></button><button data-t="vibrate" aria-pressed="' + st.vibrate + '">Buzz on every count of 1 <i></i></button><button data-t="subdivide" aria-pressed="' + st.subdivide + '">Soft tick on the “&amp;” between beats <i></i></button></div>' +
       '<label class="lab">Lock in: start on the next mark every</label><div class="seg">' + [10, 20, 30].map(function (n) { return '<button class="pill" data-cy="' + n + '" aria-pressed="' + (st.cycle === n * 1000) + '">' + n + " s</button>"; }).join("") + '</div>' +
-      '<div class="list"><button data-s="backup">Back up my routines (file)</button><button data-s="restore">Restore from a backup</button><button data-s="help">How it works</button></div>' +
+      '<div class="list"><button data-s="backup">Back up my routines (file)</button><button data-s="restore">Restore from a backup</button><button data-s="help">How it works</button><button onclick="window.nateHealth&&nateHealth.report()">Something wrong? Send a report</button></div>' +
       '<p class="hint">' + VERSION + ". Everything is saved on this phone only.</p>");
     $("#trim", sh).oninput = function (e) { st.trim = +e.target.value; $("#trimv", sh).textContent = st.trim + " ms"; App.saveSettings(); };
     $("#vol", sh).oninput = function (e) { st.volume = +e.target.value; App.saveSettings(); };

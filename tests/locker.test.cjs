@@ -232,7 +232,7 @@ function streakDoc(opts) {
     assert.ok(/Add your first drill/.test(await page.textContent('#view')));
     await page.screenshot({ path: SHOTS + '/locker-02-today-empty-390.png' });
     // only the expected hosts were contacted (fonts + install pop-up are blocked in tests)
-    const bad = [...hosts].filter(h => !/^(fonts\.googleapis\.com|fonts\.gstatic\.com|natesteele888\.github\.io\/apps\/install\.js)/.test(h));
+    const bad = [...hosts].filter(h => !/^(fonts\.googleapis\.com|fonts\.gstatic\.com|natesteele888\.github\.io\/apps\/(install|health)\.js)/.test(h));
     assert.deepStrictEqual(bad, [], 'unexpected network hosts: ' + bad.join());
     assert.deepStrictEqual(errors, []);
     await page.context().close();

@@ -139,6 +139,7 @@
       '<div class="stack" style="margin-top:12px"><button type="button" class="btn block" data-act="backup">' + I.dl + 'Back up my notes</button>' +
       '<label class="btn ghost block file-btn">Restore from a backup file<input type="file" accept="application/json,.json" data-restore aria-label="Choose a Film Lite backup file"></label></div>' +
       '<p class="hint mute" style="margin-top:10px;font-size:14px">Restoring replaces the notes and settings on this phone. After a restore, pick each video again and its notes come back.</p></div>' +
+      '<div class="sheet-sec"><h3>Something wrong?</h3><button type="button" class="btn ghost block" onclick="window.nateHealth&&nateHealth.report()">Send a problem report</button></div>' +
       '<div class="sheet-sec"><h3>About</h3><p class="msg">' + esc(C.VERSION) + ". Videos are played straight from your phone's files. They are never uploaded, and Film Lite does not keep a copy. Nothing leaves this phone.</p>" +
       '<button type="button" class="btn danger block" style="margin-top:12px" data-act="clear-all">' + I.trash + "Clear everything</button></div>";
   }

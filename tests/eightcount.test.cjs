@@ -15,7 +15,7 @@ async function newPage(ctx, errs) {
   const page = await ctx.newPage();
   page.on("console", (m) => { if (m.type() === "error") errs.push("console: " + m.text()); });
   page.on("pageerror", (e) => errs.push("pageerror: " + e.message));
-  await page.route("**/install.js", (r) => r.fulfill({ status: 200, contentType: "text/javascript", body: "" }));
+  await page.route("**/install.js", (r) => r.fulfill({ status: 200, contentType: "text/javascript", body: "" })); await page.route("**/health.js", (r) => r.fulfill({ status: 200, contentType: "text/javascript", body: "" }));
   await page.route("**/fonts.googleapis.com/**", (r) => r.abort());
   await page.route("**/fonts.gstatic.com/**", (r) => r.abort());
   return page;

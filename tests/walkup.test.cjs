@@ -1090,7 +1090,7 @@ const dbKeys = page => page.evaluate(() => window.WalkupApp.WU.db.keys());
     eq((await state(page)).roster.length, 9, 'the team is there'); await resetSpies(page); await page.click('#gPlay'); await page.waitForFunction(() => window.__starts.length >= 1); await page.click('#gPlay');
     await page.goto(srv.url + 'index.html?x=1'); await page.waitForSelector('#gPlay', { timeout: 10000 });
     eq(await page.evaluate(() => navigator.serviceWorker.controller && navigator.serviceWorker.controller.scriptURL.split('/').pop()), 'sw.js');
-    await ctx.setOffline(false); deep(errors.filter(e => !/net::ERR|Failed to fetch|install\.js|fonts/.test(e)), []); await ctx.close();
+    await ctx.setOffline(false); deep(errors.filter(e => !/net::ERR|Failed to fetch|install\.js|health\.js|fonts/.test(e)), []); await ctx.close();
   });
 
   /* ============ the Back button ============ */

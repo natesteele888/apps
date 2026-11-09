@@ -1309,9 +1309,9 @@ function rng(seed) { return function () { seed |= 0; seed = seed + 0x6D2B79F5 | 
     const code = files.filter(f => /\.(js|html)$/.test(f) && f !== 'sw.js').map(f => fs.readFileSync(path.join(dir, f), 'utf8')).join('\n');
     assert.ok(!/\bfetch\s*\(|XMLHttpRequest|WebSocket|sendBeacon|navigator\.sendBeacon/.test(code), 'no network calls in app code');
     const urls = (code.match(/https?:\/\/[^\s"'<>)]+/g) || []).filter(u => !/^https?:\/\/www\.w3\.org/.test(u));
-    urls.forEach(u => assert.ok(/natesteele888\.github\.io\/apps\/install\.js|fonts\.(googleapis|gstatic)\.com/.test(u), 'unexpected external reference: ' + u));
+    urls.forEach(u => assert.ok(/natesteele888\.github\.io\/apps\/(install|health)\.js|fonts\.(googleapis|gstatic)\.com/.test(u), 'unexpected external reference: ' + u));
     assert.ok(!/[\w.+-]+@[\w-]+\.[a-z]{2,}|\b\d{3}[.) -]\d{3}[.-]\d{4}\b/i.test(code + fs.readFileSync(path.join(dir, 'scoreboard.css'), 'utf8')), 'no emails or phone numbers');
-    assert.ok(/<script src="https:\/\/natesteele888\.github\.io\/apps\/install\.js" defer><\/script>/.test(code), 'shared install script');
+    assert.ok(/<script src="https:\/\/natesteele888\.github\.io\/apps\/(install|health)\.js" defer><\/script>/.test(code), 'shared install script');
   });
 
 //__UI2__

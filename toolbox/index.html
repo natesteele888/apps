@@ -30,7 +30,7 @@
 <script src="https://www.gstatic.com/firebasejs/11.6.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/11.6.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/11.6.0/firebase-firestore-compat.js"></script>
-<script src="https://natesteele888.github.io/apps/install.js" defer></script>
+<script src="https://natesteele888.github.io/apps/install.js" defer></script><script src="https://natesteele888.github.io/apps/health.js" defer></script>
 </head>
 <body>
 <div id="gate"><div class="box"><img src="icons/icon-192.png" width="88" height="88" alt="" style="border-radius:22px"><h1>Toolbox</h1><p id="gateMsg">Loading…</p><button id="gateBtn" hidden>Sign in with Google</button></div></div>
@@ -1912,6 +1912,7 @@ function openSettings(){
     <label class="btn"><input type="file" id="imp" accept="application/json,.json" hidden>Choose file…</label> <span class="prog" id="impMsg"></span>
     <h3 class="as-h">Backup</h3><p class="sh-note">Saves everything to this device. Keep it private, never in a GitHub repo.</p><button class="btn" id="exp">Download backup</button>
     <h3 class="as-h">App icons</h3><p class="sh-note">Send every icon you've set here to the live apps and the App Store in one go.</p><button class="btn" id="pubAll">Publish all my app icons</button> <span class="prog" id="pubMsg"></span>
+    <h3 class="as-h">Help</h3><p class="sh-note">A short report of this phone's saving, storage and recent errors, with no data in it.</p><button class="btn" type="button" onclick="window.nateHealth&&nateHealth.report()">Something wrong? Send a report</button>
     <h3 class="as-h">Account</h3><button class="btn" id="out">Sign out</button></section>`;
   $("#shScrim").onclick=closeSheet;$("#shClose").onclick=closeSheet;
   document.querySelectorAll("[data-closesheet]").forEach(a=>a.addEventListener("click",closeSheet));

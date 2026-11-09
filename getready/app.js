@@ -28,7 +28,7 @@
   function save() {
     if (sigOf(S) !== cfgSig) { cfgSig = sigOf(S); S.mod = Date.now(); } // lists, reminders or settings changed: the newer set wins when phones sync
     const j = JSON.stringify(S);
-    try { localStorage.setItem(KEY, j); failed = false; } catch (e) { failed = true; }
+    try { localStorage.setItem(KEY, j); failed = false; } catch (e) { failed = true; if (window.nateHealth) window.nateHealth.note("save", "Checklist could not be saved (" + (e && e.name || "error") + ")"); }
     DB.put("state", j).catch(() => {}); // a second copy, in case the phone clears one of the two
     const w = $("#warn"); if (w) w.hidden = !failed;
     CL.schedule();
@@ -337,6 +337,7 @@
     const on = cloudOn(), st = CL.status;
     return '<h2 class="sec">Back up &amp; sync</h2><div class="card"><p id="cl">' + (cloudLine() || "Not backed up yet. Everything is on this phone only.") + '</p><p class="fine">Sign in with Google to keep your lists, check marks, streak and pictures safe, and to bring them to a new phone. It is optional.</p><div class="row wrap" style="margin-top:10px">' +
       (on || st === "loading" ? "" : '<button class="btn pri" data-act="cloudin">Sign in with Google</button>') + (st === "ok" || (st === "offline" && CL.email) ? '<button class="btn" data-act="cloudnow">Back up now</button>' : "") + (on ? '<button class="btn" data-act="cloudout">Sign out</button>' : "") + "</div></div>" +
+      '<h2 class="sec">Something wrong?</h2><div class="card"><p class="fine" style="margin-bottom:8px">Sends a short report (saving, storage, recent errors; no names or pictures) to whoever looks after the app.</p><button class="btn" type="button" onclick="window.nateHealth&&nateHealth.report()">Send a problem report</button></div>' +
       '<h2 class="sec">Sound</h2><div class="card row sp"><span>Beeps and cheers</span><button class="sw" role="switch" aria-checked="' + !!S.sound + '" aria-label="Sound" data-act="sound"></button></div>' +
       '<h2 class="sec">Celebration</h2><p class="mute">When everything is checked off, a random full-screen dance plays. Preview one:</p><div class="chips">' +
       CEL.STYLES.map(s => '<button class="chip" data-act="preview" data-style="' + s + '">' + CEL.NAMES[s] + "</button>").join("") + "</div>" +

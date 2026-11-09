@@ -29,7 +29,7 @@ function wav(path_) {
   const page = await ctx.newPage();
   page.on("console", m => { if (m.type() === "error") errs.push(m.text()); });
   page.on("pageerror", e => errs.push("pageerror " + e.message));
-  await page.route("**/install.js", r => r.fulfill({ status: 200, contentType: "text/javascript", body: "" }));
+  await page.route("**/install.js", r => r.fulfill({ status: 200, contentType: "text/javascript", body: "" })); await page.route("**/health.js", r => r.fulfill({ status: 200, contentType: "text/javascript", body: "" }));
   await page.route("**/fonts.g*/**", r => r.abort());
   await page.addInitScript(() => { window.__audios = []; const A = window.Audio; window.Audio = function () { const a = new A(); window.__audios.push(a); return a; }; });
   const WAV = SP + "/shots/test-click-120.wav"; wav(WAV);
@@ -137,7 +137,7 @@ function wav(path_) {
     const c2 = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true });
     const p2 = await c2.newPage(); const e2 = [];
     p2.on("pageerror", e => e2.push(e.message));
-    await p2.route("**/install.js", r => r.fulfill({ status: 200, contentType: "text/javascript", body: "" }));
+    await p2.route("**/install.js", r => r.fulfill({ status: 200, contentType: "text/javascript", body: "" })); await p2.route("**/health.js", r => r.fulfill({ status: 200, contentType: "text/javascript", body: "" }));
     await p2.route("**/fonts.g*/**", r => r.abort());
     await p2.addInitScript(() => { Storage.prototype.setItem = function () { throw new Error("quota"); }; Storage.prototype.getItem = function () { throw new Error("blocked"); }; });
     await p2.goto(URL, { waitUntil: "load" }); await p2.waitForSelector(".quick");

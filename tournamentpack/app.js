@@ -568,6 +568,7 @@
       '<div class="stack"><button type="button" class="btn block" data-act="dl-backup">Download backup file</button>' + (canShare ? '<button type="button" class="btn ghost block" data-act="share-backup">Share backup file...</button>' : "") +
       '<label class="btn ghost block file-btn">Restore from a backup file<input type="file" accept="application/json,.json" data-restore aria-label="Choose a Tournament Pack backup file"></label>' +
       '<button type="button" class="btn ghost block" data-act="sample">Load a sample tournament</button><button type="button" class="btn danger block" data-act="clear-all">Clear everything</button></div></article>' +
+      '<article class="card"><h3>Something wrong?</h3><button type="button" class="btn ghost block" onclick="window.nateHealth&&nateHealth.report()">Send a problem report</button></article>' +
       '<article class="card"><h3>About</h3><p><b>' + esc(C.VERSION) + "</b></p><p class=\"mute\">No accounts, no ads, and nothing is sent anywhere. Only files you choose to save or share (a backup, a calendar file) leave the app. Works offline once it has loaded one time.</p></article></div>";
   };
   function backupFile() {

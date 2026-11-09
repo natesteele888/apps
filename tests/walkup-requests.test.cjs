@@ -628,7 +628,7 @@ const waitReq = (page, i, fn) => page.waitForFunction(([i, f]) => { const p = wi
     // another player gets a different token
     await page.click(sheetSel + ' [data-close].btn'); await noSheets(page);
     await openPlayerSheet(page, 'Robin Sample'); const m2 = await msgOf(page), i2 = C.parseRequestLink(linkIn(m2)); deep([i2.n, i2.u], ['Robin', '12']); assert.notStrictEqual(i2.t, info.t);
-    deep(outside.filter(u => !/fonts\.(googleapis|gstatic)\.com|natesteele888\.github\.io\/apps\/install\.js/.test(u)), [], 'asking made no network request beyond the page\'s own fonts and install script'); deep(errors, []); await ctx.close();
+    deep(outside.filter(u => !/fonts\.(googleapis|gstatic)\.com|natesteele888\.github\.io\/apps\/(install|health)\.js/.test(u)), [], 'asking made no network request beyond the page\'s own fonts and install script'); deep(errors, []); await ctx.close();
   });
 
   await test('Ask a parent: the message follows the name and number until the coach types in it; Share is only there when the phone has it, and cancelling it asks no one', async () => {
@@ -983,7 +983,7 @@ const waitReq = (page, i, fn) => page.waitForFunction(([i, f]) => { const p = wi
     vm.runInNewContext(sw, { self: { addEventListener: (t, f) => { listeners[t] = f; }, skipWaiting() {}, location: { origin: srv.url }, registration: { scope: srv.url }, clients: { claim: async () => { claimed = true; } } }, caches: { keys: async () => Array.from(store.keys()), delete: async k => store.delete(k) }, URL, Request, Response, Promise, Array, String });
     await new Promise(res => listeners.activate({ waitUntil: p => p.then(res) }));
     deep(Array.from(store.keys()).sort(), ['locker-v3', 'other-app-v1', 'walkup-inbox-v1', 'walkup-v2'], 'old walkup caches gone; the inbox and other apps\' caches kept'); eq(claimed, true);
-    deep(errors.filter(e => !/net::ERR|Failed to fetch|install\.js|fonts/.test(e)), []); await ctx.close();
+    deep(errors.filter(e => !/net::ERR|Failed to fetch|install\.js|health\.js|fonts/.test(e)), []); await ctx.close();
   });
 
   const SHARE_FILES = [['WU-ta00001-Shared_Song.wav', 'audio/wav', SONG_B], ['Plain Shared.mp3', 'audio/mpeg', MP3], ['voice.m4a', '', SONG_C]];
@@ -1015,7 +1015,7 @@ const waitReq = (page, i, fn) => page.waitForFunction(([i, f]) => { const p = wi
     const s = await state(page); deep(s.songs.map(x => x.name).sort(), ['Plain Shared.mp3', 'WU-ta00001-Shared_Song.wav', 'voice.m4a'].sort(), 'all three arrived (the mp3 was decoded for real)'); deep([s.roster[0].songId === s.songs.find(x => x.name.startsWith('WU-')).id, s.roster[0].req.st], [true, 'got']);
     // nothing comes in twice on the next start
     await page.reload(); await page.waitForSelector('#wuNav .navb'); await settle(page, 600); eq((await state(page)).songs.length, 3); eq(await page.$$('.sheet-wrap').then(e => e.length), 0);
-    deep(errors.filter(e => !/net::ERR|Failed to fetch|install\.js|fonts/.test(e)), []); await ctx.close();
+    deep(errors.filter(e => !/net::ERR|Failed to fetch|install\.js|health\.js|fonts/.test(e)), []); await ctx.close();
   });
 
   await test('Android share: songs that are waiting when the app comes back to the front are taken then; nothing waiting means nothing happens; a file that is not audio is told plainly', async () => {

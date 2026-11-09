@@ -196,6 +196,7 @@
         '<h3 class="sub-h">Back up &amp; restore</h3><p class="msg">Everything is saved only on this phone, in this browser. Clearing the browser\'s data erases it, so back up now and then. A backup holds your ' + (n ? n + " recent " + (n === 1 ? "game" : "games") : "recent games (none yet)") + " and these settings.</p><p class=\"msg mute\" id=\"last-bk\">" + esc(lastBackupText()) + "</p>" +
         '<div class="stack" style="margin-top:10px"><button type="button" class="btn block" data-act="dl-backup">Back up now</button><label class="btn ghost block file-btn">Restore from a backup file<input type="file" accept="application/json,.json" data-restore aria-label="Choose a Scoreboard backup file"></label></div>' +
         (SB.memMode ? '<p class="errmsg">This browser is not letting Scoreboard save, so a backup is the only way to keep these.</p>' : "") +
+        '<h3 class="sub-h">Something wrong?</h3><button type="button" class="btn ghost block" onclick="window.nateHealth&&nateHealth.report()">Send a problem report</button>' +
         '<h3 class="sub-h">About</h3><p class="msg"><b>' + esc(C.VERSION) + '</b></p><p class="msg mute">A scoreboard for any gym or field. No account, no ads, nothing is sent anywhere. Only a backup file or a picture you choose to share ever leaves the app.</p>' +
         '<button type="button" class="btn danger block" data-act="clear-all" style="margin-top:14px">Clear everything</button>',
       footer: '<button type="button" class="btn" data-close>Done</button>',

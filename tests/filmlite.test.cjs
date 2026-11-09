@@ -239,7 +239,7 @@ async function pngCount(page, file, rgb, tol) {
       const full = path.join(APPDIR, f), sz = fs.statSync(full).size; assert.ok(sz < 60 * 1024, f + ' is ' + sz + ' bytes');
       if (/\.js$/.test(f) && f !== 'sw.js') { const src = fs.readFileSync(full, 'utf8'); assert.ok(!/\bfetch\s*\(|XMLHttpRequest|WebSocket|sendBeacon|EventSource/.test(src), f + ' makes no network calls'); }
     }
-    const urls = (idx.match(/https?:\/\/[^"')\s]+/g) || []).filter(u => !/^https:\/\/(natesteele888\.github\.io\/apps\/install\.js|fonts\.(googleapis|gstatic)\.com)/.test(u) && !/w3\.org/.test(u));
+    const urls = (idx.match(/https?:\/\/[^"')\s]+/g) || []).filter(u => !/^https:\/\/(natesteele888\.github\.io\/apps\/(install|health)\.js|fonts\.(googleapis|gstatic)\.com)/.test(u) && !/w3\.org/.test(u));
     deq(urls, [], 'only the shared install script and the optional fonts are referenced');
     const css = fs.readFileSync(path.join(APPDIR, 'filmlite.css'), 'utf8'); assert.ok(/prefers-reduced-motion/.test(css) && /safe-area-inset-bottom/.test(css));
   });
@@ -249,7 +249,7 @@ async function pngCount(page, file, rgb, tol) {
      ============================================================ */
   await test('Example: "See an example" makes a real video in a few seconds and opens it with 3 sample tags, shown in the player', async () => {
     const { page, errors } = await newPage(br, { today: TODAY });
-    const reqs = []; page.on('request', r => { const u = r.url(); if (!/^(data:|blob:|about:)/.test(u) && !/^http:\/\/localhost:/.test(u) && !/^https:\/\/(natesteele888\.github\.io\/apps\/install\.js|fonts\.(googleapis|gstatic)\.com\/)/.test(u)) reqs.push(u); });
+    const reqs = []; page.on('request', r => { const u = r.url(); if (!/^(data:|blob:|about:)/.test(u) && !/^http:\/\/localhost:/.test(u) && !/^https:\/\/(natesteele888\.github\.io\/apps\/(install|health)\.js|fonts\.(googleapis|gstatic)\.com\/)/.test(u)) reqs.push(u); });
     await page.goto(srv.url); await page.waitForSelector('.home');
     await shot(page, '01-home-390');
     eq((await page.textContent('#exBtn')).trim(), 'See an example'); assert.ok((await page.textContent('.home label.file-btn')).includes('Choose a video'));

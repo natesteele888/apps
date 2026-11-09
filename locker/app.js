@@ -454,7 +454,7 @@
         "<h3>Your privacy</h3><ul><li>Everything is saved on this phone only. There are no accounts and no servers.</li><li>Nothing about you goes into a web link.</li><li>Only files you choose to save or share (a backup, a card picture) leave the app.</li></ul>" +
         "<h3>Keep a backup</h3><p>A phone can clear a web app's saved data, for example after a reset or when it is low on space. Download a backup file now and then and keep it somewhere safe.</p>" +
         '<h3>About pitch counts</h3><div class="disclaimer"><p><b>Presets come from one league\'s rules. Always check your own league or tournament rules.</b></p><p>A pitch count includes only pitches thrown in games unless your league says otherwise.</p></div>' +
-        '<div class="row wrap" style="margin-top:14px"><button type="button" class="btn ghost small" data-act="tips-reset">Show tips again</button><button type="button" class="btn ghost small" data-act="backup-sheet">Back up &amp; restore</button></div>' +
+        '<div class="row wrap" style="margin-top:14px"><button type="button" class="btn ghost small" data-act="tips-reset">Show tips again</button><button type="button" class="btn ghost small" data-act="backup-sheet">Back up &amp; restore</button><button type="button" class="btn ghost small" onclick="window.nateHealth&&nateHealth.report()">Something wrong? Send a report</button></div>' +
         '<p class="ver">' + esc(C.VERSION) + " &middot; Made for young athletes and their families</p>"
     });
   };

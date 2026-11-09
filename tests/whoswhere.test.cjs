@@ -1017,7 +1017,7 @@ const evByTitle = (st, title, date) => st.events.filter(e => e.title === title &
     const { ctx, page } = await newPage(br, { today: TODAY }); const reqs = [];
     ctx.on('request', r => reqs.push(r.url())); await page.goto(srv.url); await page.waitForSelector('.welcome'); await page.click('[data-act=sample]'); await tab(page, 'month'); await tab(page, 'attention'); await page.waitForTimeout(300);
     const foreign = reqs.filter(u => !u.startsWith(srv.url.replace(/apps\/whoswhere\/$/, '')) && !u.startsWith('data:'));
-    assert.ok(foreign.every(u => /natesteele888\.github\.io\/apps\/install\.js|fonts\.(googleapis|gstatic)\.com/.test(u)), foreign.join());
+    assert.ok(foreign.every(u => /natesteele888\.github\.io\/apps\/(install|health)\.js|fonts\.(googleapis|gstatic)\.com/.test(u)), foreign.join());
     const src = ['core', 'base', 'views', 'forms', 'app'].map(f => fs.readFileSync(path.join(__dirname, '../apps/whoswhere/' + f + '.js'), 'utf8')).join('\n');
     assert.ok(!/\bfetch\s*\(|XMLHttpRequest|WebSocket|sendBeacon|EventSource|importScripts/.test(src.replace(/\/\*[\s\S]*?\*\//g, '')), 'no network APIs in the code');
     const priv = (src + fs.readFileSync(path.join(__dirname, '../apps/whoswhere/index.html'), 'utf8') + fs.readFileSync(path.join(__dirname, '../apps/whoswhere/manifest.json'), 'utf8')).match(/[\w.+-]+@[\w-]+\.[a-z]{2,}|\b\d{3}[.) -]\d{3}[.-]\d{4}\b/gi) || []; deq(priv, []); // no emails or phone numbers

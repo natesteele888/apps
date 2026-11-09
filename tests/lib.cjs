@@ -28,7 +28,7 @@ async function newPage(browser, opts = {}) {
   const errors = [];
   page.on('console', m => { if (m.type() === 'error') { const t = m.text(); if (/Failed to load resource/.test(t)) return; errors.push('console: ' + t); } });
   page.on('pageerror', e => errors.push('pageerror: ' + e.message));
-  await page.route(/natesteele888\.github\.io\/apps\/install\.js/, r => r.abort());
+  await page.route(/natesteele888\.github\.io\/apps\/(install|health)\.js/, r => r.abort());
   await page.route(/fonts\.(googleapis|gstatic)\.com/, r => r.abort());
   if (opts.today) await page.addInitScript(d => { window.__today = d; }, opts.today);
   return { ctx, page, errors };

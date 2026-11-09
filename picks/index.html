@@ -97,7 +97,7 @@ code{font-family:ui-monospace,Menlo,monospace;font-size:13px;background:var(--pa
 [hidden]{display:none!important}
 @media(max-width:520px){header h1{font-size:32px}.badge{width:46px;height:46px;font-size:18px}.mid{width:36px}table{font-size:11.5px}}
 </style>
-<script src="https://natesteele888.github.io/apps/install.js" defer></script>
+<script src="https://natesteele888.github.io/apps/install.js" defer></script><script src="https://natesteele888.github.io/apps/health.js" defer></script>
 </head>
 <body>
 <div class="wrap" id="app"><div class="gate"><div class="box"><img src="/apps/icons/picks-192.png" alt=""><h1>Gameday Picks</h1><p style="color:var(--ink-dim)">Loading…</p></div></div></div>
@@ -127,7 +127,7 @@ function render(){
   // keep the page position and the focused pick button through a redraw
   const y=window.scrollY,fb=document.activeElement,fg=fb&&fb.dataset&&fb.dataset.g,ft=fb&&fb.dataset&&fb.dataset.t;
   $("#app").innerHTML=`<header><div><h1>Gameday Picks</h1><p>Pick a side, every week, all season.</p></div>
-    <div class="me"><b>${esc(S.me.name)}</b>${rec.total?`${rec.w}-${rec.l} · ${Math.round(rec.w/rec.total*100)}%`:"No results yet"}<br><button class="linkbtn" id="rename">rename</button> · <button class="linkbtn" id="out">sign out</button></div></header>
+    <div class="me"><b>${esc(S.me.name)}</b>${rec.total?`${rec.w}-${rec.l} · ${Math.round(rec.w/rec.total*100)}%`:"No results yet"}<br><button class="linkbtn" id="rename">rename</button> · <button class="linkbtn" id="out">sign out</button> · <button class="linkbtn" type="button" onclick="window.nateHealth&&nateHealth.report()">something wrong?</button></div></header>
     <nav class="views">${views.map(([k,n])=>`<button data-view="${k}" ${S.view===k?'aria-current="page"':""}>${n}</button>`).join("")}</nav>
     <section id="view"></section>`;
   $("#out").onclick=()=>firebase.auth().signOut();

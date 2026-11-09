@@ -21,7 +21,7 @@ function ok(cond, name, extra) {
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 
 // Errors we expect: the icons are supplied later, install.js / fonts are blocked in tests.
-const EXPECTED = /\/apps\/icons\/playboard-|install\.js|fonts\.g|favicon/;
+const EXPECTED = /\/apps\/icons\/playboard-|install\.js|health\.js|fonts\.g|favicon/;
 
 async function newPage(ctx, opts = {}) {
   const page = await ctx.newPage();
@@ -33,7 +33,7 @@ async function newPage(ctx, opts = {}) {
     if (EXPECTED.test(url) || EXPECTED.test(m.text())) return;
     page.__errs.push('console: ' + m.text() + ' @' + url);
   });
-  await page.route('**/install.js', r => r.abort());
+  await page.route('**/install.js', r => r.abort()); await page.route('**/health.js', r => r.abort());
   await page.route('**/fonts.g*', r => r.abort());
   if (!opts.noGoto) await page.goto(BASE);
   return page;

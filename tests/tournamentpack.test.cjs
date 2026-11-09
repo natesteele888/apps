@@ -1296,7 +1296,7 @@ const ranks = (res) => res.rows.map(r => r.team + ':' + r.rank + (r.tied ? 't' :
       const clean = async where => {
         eq(await page.evaluate(() => window.__xss), undefined, where + ': nothing ran');
         eq(await page.evaluate(() => document.body.querySelectorAll('img, [onerror], [onload], [onclick], [onmouseover]').length), 0, where + ': no injected elements');
-        eq(await page.evaluate(() => document.querySelectorAll('script').length), 5, where + ': no extra script tags (install.js, core, ui, views, app)');
+        eq(await page.evaluate(() => document.querySelectorAll('script').length), 6, where + ': no extra script tags (install.js, health.js, core, ui, views, app)');
       };
       await page.click('[data-act=tour-new]'); await openSheetWait(page);
       await page.fill('#f-name', IMG); await page.fill('#f-team', '<b>Evil</b> "Team"'); await saveSheet(page); await noSheets(page);

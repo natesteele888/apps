@@ -7,6 +7,7 @@ NODE_PATH=/path/to/node_modules tests/run.sh           # everything (about 20 mi
 NODE_PATH=/path/to/node_modules tests/run.sh locker    # one app
 ```
 
+- `health`: the shared health check and problem report (`health.js`) that every app loads: a healthy phone, crash and failed-promise logging that survives a reload with repeats folded, the no-save bar, the Something wrong? sheet sending through the share sheet or copying, installed detection, and a check that every app loads the script and has the button.
 - `photoblueprint`: the sheet math (angle of view, shutter and aperture formats, APEX, compass, the field-of-view wedge, share links), the EXIF reader on JPEGs built in the test (both byte orders, GPS, damaged files), then the app: every screen at phone size, a photo whose camera notes fill the sheet and drop the pin, stance and direction, the blueprint sheet, share links, edit, delete, backup, themes and units, small phones, the Back button, offline with the real service worker.
 - `eightcount-core`: the pure timing math (beats, lock-in marks, share links).
 - `eightcount`, `eightcount-more`: the screens, click timing (checked with an oscillator spy), lock-in across two pages with a shifted clock, recording with a fake camera, offline.

@@ -35,6 +35,7 @@
       '<div class="stack"><button type="button" class="btn" data-act="backup-settings">Back up settings</button><button type="button" class="btn" data-act="backup-all">Back up everything with audio</button>' +
       U.fileBtn({ text: "Restore from a backup file", cls: "ghost block", accept: "application/json,.json", attr: 'data-file="restore"', label: "Choose a Walk-Up backup file" }) + "</div>" +
       '<p class="mute small-note">"Back up settings" saves the team, batting order, mixes, voice polish and song list, but not the audio files. After restoring it on another phone, players show "needs a song" or "needs a voice" until you pick the files again. "Back up everything" includes the audio in one bigger file (up to 80 MB).</p></section>';
+    h += '<section class="card"><h3>Something wrong?</h3><button type="button" class="btn ghost" onclick="window.nateHealth&&nateHealth.report()">Send a problem report</button></section>';
     h += '<section class="card"><h3>Start over</h3><button type="button" class="btn danger" data-act="clear-all">Clear everything</button></section>';
     h += '<section class="card"><h3>About</h3><p class="msg"><b>' + esc(C.VERSION) + '</b></p><p class="mute small-note">A walk-up studio and game-day player. Record each player\'s announcement, polish it, add the songs the kids pick, balance voice against music, and play it on cue. Everything stays on this phone. No account, no sign-in, nothing is uploaded.</p></section>';
     return h;

@@ -346,6 +346,8 @@
       <button class="btn" id="cin" hidden>Sign in with Google</button>
       <button class="btn alt" id="cnow" hidden>Back up now</button>
       <button class="btn alt" id="cout" hidden>Sign out of the backup</button>
+      <h3 class="subh">Something wrong?</h3>
+      <button class="btn alt" type="button" onclick="window.nateHealth&&nateHealth.report()">Send a problem report</button>
       <h3 class="subh">Or save a file</h3>
       <p class="fine left">${S.bk ? "Last backup: " + esc(S.bk) : "No backup saved yet."} The file is saved on this phone; keep it somewhere safe.</p>
       <button class="btn alt" id="sb">💾 Save a backup file</button>

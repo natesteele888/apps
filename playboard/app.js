@@ -976,6 +976,8 @@ function aboutSheet() {
       h("h3", {}, "Keep your plays safe"),
       h("p", {}, "Plays are saved on this device only. Phones can clear a web app's storage, so make a backup now and then."),
       h("div", { class: "btnrow" }, h("button", { class: "btn", onclick: function () { close(true); backupSheet(); } }, "Back up or restore")),
+      h("h3", {}, "Something wrong?"),
+      h("div", { class: "btnrow" }, h("button", { class: "btn", onclick: function () { close(true); if (window.nateHealth) window.nateHealth.report(); } }, "Send a problem report")),
       h("p", { class: "muted small", style: "margin-top:18px" }, VERSION));
   });
 }
