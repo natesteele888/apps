@@ -1,4 +1,4 @@
-// Firestore rules for the nates-toolbox Firebase project (Toolbox + Gameday Picks).
+// Firestore rules for the nates-toolbox Firebase project (Toolbox, Gameday Picks, Read 20, Photo Blueprint).
 // Copy of the live rules from the Firebase console, saved 2026-11-06.
 // OWNER_EMAIL stands in for Nate's sign-in email (this repo is public, so the
 // real address is not committed). Put the real address back before pasting
@@ -61,6 +61,42 @@ service cloud.firestore {
         && request.resource.data.keys().hasOnly(['log', 'updated'])
         && request.resource.data.log is string && request.resource.data.log.size() <= 400000;
       allow delete: if request.auth != null && request.auth.uid == uid;
+    }
+    // ---------- Photo Blueprint (apps/photoblueprint): photos pinned to where they were shot ----------
+    // sp_sheets: one photographer's own sheets (owner only, their cross-phone copy).
+    // sp_public: the sheets shared with everyone (anyone can read; only the owner writes, and the doc's uid must be theirs).
+    // sp_images: the resized picture for a sheet, as one data-URL string under 950 KB; readable when the sheet is public or by its owner.
+    function spOwnerOf(d) { return request.auth != null && d.uid == request.auth.uid; }
+    function spSheetOk(d) {
+      return d.keys().hasOnly(['id', 'uid', 'author', 'public', 'created', 'updated', 'title', 'story', 'lat', 'lon', 'heading', 'posture', 'height',
+          'camera', 'lens', 'focal', 'sensor', 'aperture', 'shutter', 'iso', 'ev', 'filters', 'support', 'light', 'taken', 'ig', 'thumb', 'w', 'h', 'place', 'distance'])
+        && d.uid is string && d.title is string && d.title.size() > 0 && d.title.size() <= 120
+        && d.public is bool && d.created is number && d.updated is number
+        && (!('story' in d) || (d.story is string && d.story.size() <= 6000))
+        && (!('thumb' in d) || (d.thumb is string && d.thumb.size() <= 70000))
+        && (!('author' in d) || (d.author is string && d.author.size() <= 80))
+        && (!('ig' in d) || (d.ig is string && d.ig.size() <= 300))
+        && d.lat is number && d.lon is number && d.lat >= -90 && d.lat <= 90 && d.lon >= -180 && d.lon <= 180;
+    }
+    match /sp_sheets/{id} {
+      allow read: if spOwnerOf(resource.data);
+      allow create: if spOwnerOf(request.resource.data) && request.resource.data.id == id && spSheetOk(request.resource.data);
+      allow update: if spOwnerOf(resource.data) && spOwnerOf(request.resource.data) && request.resource.data.id == id && spSheetOk(request.resource.data);
+      allow delete: if spOwnerOf(resource.data);
+    }
+    match /sp_public/{id} {
+      allow read: if true;
+      allow create: if spOwnerOf(request.resource.data) && request.resource.data.id == id && request.resource.data.public == true && spSheetOk(request.resource.data);
+      allow update: if spOwnerOf(resource.data) && spOwnerOf(request.resource.data) && request.resource.data.id == id && request.resource.data.public == true && spSheetOk(request.resource.data);
+      allow delete: if spOwnerOf(resource.data);
+    }
+    match /sp_images/{id} {
+      allow read: if resource.data.public == true || spOwnerOf(resource.data);
+      allow create, update: if spOwnerOf(request.resource.data) && (resource == null || spOwnerOf(resource.data))
+        && request.resource.data.keys().hasOnly(['uid', 'public', 'data', 'updated'])
+        && request.resource.data.public is bool
+        && (!('data' in request.resource.data) || (request.resource.data.data is string && request.resource.data.data.size() <= 950000));
+      allow delete: if spOwnerOf(resource.data);
     }
     match /gp_weeks/{key} {
       allow read, write: if gpPlayer();

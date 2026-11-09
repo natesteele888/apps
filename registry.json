@@ -2298,6 +2298,77 @@
           }
         ]
       }
+    },
+    {
+      "id": "photoblueprint",
+      "name": "Photo Blueprint",
+      "live": "https://natesteele888.github.io/apps/photoblueprint/",
+      "repo": "natesteele888/apps",
+      "path": "photoblueprint/",
+      "toolboxIds": [],
+      "listing": {
+        "sub": "Where the photographer stood",
+        "cat": "creative",
+        "ac": "#8fd3ff",
+        "install": true,
+        "access": "Open to read, Google sign-in to share",
+        "desc": "A companion to your photo gallery. Every photo gets a pin on a map at the exact spot it was shot from, and a blueprint-style sheet of how: standing, kneeling, laying down, crouching, sitting, on a tripod or a monopod; the camera, lens, focal length, aperture, shutter, ISO and the direction the camera faced; and below it the story of how the shot came together. A photo's own notes (EXIF) fill the sheet in. Sheets stay on your phone until you sign in and share them; a link to the Instagram post ties the two together.",
+        "feats": [
+          [
+            "📍",
+            "A pin where you stood",
+            "Tap the map, or let the photo's own GPS drop it. Aim the field-of-view wedge where the lens pointed."
+          ],
+          [
+            "📐",
+            "Blueprint sheet",
+            "Title block, stance drawing with the camera height, gear and exposure table, mini map and the story."
+          ],
+          [
+            "🗂️",
+            "Gallery and map",
+            "Browse everyone's shared sheets as a contact sheet or as pins. Yours work offline."
+          ]
+        ],
+        "facts": [
+          [
+            "Stances",
+            "7",
+            "drawn"
+          ],
+          [
+            "Fills from",
+            "EXIF",
+            "camera notes"
+          ],
+          [
+            "Map",
+            "OSM",
+            "blueprint tint"
+          ]
+        ],
+        "news": {
+          "d": "Nov 2026",
+          "t": "New: Photo Blueprint, the map-and-sheet companion for photographers"
+        },
+        "parts": [
+          "signin",
+          "rules",
+          "pwa",
+          "map"
+        ],
+        "tie": "The first creative app in the set. Same Google sign-in and rules kit as Gameday Picks and Read 20, same map part as Tournament Pack.",
+        "rel": [
+          "picks",
+          "read20"
+        ],
+        "for": [
+          "curious"
+        ],
+        "shots": [
+          "mock"
+        ]
+      }
     }
   ],
   "comingSoon": []

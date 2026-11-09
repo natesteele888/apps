@@ -1,0 +1,17 @@
+{
+  "name": "Photo Blueprint",
+  "short_name": "Photo Blueprint",
+  "description": "Where the photographer stood: a map pin and a blueprint-style spec sheet for every photo.",
+  "id": "/apps/photoblueprint/",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0d2d66",
+  "theme_color": "#0d2d66",
+  "icons": [
+    { "src": "/apps/icons/photoblueprint-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/apps/icons/photoblueprint-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/apps/icons/photoblueprint-maskable.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

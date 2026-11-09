@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="blueprint">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Photo Blueprint: where the photographer stood</title>
+<meta name="description" content="Photo Blueprint pins every photo to the spot it was taken from and draws a blueprint-style sheet of how: standing, kneeling, prone or on a tripod, camera, lens, aperture, shutter, ISO, the direction faced, and the story of getting the shot.">
+<meta name="theme-color" content="#0d2d66">
+<meta name="color-scheme" content="dark light">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Photo Blueprint">
+<meta name="application-name" content="Photo Blueprint">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" type="image/png" sizes="192x192" href="/apps/icons/photoblueprint-192.png">
+<link rel="apple-touch-icon" href="/apps/icons/photoblueprint-192.png">
+<script src="https://natesteele888.github.io/apps/install.js" defer></script>
+<!-- Drafting-table type. Loaded without blocking; offline the system fonts stand in. -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" media="print" onload="this.media='all'">
+<link rel="stylesheet" href="vendor/leaflet.css">
+<link rel="stylesheet" href="photoblueprint.css">
+</head>
+<body>
+<div id="app">
+  <header class="top" id="top">
+    <a class="brand" href="#map" aria-label="Photo Blueprint home"><span class="mark" aria-hidden="true"></span><b>PHOTO BLUEPRINT</b><small>where the photographer stood</small></a>
+    <div class="feed" id="feed" role="group" aria-label="Whose sheets"></div>
+  </header>
+  <main id="view" tabindex="-1" aria-live="polite"></main>
+  <nav class="nav" id="nav" aria-label="Sections">
+    <a href="#map" data-r="map"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6l6-2 6 2 6-2v14l-6 2-6-2-6 2z"/><path d="M9 4v14M15 6v14"/></svg><span>Map</span></a>
+    <a href="#sheets" data-r="sheets"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="8" height="8"/><rect x="13" y="3" width="8" height="8"/><rect x="3" y="13" width="8" height="8"/><rect x="13" y="13" width="8" height="8"/></svg><span>Sheets</span></a>
+    <a href="#new" data-r="new" class="add"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v10M7 12h10"/></svg><span>New</span></a>
+    <a href="#me" data-r="me"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg><span>Me</span></a>
+  </nav>
+  <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+</div>
+<noscript><p style="padding:24px;font-family:sans-serif">Photo Blueprint needs JavaScript turned on to work.</p></noscript>
+<script src="core.js"></script>
+<script src="exif.js"></script>
+<script src="figures.js"></script>
+<script src="vendor/leaflet.js"></script>
+<script src="store.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

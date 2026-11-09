@@ -23,7 +23,7 @@
 :root{
   --bg:#f2f2f7;--card:#ffffff;--card2:#f7f7fa;--text:#111114;--muted:#6e6e76;--line:rgba(60,60,67,.14);
   --blue:#0a73ff;--pill:#eceef3;--shadow:0 10px 30px rgba(0,0,0,.08);--glass:rgba(242,242,247,.82);
-  --football:#ff6a1a;--baseball:#2f6df6;--family:#8a5cf6;--team:#17b8a6;--builder:#e2a51b;
+  --football:#ff6a1a;--baseball:#2f6df6;--family:#8a5cf6;--team:#17b8a6;--builder:#e2a51b;--creative:#1aa7e6;
   --r:22px;--f:-apple-system,BlinkMacSystemFont,"SF Pro Display","Segoe UI",Roboto,Helvetica,Arial,sans-serif;
 }
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
@@ -246,10 +246,11 @@ footer a,footer button,#main p a,#main p button,#sheet p a,#sheet p button{displ
 <script src="qr.js"></script>
 <script>
 /* ===== The catalog. Public copy only: no data, no names of kids, no schedules. ===== */
-const CATS={football:{n:"Football",e:"🏈",c:"var(--football)"},baseball:{n:"Baseball & League",e:"⚾",c:"var(--baseball)"},team:{n:"Team & player tools",e:"🏟️",c:"var(--team)"},family:{n:"Everyday",e:"🧩",c:"var(--family)"},builder:{n:"Builder tools",e:"🧰",c:"var(--builder)"}};
+const CATS={football:{n:"Football",e:"🏈",c:"var(--football)"},baseball:{n:"Baseball & League",e:"⚾",c:"var(--baseball)"},team:{n:"Team & player tools",e:"🏟️",c:"var(--team)"},family:{n:"Everyday",e:"🧩",c:"var(--family)"},creative:{n:"Photo & creative",e:"📷",c:"var(--creative)"},builder:{n:"Builder tools",e:"🧰",c:"var(--builder)"}};
 const PARTS={
   signin:{e:"🔐",n:"Google sign-in",d:"One tap to get in, and private data stays private."},
   rules:{e:"🛡️",n:"Security rules",d:"The database itself decides who can see what."},
+  map:{e:"📍",n:"Map pin",d:"A pin on a real map, right where it happened."},
   pwa:{e:"📲",n:"Installs like a real app",d:"Home-screen icon, full screen, works with spotty signal."},
   firebase:{e:"🔥",n:"Live cloud data",d:"Changes show up on every phone at once."},
   calendar:{e:"📅",n:"Calendar export",d:"Games and events drop straight into your calendar."},
@@ -360,11 +361,12 @@ const GROUPS=[
   {k:"family",n:"Everyday",ids:["fitness","cube","picks","events"],x:150,y:370,ny:680},
   {k:"builder",n:"Behind the scenes",ids:["toolbox"],x:450,y:370,ny:1500},
   {k:"team",n:"Practice & game day",ids:["practiceclock","scoreboard","tournamentpack","whoswhere","walkup"],x:150,y:630,ny:960},
-  {k:"team",n:"Player & team skills",ids:["eightcount","playboard","locker","filmlite"],x:450,y:630,ny:1240}
+  {k:"team",n:"Player & team skills",ids:["eightcount","playboard","locker","filmlite"],x:450,y:630,ny:1240},
+  {k:"creative",n:"Photo & creative",ids:["photoblueprint"],x:150,y:890,ny:1760}
 ];
-const LINKS=[["situations","ballclub","trainer moving into"],["bengals","gridiron","team → organization"],["dashboard","ballclub","board ↔ families"],["cards","ballclub","same teams"],["sponsor-banners","dashboard","same board sign-in"],["fitness","bengals","off-season"],["toolbox","bengals",""],["toolbox","dashboard",""],["toolbox","situations",""],["toolbox","cube",""],["practiceclock","eightcount",""],["practiceclock","scoreboard",""],["scoreboard","tournamentpack",""],["scoreboard","walkup",""],["whoswhere","tournamentpack",""],["tournamentpack","ballclub",""],["playboard","situations",""],["locker","fitness",""],["eightcount","walkup",""]];
+const LINKS=[["situations","ballclub","trainer moving into"],["bengals","gridiron","team → organization"],["dashboard","ballclub","board ↔ families"],["cards","ballclub","same teams"],["sponsor-banners","dashboard","same board sign-in"],["fitness","bengals","off-season"],["toolbox","bengals",""],["toolbox","dashboard",""],["toolbox","situations",""],["toolbox","cube",""],["practiceclock","eightcount",""],["practiceclock","scoreboard",""],["scoreboard","tournamentpack",""],["scoreboard","walkup",""],["whoswhere","tournamentpack",""],["tournamentpack","ballclub",""],["playboard","situations",""],["locker","fitness",""],["eightcount","walkup",""],["photoblueprint","picks","same sign-in"],["photoblueprint","tournamentpack","same map"]];
 function webSVG(){
-  const narrow=innerWidth<620;const VW=narrow?380:600,VH=narrow?1620:760;
+  const narrow=innerWidth<620;const VW=narrow?380:600,VH=narrow?1860:1020;
   const G=narrow?GROUPS.map(g=>({...g,x:190,y:g.ny})):GROUPS;
   const pos={};G.forEach(g=>{const n=g.ids.length;g.ids.forEach((id,i)=>{const t=n===1?0:(i/(n)*Math.PI*2)-Math.PI/2;const r=n===1?0:(n>2?78:62);pos[id]={x:g.x+r*Math.cos(t),y:g.y+r*Math.sin(t)+(n===1?0:8)}})});
   const col=k=>getComputedStyle(document.documentElement).getPropertyValue("--"+k).trim();

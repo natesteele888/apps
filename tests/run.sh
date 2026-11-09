@@ -1,5 +1,5 @@
 #!/bin/bash
-# Runs the browser tests for Get Ready, Eight Count, Play Board, Locker, Practice Clock, Who's Where, Tournament Pack, Walk-Up,
+# Runs the browser tests for Photo Blueprint, Get Ready, Eight Count, Play Board, Locker, Practice Clock, Who's Where, Tournament Pack, Walk-Up,
 # Scoreboard and Film Lite against the files in this repo.
 # Needs: Google Chrome on the Mac, or Playwright's own Chromium anywhere else (see CHROME in lib.cjs), python3, and Node with the `playwright` package
 # (point NODE_PATH at a node_modules that has it).
@@ -18,7 +18,7 @@ cp "$REPO"/tests/*.cjs "$W/tests/"
 trap 'kill $S1 $S2 2>/dev/null; rm -rf "$W"' EXIT
 sleep 1
 FILTER="${1:-}"; FAIL=0
-for t in getready eightcount-core eightcount eightcount-more playboard locker locker-back practiceclock read20 whoswhere tournamentpack walkup walkup-requests scoreboard filmlite; do
+for t in photoblueprint getready eightcount-core eightcount eightcount-more playboard locker locker-back practiceclock read20 whoswhere tournamentpack walkup walkup-requests scoreboard filmlite; do
   [ -n "$FILTER" ] && [[ "$t" != *"$FILTER"* ]] && continue
   echo "=== $t"
   (cd "$W/tests" && node "$t.test.cjs") 2>&1 | grep -E "^(PASS|FAIL|ALL|[0-9]+/[0-9]+|[0-9]+ passed|all passed|  FAIL|HARNESS)|failed" | tail -60
