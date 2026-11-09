@@ -408,6 +408,16 @@ const TODAY = '2026-11-08';
     const p = await bad.page.evaluate(() => [window.R20Cloud.parseKey('https://x.github.io/apps/read20/#join=abcdefghijklmnopqrst'), window.R20Cloud.parseKey('ABCDE-FGHIJ-KLMNO-PQRST'), window.R20Cloud.parseKey('abcdefghij'), window.R20Cloud.parseKey('abcdefghijklmnopqrs1'), window.R20Cloud.parseKey('')]);
     eq(p.join('|'), 'abcdefghijklmnopqrst|abcdefghijklmnopqrst|||');
   });
+  await test('family link: a join that was walked away from does not join this phone later', async () => {
+    cloudDb.clear(); fsDeny = false; const K = 'abcdefghijklmnopqrst', PEND = 'read20.joinPending';
+    const a = await mkPhone({ uid: 'dad3', hash: '#join=' + K }); await a.page.locator('#jno').waitFor();
+    await a.page.evaluate(([p, k]) => localStorage.setItem(p, k + '.' + Date.now()), [PEND, K]); await a.page.locator('#jno').click();
+    eq(await a.page.evaluate(p => localStorage.getItem(p), PEND), null, 'Not now forgets the code');
+    await a.page.evaluate(([p, k]) => localStorage.setItem(p, k + '.' + (Date.now() - 20 * 60 * 1000)), [PEND, K]);
+    await a.page.locator('#gear').click(); await a.page.locator('#cin').click(); await a.page.waitForFunction(() => /Backed up as/.test(document.querySelector('#cl').textContent));
+    eq(await a.page.evaluate(() => window.R20Cloud.shareKey()), '', 'an old pending code is ignored at sign-in'); eq(await a.page.evaluate(p => localStorage.getItem(p), PEND), null, 'and cleared');
+    assert.ok(!cloudDb.has('r20_shared/' + K), 'nothing went to the family log'); assert.ok(cloudDb.has('r20_users/dad3'), 'the backup went to this account');
+  });
   await test('offline: the service worker caches the app and it reopens with no network', async () => {
     const o = await newPage(br, { sw: true, today: TODAY }); const { page, ctx } = o;
     await page.goto(srv.url); await page.waitForSelector('.cover'); await page.evaluate(() => navigator.serviceWorker.ready); await page.reload(); await page.waitForSelector('.cover');

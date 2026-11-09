@@ -8,9 +8,13 @@
   "use strict";
   const CONFIG = { apiKey: "AIzaSyDT_wGN93U4oM70orIU8flSAnvXHApqW2A", authDomain: "nates-toolbox.firebaseapp.com", projectId: "nates-toolbox", storageBucket: "nates-toolbox.firebasestorage.app", messagingSenderId: "567737923830", appId: "1:567737923830:web:b597b5d71e7c7a73c4d4d7" };
   const V = "11.6.0", FLAG = "read20.cloud", COL = "r20_users", SHARED = "r20_shared", SHARE = "read20.share", PEND = "read20.joinPending";
-  const KEYRE = /^[a-z2-7]{20}$/;
+  const KEYRE = /^[a-z2-7]{20}$/, PEND_MS = 15 * 60 * 1000;
   const SCRIPTS = ["app", "auth", "firestore"].map(n => "https://www.gstatic.com/firebasejs/" + V + "/firebase-" + n + "-compat.js");
   const C = window.R20Core;
+  const get = k => { try { return localStorage.getItem(k) || ""; } catch (e) { return ""; } };
+  const put = (k, v) => { try { v ? localStorage.setItem(k, v) : localStorage.removeItem(k); } catch (e) {} };
+  /* A join waiting on Google sign-in holds the code and when it was tapped. An abandoned one must not join this phone later, so it lapses. */
+  const pendingKey = () => { const m = /^([a-z2-7]{20})\.(\d+)$/.exec(get(PEND)); return m && Date.now() - Number(m[2]) < PEND_MS ? m[1] : ""; };
   const cloud = { status: "off", email: "", at: 0, msg: "", onchange: () => {} };
   let getS = null, apply = null, loading = null, ready = false, timer = 0, busy = false, again = false;
 
@@ -30,14 +34,12 @@
       let first = true;
       fb.auth().onAuthStateChanged(u => {
         cloud.email = u && u.email || "";
-        if (u) { try { const pk = localStorage.getItem(PEND); if (pk && KEYRE.test(pk)) { localStorage.setItem(SHARE, pk); localStorage.removeItem(PEND); } } catch (e) {} set("signedin"); sync(); } else set("signedout");
+        if (u) { const pk = pendingKey(); put(PEND, ""); if (pk) put(SHARE, pk); set("signedin"); sync(); } else set("signedout");
         if (first) { first = false; ready = true; res(); }
       });
     })).catch(e => { loading = null; set("offline"); });
     return loading;
   }
-  const get = k => { try { return localStorage.getItem(k) || ""; } catch (e) { return ""; } };
-  const put = (k, v) => { try { v ? localStorage.setItem(k, v) : localStorage.removeItem(k); } catch (e) {} };
   const ref = () => { const fb = window.firebase, u = fb.auth().currentUser, k = get(SHARE); return KEYRE.test(k) ? fb.firestore().collection(SHARED).doc(k) : fb.firestore().collection(COL).doc(u.uid); };
 
   /* One round trip: read the saved copy, merge it with this phone's log, and write the result back if it grew. */
@@ -87,11 +89,12 @@
   /* Joins the log a family link points to. Signs in first if this phone has not. */
   cloud.join = async key => {
     if (!KEYRE.test(key)) return false;
-    put(PEND, key); flag(true); await start(); if (!ready) return false;
+    put(PEND, key + "." + Date.now()); flag(true); await start(); if (!ready) return false;
     if (window.firebase.auth().currentUser) { put(SHARE, key); put(PEND, ""); await sync(); return cloud.status === "ok"; }
     cloud.signIn(); return false;   // finishes in the sign-in listener (also after a redirect)
   };
   cloud.leave = () => { put(SHARE, ""); put(PEND, ""); cloud.onchange(); };
+  cloud.forgetJoin = () => put(PEND, "");
   cloud.schedule = schedule;
   cloud.flush = () => { if (cloud.status === "ok" || cloud.status === "signedin") sync(); };
   /* Overwrite the saved copy (used by "erase the log" so the cloud copy doesn't bring it back). */
