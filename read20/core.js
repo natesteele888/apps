@@ -11,7 +11,7 @@
   C.addDays = (k, n) => { const d = C.parseDay(k); d.setDate(d.getDate() + n); return C.dayKey(d); };
 
   C.GOALS = [10, 15, 20, 25, 30];
-  C.empty = () => ({ v: 1, name: "", goal: 20, size: 1, say: false, days: {} });
+  C.empty = () => ({ v: 1, name: "", goal: 20, size: 1, say: false, bk: "", days: {} });
   const int = (x, lo, hi, dflt) => { x = Math.round(Number(x)); return isFinite(x) ? Math.min(hi, Math.max(lo, x)) : dflt; };
   const clean = (s, n) => String(s == null ? "" : s).replace(/[\u0000-\u001f\u007f‪-‮⁦-⁩]/g, "").trim().slice(0, n);
 
@@ -23,6 +23,7 @@
     s.goal = C.GOALS.includes(raw.goal) ? raw.goal : 20;
     s.size = int(raw.size, 0, 2, 1);
     s.say = raw.say === true;
+    s.bk = C.parseDay(raw.bk) ? raw.bk : "";
     const days = raw.days && typeof raw.days === "object" ? raw.days : {};
     for (const k of Object.keys(days)) {
       if (!C.parseDay(k)) continue;
@@ -85,6 +86,25 @@
     for (const k of Object.keys(s.days)) { const d = C.parseDay(k); if (d.getFullYear() === y && d.getMonth() === m) { sec += s.days[k].sec; if (C.isDone(s, k)) nights++; } }
     return { nights, sec };
   };
+
+  C.total = s => Object.keys(s.days).reduce((a, k) => a + s.days[k].sec, 0);
+
+  /* Combine two saves without ever losing time: for each day keep the bigger total, every story's bigger time and any
+     finished mark. Used to restore a backup and to recover from the second copy of the log. */
+  C.merge = (a, b) => {
+    const out = C.sanitize(a), o = C.sanitize(b);
+    if (!out.name && o.name) out.name = o.name;
+    if (!out.bk || (o.bk && o.bk > out.bk)) out.bk = o.bk;
+    for (const k of Object.keys(o.days)) {
+      const x = out.days[k], y = o.days[k];
+      if (!x) { out.days[k] = y; continue; }
+      x.sec = Math.max(x.sec, y.sec); x.done = x.done || y.done;
+      for (const id of Object.keys(y.books)) { const t = x.books[id]; if (!t) x.books[id] = y.books[id]; else { t.sec = Math.max(t.sec, y.books[id].sec); t.fin = t.fin || y.books[id].fin; } }
+      const sum = e => e.reduce((n, v) => n + v.sec, 0); if (sum(y.extra) > sum(x.extra)) x.extra = y.extra;
+    }
+    return out;
+  };
+  C.daysSince = (from, to) => Math.round((C.parseDay(to) - C.parseDay(from)) / 864e5);
   C.fmtClock = sec => { sec = Math.max(0, Math.floor(sec)); return Math.floor(sec / 60) + ":" + pad(sec % 60); };
   C.fmtMin = sec => (sec > 0 && sec < 60 ? "under 1 min" : Math.round(sec / 60) + " min");
 

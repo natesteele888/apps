@@ -108,3 +108,11 @@ h1,h2,h3{margin:0;line-height:1.15}
 .row{display:flex;gap:10px}.row .btn{margin-top:16px}
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
 @media (min-height:760px){.pic{min-height:240px}}
+
+.warn{background:#ffe3e3;border:2px solid #f0a8a8;border-radius:14px;padding:10px 12px;margin:8px 0;font-weight:700}
+.warn[hidden]{display:none}
+.nudge{background:#e8f0ff;border:2px solid #b8cdf5;border-radius:20px;padding:12px 14px;margin:14px 0}
+.nudge p{margin:4px 0 0;color:var(--soft);font-size:.92rem}
+.subh{margin:20px 0 4px;font-size:1.05rem}
+.fine.left{text-align:left;margin:4px 0}
+.filebtn{display:flex;align-items:center;justify-content:center;cursor:pointer}
