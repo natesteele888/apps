@@ -329,7 +329,8 @@ const TODAY = '2026-11-08';
     for (const p of [a.page, b.page]) { await p.locator('#gear').click(); await p.locator('#cin').click(); await p.waitForFunction(() => /Backed up as/.test(document.querySelector('#cl').textContent)); await p.locator('#sd').click(); }
     await a.page.locator('#gear').click(); await a.page.locator('#cnow').click(); await a.page.waitForTimeout(400); await a.page.locator('#sd').click();
     eq(cloudSec(TODAY), 900, 'two phones, same day: both readings count (10 + 5 minutes)'); 
-    await a.page.reload(); await a.page.waitForSelector('.cover'); await a.page.waitForFunction(() => document.querySelector('#cloudbadge') && !document.querySelector('#cloudbadge').hidden);
+    await a.page.reload().catch(() => a.page.reload()); // the sheet's closing Back navigation can abort a reload
+    await a.page.waitForSelector('.cover'); await a.page.waitForFunction(() => document.querySelector('#cloudbadge') && !document.querySelector('#cloudbadge').hidden);
     await logMin(b.page, 'Book C', 20); // b now ahead
     await b.page.locator('#gear').click(); await b.page.locator('#cnow').click(); await b.page.waitForTimeout(400); await b.page.locator('#sd').click();
     await a.page.locator('#gear').click(); await a.page.locator('#cnow').click(); await a.page.waitForTimeout(400); await a.page.locator('#sd').click();
