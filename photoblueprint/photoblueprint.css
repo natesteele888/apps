@@ -124,9 +124,9 @@ button, input, select, textarea { font: inherit; color: inherit; }
 /* The photo as the marker: a little print with a pointer down to the spot. */
 .photopin { position: relative; box-sizing: border-box; border: 2px solid var(--accent); background: var(--bg); border-radius: 3px; box-shadow: 0 3px 10px rgba(0, 0, 0, .35); cursor: pointer; transition: transform .12s; }
 .photopin img { display: block; width: 100%; height: 100%; object-fit: cover; }
-.photopin::after { content: ""; position: absolute; left: 50%; bottom: -9px; width: 10px; height: 10px; background: var(--accent); transform: translateX(-50%) rotate(45deg); clip-path: polygon(0 0, 100% 100%, 0 100%); }
+.photopin::after { content: ""; position: absolute; left: 50%; bottom: -10px; width: 0; height: 0; transform: translateX(-50%); border-left: 7px solid transparent; border-right: 7px solid transparent; border-top: 9px solid var(--accent); }
 .photopin.me { border-style: dashed; border-color: var(--ink); }
-.photopin.me::after { background: var(--ink); }
+.photopin.me::after { border-top-color: var(--ink); }
 .leaflet-marker-icon:hover .photopin, .leaflet-marker-icon:focus-visible .photopin { transform: scale(1.06); }
 .leaflet-popup-content-wrapper { background: var(--bg) !important; color: var(--ink) !important; border: 1px solid var(--line); border-radius: var(--r) !important; box-shadow: 0 8px 24px rgba(0, 0, 0, .35) !important; }
 .leaflet-popup-tip { background: var(--bg) !important; border: 1px solid var(--line); box-shadow: none !important; }
