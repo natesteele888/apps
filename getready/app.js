@@ -3,7 +3,7 @@
    Nothing is sent anywhere. */
 (function () {
   "use strict";
-  const C = window.GRCore, DB = window.GRDB, CEL = window.GRCelebrate;
+  const C = window.GRCore, DB = window.GRDB, CEL = window.GRCelebrate, CL = window.GRCloud;
   const KEY = "getready.v1";
   const $ = s => document.querySelector(s);
   const esc = s => String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
@@ -13,7 +13,7 @@
   const DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
   const TABS = [["today", "Today"], ["log", "Log"], ["list", "Lists"], ["alarms", "Alarms"], ["more", "More"]];
 
-  let S = C.defaults(), failed = false;
+  let S = C.defaults(), failed = false, cfgSig = "";
   const photos = {}, gifURL = {};
   const ui = { tab: "today", edit: "", month: null, sel: null, viewer: null, photoFor: null, shown: "", lastCel: "", lastRem: 0 };
 
@@ -24,12 +24,30 @@
     catch (e) { S = C.defaults(); try { if (raw) localStorage.setItem(KEY + ".damaged", raw); } catch (e2) {} } // keep a damaged save instead of writing over it
     return !!raw;
   }
+  const sigOf = x => JSON.stringify([x.lists, x.reminders, x.gifs, x.sound]);
   function save() {
+    if (sigOf(S) !== cfgSig) { cfgSig = sigOf(S); S.mod = Date.now(); } // lists, reminders or settings changed: the newer set wins when phones sync
     const j = JSON.stringify(S);
     try { localStorage.setItem(KEY, j); failed = false; } catch (e) { failed = true; }
     DB.put("state", j).catch(() => {}); // a second copy, in case the phone clears one of the two
     const w = $("#warn"); if (w) w.hidden = !failed;
+    CL.schedule();
   }
+  /* The cloud copy has been merged in: take it (without bumping the change time) and redraw when nothing is being typed. */
+  const canDraw = () => !stack.length && !/^(INPUT|SELECT)$/.test((document.activeElement || {}).tagName || "");
+  function adopt(m) {
+    const next = C.sanitize(m); if (JSON.stringify(next) === JSON.stringify(S)) return;
+    S = next; cfgSig = sigOf(S); try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {}
+    DB.put("state", JSON.stringify(S)).catch(() => {});
+    if (canDraw()) render();
+  }
+  const photoApi = {
+    ids: () => Object.keys(photos), exists: id => !!item(id), get: id => DB.get("photo:" + id),
+    put: async (id, blob) => { await DB.put("photo:" + id, blob); if (photos[id]) URL.revokeObjectURL(photos[id]); photos[id] = URL.createObjectURL(blob); if (canDraw()) render(); },
+    shrink: async blob => { // a small copy for the cloud (about 50 KB)
+      try { const b = await createImageBitmap(blob), k = Math.min(1, 640 / Math.max(b.width, b.height)), cv = document.createElement("canvas"); cv.width = Math.max(1, Math.round(b.width * k)); cv.height = Math.max(1, Math.round(b.height * k)); cv.getContext("2d").drawImage(b, 0, 0, cv.width, cv.height); return cv.toDataURL("image/jpeg", 0.7); } catch (e) { return null; }
+    }
+  };
   const item = id => C.findItem(S, id);
 
   /* ---------- small helpers ---------- */
@@ -104,7 +122,7 @@
     const blob = await shrink(file);
     try { await DB.put("photo:" + id, blob); } catch (e) { toast("Could not save the photo on this phone."); return; }
     if (photos[id]) URL.revokeObjectURL(photos[id]);
-    photos[id] = URL.createObjectURL(blob);
+    photos[id] = URL.createObjectURL(blob); CL.photoChanged(id);
     toast("Photo saved 📸", 2000);
     if (ui.viewer && ui.viewer.id === id) paintViewer();
     if (!stack.length || ui.viewer) render();
@@ -207,6 +225,24 @@
       (has ? '<img alt="" src="' + photos[it.id] + '">' : ICON.cam + '<span class="plus" aria-hidden="true">+</span>') + "</button>";
   }
 
+  /* ---------- the cloud line ---------- */
+  function cloudLine() {
+    const st = CL.status;
+    if (st === "ok") return "☁️ Backed up as " + esc(CL.email) + (CL.at ? " · " + new Date(CL.at).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }) : "");
+    if (st === "signedin" || st === "loading") return "☁️ Checking the cloud…";
+    if (st === "offline") return CL.email ? "☁️ Signed in, but no connection right now. It will back up when there is signal." : "☁️ No connection right now. Try again when there is signal.";
+    if (st === "denied") return "⚠️ The cloud backup is not allowed for this account yet. Ask Dad to publish the Get Ready rules.";
+    if (st === "signedout" && CL.msg) return esc(CL.msg);
+    return "";
+  }
+  const cloudOn = () => ["ok", "signedin", "loading", "denied"].includes(CL.status) || (CL.status === "offline" && !!CL.email);
+  function paintBadge() { const b = $("#cloud"); if (b) b.hidden = CL.status !== "ok"; }
+  function nudgeHtml() {
+    let at = 0; try { at = +localStorage.getItem("getready.nudge") || 0; } catch (e) {}
+    if (CL.enabled() || cloudOn() || nowMs() - at < 7 * 864e5 || !(C.doneDays(S) >= 1 || Object.keys(photos).length)) return "";
+    return '<div class="card nudge"><b>Keep your streak safe ☁️</b><p class="fine" style="margin:4px 0 10px">Your lists, streak and pictures live on this phone only. Sign in with Google once and they are backed up, and come back on a new phone.</p><div class="row wrap"><button class="btn pri sm" data-act="cloudin">Sign in with Google</button><button class="btn sm" data-act="nudgeno">Not now</button></div></div>';
+  }
+
   /* Switch which list this date uses (for one day only; the weekdays set in the Lists tab stay as they are). */
   function listPicker(k, list) {
     if (S.lists.length < (list ? 2 : 1)) return "";
@@ -231,7 +267,7 @@
         '<button class="iname" data-act="check" data-id="' + esc(it.id) + '">' + esc(it.name) + "</button>" + t +
         '<button class="chk" role="checkbox" aria-checked="' + on + '" aria-label="' + esc(it.name) + '" data-act="check" data-id="' + esc(it.id) + '">' + ICON.check + "</button></li>";
     }).join("") + "</ul>";
-    return o + listPicker(k, list) + '<p class="fine">Tap the picture next to an item to see what it looks like. No picture yet? Tap the camera to take one. Keep the app open while a timer runs.</p>';
+    return o + listPicker(k, list) + nudgeHtml() + '<p class="fine">Tap the picture next to an item to see what it looks like. No picture yet? Tap the camera to take one. Keep the app open while a timer runs.</p>';
   }
 
   function vLog() {
@@ -298,7 +334,10 @@
   }
 
   function vMore() {
-    return '<h2 class="sec">Sound</h2><div class="card row sp"><span>Beeps and cheers</span><button class="sw" role="switch" aria-checked="' + !!S.sound + '" aria-label="Sound" data-act="sound"></button></div>' +
+    const on = cloudOn(), st = CL.status;
+    return '<h2 class="sec">Back up &amp; sync</h2><div class="card"><p id="cl">' + (cloudLine() || "Not backed up yet. Everything is on this phone only.") + '</p><p class="fine">Sign in with Google to keep your lists, check marks, streak and pictures safe, and to bring them to a new phone. It is optional.</p><div class="row wrap" style="margin-top:10px">' +
+      (on || st === "loading" ? "" : '<button class="btn pri" data-act="cloudin">Sign in with Google</button>') + (st === "ok" || (st === "offline" && CL.email) ? '<button class="btn" data-act="cloudnow">Back up now</button>' : "") + (on ? '<button class="btn" data-act="cloudout">Sign out</button>' : "") + "</div></div>" +
+      '<h2 class="sec">Sound</h2><div class="card row sp"><span>Beeps and cheers</span><button class="sw" role="switch" aria-checked="' + !!S.sound + '" aria-label="Sound" data-act="sound"></button></div>' +
       '<h2 class="sec">Celebration</h2><p class="mute">When everything is checked off, a random full-screen dance plays. Preview one:</p><div class="chips">' +
       CEL.STYLES.map(s => '<button class="chip" data-act="preview" data-style="' + s + '">' + CEL.NAMES[s] + "</button>").join("") + "</div>" +
       '<div class="card"><b>My own dance GIFs</b><p class="fine" style="margin-bottom:8px">Add GIFs to mix into the random pick. They stay on this phone. A link needs a connection to play; a GIF from the phone works offline.</p>' +
@@ -321,7 +360,7 @@
     const it = item(id); if (!it || !window.confirm('Remove "' + it.name + '" from the list?')) return;
     const L = C.listOf(S, id); if (L) L.items = L.items.filter(i => i.id !== id);
     if (S.timer && S.timer.id === id) S.timer = null;
-    if (photos[id]) { URL.revokeObjectURL(photos[id]); delete photos[id]; DB.del("photo:" + id).catch(() => {}); }
+    if (photos[id]) { URL.revokeObjectURL(photos[id]); delete photos[id]; DB.del("photo:" + id).catch(() => {}); } CL.photoGone(id);
     const done = C.settle(S, today()); save(); render();
     if (done) setTimeout(() => celebrate(), 300);
   }
@@ -330,13 +369,13 @@
     const copy = { id: C.uid(), name: (src.name + " copy").slice(0, 30), days: [], items: [] };
     src.items.forEach(it => {
       const n = { id: C.uid(), name: it.name, timer: it.timer }; copy.items.push(n);
-      if (photos[it.id]) DB.get("photo:" + it.id).then(b => b && DB.put("photo:" + n.id, b).then(() => { photos[n.id] = URL.createObjectURL(b); if (!stack.length) render(); })).catch(() => {});
+      if (photos[it.id]) DB.get("photo:" + it.id).then(b => b && DB.put("photo:" + n.id, b).then(() => { photos[n.id] = URL.createObjectURL(b); CL.photoChanged(n.id); if (!stack.length) render(); })).catch(() => {});
     });
     S.lists.push(copy); ui.edit = copy.id; save(); render(); toast("Copied. Now pick the days for it.", 3000);
   }
   function deleteList(id) {
     const l = S.lists.find(x => x.id === id); if (!l || !window.confirm('Delete the list "' + l.name + '" and its pictures?')) return;
-    l.items.forEach(it => { if (S.timer && S.timer.id === it.id) S.timer = null; if (photos[it.id]) { URL.revokeObjectURL(photos[it.id]); delete photos[it.id]; DB.del("photo:" + it.id).catch(() => {}); } });
+    l.items.forEach(it => { if (S.timer && S.timer.id === it.id) S.timer = null; if (photos[it.id]) { URL.revokeObjectURL(photos[it.id]); delete photos[it.id]; DB.del("photo:" + it.id).catch(() => {}); } CL.photoGone(it.id); });
     S.lists = S.lists.filter(x => x.id !== id); C.settle(S, today()); save(); render();
   }
   function download(name, type, text) {
@@ -359,7 +398,7 @@
       case "again": celebrate(); break;
       case "vcam": askPhoto(ui.viewer.id, true); break;
       case "vpick": askPhoto(ui.viewer.id, false); break;
-      case "vdel": { const vid = ui.viewer.id; URL.revokeObjectURL(photos[vid]); delete photos[vid]; DB.del("photo:" + vid).catch(() => {}); paintViewer(); render(); break; }
+      case "vdel": { const vid = ui.viewer.id; URL.revokeObjectURL(photos[vid]); delete photos[vid]; DB.del("photo:" + vid).catch(() => {}); CL.photoGone(vid); paintViewer(); render(); break; }
       case "vclose": closeTop(); break;
       case "up": sort(id, -1); break;
       case "down": sort(id, 1); break;
@@ -376,6 +415,10 @@
       case "rtest": beep("alarm"); vibrate([200, 100, 200]); toast("⏰ This is what a reminder looks like", 6000); notify("This is what a reminder looks like", "test"); break;
       case "notif": try { const p = Notification.requestPermission(); if (p && p.then) p.then(render); else render(); } catch (err) { render(); } break;
       case "ics": download("getready-reminders.ics", "text/calendar", C.ics(S, nowDate())); toast("Open the file to add the reminders to your calendar.", 5000); break;
+      case "cloudin": CL.signIn(); break;
+      case "cloudnow": CL.syncNow(); toast("Backing up…", 1500); break;
+      case "cloudout": CL.signOut(); break;
+      case "nudgeno": try { localStorage.setItem("getready.nudge", String(nowMs())); } catch (err) {} render(); break;
       case "editlist": ui.edit = id; render(); break;
       case "newlist": { const l = { id: C.uid(), name: "New list", days: [], items: [] }; S.lists.push(l); ui.edit = l.id; save(); render(); const n = $("#lname"); if (n) { n.focus(); n.select(); } break; }
       case "duplist": duplicateList(id); break;
@@ -418,12 +461,15 @@
   function init() {
     const had = load();
     render();
-    if (!had) DB.get("state").then(j => { if (j) { S = C.sanitize(JSON.parse(j)); try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {} if (!stack.length) render(); } }).catch(() => {});
+    if (!had) DB.get("state").then(j => { if (j) { S = C.sanitize(JSON.parse(j)); cfgSig = sigOf(S); try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {} if (!stack.length) render(); } }).catch(() => {});
+    cfgSig = sigOf(S);
+    CL.init({ get: () => S, apply: adopt, photos: photoApi, onchange: () => { paintBadge(); if (canDraw() && (ui.tab === "more" || ui.tab === "today")) render(); } });
     loadPhotos();
     setInterval(tick, 250);
-    document.addEventListener("visibilitychange", () => { if (!document.hidden) { ui.lastRem = 0; tick(); if (!stack.length) render(); } });
+    document.addEventListener("visibilitychange", () => { if (document.hidden) CL.flush(); else { ui.lastRem = 0; tick(); if (!stack.length) render(); } });
     checkReminders(); ui.lastRem = nowMs();
     if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {});
+    paintBadge();
     window.GetReady = { state: () => S, render, celebrate }; // for the tests
   }
   init();

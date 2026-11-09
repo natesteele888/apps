@@ -98,6 +98,23 @@ service cloud.firestore {
         && (!('data' in request.resource.data) || (request.resource.data.data is string && request.resource.data.data.size() <= 950000));
       allow delete: if spOwnerOf(resource.data);
     }
+    // ---------- Get Ready (apps/getready): optional cloud backup of one person's checklist ----------
+    // One document per signed-in Google account, readable and writable only by that account: the lists,
+    // check marks and streak history as one JSON string, plus the ids of items that have a picture.
+    // Pictures (small JPEGs as text) sit one per item under photos/.
+    match /gr_users/{uid} {
+      allow read, delete: if request.auth != null && request.auth.uid == uid;
+      allow create, update: if request.auth != null && request.auth.uid == uid
+        && request.resource.data.keys().hasOnly(['data', 'updated', 'pids'])
+        && request.resource.data.data is string && request.resource.data.data.size() <= 400000
+        && (!('pids' in request.resource.data) || (request.resource.data.pids is list && request.resource.data.pids.size() <= 200));
+      match /photos/{pid} {
+        allow read, delete: if request.auth != null && request.auth.uid == uid;
+        allow create, update: if request.auth != null && request.auth.uid == uid
+          && request.resource.data.keys().hasOnly(['img', 'updated'])
+          && request.resource.data.img is string && request.resource.data.img.size() <= 600000;
+      }
+    }
     match /gp_weeks/{key} {
       allow read, write: if gpPlayer();
     }
