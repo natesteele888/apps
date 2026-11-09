@@ -12,7 +12,7 @@ async function test(name, fn) {
 const eq = (a, b, m) => assert.strictEqual(a, b, (m ? m + ': ' : '') + 'expected ' + JSON.stringify(b) + ' got ' + JSON.stringify(a));
 const MON = '2026-11-09'; // a Monday
 const PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==', 'base64');
-const doAll = (s, k) => s.items.forEach(i => { if (!C.isChecked(s, k, i.id)) C.toggle(s, k, i.id); });
+const doAll = (s, k) => C.itemsFor(s, k).forEach(i => { if (!C.isChecked(s, k, i.id)) C.toggle(s, k, i.id); });
 
 (async () => {
   await test('core: day keys, adding days across month and year ends, weekdays', () => {
@@ -20,32 +20,49 @@ const doAll = (s, k) => s.items.forEach(i => { if (!C.isChecked(s, k, i.id)) C.t
     eq(C.parseDay('2026-02-30'), null); eq(C.dow(MON), 1); eq(C.fmt(125), '2:05'); eq(C.fmt(-3), '0:00'); eq(C.timerLabel(30), '30 sec'); eq(C.timerLabel(180), '3 min');
   });
   await test('core: a damaged save falls back safely and keeps what is good', () => {
-    eq(C.sanitize(null).items.length, 6); eq(C.sanitize('x').items.length, 6);
-    const s = C.sanitize({ items: [{ id: 'a', name: '  Glasses  ', timer: 99 }, { id: 'a', name: 'dup' }, { name: '' }, null, { id: 'b', name: 'B', timer: 120 }], school: [1, 9, 'x', 1],
-      reminders: [{ id: 'r', label: '', time: '25:99', days: [], on: 1 }], days: { 'nope': {}, [MON]: { c: { a: 1, b: 0 }, done: 1 } }, timer: { id: 'a', end: 'soon' }, gifs: [{ kind: 'url', url: 'javascript:alert(1)' }, { kind: 'url', url: 'https://x.test/a.gif' }, { kind: 'file', id: 'f' }] });
-    eq(s.items.length, 2); eq(s.items[0].name, 'Glasses'); eq(s.items[0].timer, 0); eq(s.items[1].timer, 120); assert.deepStrictEqual(s.school, [1]);
+    eq(C.sanitize(null).lists.length, 2); eq(C.sanitize('x').lists[0].items.length, 6);
+    const s = C.sanitize({ lists: [{ id: 'L', name: '  Mon Thu  ', days: [1, 4, 9, 'x', 1], items: [{ id: 'a', name: '  Glasses  ', timer: 99 }, { id: 'a', name: 'dup' }, { name: '' }, null, { id: 'b', name: 'B', timer: 120 }] },
+      { id: 'L', name: 'Tue Fri', days: [2, 4, 5], items: [{ id: 'a', name: 'same id elsewhere' }, { id: 'c', name: 'C' }] }, 7, null],
+      reminders: [{ id: 'r', label: '', time: '25:99', days: [], on: 1 }], days: { 'nope': {}, [MON]: { c: { a: 1, b: 0 }, done: 1, l: 'L' } }, timer: { id: 'a', end: 'soon' }, gifs: [{ kind: 'url', url: 'javascript:alert(1)' }, { kind: 'url', url: 'https://x.test/a.gif' }, { kind: 'file', id: 'f' }] });
+    eq(s.lists.length, 2); const [a, b] = s.lists; eq(a.name, 'Mon Thu'); assert.deepStrictEqual(a.days, [1, 4]); assert.deepStrictEqual(b.days, [2, 5], 'a day belongs to one list (the first)'); assert.notStrictEqual(a.id, b.id, 'duplicate list ids are fixed');
+    eq(a.items.length, 2); eq(a.items[0].name, 'Glasses'); eq(a.items[0].timer, 0); eq(a.items[1].timer, 120); eq(b.items.length, 1, 'an item id is only used once'); eq(b.items[0].name, 'C');
     eq(s.reminders[0].time, '07:00'); eq(s.reminders[0].label, 'Reminder'); assert.deepStrictEqual(s.reminders[0].days, []);
-    assert.deepStrictEqual(Object.keys(s.days), [MON]); eq(s.timer, null); eq(s.gifs.length, 2); eq(s.gifs[0].kind, 'url');
-    eq(C.sanitize({ items: [] }).items.length, 0, 'an emptied list stays empty');
+    assert.deepStrictEqual(Object.keys(s.days), [MON]); eq(s.days[MON].l, 'L'); eq(s.timer, null); eq(s.gifs.length, 2); eq(s.gifs[0].kind, 'url');
+    eq(C.sanitize({ lists: [] }).lists.length, 0, 'no lists stays no lists');
+  });
+  await test('core: an older one-list save becomes a school list plus a weekend list, keeping every item', () => {
+    const s = C.sanitize({ v: 1, items: [{ id: 'a', name: 'Bag' }, { id: 'b', name: 'Water', timer: 60 }], school: [1, 2, 3, 4, 5], days: { [MON]: { c: { a: 1 }, done: 0 } } });
+    eq(s.lists.length, 2); eq(s.lists[0].name, 'School days'); assert.deepStrictEqual(s.lists[0].days, [1, 2, 3, 4, 5]); eq(s.lists[0].items.map(i => i.id).join(), 'a,b'); assert.deepStrictEqual(s.lists[1].days, [0, 6]);
+    eq(C.isChecked(s, MON, 'a'), true, 'old check marks still count'); eq(C.count(s, MON), 1);
+    const all = C.sanitize({ items: [{ id: 'a', name: 'Bag' }], school: [0, 1, 2, 3, 4, 5, 6] }); eq(all.lists.length, 1, 'no weekend list when every day was a school day');
+  });
+  await test('core: which list a day uses, switching it for one date, and a weekday only ever belongs to one list', () => {
+    const s = C.defaults(); eq(C.listFor(s, MON).name, 'School days'); eq(C.listFor(s, '2026-11-08').name, 'Weekend'); eq(C.itemsFor(s, '2026-11-08').length, 3);
+    C.setListDays(s, 'school', [1, 2, 3, 4, 5, 6]); assert.deepStrictEqual(s.lists[1].days, [0], 'Saturday moved to the school list'); eq(C.listFor(s, '2026-11-07').name, 'School days');
+    C.setListDays(s, 'school', [1, 4]); eq(C.listFor(s, '2026-11-10'), null, 'a day with no list is a day off'); assert.deepStrictEqual(C.activeDays(s), [0, 1, 4]);
+    C.setDayList(s, '2026-11-10', 'weekend'); eq(C.listFor(s, '2026-11-10').name, 'Weekend'); eq(C.itemsFor(s, '2026-11-10').length, 3);
+    C.setDayList(s, '2026-11-10', ''); eq(C.listFor(s, '2026-11-10'), null); C.setDayList(s, MON, 'school'); eq(s.days[MON], undefined, 'the usual list is not stored as a pick');
+    C.setDayList(s, MON, 'nope'); eq(C.listFor(s, MON).name, 'School days'); eq(C.findItem(s, 'bag').name, 'School bag'); eq(C.listOf(s, 'bag').id, 'school'); eq(C.findItem(s, 'x'), null);
   });
   await test('core: ticking items, finishing the day once, unticking, adding and removing items', () => {
-    const s = C.defaults(), n = s.items.length;
-    for (let i = 0; i < n - 1; i++) { const r = C.toggle(s, MON, s.items[i].id); assert.ok(r.checked && !r.justDone); }
+    const s = C.defaults(), items = s.lists[0].items, n = items.length;
+    for (let i = 0; i < n - 1; i++) { const r = C.toggle(s, MON, items[i].id); assert.ok(r.checked && !r.justDone); }
     eq(C.count(s, MON), n - 1); assert.ok(!C.isDone(s, MON));
-    const last = C.toggle(s, MON, s.items[n - 1].id); assert.ok(last.justDone && C.isDone(s, MON));
-    const off = C.toggle(s, MON, s.items[0].id); assert.ok(!off.checked && !C.isDone(s, MON), 'unticking undoes the day');
-    const again = C.toggle(s, MON, s.items[0].id); assert.ok(again.justDone, 'finishing again counts again');
-    s.items.push({ id: 'x', name: 'X', timer: 0 }); C.settle(s, MON); assert.ok(!C.isDone(s, MON), 'a new item makes the day unfinished');
-    s.items = s.items.filter(i => i.id !== 'x'); assert.ok(C.settle(s, MON), 'removing it finishes the day');
-    eq(C.toggle(s, MON, 'ghost').checked, false); eq(C.isComplete({ items: [], days: {} }, MON), false, 'an empty list is never complete');
+    const last = C.toggle(s, MON, items[n - 1].id); assert.ok(last.justDone && C.isDone(s, MON));
+    const off = C.toggle(s, MON, items[0].id); assert.ok(!off.checked && !C.isDone(s, MON), 'unticking undoes the day');
+    const again = C.toggle(s, MON, items[0].id); assert.ok(again.justDone, 'finishing again counts again');
+    items.push({ id: 'x', name: 'X', timer: 0 }); C.settle(s, MON); assert.ok(!C.isDone(s, MON), 'a new item makes the day unfinished');
+    s.lists[0].items = items.filter(i => i.id !== 'x'); assert.ok(C.settle(s, MON), 'removing it finishes the day');
+    eq(C.toggle(s, MON, 'ghost').checked, false); eq(C.isComplete({ lists: [{ id: 'e', name: 'E', days: [1], items: [] }], days: {} }, MON), false, 'an empty list is never complete'); eq(C.toggle(s, '2026-11-08', items[0].id).checked, false, 'an item from another list cannot be ticked');
   });
   await test('core: streak skips weekends, survives an unfinished today, breaks on a missed school day', () => {
-    const s = C.defaults();
+    const s = C.defaults(); s.lists = [s.lists[0]]; // school days only; weekends are days off
     ['2026-11-04', '2026-11-05', '2026-11-06', MON].forEach(k => doAll(s, k)); // Wed Thu Fri (weekend off) Mon
     eq(C.streak(s, MON), 4); eq(C.streak(s, '2026-11-08'), 3, 'Sunday: not a school day, streak holds'); eq(C.streak(s, '2026-11-10'), 4, 'Tuesday not done yet: still 4');
     eq(C.streak(s, '2026-11-11'), 0, 'Tuesday was missed, so Wednesday starts over');
-    const t = C.defaults(); eq(C.streak(t, MON), 0); t.school = []; eq(C.streak(t, MON), 0, 'no school days at all');
-    doAll(s, '2026-11-07'); eq(C.streak(s, '2026-11-08'), 4, 'a done Saturday adds to it');
+    const t = C.defaults(); eq(C.streak(t, MON), 0); t.lists = []; eq(C.streak(t, MON), 0, 'no lists at all');
+    const w = C.defaults(); ['2026-11-06', '2026-11-07', '2026-11-08', MON].forEach(k => doAll(w, k)); eq(C.streak(w, MON), 4, 'with a weekend list, the weekend counts'); const m = C.defaults(); ['2026-11-06', MON].forEach(k => doAll(m, k)); eq(C.streak(m, MON), 1, 'a missed weekend day breaks it');
+    C.setDayList(s, '2026-11-07', 'school'); doAll(s, '2026-11-07'); eq(C.streak(s, '2026-11-08'), 4, 'a done day with no list adds to it');
     eq(C.doneDays(s), 5);
   });
   await test('core: reminders are due from their time for two hours, once a day, on the right weekdays', () => {
@@ -79,6 +96,7 @@ const doAll = (s, k) => s.items.forEach(i => { if (!C.isChecked(s, k, i.id)) C.t
     await o.page.clock.install({ time: new Date('2026-11-09T06:50:00') });
     await o.page.goto(srv.url); await o.page.waitForSelector('.item'); return o;
   };
+  const first = page => page.locator('.chip.on[data-act=editlist]');
   const names = page => page.$$eval('.item .iname', els => els.map(e => e.textContent));
 
   await test('page: the default list shows; checking everything plays a full-screen dance once, and it survives a reload', async () => {
@@ -99,7 +117,7 @@ const doAll = (s, k) => s.items.forEach(i => { if (!C.isChecked(s, k, i.id)) C.t
   });
   await test('page: add, rename, reorder, timer and remove items; changes show on Today and are kept', async () => {
     const o = await mk(); const { page } = o; page.on('dialog', d => d.accept());
-    await page.locator('[data-tab=list]').click(); eq(await page.locator('.erow').count(), 6);
+    await page.locator('[data-tab=list]').click(); eq(await first(page).innerText(), 'School days'); eq(await page.locator('.erow').count(), 6);
     await page.locator('#newItem').fill('Glasses'); await page.locator('#newItem').press('Enter'); eq(await page.locator('.erow').count(), 7);
     await page.locator('.chip', { hasText: 'Jacket' }).click(); eq(await page.locator('.erow').count(), 8); eq(await page.locator('.chip', { hasText: 'Jacket' }).count(), 0, 'suggestion used up');
     await page.locator('.erow').nth(7).locator('[data-act=rename]').fill('Rain jacket'); await page.locator('.erow').nth(7).locator('[data-act=rename]').blur();
@@ -108,7 +126,7 @@ const doAll = (s, k) => s.items.forEach(i => { if (!C.isChecked(s, k, i.id)) C.t
     await page.locator('.erow').nth(3).locator('[data-act=del]').click(); eq(await page.locator('.erow').count(), 7);
     await page.locator('[data-tab=today]').click(); eq((await names(page)).join('|'), 'Morning medicine|Brush teeth|Vitamins|Water bottle|Lunch|Glasses|Rain jacket');
     eq(await page.locator('.item').nth(0).locator('.tbtn').innerText(), '⏱ 5:00');
-    await page.reload(); await page.waitForSelector('.item'); eq((await names(page)).length, 7, 'saved');
+    await page.reload(); await page.waitForSelector('.item'); eq((await names(page)).length, 7, 'saved'); eq(await page.locator('.item').count(), 7);
     eq(o.errors.length, 0, o.errors.join('|'));
   });
   await test('page: a timer counts down on screen, a tap stops it, and finishing checks the item off', async () => {
@@ -154,11 +172,46 @@ const doAll = (s, k) => s.items.forEach(i => { if (!C.isChecked(s, k, i.id)) C.t
     const text = require('fs').readFileSync(await dl.path(), 'utf8'); assert.ok(text.includes('RRULE:FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR') && text.includes('Time to start getting ready'));
     eq(o.errors.length, 0, o.errors.join('|'));
   });
-  await test('page: a Sunday has no reminders and says no school; weekdays chosen in More change that', async () => {
+  await test('page: a Sunday shows the weekend list and no reminders', async () => {
     const o = await newPage(br, { today: '2026-11-08' }); await o.page.clock.install({ time: new Date('2026-11-08T07:05:00') }); await o.page.goto(srv.url); await o.page.waitForSelector('.item');
-    assert.ok(/No school today/.test(await o.page.locator('.notice').innerText())); await o.page.clock.runFor(60000); eq(await o.page.locator('.toast').count(), 0);
-    await o.page.locator('[data-tab=more]').click(); await o.page.locator('[data-act=school][data-d="0"]').click(); await o.page.locator('[data-tab=today]').click(); eq(await o.page.locator('.notice').count(), 0, 'Sunday is now a school day');
+    eq(await o.page.locator('.item').count(), 3); assert.ok(/Weekend/.test(await o.page.locator('.hello p').innerText())); await o.page.clock.runFor(60000); eq(await o.page.locator('.toast').count(), 0);
     eq(o.errors.length, 0, o.errors.join('|'));
+  });
+  await test('page: lists get their own days: one list for Mon and Thu, another for Tue and Fri, a day with none is a day off', async () => {
+    const o = await mk(); const { page } = o; page.on('dialog', d => d.accept());
+    await page.locator('[data-tab=list]').click();
+    await page.locator('[data-act=newlist]').click(); await page.locator('#lname').fill('Class days'); await page.locator('#lname').blur(); eq(await page.locator('.chip.on[data-act=editlist]').innerText(), 'Class days', 'tab shows the new name');
+    await page.locator('#newItem').fill('Gym clothes'); await page.locator('#newItem').press('Enter'); await page.locator('.chip', { hasText: 'Library book' }).click(); eq(await page.locator('.erow').count(), 2);
+    await page.locator('[data-act=lday][data-d="2"]').click(); await page.locator('[data-act=lday][data-d="5"]').click(); // Tue, Fri move here from School days
+    await page.locator('[data-act=editlist]', { hasText: 'School days' }).click(); eq(await page.locator('.chip.on[data-act=lday]').count(), 3, 'School days lost Tue and Fri (Mon, Wed, Thu left)');
+    await page.locator('[data-act=lday][data-d="3"]').click(); eq(await page.locator('.chip.on[data-act=lday]').count(), 2, 'Wednesday switched off: a day off');
+    assert.ok(/Wed<\/b> day off/.test(await page.locator('.fine', { hasText: 'Sun' }).innerHTML()));
+    await page.locator('[data-tab=today]').click(); assert.ok(/School days/.test(await page.locator('.hello p').innerText())); eq(await page.locator('.item').count(), 6, 'Monday is the school list');
+    await page.addInitScript(() => { window.__today = '2026-11-10'; }); await page.reload(); await page.waitForSelector('.item'); eq((await names(page)).join('|'), 'Gym clothes|Library book', 'Tuesday uses the other list');
+    await page.addInitScript(() => { window.__today = '2026-11-11'; }); await page.reload();
+    await page.waitForSelector('.card'); assert.ok(/No list on Wednesdays/.test(await page.locator('.card').first().innerText())); eq(await page.locator('.item').count(), 0);
+    await page.locator('[data-act=daylist]').selectOption({ label: 'Class days' }); await page.waitForSelector('.item'); eq(await page.locator('.item').count(), 2, 'a day off can borrow a list');
+    await page.locator('.item .chk').nth(0).click(); await page.locator('.item .chk').nth(1).click(); await page.waitForSelector('.celebrate'); await page.locator('.cel-go').click();
+    await page.locator('[data-tab=log]').click(); await page.locator('.cal .d.today').click(); assert.ok(/Class days: All done/.test(await page.locator('.card').innerText()));
+    eq(o.errors.length, 0, o.errors.join('|'));
+  });
+  await test('page: copying a list copies its photos, deleting a list removes it, and a day can switch lists', async () => {
+    const o = await mk(); const { page } = o; page.on('dialog', d => d.accept());
+    const [fc] = await Promise.all([page.waitForEvent('filechooser'), page.locator('.item').nth(3).locator('.thumb').click()]); await fc.setFiles({ name: 'a.png', mimeType: 'image/png', buffer: PNG }); await page.locator('.item').nth(3).locator('.thumb img').waitFor();
+    await page.locator('[data-tab=list]').click(); await page.locator('[data-act=duplist]').click(); await page.waitForSelector('.erow'); eq(await page.locator('.chip.on[data-act=editlist]').innerText(), 'School days copy'); eq(await page.locator('.erow').count(), 6);
+    await page.locator('.erow').nth(3).locator('.thumb img').waitFor(); eq(await page.locator('.chip.on[data-act=lday]').count(), 0, 'the copy has no days yet');
+    await page.reload(); await page.locator('[data-tab=list]').click(); await page.locator('[data-act=editlist]', { hasText: 'copy' }).click(); await page.locator('.erow').nth(3).locator('.thumb img').waitFor();
+    await page.locator('[data-tab=today]').click(); await page.locator('[data-act=daylist]').selectOption({ label: 'School days copy' }); await page.waitForTimeout(100); assert.ok(/copy/.test(await page.locator('.hello p').innerText()));
+    await page.locator('[data-act=daylist]').selectOption({ label: 'School days' }); assert.ok(!/copy/.test(await page.locator('.hello p').innerText()));
+    await page.locator('[data-tab=list]').click(); await page.locator('[data-act=editlist]', { hasText: 'copy' }).click(); await page.locator('[data-act=dellist]').click(); eq(await page.locator('[data-act=editlist]').count(), 2);
+    eq(o.errors.length, 0, o.errors.join('|'));
+  });
+  await test('page: an older save from before lists opens as a school list plus a weekend list, with its photos and checks', async () => {
+    const q = await newPage(br, { today: MON }); await q.page.addInitScript(() => { if (!sessionStorage.x) { sessionStorage.x = 1; localStorage.setItem('getready.v1', JSON.stringify({ v: 1, items: [{ id: 'm', name: 'Meds' }, { id: 'b', name: 'Bag', timer: 60 }], school: [1, 2, 3, 4, 5], days: { '2026-11-09': { c: { m: 1 }, done: 0 } } })); } });
+    await q.page.clock.install({ time: new Date('2026-11-09T06:50:00') }); await q.page.goto(srv.url); await q.page.waitForSelector('.item');
+    eq((await names(q.page)).join('|'), 'Meds|Bag'); eq(await q.page.locator('.item.on').count(), 1); assert.ok(/1 of 2/.test(await q.page.locator('.bartxt').innerText()));
+    await q.page.addInitScript(() => { window.__today = '2026-11-14'; }); await q.page.reload(); await q.page.waitForSelector('.item'); eq(await q.page.locator('.item').count(), 3, 'Saturday has the new weekend list');
+    eq(q.errors.length, 0, q.errors.join('|'));
   });
   await test('page: the log marks finished days, shows the streak, and steps between months', async () => {
     const o = await mk(); const { page } = o;
