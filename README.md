@@ -9,6 +9,7 @@ Installable phone apps, hosted on GitHub Pages.
 - [Locker](https://natesteele888.github.io/apps/locker/) — one player's own season: games, goals, clips and pitch counts, kept on the phone
 - [Practice Clock](https://natesteele888.github.io/apps/practiceclock/) — timed practice plans with a big countdown and station rotations
 - [Read 20](https://natesteele888.github.io/apps/read20/) — nightly reading for a first grader: story shelf, tap-to-highlight words, a 20-minute timer and a calendar log
+- [Get Ready](https://natesteele888.github.io/apps/getready/) — a school-morning checklist with a photo for each item, timers, reminders, streaks and a dance when it's all done
 - [Who's Where](https://natesteele888.github.io/apps/whoswhere/) — the family sports week, with driver and double-booking clashes flagged
 - [Tournament Pack](https://natesteele888.github.io/apps/tournamentpack/) — tournament schedule, standings with real tiebreakers, bracket and packing list
 - [Walk-Up](https://natesteele888.github.io/apps/walkup/) — record, polish and play each player's walk-up announcement and song
