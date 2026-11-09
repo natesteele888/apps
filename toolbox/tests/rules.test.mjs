@@ -80,6 +80,43 @@ test('Picks invite codes: good code joins, wrong or switched-off code does not',
   await assertFails(join('sneaky', 'OWNER'));
 });
 
+// ---------- Get Ready cloud backup (gr_users/<uid> and its photos) ----------
+const gr = (uid) => env.authenticatedContext(uid, { email: uid + '@example.com', email_verified: true }).firestore();
+const grData = { data: '{"v":2,"days":{}}', updated: 1 };
+
+test('getready: a signed-in account can create, read, update and delete its own backup and photos', async () => {
+  const db = gr('kidA');
+  await assertSucceeds(setDoc(doc(db, 'gr_users/kidA'), grData));
+  await assertSucceeds(setDoc(doc(db, 'gr_users/kidA'), { ...grData, pids: ['bag'] }));
+  await assertSucceeds(setDoc(doc(db, 'gr_users/kidA/photos/bag'), { img: 'data:image/jpeg;base64,AAAA', updated: 1 }));
+  await assertSucceeds(getDoc(doc(db, 'gr_users/kidA')));
+  await assertSucceeds(getDoc(doc(db, 'gr_users/kidA/photos/bag')));
+  await assertSucceeds(deleteDoc(doc(db, 'gr_users/kidA/photos/bag')));
+  await assertSucceeds(deleteDoc(doc(db, 'gr_users/kidA')));
+});
+test('getready: nobody can read or write another account\'s backup or photos, and signed-out visitors get nothing', async () => {
+  await env.withSecurityRulesDisabled(async (ctx) => {
+    await setDoc(doc(ctx.firestore(), 'gr_users/kidA'), grData);
+    await setDoc(doc(ctx.firestore(), 'gr_users/kidA/photos/bag'), { img: 'x', updated: 1 });
+  });
+  await assertFails(getDoc(doc(gr('kidB'), 'gr_users/kidA')));
+  await assertFails(setDoc(doc(gr('kidB'), 'gr_users/kidA'), grData));
+  await assertFails(deleteDoc(doc(gr('kidB'), 'gr_users/kidA')));
+  await assertFails(getDoc(doc(gr('kidB'), 'gr_users/kidA/photos/bag')));
+  await assertFails(setDoc(doc(gr('kidB'), 'gr_users/kidA/photos/bag'), { img: 'x', updated: 1 }));
+  await assertFails(getDoc(doc(anon(), 'gr_users/kidA')));
+  await assertFails(setDoc(doc(anon(), 'gr_users/kidA/photos/bag'), { img: 'x', updated: 1 }));
+});
+test('getready: documents only accept the expected fields and sane sizes', async () => {
+  const db = gr('kidA');
+  await assertFails(setDoc(doc(db, 'gr_users/kidA'), { data: 5, updated: 1 }));
+  await assertFails(setDoc(doc(db, 'gr_users/kidA'), { data: 'x'.repeat(400001), updated: 1 }));
+  await assertFails(setDoc(doc(db, 'gr_users/kidA'), { ...grData, extra: 'nope' }));
+  await assertFails(setDoc(doc(db, 'gr_users/kidA'), { ...grData, pids: 'bag' }));
+  await assertFails(setDoc(doc(db, 'gr_users/kidA/photos/bag'), { img: 'x'.repeat(600001), updated: 1 }));
+  await assertFails(setDoc(doc(db, 'gr_users/kidA/photos/bag'), { img: 'x', updated: 1, extra: 1 }));
+});
+
 // ---------- Read 20 cloud backup (r20_users/<uid>) ----------
 const r20 = (uid, email = 'parent@example.com') => env.authenticatedContext(uid, { email, email_verified: true }).firestore();
 const r20Data = { log: '{"v":1,"days":{}}', updated: 1 };

@@ -2,7 +2,7 @@
 const CACHE = "getready-v2";
 // Save the page itself at install so it opens offline right after the first visit.
 // Each file is added on its own so one miss can't block install.
-const SHELL = ["./", "manifest.json", "getready.css", "core.js", "db.js", "celebrate.js", "app.js", "/apps/icons/getready-192.png", "/apps/icons/getready-512.png"];
+const SHELL = ["./", "manifest.json", "getready.css", "core.js", "db.js", "cloud.js", "celebrate.js", "app.js", "/apps/icons/getready-192.png", "/apps/icons/getready-512.png"];
 self.addEventListener("install", e => {
   self.skipWaiting();
   e.waitUntil(caches.open(CACHE).then(c => Promise.all(SHELL.map(u => c.add(new Request(u, {cache: "reload"})).catch(() => {})))));

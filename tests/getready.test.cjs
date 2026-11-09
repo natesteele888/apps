@@ -82,6 +82,31 @@ const doAll = (s, k) => C.itemsFor(s, k).forEach(i => { if (!C.isChecked(s, k, i
     assert.ok(!/[^\r]\n/.test(ics), 'all CRLF'); assert.ok(ics.split('\r\n').every(l => l.length <= 75));
     s.reminders[0].label = 'x'.repeat(200); assert.ok(C.ics(s, new Date()).split('\r\n').every(l => l.length <= 75), 'long lines are folded');
   });
+  await test('core: merging with the cloud copy keeps streaks, lets an unticked item stay unticked, and the newer settings win', () => {
+    const T = 1e12, mk = () => C.defaults();
+    const a = mk(), b = mk();
+    a.days['2026-11-05'] = { c: { med: 1 }, done: 0, m: T }; b.days['2026-11-05'] = { c: { med: 1, vit: 1 }, done: 1, m: T + 10 };
+    a.days['2026-11-06'] = { c: {}, done: 0, m: T + 50 }; b.days['2026-11-06'] = { c: { med: 1 }, done: 0, m: T + 20 }; // unticked later on this phone
+    a.days['2026-11-07'] = { c: { x: 1 }, done: 1, m: T }; // only here
+    b.days['2026-11-08'] = { c: { y: 1 }, done: 1, m: T }; // only there
+    a.days['2026-11-09'] = { c: { med: 1 }, done: 0, m: T }; b.days['2026-11-09'] = { c: { vit: 1 }, done: 0, m: T }; // same time: both kept
+    const m = C.merge(a, b);
+    eq(m.days['2026-11-05'].done, 1, 'the newer copy of a day wins'); eq(Object.keys(m.days['2026-11-06'].c).length, 0, 'unticking sticks'); eq(m.days['2026-11-07'].done, 1); eq(m.days['2026-11-08'].done, 1);
+    assert.deepStrictEqual(Object.keys(m.days['2026-11-09'].c).sort(), ['med', 'vit']);
+    a.mod = 5; b.mod = 9; b.lists = [{ id: 'z', name: 'Cloud list', days: [1], items: [{ id: 'q', name: 'Q' }] }];
+    eq(C.merge(a, b).lists[0].name, 'Cloud list', 'newer settings win'); eq(C.merge(b, a).lists[0].name, 'Cloud list'); eq(C.merge(a, b).mod, 9);
+    a.mod = 20; eq(C.merge(a, b).lists[0].name, 'School days', 'this phone newer'); eq(C.merge(a, b, true).lists[0].name, 'Cloud list', 'first link prefers the account');
+    a.timer = { id: 'med', end: 5 }; a.fired = { r1: '2026-11-09' }; b.fired = {}; eq(C.merge(a, b).timer.id, 'med', 'timers stay local'); eq(C.merge(a, b).fired.r1, '2026-11-09');
+    const g = mk(), h = mk(); g.gifs = [{ id: 'f1', kind: 'file', name: 'mine' }]; h.gifs = [{ id: 'u1', kind: 'url', url: 'https://x.test/a.gif', name: 'link' }, { id: 'f2', kind: 'file', name: 'theirs' }]; h.mod = 3;
+    assert.deepStrictEqual(C.merge(g, h).gifs.map(x => x.id).sort(), ['f1', 'u1'], 'file GIFs stay on their own phone');
+    eq(JSON.parse(C.forCloud(Object.assign(mk(), { timer: { id: 'a', end: 1 }, fired: { r1: '2026-11-09' } }))).timer, null);
+    eq(C.merge(a, null).lists.length, 2, 'no cloud copy: this phone as is');
+  });
+  await test('core: ticking and resetting a day stamp it, so the newest change always wins', () => {
+    const s = C.defaults(); eq(C.toggle(s, MON, 'med').checked, true); const t1 = s.days[MON].m; assert.ok(t1 > 0);
+    C.resetDay(s, MON); eq(C.count(s, MON), 0); assert.ok(s.days[MON].m >= t1, 'a reset is an empty, newer record');
+    const cloud = C.defaults(); cloud.days[MON] = { c: { med: 1 }, done: 0, m: t1 }; eq(C.count(C.merge(s, cloud), MON), 0, 'the old check marks do not come back');
+  });
   await test('core: list order moves and random celebration never repeats back to back', () => {
     const it = ['a', 'b', 'c'].map(id => ({ id, name: id })); eq(C.moveItem(it, 'a', 1).map(x => x.id).join(''), 'bac'); eq(C.moveItem(it, 'a', -1).map(x => x.id).join(''), 'abc'); eq(C.moveItem(it, 'c', 1).map(x => x.id).join(''), 'abc');
     for (let i = 0; i < 200; i++) { const n = C.pick(5, 2); assert.ok(n >= 0 && n < 5 && n !== 2); } eq(C.pick(1, 0), 0); eq(C.pick(5, -1, () => 0.9999), 4);
@@ -247,6 +272,80 @@ const doAll = (s, k) => C.itemsFor(s, k).forEach(i => { if (!C.isChecked(s, k, i
     eq(await q.page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true, 'no sideways scroll');
     for (const t of ['list', 'alarms', 'more', 'log']) { await q.page.locator('[data-tab=' + t + ']').click(); eq(await q.page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true, t + ' fits'); }
     eq(q.errors.length, 0, q.errors.join('|'));
+  });
+  /* ============ cloud backup (Firebase stubbed: the real scripts live on gstatic, which tests can't reach) ============ */
+  const FAKE_FB = `(function(){ if (window.firebase) return; var L = [], user = null; try { user = JSON.parse(localStorage.getItem('fakeUser')); } catch (e) {}
+    function Ref(path) { this.path = path; } Ref.prototype.collection = function (c) { var p = this.path; return { doc: function (id) { return new Ref(p + '/' + c + '/' + id); } }; };
+    Ref.prototype.get = async function () { var d = await window.__fsGet(this.path); if (d && d.__deny) { var e = new Error('denied'); e.code = 'permission-denied'; throw e; } return { exists: d != null, data: function () { return d; } }; };
+    Ref.prototype.set = function (d, o) { return window.__fsSet(this.path, d, !!(o && o.merge)); }; Ref.prototype.update = function (d) { return window.__fsUpdate(this.path, d); }; Ref.prototype.delete = function () { return window.__fsDel(this.path); };
+    function Tx() { this.w = []; } Tx.prototype.get = function (r) { return r.get(); }; Tx.prototype.set = function (r, d, o) { this.w.push([r, d, o]); };
+    var auth = { get currentUser() { return user; }, onAuthStateChanged: function (cb) { L.push(cb); setTimeout(function () { cb(user); }, 0); }, signInWithPopup: async function () { user = { uid: window.__uid || 'kid1', email: 'family@example.com' }; localStorage.setItem('fakeUser', JSON.stringify(user)); L.forEach(function (f) { f(user); }); }, signOut: async function () { user = null; localStorage.removeItem('fakeUser'); L.forEach(function (f) { f(null); }); } };
+    var fs = { collection: function (c) { return { doc: function (id) { return new Ref(c + '/' + id); } }; }, runTransaction: async function (fn) { var t = new Tx(); await fn(t); for (var i = 0; i < t.w.length; i++) await t.w[i][0].set(t.w[i][1], t.w[i][2]); } };
+    window.firebase = { apps: [], initializeApp: function () { this.apps.push(1); }, auth: Object.assign(function () { return auth; }, { GoogleAuthProvider: function () { this.setCustomParameters = function () {}; } }),
+      firestore: Object.assign(function () { return fs; }, { FieldValue: { serverTimestamp: function () { return 'TS'; }, arrayUnion: function (v) { return { __op: 'union', v: v }; }, arrayRemove: function (v) { return { __op: 'remove', v: v }; } } }) }; })();`;
+  const cloudDb = new Map(); let fsDeny = false;
+  const mkPhone = async (opts = {}) => {
+    const ctx = await br.newContext({ viewport: { width: 390, height: 844 }, serviceWorkers: 'block' });
+    let hits = 0;
+    await ctx.exposeFunction('__fsGet', async p => { if (fsDeny) return { __deny: true }; return cloudDb.has(p) ? JSON.parse(JSON.stringify(cloudDb.get(p))) : null; });
+    await ctx.exposeFunction('__fsSet', async (p, d, merge) => { cloudDb.set(p, merge ? Object.assign({}, cloudDb.get(p) || {}, d) : d); });
+    await ctx.exposeFunction('__fsUpdate', async (p, d) => { const cur = Object.assign({}, cloudDb.get(p) || {}); for (const [k, v] of Object.entries(d)) { if (v && v.__op === 'union') cur[k] = [...new Set((cur[k] || []).concat(v.v))]; else if (v && v.__op === 'remove') cur[k] = (cur[k] || []).filter(x => x !== v.v); else cur[k] = v; } cloudDb.set(p, cur); });
+    await ctx.exposeFunction('__fsDel', async p => { cloudDb.delete(p); });
+    await ctx.route(/gstatic\.com\/firebasejs/, r => { hits++; opts.offline ? r.abort() : r.fulfill({ contentType: 'text/javascript', body: FAKE_FB }); });
+    const o = await newPage(br, { context: ctx, today: MON }); await o.page.clock.install({ time: new Date('2026-11-09T06:50:00') });
+    await o.page.goto(srv.url); await o.page.waitForSelector('.item'); o.hits = () => hits; return o;
+  };
+  const signIn = async page => { await page.locator('[data-tab=more]').click(); await page.locator('[data-act=cloudin]').click(); await page.waitForFunction(() => /Backed up as/.test(document.querySelector('#cl').textContent)); };
+  const cloudState = () => { const d = cloudDb.get('gr_users/kid1'); return d ? JSON.parse(d.data) : null; };
+  await test('cloud: nothing is loaded or stored online until you sign in; the app offers it after a finished day', async () => {
+    cloudDb.clear(); const a = await mkPhone(); eq(a.hits(), 0, 'no Firebase scripts loaded'); eq(cloudDb.size, 0);
+    eq(await a.page.locator('.nudge').count(), 0, 'no nudge before there is anything to lose');
+    for (let i = 0; i < 6; i++) await a.page.locator('.item .chk').nth(i).click(); await a.page.waitForSelector('.celebrate'); await a.page.locator('.cel-go').click();
+    await a.page.waitForSelector('.nudge'); assert.ok(/Keep your streak safe/.test(await a.page.locator('.nudge').innerText()));
+    await a.page.locator('[data-act=nudgeno]').click(); eq(await a.page.locator('.nudge').count(), 0, 'Not now hides it for a week'); eq(a.hits(), 0); eq(cloudDb.size, 0);
+    eq(a.errors.length, 0, a.errors.join('|'));
+  });
+  await test('cloud: signing in backs up the lists, streak and photos; a new phone gets them all back; the backup holds no timers', async () => {
+    cloudDb.clear(); const a = await mkPhone();
+    const [fc] = await Promise.all([a.page.waitForEvent('filechooser'), a.page.locator('.item').nth(3).locator('.thumb').click()]); await fc.setFiles({ name: 'bag.png', mimeType: 'image/png', buffer: PNG }); await a.page.locator('.item').nth(3).locator('.thumb img').waitFor();
+    await a.page.locator('.item', { hasText: 'Brush teeth' }).locator('.tbtn').click();
+    for (const i of [0, 1, 2, 3, 4, 5]) { const row = a.page.locator('.item').nth(i); if (!(await row.evaluate(e => e.classList.contains('on')))) await row.locator('.chk').click(); }
+    await a.page.waitForSelector('.celebrate'); await a.page.locator('.cel-go').click();
+    await signIn(a.page); eq(a.hits() > 0, true); assert.ok(cloudDb.has('gr_users/kid1'), 'the account document exists');
+    const cs = cloudState(); eq(cs.days[MON].done, 1, 'the finished day is backed up'); eq(cs.lists.length, 2); eq(cs.timer, null, 'no timer in the cloud'); assert.deepStrictEqual(Object.keys(cloudDb.get('gr_users/kid1')).sort(), ['data', 'pids', 'updated']);
+    await a.page.waitForFunction(() => true); await a.page.clock.runFor(200); assert.ok(cloudDb.has('gr_users/kid1/photos/bag'), 'the bag photo went up'); assert.ok(cloudDb.get('gr_users/kid1/photos/bag').img.startsWith('data:image/jpeg'));
+    eq(cloudDb.get('gr_users/kid1').pids.join(), 'bag'); assert.ok(await a.page.locator('#cloud').isVisible(), 'cloud badge'); eq(await a.page.locator('#cloud').innerText(), '☁️✓');
+    // a brand new phone
+    const b = await mkPhone(); eq(await b.page.locator('.item.on').count(), 0); eq(await b.page.locator('.thumb img').count(), 0);
+    await signIn(b.page); await b.page.locator('[data-tab=today]').click(); await b.page.waitForSelector('.item.on'); eq(await b.page.locator('.item.on').count(), 6, 'check marks came over');
+    await b.page.locator('.item').nth(3).locator('.thumb img').waitFor({ timeout: 5000 }); eq(await b.page.locator('.streak').innerText().then(t => t.replace(/\s+/g, ' ')), '🔥 1 streak', 'the streak came over');
+    eq(a.errors.length, 0, a.errors.join('|')); eq(b.errors.length, 0, b.errors.join('|'));
+  });
+  await test('cloud: two phones keep both sets of changes; unticking, removing a photo and list edits sync across; a new phone adopts the account lists', async () => {
+    cloudDb.clear(); const a = await mkPhone(); await a.page.locator('.item .chk').nth(0).click(); await signIn(a.page);
+    const b = await mkPhone(); await signIn(b.page); await b.page.locator('[data-tab=today]').click(); await b.page.waitForSelector('.item.on'); eq(await b.page.locator('.item.on').count(), 1);
+    await b.page.locator('.item .chk').nth(1).click(); await b.page.locator('.item .chk').nth(0).click(); // b ticks vitamins and unticks medicine
+    await b.page.locator('[data-tab=list]').click(); await b.page.locator('#lname').fill('Weekdays'); await b.page.locator('#lname').blur();
+    await b.page.clock.runFor(25000); await a.page.clock.runFor(1000);
+    await a.page.locator('[data-tab=more]').click(); await a.page.locator('[data-act=cloudnow]').click(); await a.page.waitForTimeout(300); await a.page.locator('[data-tab=today]').click();
+    eq((await a.page.locator('.item.on .iname').allInnerTexts()).join(), 'Vitamins', 'a sees b\'s changes (and medicine stays unticked)'); assert.ok(/Weekdays/.test(await a.page.locator('.hello p').innerText()), 'the new list name came over');
+    const c = await mkPhone(); await c.page.locator('[data-tab=list]').click(); await c.page.locator('#lname').fill('Edited before signing in'); await c.page.locator('#lname').blur(); await signIn(c.page);
+    await c.page.locator('[data-tab=list]').click(); eq(await c.page.locator('#lname').inputValue(), 'Weekdays', 'a phone linking for the first time takes the account\'s lists');
+    // removing a photo elsewhere sticks
+    const [fc] = await Promise.all([a.page.waitForEvent('filechooser'), a.page.locator('[data-tab=today]').click().then(() => a.page.locator('.item').nth(2).locator('.thumb').click())]); await fc.setFiles({ name: 'x.png', mimeType: 'image/png', buffer: PNG });
+    await a.page.locator('.item').nth(2).locator('.thumb img').waitFor(); await a.page.clock.runFor(25000); await a.page.waitForTimeout(300); assert.ok(cloudDb.has('gr_users/kid1/photos/teeth'));
+    await a.page.locator('.item').nth(2).locator('.thumb').click(); await a.page.locator('[data-act=vdel]').click(); await a.page.locator('[data-act=vclose]').click(); await a.page.clock.runFor(25000); await a.page.waitForTimeout(300);
+    eq(cloudDb.has('gr_users/kid1/photos/teeth'), false, 'removed from the cloud'); eq(cloudDb.get('gr_users/kid1').pids.includes('teeth'), false);
+    eq(a.errors.length, 0, a.errors.join('|')); eq(b.errors.length, 0, b.errors.join('|')); eq(c.errors.length, 0, c.errors.join('|'));
+  });
+  await test('cloud: no signal or a blocked account never breaks the checklist; sign out keeps everything on the phone', async () => {
+    cloudDb.clear(); fsDeny = false; const off = await mkPhone({ offline: true }); await off.page.locator('[data-tab=more]').click(); await off.page.locator('[data-act=cloudin]').click();
+    await off.page.waitForFunction(() => /No connection/.test(document.querySelector('#cl').textContent)); await off.page.locator('[data-tab=today]').click(); await off.page.locator('.item .chk').nth(0).click(); eq(await off.page.locator('.item.on').count(), 1);
+    const d = await mkPhone(); fsDeny = true; await d.page.locator('[data-tab=more]').click(); await d.page.locator('[data-act=cloudin]').click(); await d.page.waitForFunction(() => /not allowed/.test(document.querySelector('#cl').textContent)); fsDeny = false;
+    await d.page.locator('[data-tab=today]').click(); await d.page.locator('.item .chk').nth(0).click(); eq(await d.page.locator('.item.on').count(), 1, 'still works');
+    const e = await mkPhone(); await e.page.locator('.item .chk').nth(0).click(); await signIn(e.page); await e.page.locator('[data-act=cloudout]').click(); await e.page.waitForSelector('[data-act=cloudin]');
+    eq(await e.page.evaluate(() => localStorage.getItem('getready.cloud')), null); await e.page.locator('[data-tab=today]').click(); eq(await e.page.locator('.item.on').count(), 1, 'the day is still on the phone');
+    eq(off.errors.length + d.errors.length + e.errors.length, 0, off.errors.concat(d.errors, e.errors).join('|'));
   });
   await test('offline: the service worker caches the app and it reopens with no network', async () => {
     const o = await newPage(br, { sw: true, today: MON }); const { page, ctx } = o;

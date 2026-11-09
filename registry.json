@@ -2228,12 +2228,12 @@
         "ac": "#2f8cff",
         "install": true,
         "access": "Open",
-        "desc": "A daily checklist for getting out the door ready for school: medicine, vitamins, school bag, water and whatever else the morning needs. Make a different list for different days (a weekend list, or one for Mon/Thu and another for Tue/Fri), add or remove items any time, snap a photo of each item so it's easy to recognize, set optional timers and reminders, and when every box is checked a random full-screen dance celebrates. No end date. Everything stays on the phone.",
+        "desc": "A daily checklist for getting out the door ready for school: medicine, vitamins, school bag, water and whatever else the morning needs. Make a different list for different days (a weekend list, or one for Mon/Thu and another for Tue/Fri), add or remove items any time, snap a photo of each item so it's easy to recognize, set optional timers and reminders, and when every box is checked a random full-screen dance celebrates. No end date. Everything stays on the phone unless you sign in with Google to back up your lists, streak and pictures.",
         "feats": [
           [
             "📸",
             "A photo for every item",
-            "Tap the camera next to an item to take its picture; tap the picture to see it big."
+            "Tap the camera next to an item to take its picture. Sign in with Google to keep them safe."
           ],
           [
             "⏱️",
@@ -2282,8 +2282,12 @@
         "shots": [
           "mock"
         ],
-        "version": "1.2.0",
+        "version": "1.3.0",
         "history": [
+          {
+            "v": "1.3.0",
+            "t": "Get Ready: optional Google sign-in backs up lists, check marks, streaks and photos, and brings them to a new phone"
+          },
           {
             "v": "1.2.0",
             "t": "Get Ready: two new celebration dances, the twerk and the Griddy"
