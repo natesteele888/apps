@@ -55,7 +55,7 @@ const TODAY = '2026-11-08';
     eq(first[0], '2026-11-01'); eq(first.filter(Boolean).length, 30);
     eq(C.monthGrid(2026, 1).filter(Boolean).length, 28); eq(C.monthGrid(2028, 1).filter(Boolean).length, 29);
     C.addSeconds(s, '2026-11-02', 'a', 1200); const st = C.monthStats(s, 2026, 10); eq(st.nights, 1); eq(st.sec, 900 + 1200);
-    eq(C.fmtClock(125), '2:05'); eq(C.fmtMin(30), 'under 1 min'); eq(C.fmtMin(0), '0 min'); eq(C.fmtMin(1200), '20 min');
+    eq(C.fmtTotal(1800), '30 min'); eq(C.fmtTotal(3600), '1 hr'); eq(C.fmtTotal(5400), '1.5 hr'); eq(C.fmtClock(125), '2:05'); eq(C.fmtMin(30), 'under 1 min'); eq(C.fmtMin(0), '0 min'); eq(C.fmtMin(1200), '20 min');
   });
   await test('core: merging two saves never loses time (restore, second-copy recovery)', () => {
     const a = C.empty(), b = C.empty();
@@ -148,6 +148,15 @@ const TODAY = '2026-11-08';
       await page.screenshot({ path: SHOTS + '/read20-log-' + w + '.png' });
       await page.goto(srv.url); await page.waitForSelector('.cover'); eq(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth), true, w + ' shelf');
     }
+  });
+  await test('log screen: tonight can be saved from right there (file and cloud buttons), and the total is in minutes not hours', async () => {
+    const { page } = await mk(); await page.locator('#manual').click(); await page.fill('#mm', '30'); await page.locator('#ms').click(); await page.waitForSelector('.cover');
+    await page.locator('#nav button[data-go="log"]').click(); await page.waitForSelector('.keep');
+    assert.ok(/Saved on this phone/.test(await page.locator('.keep').innerText())); assert.ok(/30 min/.test(await page.locator('.stats').innerText()) && !/hours? read/.test(await page.locator('.stats').innerText()));
+    const dl = page.waitForEvent('download'); await page.locator('#kfile').click(); const d = await dl; assert.ok(/read20-backup/.test(d.suggestedFilename()));
+    await page.locator('#kcloud').click(); await page.locator('#cin').waitFor(); await page.locator('#sd').click();
+    await page.locator('#gear').click(); await page.locator('#cin').waitFor(); await page.locator('#sd').click();
+    await page.screenshot({ path: SHOTS + '/read20-log-keep.png', fullPage: true });
   });
   await test('log from home + settings: minutes count, goal changes, name shows; survives reload', async () => {
     const { page, ctx } = await mk(); await page.locator('#manual').click();

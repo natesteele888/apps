@@ -242,17 +242,27 @@
     if (!ui.sel) ui.sel = k;
     const { y, m } = ui.month, cells = C.monthGrid(y, m), st = C.monthStats(S, y, m);
     const names = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
-    const fin = C.finishedIds(S), totalMin = Object.keys(S.days).reduce((a, d) => a + S.days[d].sec, 0), nights = Object.keys(S.days).filter(d => C.isDone(S, d)).length;
+    const fin = C.finishedIds(S), totalSec = C.total(S), nights = Object.keys(S.days).filter(d => C.isDone(S, d)).length;
     $("#view").innerHTML = `
-    <header class="top"><h1>🗓️ My Reading Log</h1></header>
-    <section class="stats"><div><b>🔥 ${C.streak(S, k)}</b><span>nights in a row</span></div><div><b>⭐ ${nights}</b><span>${S.goal}-minute nights</span></div><div><b>📚 ${Object.keys(fin).length}</b><span>stories finished</span></div><div><b>⏱ ${Math.round(totalMin / 60)}</b><span>hours read</span></div></section>
+    <header class="top"><h1>🗓️ My Reading Log</h1><button class="icon" id="gear" aria-label="Settings">⚙️</button></header>
+    <section class="stats"><div><b>🔥 ${C.streak(S, k)}</b><span>nights in a row</span></div><div><b>⭐ ${nights}</b><span>${S.goal}-minute nights</span></div><div><b>📚 ${Object.keys(fin).length}</b><span>stories finished</span></div><div><b>⏱ ${C.fmtTotal(totalSec)}</b><span>read in all</span></div></section>
     <div class="mhead"><button class="icon" id="pm" aria-label="Last month">◀</button><h2>${names[m]} ${y}</h2><button class="icon" id="nm" aria-label="Next month">▶</button></div>
     <p class="mfine">${st.nights} night${st.nights === 1 ? "" : "s"} done this month</p>
     <div class="cal" role="grid"><div class="dow">S</div><div class="dow">M</div><div class="dow">T</div><div class="dow">W</div><div class="dow">T</div><div class="dow">F</div><div class="dow">S</div>
     ${cells.map(c => { if (!c) return '<div class="day empty"></div>'; const s = C.daySec(S, c), dn = +c.slice(8); const cls = (C.isDone(S, c) ? "done " : s ? "some " : "") + (c === k ? "now " : "") + (c === ui.sel ? "sel" : "");
       return `<button class="day ${cls}" data-d="${c}" aria-label="${c}${s ? ", " + C.fmtMin(s) : ""}${C.isDone(S, c) ? ", goal reached" : ""}"><b>${dn}</b><i>${C.isDone(S, c) ? "⭐" : s ? Math.round(s / 60) + "m" : ""}</i></button>`; }).join("")}</div>
-    <div id="detail"></div>`;
+    <div id="detail"></div>
+    <section class="keep"><h3>Keep her log safe</h3>
+      <p class="ok">${store.fail ? "⚠️ This phone is not letting the app save." : "✓ Saved on this phone"}</p>
+      <p class="cl2" id="cl2">${esc(cloudLine()) || "☁️ Not backed up online yet."}</p>
+      <button class="btn" id="kcloud">${CL.status === "ok" ? "☁️ Back up now" : "☁️ Back up online (a parent signs in once)"}</button>
+      <button class="btn alt" id="kfile">💾 Save a backup file</button>
+      <p class="fine left" id="kmsg" role="status"></p>
+    </section>`;
     nav("log");
+    $("#gear").onclick = openSettings;
+    $("#kcloud").onclick = () => { if (CL.status === "ok") { CL.syncNow(); $("#kmsg").textContent = "Backing up…"; setTimeout(() => { if ($("#cl2")) renderLog(); }, 1500); } else openSettings(); };
+    $("#kfile").onclick = () => { backup(); $("#kmsg").textContent = "Backup file saved to this phone's Downloads."; };
     $("#pm").onclick = () => { ui.month = m === 0 ? { y: y - 1, m: 11 } : { y, m: m - 1 }; renderLog(); };
     $("#nm").onclick = () => { ui.month = m === 11 ? { y: y + 1, m: 0 } : { y, m: m + 1 }; renderLog(); };
     document.querySelectorAll(".day[data-d]").forEach(b => (b.onclick = () => { ui.sel = b.dataset.d; renderLog(); }));
