@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Get Ready: the school-morning checklist</title>
+<meta name="description" content="A daily checklist for getting ready for school: medicine, vitamins, school bag, water and more. Add your own photos, timers and reminders, and celebrate when the whole list is done. Everything stays on your phone.">
+<meta name="theme-color" content="#000000">
+<meta name="color-scheme" content="dark">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Get Ready">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" type="image/png" sizes="192x192" href="/apps/icons/getready-192.png">
+<link rel="apple-touch-icon" href="/apps/icons/getready-192.png">
+<script src="https://natesteele888.github.io/apps/install.js" defer></script>
+<link rel="stylesheet" href="getready.css">
+</head>
+<body>
+<div id="app">
+  <header id="top"><span class="brand">Get Ready</span><span class="tabname" id="tabname"></span></header>
+  <div id="toasts" aria-live="polite"></div>
+  <main id="view" tabindex="-1"></main>
+  <nav class="nav" id="nav" aria-label="Sections"></nav>
+</div>
+<input type="file" id="cam" accept="image/*" capture="environment" hidden>
+<input type="file" id="pick" accept="image/*" hidden>
+<input type="file" id="gifpick" accept="image/gif,image/webp,image/png" hidden>
+<noscript><p style="padding:24px;font-family:sans-serif;color:#fff">Get Ready needs JavaScript turned on to work.</p></noscript>
+<script src="core.js"></script>
+<script src="db.js"></script>
+<script src="celebrate.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
