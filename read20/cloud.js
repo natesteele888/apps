@@ -1,12 +1,14 @@
 /* Read 20: optional Google sign-in and cloud backup.
    Reading never needs this. A parent signs in once in Settings; after that the log is merged with a copy in
    Firebase (nates-toolbox project, one document per signed-in account: r20_users/<uid>) so a lost, reset or new phone
-   gets it all back. The merge only ever adds time, so two phones can't erase each other.
+   gets it all back. A family link lets two homes use one log: both phones sync with one shared document (r20_shared/<key>, the key is
+   a long random code in the link) and each phone signs in with its own Google account. The merge only ever adds time, so two phones can't erase each other.
    The Firebase scripts load only when a parent has turned this on, so the app starts instantly and works offline. */
 (function () {
   "use strict";
   const CONFIG = { apiKey: "AIzaSyDT_wGN93U4oM70orIU8flSAnvXHApqW2A", authDomain: "nates-toolbox.firebaseapp.com", projectId: "nates-toolbox", storageBucket: "nates-toolbox.firebasestorage.app", messagingSenderId: "567737923830", appId: "1:567737923830:web:b597b5d71e7c7a73c4d4d7" };
-  const V = "11.6.0", FLAG = "read20.cloud", COL = "r20_users";
+  const V = "11.6.0", FLAG = "read20.cloud", COL = "r20_users", SHARED = "r20_shared", SHARE = "read20.share", PEND = "read20.joinPending";
+  const KEYRE = /^[a-z2-7]{20}$/;
   const SCRIPTS = ["app", "auth", "firestore"].map(n => "https://www.gstatic.com/firebasejs/" + V + "/firebase-" + n + "-compat.js");
   const C = window.R20Core;
   const cloud = { status: "off", email: "", at: 0, msg: "", onchange: () => {} };
@@ -28,13 +30,15 @@
       let first = true;
       fb.auth().onAuthStateChanged(u => {
         cloud.email = u && u.email || "";
-        if (u) { set("signedin"); sync(); } else set("signedout");
+        if (u) { try { const pk = localStorage.getItem(PEND); if (pk && KEYRE.test(pk)) { localStorage.setItem(SHARE, pk); localStorage.removeItem(PEND); } } catch (e) {} set("signedin"); sync(); } else set("signedout");
         if (first) { first = false; ready = true; res(); }
       });
     })).catch(e => { loading = null; set("offline"); });
     return loading;
   }
-  const ref = () => { const fb = window.firebase, u = fb.auth().currentUser; return fb.firestore().collection(COL).doc(u.uid); };
+  const get = k => { try { return localStorage.getItem(k) || ""; } catch (e) { return ""; } };
+  const put = (k, v) => { try { v ? localStorage.setItem(k, v) : localStorage.removeItem(k); } catch (e) {} };
+  const ref = () => { const fb = window.firebase, u = fb.auth().currentUser, k = get(SHARE); return KEYRE.test(k) ? fb.firestore().collection(SHARED).doc(k) : fb.firestore().collection(COL).doc(u.uid); };
 
   /* One round trip: read the saved copy, merge it with this phone's log, and write the result back if it grew. */
   async function sync(force) {
@@ -47,7 +51,7 @@
         const snap = await tx.get(r);
         let remote = null; try { remote = snap.exists ? JSON.parse(snap.data().log) : null; } catch (e) {}
         const mine = getS(), merged = force ? mine : C.merge(mine, remote || C.empty());
-        const text = JSON.stringify(merged);
+        const text = JSON.stringify(C.serialize(merged));
         if (!snap.exists || snap.data().log !== text) tx.set(r, { log: text, updated: fb.firestore.FieldValue.serverTimestamp() });
         cloud.merged = merged;
       });
@@ -70,6 +74,24 @@
   };
   cloud.signOut = async () => { flag(false); try { await window.firebase.auth().signOut(); } catch (e) {} set("off"); };
   cloud.syncNow = () => sync();
+  /* Family link: one shared log for two homes. */
+  cloud.shareKey = () => { const k = get(SHARE); return KEYRE.test(k) ? k : ""; };
+  cloud.parseKey = text => { const m = String(text || "").toLowerCase().replace(/[^a-z2-7]/g, ""); const t = /join=([a-z2-7]{20})/.exec(String(text || "").toLowerCase()); return t ? t[1] : KEYRE.test(m) ? m : m.length > 20 && KEYRE.test(m.slice(-20)) ? m.slice(-20) : ""; };
+  cloud.link = k => location.origin + location.pathname.replace(/[^/]*$/, "") + "#join=" + (k || cloud.shareKey());
+  cloud.pretty = k => (k || cloud.shareKey()).replace(/(.{5})(?=.)/g, "$1-");
+  cloud.makeShare = async () => {
+    const bytes = new Uint8Array(20); (window.crypto || window.msCrypto).getRandomValues(bytes);
+    const A = "abcdefghijklmnopqrstuvwxyz234567"; let k = ""; for (const b of bytes) k += A[b % 32];
+    put(SHARE, k); await sync(); return cloud.status === "ok" ? k : (put(SHARE, ""), "");
+  };
+  /* Joins the log a family link points to. Signs in first if this phone has not. */
+  cloud.join = async key => {
+    if (!KEYRE.test(key)) return false;
+    put(PEND, key); flag(true); await start(); if (!ready) return false;
+    if (window.firebase.auth().currentUser) { put(SHARE, key); put(PEND, ""); await sync(); return cloud.status === "ok"; }
+    cloud.signIn(); return false;   // finishes in the sign-in listener (also after a redirect)
+  };
+  cloud.leave = () => { put(SHARE, ""); put(PEND, ""); cloud.onchange(); };
   cloud.schedule = schedule;
   cloud.flush = () => { if (cloud.status === "ok" || cloud.status === "signedin") sync(); };
   /* Overwrite the saved copy (used by "erase the log" so the cloud copy doesn't bring it back). */

@@ -150,7 +150,7 @@ test('read20: nobody can read or write another account\'s backup, and signed-out
 test('read20: the backup document only accepts a log string of a sane size', async () => {
   const db = r20('parentA');
   await assertFails(setDoc(doc(db, 'r20_users/parentA'), { log: 5, updated: 1 }));
-  await assertFails(setDoc(doc(db, 'r20_users/parentA'), { log: 'x'.repeat(400001), updated: 1 }));
+  await assertFails(setDoc(doc(db, 'r20_users/parentA'), { log: 'x'.repeat(900001), updated: 1 }));
   await assertFails(setDoc(doc(db, 'r20_users/parentA'), { ...r20Data, extra: 'nope' }));
 });
 test('read20: a backup account is not a Gameday Picks player or the owner', async () => {
@@ -214,4 +214,30 @@ test('Photo Blueprint accounts cannot read Toolbox, Picks or Read 20 data', asyn
   await assertFails(getDoc(doc(photoA(), 'projects/p1')));
   await assertFails(getDocs(collection(photoA(), 'gp_picks')));
   await assertFails(getDoc(doc(photoA(), 'r20_users/someone')));
+});
+
+// ---------- Read 20 family link (r20_shared/<code>) ----------
+const KEY = 'abcdefghijklmnopqrst';
+const g = (uid) => env.authenticatedContext(uid, { email: uid + '@example.com', email_verified: true, firebase: { sign_in_provider: 'google.com' } }).firestore();
+const anonUser = () => env.authenticatedContext('anon1', { firebase: { sign_in_provider: 'anonymous' } }).firestore();
+
+test('read20 shared: two different Google accounts that know the code can both read and write the one log', async () => {
+  await assertSucceeds(setDoc(doc(g('dad'), 'r20_shared/' + KEY), r20Data));
+  await assertSucceeds(getDoc(doc(g('mom'), 'r20_shared/' + KEY)));
+  await assertSucceeds(setDoc(doc(g('mom'), 'r20_shared/' + KEY), { ...r20Data, log: '{"v":1,"days":{"2026-11-09":{}}}' }));
+});
+test('read20 shared: no listing, no deleting, no signed-out or anonymous access', async () => {
+  await env.withSecurityRulesDisabled(async (ctx) => { await setDoc(doc(ctx.firestore(), 'r20_shared/' + KEY), r20Data); });
+  await assertFails(getDocs(collection(g('mom'), 'r20_shared')));
+  await assertFails(deleteDoc(doc(g('mom'), 'r20_shared/' + KEY)));
+  await assertFails(getDoc(doc(anon(), 'r20_shared/' + KEY)));
+  await assertFails(getDoc(doc(anonUser(), 'r20_shared/' + KEY)));
+  await assertFails(setDoc(doc(anonUser(), 'r20_shared/' + KEY), r20Data));
+});
+test('read20 shared: the code must be 20 letters/digits, and the document only takes a log string of sane size', async () => {
+  await assertFails(setDoc(doc(g('dad'), 'r20_shared/short'), r20Data));
+  await assertFails(setDoc(doc(g('dad'), 'r20_shared/ABCDEFGHIJKLMNOPQRST'), r20Data));
+  await assertFails(setDoc(doc(g('dad'), 'r20_shared/' + KEY), { log: 5, updated: 1 }));
+  await assertFails(setDoc(doc(g('dad'), 'r20_shared/' + KEY), { log: 'x'.repeat(900001), updated: 1 }));
+  await assertFails(setDoc(doc(g('dad'), 'r20_shared/' + KEY), { ...r20Data, extra: 1 }));
 });
