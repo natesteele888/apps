@@ -107,6 +107,7 @@
   };
   C.daysSince = (from, to) => Math.round((C.parseDay(to) - C.parseDay(from)) / 864e5);
   C.fmtClock = sec => { sec = Math.max(0, Math.floor(sec)); return Math.floor(sec / 60) + ":" + pad(sec % 60); };
+  C.fmtTotal = sec => (sec < 3600 ? Math.round(sec / 60) + " min" : (Math.round(sec / 360) / 10) + " hr");
   C.fmtMin = sec => (sec > 0 && sec < 60 ? "under 1 min" : Math.round(sec / 60) + " min");
 
   root.R20Core = C;
