@@ -1,0 +1,11 @@
+{
+  "id": "walkup",
+  "caps": [
+    "Your batting order, with who is up and who is on deck",
+    "Balance the voice against the song with one slider",
+    "Choose when the voice starts, to the tenth of a second",
+    "Soften the music while the name is read",
+    "Add each song once, then give it to any player",
+    "The whole team, with each player's song and voice"
+  ]
+}

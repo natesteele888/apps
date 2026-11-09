@@ -143,3 +143,9 @@ input[type=time].inp { width: 130px; flex: none; font-size: 18px; font-weight: 7
 .chips.days .chip { flex: 1 1 0; min-width: 0; padding: 0; }
 .cloudbadge { font-size: 14px; font-weight: 700; color: var(--blue2); margin-left: 6px; }
 .nudge { border-color: var(--blue-d); }
+
+/* reminder rows: time and switch on one line, the words below, so nothing is cut off on a phone */
+.rrow > .row { flex-wrap: wrap; }
+.rrow > .row input[type=time].inp { width: 150px; }
+.rrow > .row .sw { margin-left: auto; }
+.rrow > .row input[data-act=rlabel] { order: 3; flex: 1 0 100%; }

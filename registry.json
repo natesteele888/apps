@@ -183,18 +183,13 @@
         ],
         "shots": [
           "store/shots/situations-1.webp",
-          "store/shots/situations-2.webp"
+          "store/shots/situations-2.webp",
+          "store/shots/situations-3.webp",
+          "store/shots/situations-4.webp",
+          "store/shots/situations-5.webp",
+          "store/shots/situations-6.webp"
         ],
-        "autoShots": [
-          {
-            "url": "",
-            "click": "Run the play",
-            "wait": 2500
-          },
-          {
-            "url": ""
-          }
-        ],
+        "autoShots": [],
         "latest": {
           "d": "Nov 8, 2026",
           "t": "Where Do I Go?: make the Slow button and play scrubber easier to tap",
@@ -222,6 +217,14 @@
             "v": "1.1.6",
             "t": "Where Do I Go: saved rules, team and quiz scores now stick; shared install pop-up"
           }
+        ],
+        "caps": [
+          "Runners, outs and the hit, then watch all nine fielders move",
+          "Your job on the play, in plain words, for your position",
+          "Fly balls, base hits and bunts too, with cutoffs and relays",
+          "Quiz yourself on where you go, then see the right answer",
+          "The few rules that cover almost every ball, in plain words",
+          "Keep the roster and game schedule with the plays"
         ]
       }
     },
@@ -299,7 +302,12 @@
           "curious"
         ],
         "shots": [
-          "store/img/picks.webp"
+          "store/shots/picks-1.webp",
+          "store/shots/picks-2.webp",
+          "store/shots/picks-3.webp",
+          "store/shots/picks-4.webp",
+          "store/shots/picks-5.webp",
+          "store/shots/picks-6.webp"
         ],
         "autoShots": [],
         "latest": {
@@ -325,6 +333,14 @@
             "v": "1.0.1",
             "t": "Gameday Picks: a real installable app with Google sign-in and invite codes"
           }
+        ],
+        "caps": [
+          "Pick a side in every game; picks stay open until it starts",
+          "Once a game starts, everyone's picks show and winners are marked",
+          "A leaderboard for each league keeps score",
+          "See how your picks went, team by team",
+          "Switch leagues with one tap: NFL, MLB, NBA and NHL",
+          "Invite your crew with a code, and turn it off any time"
         ]
       }
     },
@@ -397,15 +413,14 @@
           "coach"
         ],
         "shots": [
-          "store/shots/bengals-1.webp"
+          "store/shots/bengals-1.webp",
+          "store/shots/bengals-2.webp",
+          "store/shots/bengals-3.webp",
+          "store/shots/bengals-4.webp",
+          "store/shots/bengals-5.webp",
+          "store/shots/bengals-6.webp"
         ],
-        "autoShots": [
-          {
-            "url": "",
-            "click": "Let's go",
-            "wait": 2000
-          }
-        ],
+        "autoShots": [],
         "latest": {
           "d": "Nov 8, 2026",
           "t": "Banner: end with 'All of us coaches are proud of you.'",
@@ -433,6 +448,14 @@
             "v": "1.49.7",
             "t": "Sign-in: stop the published code hashes from working as Firebase passwords"
           }
+        ],
+        "caps": [
+          "Quiz yourself on the hand signals before game day",
+          "Every signal the coaches use, in one study guide",
+          "Every play drawn out, with direction and motion toggles",
+          "This Week: the next game and practices at a glance",
+          "Schedule with results, times and fields for every game",
+          "League standings with power rankings and playoff tools"
         ]
       },
       "inUse": true
@@ -507,14 +530,14 @@
           "board"
         ],
         "shots": [
-          "store/shots/gridiron-1.webp"
+          "store/shots/gridiron-1.webp",
+          "store/shots/gridiron-2.webp",
+          "store/shots/gridiron-3.webp",
+          "store/shots/gridiron-4.webp",
+          "store/shots/gridiron-5.webp",
+          "store/shots/gridiron-6.webp"
         ],
-        "autoShots": [
-          {
-            "url": "",
-            "scrollY": 1180
-          }
-        ],
+        "autoShots": [],
         "latest": {
           "d": "Nov 7, 2026",
           "t": "Gridiron Hub: show the Milford logo, point three stray pages at the real ones",
@@ -542,6 +565,14 @@
             "v": "1.5.0",
             "t": "Gridiron Hub: unlock the already-built RSVP/roster/message board, make messages two-way, add read receipts"
           }
+        ],
+        "caps": [
+          "Every team has a roster, with a page for each player",
+          "A team message board that shows who has seen each post",
+          "Practice schedule with one-tap RSVPs and live counts",
+          "Schedule and results for every team, with a calendar button",
+          "Season results and updates for the whole organization",
+          "Every program, ages and season dates in one place"
         ]
       }
     },
@@ -614,12 +645,21 @@
           "board"
         ],
         "shots": [
-          "store/shots/dashboard-1.webp"
+          "store/shots/dashboard-1.webp",
+          "store/shots/dashboard-2.webp",
+          "store/shots/dashboard-3.webp",
+          "store/shots/dashboard-4.webp",
+          "store/shots/dashboard-5.webp",
+          "store/shots/dashboard-6.webp"
         ],
-        "autoShots": [
-          {
-            "url": ""
-          }
+        "autoShots": [],
+        "caps": [
+          "Registrations, revenue and growth for the season at a glance",
+          "Charts of who signed up, by sport, division and town",
+          "See every sport and division compared to last year",
+          "League health: how many families came back this year",
+          "Every team, its roster and how many players returned",
+          "All-Stars eligibility by age bracket, worked out for you"
         ]
       }
     },
@@ -695,13 +735,14 @@
           "coach"
         ],
         "shots": [
-          "store/shots/ballclub-1.webp"
+          "store/shots/ballclub-1.webp",
+          "store/shots/ballclub-2.webp",
+          "store/shots/ballclub-3.webp",
+          "store/shots/ballclub-4.webp",
+          "store/shots/ballclub-5.webp",
+          "store/shots/ballclub-6.webp"
         ],
-        "autoShots": [
-          {
-            "url": ""
-          }
-        ],
+        "autoShots": [],
         "latest": {
           "d": "Nov 9, 2026",
           "t": "Where Do I Go: give extra-base hits a realistic roll instead of always reaching the fence",
@@ -729,6 +770,14 @@
             "v": "1.24.2",
             "t": "Make Ballclub's small buttons and links easier to tap"
           }
+        ],
+        "caps": [
+          "Your team home: record, standings and tonight's games",
+          "Post updates for families and see what is coming up",
+          "Every game with the score and a win or loss badge",
+          "The roster with numbers, positions and bats/throws",
+          "Build the batting order and fielding positions for each game",
+          "Full league standings with runs for and against"
         ]
       }
     },
@@ -871,13 +920,14 @@
           "player"
         ],
         "shots": [
-          "store/shots/fitness-1.webp"
+          "store/shots/fitness-1.webp",
+          "store/shots/fitness-2.webp",
+          "store/shots/fitness-3.webp",
+          "store/shots/fitness-4.webp",
+          "store/shots/fitness-5.webp",
+          "store/shots/fitness-6.webp"
         ],
-        "autoShots": [
-          {
-            "url": ""
-          }
-        ],
+        "autoShots": [],
         "latest": {
           "d": "Nov 9, 2026",
           "t": "Power Program: the Back gesture closes an exercise card instead of leaving the app",
@@ -905,6 +955,14 @@
             "v": "1.2.8",
             "t": "Power Program: open offline right after the first visit"
           }
+        ],
+        "caps": [
+          "Tick off each move of the day as you go, mid-workout",
+          "The day, the week and your streak at a glance",
+          "Finish the cooldown and mark the day complete",
+          "Nine weeks in three phases, with finished days marked",
+          "Jump, sprint and plank numbers with a trend line for each",
+          "See the gap between left and right leg at a glance"
         ]
       }
     },
@@ -973,18 +1031,13 @@
         ],
         "shots": [
           "store/shots/cube-1.webp",
-          "store/shots/cube-2.webp"
+          "store/shots/cube-2.webp",
+          "store/shots/cube-3.webp",
+          "store/shots/cube-4.webp",
+          "store/shots/cube-5.webp",
+          "store/shots/cube-6.webp"
         ],
-        "autoShots": [
-          {
-            "url": "",
-            "click": "Got it",
-            "hideText": "Could not load Firebase"
-          },
-          {
-            "url": ""
-          }
-        ],
+        "autoShots": [],
         "latest": {
           "d": "Nov 8, 2026",
           "t": "Cube Clock: keep the top buttons on screen on small phones",
@@ -1012,6 +1065,14 @@
             "v": "1.2.1",
             "t": "Add the shared install pop-up"
           }
+        ],
+        "caps": [
+          "Pick a puzzle and see your best time on every one",
+          "Hold, release, solve: a fresh scramble for every attempt",
+          "A live leaderboard for every puzzle",
+          "Each practice session, split up automatically",
+          "Personal best, averages of 5 and 12, and days practised",
+          "A trend graph of every solve, with a rolling average on top"
         ]
       }
     },
@@ -1097,7 +1158,12 @@
           "board"
         ],
         "shots": [
-          "store/img/sponsor-banners.webp"
+          "store/shots/sponsor-banners-1.webp",
+          "store/shots/sponsor-banners-2.webp",
+          "store/shots/sponsor-banners-3.webp",
+          "store/shots/sponsor-banners-4.webp",
+          "store/shots/sponsor-banners-5.webp",
+          "store/shots/sponsor-banners-6.webp"
         ],
         "autoShots": [],
         "latest": {
@@ -1127,6 +1193,14 @@
             "v": "1.1.2",
             "t": "Let Drop pin work on more than one banner per visit"
           }
+        ],
+        "caps": [
+          "Every sponsor banner with its photo and hung status",
+          "Filter to the banners still waiting to be hung",
+          "Photo, tier and amount paid for each banner",
+          "Sponsor contact details a tap away for renewals",
+          "A map of where every banner hangs around the fields",
+          "Tap a pin to see which banner hangs there"
         ]
       }
     },
@@ -1198,13 +1272,14 @@
           "curious"
         ],
         "shots": [
-          "store/shots/events-1.webp"
+          "store/shots/events-1.webp",
+          "store/shots/events-2.webp",
+          "store/shots/events-3.webp",
+          "store/shots/events-4.webp",
+          "store/shots/events-5.webp",
+          "store/shots/events-6.webp"
         ],
-        "autoShots": [
-          {
-            "url": ""
-          }
-        ],
+        "autoShots": [],
         "latest": {
           "d": "Nov 8, 2026",
           "t": "Make the Directions link on the invitation easy to tap",
@@ -1232,6 +1307,14 @@
             "v": "1.2.3",
             "t": "Say check your signal instead of event gone when a read fails"
           }
+        ],
+        "caps": [
+          "Your own invitation, with colors, banner and schedule",
+          "Guests see the details and the plan for the day",
+          "Guests RSVP from any phone, with no account",
+          "Every event you host, live or still a draft",
+          "The guest list: headcount, pizza choices and comments",
+          "Design the invitation on screen with a live preview"
         ]
       }
     },
@@ -1305,19 +1388,13 @@
         ],
         "shots": [
           "store/shots/eightcount-1.webp",
-          "store/shots/eightcount-2.webp"
+          "store/shots/eightcount-2.webp",
+          "store/shots/eightcount-3.webp",
+          "store/shots/eightcount-4.webp",
+          "store/shots/eightcount-5.webp",
+          "store/shots/eightcount-6.webp"
         ],
-        "autoShots": [
-          {
-            "url": "",
-            "wait": 2000
-          },
-          {
-            "url": "",
-            "click": "Sample: game-day cheer",
-            "wait": 1500
-          }
-        ],
+        "autoShots": [],
         "latest": {
           "d": "Nov 7, 2026",
           "t": "Add Eight Count: cheer and dance counts, lock in together, record and review",
@@ -1329,6 +1406,14 @@
             "v": "1.0.1",
             "t": "Add Eight Count: cheer and dance counts, lock in together, record and review"
           }
+        ],
+        "caps": [
+          "A big count, the move to hit, and what comes next",
+          "Write the routine in 8-counts, one move on every beat",
+          "Tap a count and pick the move, or type your own",
+          "Slow it to 50% to learn it, then build back up to full speed",
+          "Lock every phone onto one clock so the team counts off together",
+          "Record a take with the count on top"
         ]
       }
     },
@@ -1400,14 +1485,13 @@
           "player"
         ],
         "shots": [
-          "store/shots/playboard-1.webp"
+          "store/shots/playboard-1.webp",
+          "store/shots/playboard-2.webp",
+          "store/shots/playboard-3.webp",
+          "store/shots/playboard-4.webp",
+          "store/shots/playboard-5.webp"
         ],
-        "autoShots": [
-          {
-            "url": "",
-            "wait": 2500
-          }
-        ],
+        "autoShots": [],
         "latest": {
           "d": "Nov 7, 2026",
           "t": "Play Board: draw plays and watch them move",
@@ -1419,6 +1503,13 @@
             "v": "1.0.1",
             "t": "Play Board: draw plays and watch them move"
           }
+        ],
+        "caps": [
+          "Draw a play, press play and watch every player move",
+          "Keep your plays on your phone, one card for each",
+          "Soccer, volleyball and more: draw runs and passes with your finger",
+          "Football formations with routes, step by step",
+          "Baseball and softball diamonds for relays and bunt plays"
         ]
       }
     },
@@ -1489,14 +1580,14 @@
           "parent"
         ],
         "shots": [
-          "store/shots/locker-1.webp"
+          "store/shots/locker-1.webp",
+          "store/shots/locker-2.webp",
+          "store/shots/locker-3.webp",
+          "store/shots/locker-4.webp",
+          "store/shots/locker-5.webp",
+          "store/shots/locker-6.webp"
         ],
-        "autoShots": [
-          {
-            "url": "",
-            "wait": 2500
-          }
-        ],
+        "autoShots": [],
         "latest": {
           "d": "Nov 8, 2026",
           "t": "Locker: size season numbers to the screen so they never overlap",
@@ -1512,6 +1603,14 @@
             "v": "1.0.1",
             "t": "Locker: a sports notebook for daily reps, games and arm care"
           }
+        ],
+        "caps": [
+          "Tap off today's drills and keep the streak going",
+          "A season of games adds up to batting and pitching stats",
+          "Every game in one list, with the score and your numbers",
+          "Pitch counts and the rest days that go with them",
+          "Save favorite video links with a note",
+          "A one-page athlete card made from your own season"
         ]
       }
     },
@@ -1584,19 +1683,12 @@
         ],
         "shots": [
           "store/shots/practiceclock-1.webp",
-          "store/shots/practiceclock-2.webp"
+          "store/shots/practiceclock-2.webp",
+          "store/shots/practiceclock-3.webp",
+          "store/shots/practiceclock-4.webp",
+          "store/shots/practiceclock-5.webp"
         ],
-        "autoShots": [
-          {
-            "url": "",
-            "wait": 2500
-          },
-          {
-            "url": "",
-            "click": "Start with a baseball template",
-            "wait": 1500
-          }
-        ],
+        "autoShots": [],
         "latest": {
           "d": "Nov 8, 2026",
           "t": "Practice Clock: run practice by the minute with a big countdown",
@@ -1608,6 +1700,13 @@
             "v": "1.0.1",
             "t": "Practice Clock: run practice by the minute with a big countdown"
           }
+        ],
+        "caps": [
+          "Run the whole practice by the minute with a big countdown",
+          "Build a plan from timed blocks and see when practice ends",
+          "Stations, notes and colors for every block",
+          "Your plans and the practice running, one tap away",
+          "Recent practices, planned against how long they really ran"
         ]
       }
     },
@@ -1681,19 +1780,12 @@
         ],
         "shots": [
           "store/shots/whoswhere-1.webp",
-          "store/shots/whoswhere-2.webp"
+          "store/shots/whoswhere-2.webp",
+          "store/shots/whoswhere-3.webp",
+          "store/shots/whoswhere-4.webp",
+          "store/shots/whoswhere-5.webp"
         ],
-        "autoShots": [
-          {
-            "url": "",
-            "wait": 2500
-          },
-          {
-            "url": "",
-            "click": "Fill in a sample week",
-            "wait": 1500
-          }
-        ],
+        "autoShots": [],
         "latest": {
           "d": "Nov 8, 2026",
           "t": "Who's Where: the family sports week, with conflicts flagged",
@@ -1705,6 +1797,13 @@
             "v": "1.0.1",
             "t": "Who's Where: the family sports week, with conflicts flagged"
           }
+        ],
+        "caps": [
+          "One week for every kid, with who is driving",
+          "See double-booked kids and drivers, with a one-tap fix",
+          "Games, tournaments and who still needs a ride",
+          "The whole month at a glance, with clashes marked",
+          "Tap an event for the place, the driver, the snack and a calendar file"
         ]
       }
     },
@@ -1779,19 +1878,12 @@
         ],
         "shots": [
           "store/shots/tournamentpack-1.webp",
-          "store/shots/tournamentpack-2.webp"
+          "store/shots/tournamentpack-2.webp",
+          "store/shots/tournamentpack-3.webp",
+          "store/shots/tournamentpack-4.webp",
+          "store/shots/tournamentpack-5.webp"
         ],
-        "autoShots": [
-          {
-            "url": "",
-            "wait": 2500
-          },
-          {
-            "url": "",
-            "click": "Load a sample tournament",
-            "wait": 1500
-          }
-        ],
+        "autoShots": [],
         "latest": {
           "d": "Nov 8, 2026",
           "t": "Tournament Pack: keep game times inside their column",
@@ -1811,6 +1903,13 @@
             "v": "1.0.1",
             "t": "Tournament Pack: schedule, standings with real tiebreakers, bracket and packing list"
           }
+        ],
+        "caps": [
+          "Every game with arrive-by times, and how long you get to rest",
+          "Pool standings that follow the real tiebreakers",
+          "See exactly why one team ranks ahead of another",
+          "The bracket fills in as winners advance, with your path marked",
+          "A packing list for the weekend, checked off as you go"
         ]
       }
     },
@@ -1888,19 +1987,13 @@
         ],
         "shots": [
           "store/shots/walkup-1.webp",
-          "store/shots/walkup-2.webp"
+          "store/shots/walkup-2.webp",
+          "store/shots/walkup-3.webp",
+          "store/shots/walkup-4.webp",
+          "store/shots/walkup-5.webp",
+          "store/shots/walkup-6.webp"
         ],
-        "autoShots": [
-          {
-            "url": "",
-            "wait": 2500
-          },
-          {
-            "url": "",
-            "click": "Add a sample lineup",
-            "wait": 4200
-          }
-        ],
+        "autoShots": [],
         "latest": {
           "d": "Nov 8, 2026",
           "t": "Walk-Up: the mixer fits a phone with no scrolling",
@@ -1928,6 +2021,14 @@
             "v": "1.0.1",
             "t": "Walk-Up: record, polish and play every player's walk-up music"
           }
+        ],
+        "caps": [
+          "Your batting order, with who is up and who is on deck",
+          "Balance the voice against the song with one slider",
+          "Choose when the voice starts, to the tenth of a second",
+          "Soften the music while the name is read",
+          "Add each song once, then give it to any player",
+          "The whole team, with each player's song and voice"
         ]
       }
     },
@@ -2000,19 +2101,13 @@
         ],
         "shots": [
           "store/shots/scoreboard-1.webp",
-          "store/shots/scoreboard-2.webp"
+          "store/shots/scoreboard-2.webp",
+          "store/shots/scoreboard-3.webp",
+          "store/shots/scoreboard-4.webp",
+          "store/shots/scoreboard-5.webp",
+          "store/shots/scoreboard-6.webp"
         ],
-        "autoShots": [
-          {
-            "url": "",
-            "wait": 2500
-          },
-          {
-            "url": "",
-            "click": "Start a basketball game",
-            "wait": 1500
-          }
-        ],
+        "autoShots": [],
         "latest": {
           "d": "Nov 8, 2026",
           "t": "Scoreboard: cast to a TV, plus an on-deck lower third",
@@ -2028,6 +2123,14 @@
             "v": "1.0.1",
             "t": "Scoreboard: big-number scoring for basketball, baseball and football"
           }
+        ],
+        "caps": [
+          "Big scores, fouls, timeouts and a clock you can read from the stands",
+          "Baseball with innings, balls, strikes and outs",
+          "Football with down and distance, and who has the ball",
+          "Undo any mistake, one change at a time",
+          "Lock the screen so a bumped phone cannot change the score",
+          "Start a game in one tap, and look back at recent finals"
         ]
       }
     },
@@ -2100,19 +2203,12 @@
         ],
         "shots": [
           "store/shots/filmlite-1.webp",
-          "store/shots/filmlite-2.webp"
+          "store/shots/filmlite-2.webp",
+          "store/shots/filmlite-3.webp",
+          "store/shots/filmlite-4.webp",
+          "store/shots/filmlite-5.webp"
         ],
-        "autoShots": [
-          {
-            "url": "",
-            "wait": 2500
-          },
-          {
-            "url": "",
-            "click": "See an example",
-            "wait": 1500
-          }
-        ],
+        "autoShots": [],
         "latest": {
           "d": "Nov 8, 2026",
           "t": "Film Lite: leave the tag list its full room on small phones",
@@ -2128,6 +2224,13 @@
             "v": "1.0.1",
             "t": "Film Lite: step through a clip, tag the moments and share the notes"
           }
+        ],
+        "caps": [
+          "Step a clip frame by frame, with the tag drawn on the picture",
+          "A circle or arrow on the exact frame, saved with the tag",
+          "Every tagged moment in a list: Good, Fix, Question, Coach note",
+          "Measure an angle on the paused frame",
+          "Add a short note and pick what kind of moment it is"
         ]
       }
     },
@@ -2193,7 +2296,11 @@
           "parent"
         ],
         "shots": [
-          "mock"
+          "store/shots/read20-1.webp",
+          "store/shots/read20-2.webp",
+          "store/shots/read20-3.webp",
+          "store/shots/read20-4.webp",
+          "store/shots/read20-5.webp"
         ],
         "version": "1.0.8",
         "history": [
@@ -2222,7 +2329,15 @@
           "d": "Nov 9, 2026",
           "t": "Read 20: keep the Next button on screen on small phones",
           "url": "https://github.com/natesteele888/apps/commit/6205fa758d1fdc77d991d1574e9e72aef264efb2"
-        }
+        },
+        "caps": [
+          "A shelf of short stories, and tonight's reading at a glance",
+          "Five levels of free stories, from easy to harder",
+          "Big words; tap one to keep your place while the timer runs",
+          "A calendar of every night, with the stories and the streak",
+          "Look back at any month and see what was read"
+        ],
+        "autoShots": []
       }
     },
     {
@@ -2290,7 +2405,12 @@
           "player"
         ],
         "shots": [
-          "mock"
+          "store/shots/getready-1.webp",
+          "store/shots/getready-2.webp",
+          "store/shots/getready-3.webp",
+          "store/shots/getready-4.webp",
+          "store/shots/getready-5.webp",
+          "store/shots/getready-6.webp"
         ],
         "version": "1.0.3",
         "history": [
@@ -2311,7 +2431,16 @@
           "d": "Nov 9, 2026",
           "t": "Get Ready: Google sign-in backup, and always load the freshest copy",
           "url": "https://github.com/natesteele888/apps/commit/f384386b4bedb9185e203d8b269b84d1b1a84977"
-        }
+        },
+        "caps": [
+          "Check things off with a picture of each item beside it",
+          "Tap a picture to see the item big, so it is easy to recognize",
+          "A different list for different days, with timers and photos",
+          "Reminders at the times you pick, with a calendar alarm option",
+          "A streak and a calendar of every finished morning",
+          "Finish the list and a full-screen dance celebrates"
+        ],
+        "autoShots": []
       }
     },
     {
@@ -2381,7 +2510,12 @@
           "curious"
         ],
         "shots": [
-          "mock"
+          "store/shots/photoblueprint-1.webp",
+          "store/shots/photoblueprint-2.webp",
+          "store/shots/photoblueprint-3.webp",
+          "store/shots/photoblueprint-4.webp",
+          "store/shots/photoblueprint-5.webp",
+          "store/shots/photoblueprint-6.webp"
         ],
         "latest": {
           "d": "Nov 9, 2026",
@@ -2394,7 +2528,16 @@
             "v": "1.0.1",
             "t": "Add Photo Blueprint: a map pin and a blueprint sheet for every photo"
           }
-        ]
+        ],
+        "caps": [
+          "Every photo gets a pin at the exact spot it was shot from",
+          "A contact sheet of your photos, each with how it was shot",
+          "A blueprint sheet: stance, camera height, gear and exposure",
+          "The stance drawn to scale, with every setting in a neat table",
+          "A mini map of where you stood, and the story of the shot",
+          "Tap the map to drop the pin, then aim where the lens pointed"
+        ],
+        "autoShots": []
       }
     }
   ],

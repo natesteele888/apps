@@ -1,0 +1,11 @@
+{
+  "id": "sponsor-banners",
+  "caps": [
+    "Every sponsor banner with its photo and hung status",
+    "Filter to the banners still waiting to be hung",
+    "Photo, tier and amount paid for each banner",
+    "Sponsor contact details a tap away for renewals",
+    "A map of where every banner hangs around the fields",
+    "Tap a pin to see which banner hangs there"
+  ]
+}

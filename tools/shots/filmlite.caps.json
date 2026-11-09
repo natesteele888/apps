@@ -1,0 +1,10 @@
+{
+  "id": "filmlite",
+  "caps": [
+    "Step a clip frame by frame, with the tag drawn on the picture",
+    "A circle or arrow on the exact frame, saved with the tag",
+    "Every tagged moment in a list: Good, Fix, Question, Coach note",
+    "Measure an angle on the paused frame",
+    "Add a short note and pick what kind of moment it is"
+  ]
+}

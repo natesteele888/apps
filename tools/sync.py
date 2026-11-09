@@ -231,7 +231,7 @@ def shots():
         b = pw.chromium.launch()
         for a in reg["apps"]:
             plan = (a.get("listing") or {}).get("autoShots") or []
-            if not plan or a.get("retired") or a["listing"].get("status") == "down":
+            if not plan or a.get("retired") or a["listing"].get("status") == "down" or a["listing"].get("caps"):  # "caps" = curated screenshots (tools/shots), never replace those
                 continue  # never replace a good screenshot with an error page
             paths = []
             for n, s in enumerate(plan, 1):
