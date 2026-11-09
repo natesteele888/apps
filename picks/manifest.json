@@ -1,7 +1,7 @@
 {
   "name": "Gameday Picks",
   "short_name": "Gameday Picks",
-  "description": "NFL weekly picks with your crew.",
+  "description": "NFL, MLB, NBA and NHL picks with your crew.",
   "id": "/apps/picks/",
   "start_url": "./",
   "scope": "./",

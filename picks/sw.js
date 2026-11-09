@@ -1,7 +1,7 @@
 // Lets Gameday Picks open with a weak or no signal. Pages always load fresh when online.
 // Caches the app shell plus the Firebase code and fonts it needs to start; picks data stays
 // in Firestore's own private cache on the phone, behind sign-in. The NFL schedule is never cached here.
-const CACHE = "picks-v2";
+const CACHE = "picks-v3";
 self.addEventListener("install", () => self.skipWaiting());
 self.addEventListener("activate", e => e.waitUntil(
   caches.keys().then(ks => Promise.all(ks.filter(k => k.startsWith("picks-") && k !== CACHE).map(k => caches.delete(k))))

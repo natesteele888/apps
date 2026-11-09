@@ -13,6 +13,7 @@
 <script src="https://www.gstatic.com/firebasejs/11.6.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/11.6.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/11.6.0/firebase-firestore-compat.js"></script>
+<script src="core.js"></script>
 <style>
 :root{--bg:#16231c;--panel:#1f2e24;--panel-2:#26382b;--line:rgba(245,243,236,.14);--line-soft:rgba(245,243,236,.07);
   --ink:#f5f3ec;--ink-dim:#b9c2b7;--gold:#d6a94c;--teal:#4fa8a0;--win:#5a9c68;--loss:#d06a62;--r:10px}
@@ -28,7 +29,11 @@ header p{margin:4px 0 0;color:var(--ink-dim);font-size:13.5px}
 .me{text-align:right;font-size:13px;color:var(--ink-dim)}
 .me b{display:block;color:var(--gold);font-family:Teko,sans-serif;font-size:22px;line-height:1}
 .linkbtn{background:none;border:0;color:var(--ink-dim);text-decoration:underline;cursor:pointer;padding:0;font-size:12px}
-nav.views{display:flex;gap:20px;margin-top:14px;border-bottom:1px solid var(--line);overflow-x:auto}
+.sports{display:flex;gap:6px;margin-top:14px}
+.sports button{flex:1;background:var(--panel);border:1px solid var(--line);color:var(--ink-dim);padding:9px 4px;border-radius:var(--r);cursor:pointer;font-family:Teko,sans-serif;font-size:21px;line-height:1;letter-spacing:.03em;display:flex;align-items:center;justify-content:center;gap:6px;min-height:44px}
+.sports button[aria-pressed="true"]{background:var(--gold);color:#1a1405;border-color:var(--gold)}
+.sports button small{font:600 11px Inter,sans-serif;color:inherit;opacity:.75}
+nav.views{display:flex;gap:20px;margin-top:10px;border-bottom:1px solid var(--line);overflow-x:auto}
 nav.views button{background:none;border:0;border-bottom:2px solid transparent;color:var(--ink-dim);font-weight:600;padding:10px 2px;cursor:pointer;white-space:nowrap}
 nav.views button[aria-current="page"]{color:var(--ink);border-bottom-color:var(--gold)}
 .btn{background:var(--panel-2);border:1px solid var(--line);color:var(--ink);padding:9px 14px;border-radius:var(--r);cursor:pointer;font-weight:600;font-size:14px}
@@ -104,18 +109,18 @@ code{font-family:ui-monospace,Menlo,monospace;font-size:13px;background:var(--pa
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 <script>
 "use strict";
-/* Gameday Picks: NFL weekly picks for invited players.
+/* Gameday Picks: NFL, MLB, NBA and NHL picks for invited players (NFL by the week, the others by the day).
    Sign in with Google. The owner is in automatically; everyone else joins once with an invite code.
    Data lives in Firebase (nates-toolbox project, gp_* collections), protected by Firestore rules. */
 const FIREBASE_CONFIG={apiKey:"AIzaSyDT_wGN93U4oM70orIU8flSAnvXHApqW2A",authDomain:"nates-toolbox.firebaseapp.com",projectId:"nates-toolbox",storageBucket:"nates-toolbox.firebasestorage.app",messagingSenderId:"567737923830",appId:"1:567737923830:web:b597b5d71e7c7a73c4d4d7"};
-const API="https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard";
+const C=window.GPCore;
 const $=s=>document.querySelector(s);
 const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 let toastT;function toast(m){const t=$("#toast");t.textContent=m;t.classList.add("on");clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove("on"),2400)}
 function contrast(hex){hex=String(hex||"").replace("#","");if(hex.length!==6)return"#fff";const r=parseInt(hex.slice(0,2),16),g=parseInt(hex.slice(2,4),16),b=parseInt(hex.slice(4,6),16);return(.299*r+.587*g+.114*b)/255>.6?"#151515":"#fff"}
 function store(k,v){try{if(v===undefined)return localStorage.getItem(k);localStorage.setItem(k,v)}catch(_){return null}}
 
-const S={user:null,me:null,isOwner:false,players:{},weeks:{},picks:{},view:"picks",sel:null,season:null,codes:[],loading:false};
+const S={user:null,me:null,isOwner:false,players:{},weeks:{},picks:{},view:"picks",sel:null,selBy:{},sport:C.SPORTS[store("gp.sport")]?store("gp.sport"):"nfl",season:null,codes:[],loading:false};
 let db,unsubs=[];
 
 /* ---------- routing between screens ---------- */
@@ -123,23 +128,25 @@ function render(){
   if(!S.user)return renderSignIn();
   if(!S.me)return renderJoin();
   const views=[["picks","Make picks"],["board","Leaderboard"],["stats","My stats"]];if(S.isOwner)views.push(["admin","Players & codes"]);
-  const rec=record(S.user.uid);
+  const rec=C.record(S.picks,S.weeks,S.user.uid,S.sport);
   // keep the page position and the focused pick button through a redraw
   const y=window.scrollY,fb=document.activeElement,fg=fb&&fb.dataset&&fb.dataset.g,ft=fb&&fb.dataset&&fb.dataset.t;
-  $("#app").innerHTML=`<header><div><h1>Gameday Picks</h1><p>Pick a side, every week, all season.</p></div>
+  $("#app").innerHTML=`<header><div><h1>Gameday Picks</h1><p>Pick a side, every game day, all season.</p></div>
     <div class="me"><b>${esc(S.me.name)}</b>${rec.total?`${rec.w}-${rec.l} · ${Math.round(rec.w/rec.total*100)}%`:"No results yet"}<br><button class="linkbtn" id="rename">rename</button> · <button class="linkbtn" id="out">sign out</button> · <button class="linkbtn" type="button" onclick="window.nateHealth&&nateHealth.report()">something wrong?</button></div></header>
+    <div class="sports" role="group" aria-label="League">${C.ORDER.map(id=>`<button type="button" data-sport="${id}" aria-pressed="${S.sport===id}">${C.SPORTS[id].emoji} ${C.SPORTS[id].name}</button>`).join("")}</div>
     <nav class="views">${views.map(([k,n])=>`<button data-view="${k}" ${S.view===k?'aria-current="page"':""}>${n}</button>`).join("")}</nav>
     <section id="view"></section>`;
   $("#out").onclick=()=>firebase.auth().signOut();
   $("#rename").onclick=rename;
   document.querySelectorAll("[data-view]").forEach(b=>b.onclick=()=>{S.view=b.dataset.view;render();window.scrollTo(0,0)});
+  document.querySelectorAll("[data-sport]").forEach(b=>b.onclick=()=>{if(S.sport===b.dataset.sport)return;S.sport=b.dataset.sport;store("gp.sport",S.sport);S.sel=null;ensureSel();render()});
   ({picks:renderPicks,board:renderBoard,stats:renderStats,admin:renderAdmin})[S.view]();
   if(fg){const n=[...document.querySelectorAll(".side[data-g]")].find(x=>x.dataset.g===fg&&x.dataset.t===ft);if(n)n.focus({preventScroll:true})}
   window.scrollTo(0,y);
 }
 function renderSignIn(){
   $("#app").innerHTML=`<div class="gate"><div class="box"><img src="/apps/icons/picks-192.png" alt=""><h1>Gameday Picks</h1>
-    <p style="color:var(--ink-dim)">NFL picks with your crew. Sign in with Google to play.</p>
+    <p style="color:var(--ink-dim)">NFL, MLB, NBA and NHL picks with your crew. Sign in with Google to play.</p>
     <button class="btn gold" id="si">Sign in with Google</button><p class="err" id="siErr"></p></div></div>`;
   $("#si").onclick=signIn;
 }
@@ -181,48 +188,51 @@ function subscribeAll(){
   unsubs.push(db.collection("gp_weeks").onSnapshot(s=>{S.weeks={};s.docs.forEach(d=>S.weeks[d.id]=d.data());rerender()},fail));
   unsubs.push(db.collection("gp_picks").onSnapshot(s=>{S.picks={};s.docs.forEach(d=>{const x=d.data();(S.picks[x.week]=S.picks[x.week]||{})[x.uid]=x.picks||{}});rerender()},fail));
   if(S.isOwner)unsubs.push(db.collection("gp_codes").onSnapshot(s=>{S.codes=s.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>String(b.createdAt).localeCompare(String(a.createdAt)));if(S.view==="admin")rerender()},()=>{}));
-  findCurrentWeek();
+  ensureSel();
 }
 let rr;function rerender(){clearTimeout(rr);rr=setTimeout(()=>{const a=document.activeElement;if(a&&a.tagName==="INPUT")return;render()},60)}
 
-/* ---------- schedule (ESPN public scoreboard) ---------- */
-const wkKey=(y,t,w)=>`${y}-${t}-${w}`;
-function findCurrentWeek(){
-  fetch(API).then(r=>r.json()).then(d=>{S.season={year:d.season&&d.season.year,type:d.season&&d.season.type,week:d.week&&d.week.number};
-    if(!S.sel&&S.season.year)S.sel=wkKey(S.season.year,S.season.type,S.season.week);loadWeek(S.sel);render()})
-  .catch(()=>{if(!S.sel){const k=Object.keys(S.weeks).sort().pop();if(k)S.sel=k}render();toast("Couldn't reach the NFL schedule. Showing saved weeks.")});
+/* ---------- schedule (ESPN public scoreboard): NFL by week, MLB/NBA/NHL by day ---------- */
+const today=()=>C.localDay(window.__today?new Date(window.__today):new Date());
+/* Makes sure S.sel is a slate of the current league: the one last viewed, else this week / today. */
+function ensureSel(){
+  if(S.sel&&C.sportOf(S.sel)===S.sport){S.selBy[S.sport]=S.sel;return}
+  if(S.selBy[S.sport]){S.sel=S.selBy[S.sport];loadSlate(S.sel,true);return}
+  if(S.sport==="nfl"){findNflWeek();return}
+  S.sel=C.dayKey(S.sport,today());S.selBy[S.sport]=S.sel;loadSlate(S.sel);
 }
-async function loadWeek(key,quiet){
-  if(!key)return;const [y,t,w]=key.split("-");S.loading=true;
-  try{const d=await (await fetch(`${API}?year=${y}&seasontype=${t}&week=${w}`)).json();
-    const games={};(d.events||[]).forEach(ev=>{const c=ev.competitions&&ev.competitions[0];if(!c)return;
-      const A=c.competitors.find(x=>x.homeAway==="away"),H=c.competitors.find(x=>x.homeAway==="home");if(!A||!H)return;
-      const done=!!(c.status&&c.status.type&&c.status.type.completed);const win=done?(c.competitors.find(x=>x.winner)||{team:{}}).team.abbreviation||null:null;
-      const tm=x=>({abbr:x.team.abbreviation,name:x.team.shortDisplayName||x.team.name,city:x.team.location||"",color:x.team.color?"#"+x.team.color:"#555555",score:x.score??null});
-      games[ev.id]={date:ev.date,away:tm(A),home:tm(H),done,winner:win,state:(c.status&&c.status.type&&c.status.type.state)||"pre"}});
+function findNflWeek(){
+  fetch(C.apiUrl("nfl")).then(r=>r.json()).then(d=>{S.season={year:d.season&&d.season.year,type:d.season&&d.season.type,week:d.week&&d.week.number};
+    if(S.sport!=="nfl")return;if(!S.sel&&S.season.year)S.sel=C.nflKey(S.season.year,S.season.type,S.season.week);S.selBy.nfl=S.sel;loadSlate(S.sel);render()})
+  .catch(()=>{if(S.sport!=="nfl")return;if(!S.sel){const k=Object.keys(S.weeks).filter(k=>C.sportOf(k)==="nfl").sort().pop();if(k)S.sel=k}render();toast("Couldn't reach the NFL schedule. Showing saved weeks.")});
+}
+async function loadSlate(key,quiet){
+  const url=key&&C.fetchUrl(key);if(!url)return;S.loading=true;if(S.view==="picks")render();
+  try{const d=await (await fetch(url)).json();const games=C.parseGames(d);
     const old=S.weeks[key];const changed=!old||JSON.stringify(old.games)!==JSON.stringify(games);
     S.weeks[key]={games,updatedAt:new Date().toISOString()};
     if(changed&&Object.keys(games).length)db.doc("gp_weeks/"+key).set(S.weeks[key]).catch(()=>{});
-  }catch(_){if(!quiet)toast("Couldn't load that week's games.")}
+  }catch(_){if(!quiet)toast("Couldn't load the games. Check your signal.")}
   S.loading=false;if(S.view==="picks")render();
 }
-function weekLabel(key){const [y,t,w]=key.split("-");return(t==="1"?"Pre ":t==="3"?"Playoffs ":"Wk ")+w}
-function started(g){return g.state!=="pre"||new Date(g.date)<=new Date()}
+const started=g=>C.started(g,window.__today?new Date(window.__today):undefined);
 
 /* ---------- picks ---------- */
 function renderPicks(){
-  const v=$("#view");if(!S.sel){v.innerHTML=`<p class="empty">Finding this week's games…</p>`;return}
-  const [y,t]=S.sel.split("-");const max=t==="3"?5:t==="1"?4:18;
+  const v=$("#view");const sp=C.sport(S.sport);
+  if(!S.sel){v.innerHTML=`<p class="empty">Finding this ${sp.noun}'s games…</p>`;return}
+  let keys;if(S.sport==="nfl"){const p=C.parseKey(S.sel);keys=Array.from({length:C.nflWeeks(p.t)},(_,i)=>C.nflKey(p.y,p.t,i+1))}
+  else{keys=C.dayList(today()).map(d=>C.dayKey(S.sport,d));if(!keys.includes(S.sel))keys.unshift(S.sel)}
   const wk=S.weeks[S.sel];const games=wk?Object.entries(wk.games).sort((a,b)=>new Date(a[1].date)-new Date(b[1].date)):[];
   const mine=(S.picks[S.sel]||{})[S.user.uid]||{};
   const open=games.filter(([,g])=>!started(g));const pickedOpen=open.filter(([id])=>mine[id]).length;
-  v.innerHTML=`<div class="pills" role="group" aria-label="Week">${Array.from({length:max},(_,i)=>wkKey(y,t,i+1)).map(k=>`<button class="pill" data-wk="${k}" aria-pressed="${k===S.sel}">${weekLabel(k)}</button>`).join("")}</div>
-    <div class="status"><span>${S.loading?"Loading games…":games.length?`${open.length?`${pickedOpen} of ${open.length} open games picked`:"All games have started"}`:"No games loaded for this week."}</span><button class="btn small" id="refresh">Refresh scores</button></div>
-    <div class="games">${games.map(([id,g])=>gameCard(id,g,mine)).join("")||`<p class="empty">Pick a week above.</p>`}</div>`;
-  v.querySelectorAll("[data-wk]").forEach(b=>b.onclick=()=>{S.sel=b.dataset.wk;render();loadWeek(S.sel)});
-  $("#refresh").onclick=()=>loadWeek(S.sel);
+  v.innerHTML=`<div class="pills" role="group" aria-label="${sp.weekly?"Week":"Day"}">${keys.map(k=>`<button class="pill" data-wk="${k}" aria-pressed="${k===S.sel}">${C.label(k,today())}</button>`).join("")}</div>
+    <div class="status"><span>${S.loading&&!games.length?"Loading games…":games.length?`${open.length?`${pickedOpen} of ${open.length} open games picked`:"All games have started"}`:`No ${sp.name} games ${sp.weekly?"this week":"on this day"}.`}</span><button class="btn small" id="refresh">Refresh scores</button></div>
+    <div class="games">${games.map(([id,g])=>gameCard(id,g,mine)).join("")||`<p class="empty">${S.loading?"":`Pick another ${sp.noun} above.`}</p>`}</div>`;
+  v.querySelectorAll("[data-wk]").forEach(b=>b.onclick=()=>{S.sel=b.dataset.wk;S.selBy[S.sport]=S.sel;render();loadSlate(S.sel)});
+  $("#refresh").onclick=()=>loadSlate(S.sel);
   v.querySelectorAll(".side[data-g]").forEach(b=>b.onclick=()=>pick(b.dataset.g,b.dataset.t));
-  // centre the selected week by sliding the pill row only; scrollIntoView would also pull the whole page up to it
+  // centre the selected slate by sliding the pill row only; scrollIntoView would also pull the whole page up to it
   const row=v.querySelector(".pills"),cur=row.querySelector('[aria-pressed="true"]');
   if(cur)row.scrollLeft=cur.offsetLeft-row.offsetLeft-(row.clientWidth-cur.offsetWidth)/2;
 }
@@ -238,7 +248,7 @@ function gameCard(id,g,mine){
   let date="";try{date=new Date(g.date).toLocaleString(undefined,{weekday:"short",month:"short",day:"numeric",hour:"numeric",minute:"2-digit"})}catch(_){}
   const sc=g.away.score!=null&&g.state!=="pre"?`<div class="score"><span class="${g.done?"f":""}">${esc(g.away.score)}</span><span>–</span><span class="${g.done?"f":""}">${esc(g.home.score)}</span></div>`:"";
   return `<div class="game"><div class="gtop"><span>${esc(date)}</span><span>${g.done?"Final":lock?"Locked · in progress":mine[id]?"Picked":"Open"}</span></div>
-    <div class="matchup">${side(g.away,"aw")}<div class="mid"><span>🏈</span><span>at</span></div>${side(g.home,"hm")}</div>${sc}</div>`;
+    <div class="matchup">${side(g.away,"aw")}<div class="mid"><span>${C.sport(S.sport).emoji}</span><span>at</span></div>${side(g.home,"hm")}</div>${sc}</div>`;
 }
 async function pick(gid,abbr){
   const g=S.weeks[S.sel]&&S.weeks[S.sel].games[gid];if(!g||started(g)){toast("That game has started. Picks are locked.");return}
@@ -248,26 +258,21 @@ async function pick(gid,abbr){
   catch(_){toast("Couldn't save that pick. Check your connection.")}
 }
 
-/* ---------- results ---------- */
-function record(uid){let w=0,l=0;Object.entries(S.picks).forEach(([k,by])=>{const p=by[uid];const wk=S.weeks[k];if(!p||!wk)return;
-  Object.entries(p).forEach(([gid,abbr])=>{const g=wk.games[gid];if(!g||!g.done||!g.winner)return;g.winner===abbr?w++:l++})});return{w,l,total:w+l}}
+/* ---------- results (per league) ---------- */
 function renderBoard(){
-  const rows=Object.entries(S.players).map(([u,p])=>({u,name:p.name,...record(u)})).sort((a,b)=>b.w-a.w||(b.total?b.w/b.total:0)-(a.total?a.w/a.total:0)||a.name.localeCompare(b.name));
-  const lastWk=S.sel&&S.weeks[S.sel];
-  $("#view").innerHTML=`<div class="board">${rows.map((r,i)=>{const pct=r.total?Math.round(r.w/r.total*100):0;
+  const sp=C.sport(S.sport);
+  const rows=Object.entries(S.players).map(([u,p])=>({u,name:p.name,...C.record(S.picks,S.weeks,u,S.sport)})).sort((a,b)=>b.w-a.w||(b.total?b.w/b.total:0)-(a.total?a.w/a.total:0)||a.name.localeCompare(b.name));
+  const all=Object.entries(S.players).map(([u,p])=>({u,name:p.name,...C.record(S.picks,S.weeks,u,null)})).sort((a,b)=>b.w-a.w||a.name.localeCompare(b.name));
+  $("#view").innerHTML=`<p class="status"><span>${sp.emoji} ${sp.name} leaderboard</span></p><div class="board">${rows.map((r,i)=>{const pct=r.total?Math.round(r.w/r.total*100):0;
     return `<div class="lrow${r.u===S.user.uid?" me-row":""}"><span class="rk">${i+1}</span><span><span class="nm">${esc(r.name)}</span><div class="bar"><i style="width:${pct}%"></i></div></span><span class="wl">${r.w}-${r.l}<small>${r.total?pct+"%":"no results"}</small></span></div>`}).join("")||`<p class="empty">No players yet.</p>`}</div>
-    <p class="status">Wins count when a picked game goes final. Everyone's picks show once a game kicks off.</p>`;
+    <p class="status">Wins count when a picked game goes final. Everyone's picks show once a game starts.</p>
+    <h2 style="margin:18px 0 0;font-size:24px">All leagues together</h2><div class="board" style="margin-top:8px">${all.map((r,i)=>`<div class="lrow${r.u===S.user.uid?" me-row":""}"><span class="rk">${i+1}</span><span class="nm">${esc(r.name)}</span><span class="wl">${r.w}-${r.l}<small>${r.total?Math.round(r.w/r.total*100)+"%":"no results"}</small></span></div>`).join("")}</div>`;
 }
 function renderStats(){
-  const teams={};const uid=S.user.uid;
-  Object.entries(S.picks).forEach(([k,by])=>{const p=by[uid];const wk=S.weeks[k];if(!p||!wk)return;
-    Object.entries(p).forEach(([gid,abbr])=>{const g=wk.games[gid];if(!g)return;const me=g.away.abbr===abbr?g.away:g.home,op=g.away.abbr===abbr?g.home:g.away;
-      const T=x=>teams[x.abbr]=teams[x.abbr]||{name:x.name,color:x.color,f:0,fw:0,fl:0,a:0,aw:0,al:0};
-      const a=T(me),b=T(op);a.f++;b.a++;if(g.done&&g.winner){if(g.winner===abbr){a.fw++;b.al++}else{a.fl++;b.aw++}}})});
-  const list=Object.entries(teams).sort((x,y)=>y[1].f-x[1].f||x[1].name.localeCompare(y[1].name));
-  $("#view").innerHTML=list.length?`<table><thead><tr><th>Team</th><th>Picked</th><th>Record</th><th>Against</th><th>Record</th></tr></thead><tbody>
+  const sp=C.sport(S.sport);const list=C.teamStats(S.picks,S.weeks,S.user.uid,S.sport);
+  $("#view").innerHTML=list.length?`<p class="status"><span>${sp.emoji} Your ${sp.name} picks, team by team</span></p><table><thead><tr><th>Team</th><th>Picked</th><th>Record</th><th>Against</th><th>Record</th></tr></thead><tbody>
     ${list.map(([ab,t])=>`<tr><td><span class="tcell"><span class="mini" style="background:${esc(t.color)};color:${contrast(t.color)}">${esc(ab)}</span>${esc(t.name)}</span></td><td class="num">${t.f}</td><td class="num">${t.f?t.fw+"-"+t.fl:"—"}</td><td class="num">${t.a}</td><td class="num">${t.a?t.aw+"-"+t.al:"—"}</td></tr>`).join("")}</tbody></table>
-    <p class="status">"Against" is how often you picked a team's opponent, and how those picks went.</p>`:`<p class="empty">Make some picks to see your team breakdown.</p>`;
+    <p class="status">"Against" is how often you picked a team's opponent, and how those picks went.</p>`:`<p class="empty">Make some ${sp.name} picks to see your team breakdown.</p>`;
 }
 
 /* ---------- owner: players and invite codes ---------- */
@@ -286,7 +291,7 @@ function renderAdmin(){
   document.querySelectorAll("[data-rm]").forEach(b=>{let armed=false;b.onclick=async()=>{if(!armed){armed=true;b.textContent="Tap again to remove";setTimeout(()=>{armed=false;b.textContent="Remove"},3000);return}
     try{await db.doc("gp_players/"+b.dataset.rm).delete();toast("Removed. Their old picks stay hidden from the board.")}catch(_){toast("Couldn't remove")}}});
 }
-async function share(code){const url=inviteLink(code);const text=`Join my NFL picks on Gameday Picks. Code: ${code}`;
+async function share(code){const url=inviteLink(code);const text=`Join my NFL, MLB, NBA and NHL picks on Gameday Picks. Code: ${code}`;
   try{if(navigator.share){await navigator.share({title:"Gameday Picks",text,url});return}}catch(e){if(e&&e.name==="AbortError")return}
   try{await navigator.clipboard.writeText(text+"\n"+url);toast("Invite link copied")}catch(_){prompt("Copy this invite link",url)}}
 

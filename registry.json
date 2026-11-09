@@ -235,34 +235,34 @@
         "gameday-picks"
       ],
       "listing": {
-        "sub": "NFL weekly picks with your crew",
+        "sub": "NFL, MLB, NBA and NHL picks with your crew",
         "cat": "family",
         "ac": "#d6a94c",
         "install": true,
         "access": "Invite code",
-        "desc": "Pick a side in every NFL game, every week. The schedule and scores load on their own, picks lock at kickoff, and everyone's picks show once a game starts. A season-long leaderboard and a team-by-team breakdown keep score.",
+        "desc": "Pick a side in every game, every day, across the NFL, MLB, NBA and NHL. Switch leagues with one tap: football by the week, baseball, basketball and hockey by the day. The schedule and scores load on their own, picks lock when a game starts, and everyone's picks show once it has. A leaderboard and a team-by-team breakdown for each league keep score.",
         "feats": [
           [
             "🏈",
-            "Pick every game",
-            "Away on the left, home on the right. Tap to lock it in."
+            "Four leagues",
+            "NFL by the week; MLB, NBA and NHL by the day. One tap to switch."
           ],
           [
             "🔒",
-            "Locks at kickoff",
-            "No changing a pick once the game starts."
+            "Locks at game time",
+            "No changing a pick once a game starts."
           ],
           [
             "🏆",
-            "Leaderboard",
-            "Season record and win % for everyone in the group."
+            "Leaderboard per league",
+            "Season record and win % for everyone, in each sport."
           ]
         ],
         "facts": [
           [
-            "Games",
-            "Every",
-            "NFL week"
+            "Leagues",
+            "4",
+            "NFL · MLB · NBA · NHL"
           ],
           [
             "Join",
@@ -277,14 +277,16 @@
         ],
         "news": {
           "d": "Nov 2026",
-          "t": "Now a real app: sign in with Google, join with an invite code, picks sync across phones."
+          "t": "Now MLB, NBA and NHL too: pick a side every game day, not just Sundays.",
+          "pin": true
         },
         "parts": [
           "signin",
           "rules",
           "firebase",
           "pwa",
-          "share"
+          "share",
+          "health"
         ],
         "tie": "Family game night in app form. Same sign-in and security-rule pieces as the league apps.",
         "rel": [
