@@ -93,6 +93,7 @@
      finished mark. Used to restore a backup and to recover from the second copy of the log. */
   C.merge = (a, b) => {
     const out = C.sanitize(a), o = C.sanitize(b);
+    if (!Object.keys(out.days).length && Object.keys(o.days).length) { out.goal = o.goal; out.size = o.size; out.say = o.say; } // a fresh phone takes the saved settings
     if (!out.name && o.name) out.name = o.name;
     if (!out.bk || (o.bk && o.bk > out.bk)) out.bk = o.bk;
     for (const k of Object.keys(o.days)) {

@@ -216,8 +216,72 @@ const TODAY = '2026-11-08';
   await test('saving: the backup reminder shows once there are 10+ minutes and no recent backup, and goes away after a backup', async () => {
     const { page } = await mk(); assert.ok(!(await page.locator('#bknow').count()));
     await page.locator('#manual').click(); await page.fill('#mm', '12'); await page.locator('#ms').click(); await page.waitForSelector('.cover');
-    assert.ok(await page.locator('#bknow').isVisible()); const dl = page.waitForEvent('download'); await page.locator('#bknow').click(); await dl; await page.waitForSelector('.cover');
+    assert.ok(await page.locator('#bknow').isVisible()); await page.locator('#bknow').click(); const dl = page.waitForEvent('download'); await page.locator('#sb').click(); await dl; await page.locator('#sd').click(); await page.waitForSelector('.cover');
     eq(await page.locator('#bknow').count(), 0);
+  });
+
+  /* ============ cloud backup (Firebase stubbed: the real scripts live on gstatic, which tests can't reach) ============ */
+  const FAKE_FB = `(function(){ if (window.firebase) return; var L = [], user = null; try { user = JSON.parse(localStorage.getItem('fakeUser')); } catch (e) {}
+    function Tx() { this.w = []; } Tx.prototype.get = async function (r) { var d = await window.__fsGet(r.path); if (d && d.__deny) { var e = new Error('denied'); e.code = 'permission-denied'; throw e; } return { exists: d != null, data: function () { return d; } }; }; Tx.prototype.set = function (r, d) { this.w.push([r.path, d]); };
+    var auth = { get currentUser() { return user; }, onAuthStateChanged: function (cb) { L.push(cb); setTimeout(function () { cb(user); }, 0); }, signInWithPopup: async function () { user = { uid: window.__uid || 'parent1', email: 'parent@example.com' }; localStorage.setItem('fakeUser', JSON.stringify(user)); L.forEach(function (f) { f(user); }); }, signOut: async function () { user = null; localStorage.removeItem('fakeUser'); L.forEach(function (f) { f(null); }); } };
+    var fs = { collection: function (c) { return { doc: function (id) { return { path: c + '/' + id }; } }; }, runTransaction: async function (fn) { var t = new Tx(); await fn(t); for (var i = 0; i < t.w.length; i++) await window.__fsSet(t.w[i][0], t.w[i][1]); } };
+    window.firebase = { apps: [], initializeApp: function () { this.apps.push(1); }, auth: Object.assign(function () { return auth; }, { GoogleAuthProvider: function () { this.setCustomParameters = function () {}; } }), firestore: Object.assign(function () { return fs; }, { FieldValue: { serverTimestamp: function () { return 'TS'; } } }) }; })();`;
+  const cloudDb = new Map(); let fsDeny = false;
+  const mkPhone = async (opts = {}) => {
+    const ctx = await br.newContext({ viewport: { width: 390, height: 844 }, serviceWorkers: 'block' });
+    let hits = 0;
+    await ctx.exposeFunction('__fsGet', async p => { if (fsDeny) return { __deny: true }; return cloudDb.has(p) ? cloudDb.get(p) : null; });
+    await ctx.exposeFunction('__fsSet', async (p, d) => { cloudDb.set(p, d); });
+    await ctx.route(/gstatic\.com\/firebasejs/, r => { hits++; opts.offline ? r.abort() : r.fulfill({ contentType: 'text/javascript', body: FAKE_FB }); });
+    const o = await newPage(br, { context: ctx, today: TODAY }); await o.page.clock.install({ time: new Date('2026-11-08T19:00:00') });
+    await o.page.goto(srv.url); await o.page.waitForSelector('.cover'); o.hits = () => hits; return o;
+  };
+  const logMin = async (page, title, min) => { await page.locator('#manual').click(); await page.fill('#mt', title); await page.fill('#mm', String(min)); await page.locator('#ms').click(); await page.waitForSelector('.cover'); };
+  const cloudSec = (day) => { const d = cloudDb.get('r20_users/parent1'); return d ? (JSON.parse(d.log).days[day] || { sec: 0 }).sec : -1; };
+
+  await test('cloud: reading never loads or needs Google; nothing is sent until a parent signs in', async () => {
+    cloudDb.clear(); const a = await mkPhone(); await a.page.locator('.cover', { hasText: 'Sam the Cat' }).click(); await a.page.waitForSelector('.reader');
+    await a.page.clock.runFor(30000); eq(await sec(a.page), 30); eq(a.hits(), 0, 'no Firebase scripts loaded'); eq(cloudDb.size, 0);
+    assert.ok(!(await a.page.locator('#cloudbadge').isVisible().catch(() => false)));
+  });
+  await test('cloud: a parent signs in once; the log is saved online and a brand new phone gets it back', async () => {
+    cloudDb.clear(); fsDeny = false; const a = await mkPhone(); await logMin(a.page, 'Paper Book', 14);
+    assert.ok(await a.page.locator('.nudge').isVisible(), 'sign-in reminder is on the shelf'); await a.page.locator('#bknow').click();
+    await a.page.locator('#cin').waitFor(); await a.page.locator('#cin').click(); await a.page.waitForFunction(() => /Backed up as parent@example.com/.test(document.querySelector('#cl').textContent));
+    eq(cloudSec(TODAY), 840); eq(await a.page.locator('#cin').isVisible(), false, 'sign-in button hidden once signed in'); eq(await a.page.locator('#cout').isVisible(), true); await a.page.screenshot({ path: SHOTS + '/read20-cloud.png' });
+    await a.page.locator('#sd').click(); await a.page.waitForSelector('.cover'); assert.ok(await a.page.locator('#cloudbadge').isVisible()); eq(await a.page.locator('.nudge').count(), 0);
+    // new phone, same parent account
+    const b = await mkPhone(); eq(await sec(b.page), 0); await b.page.locator('#gear').click(); await b.page.locator('#cin').click();
+    await b.page.waitForFunction(() => /Backed up as/.test(document.querySelector('#cl').textContent)); eq(await sec(b.page), 840, 'the 14 minutes came back'); await b.page.locator('#sd').click();
+    assert.ok(/14/.test(await b.page.locator('.rtxt b').innerText()));
+    // she reads on the new phone (no sign-in prompt anywhere in the reader); it syncs on its own
+    await b.page.locator('.cover', { hasText: 'Sam the Cat' }).click(); await b.page.waitForSelector('.reader'); await b.page.clock.runFor(25000); await b.page.waitForTimeout(300);
+    assert.ok(cloudSec(TODAY) >= 850, 'cloud grew while she read: ' + cloudSec(TODAY)); eq(await b.page.locator('.reader #cin').count(), 0);
+  });
+  await test('cloud: two phones merge; neither loses time; signed-in phones come back signed in after a reload', async () => {
+    cloudDb.clear(); const a = await mkPhone(), b = await mkPhone();
+    await logMin(a.page, 'Book A', 10); await logMin(b.page, 'Book B', 5);
+    for (const p of [a.page, b.page]) { await p.locator('#gear').click(); await p.locator('#cin').click(); await p.waitForFunction(() => /Backed up as/.test(document.querySelector('#cl').textContent)); await p.locator('#sd').click(); }
+    await a.page.locator('#gear').click(); await a.page.locator('#cnow').click(); await a.page.waitForTimeout(400); await a.page.locator('#sd').click();
+    eq(cloudSec(TODAY), 600, 'same day: the bigger total wins, not the sum'); 
+    await a.page.reload(); await a.page.waitForSelector('.cover'); await a.page.waitForFunction(() => document.querySelector('#cloudbadge') && !document.querySelector('#cloudbadge').hidden);
+    await logMin(b.page, 'Book C', 20); // b now ahead
+    await b.page.locator('#gear').click(); await b.page.locator('#cnow').click(); await b.page.waitForTimeout(400); await b.page.locator('#sd').click();
+    await a.page.locator('#gear').click(); await a.page.locator('#cnow').click(); await a.page.waitForTimeout(400); await a.page.locator('#sd').click();
+    assert.ok((await sec(a.page)) >= 1500, 'a caught up with b: ' + await sec(a.page));
+  });
+  await test('cloud: no signal or a blocked account never breaks reading; sign out stops syncing; erase also erases the cloud copy', async () => {
+    cloudDb.clear(); fsDeny = false; const off = await mkPhone({ offline: true }); await off.page.locator('#gear').click(); await off.page.locator('#cin').click();
+    await off.page.waitForFunction(() => /No connection/.test(document.querySelector('#cl').textContent)); await off.page.locator('#sd').click();
+    await off.page.locator('.cover', { hasText: 'Sam the Cat' }).click(); await off.page.waitForSelector('.reader'); await off.page.clock.runFor(10000); eq(await sec(off.page), 10); eq(await off.page.locator('.warn:visible').count(), 0);
+    const d = await mkPhone(); await logMin(d.page, 'X', 12); await d.page.locator('#gear').click(); await d.page.locator('#cin').click();
+    await d.page.waitForFunction(() => /Backed up as/.test(document.querySelector('#cl').textContent)); eq(cloudSec(TODAY), 720);
+    d.page.on('dialog', x => x.accept()); await d.page.locator('#se').click(); await d.page.waitForSelector('.cover'); await d.page.waitForTimeout(400);
+    eq(cloudSec(TODAY), 0, 'cloud copy erased too'); eq(await sec(d.page), 0);
+    const e = await mkPhone(); await logMin(e.page, 'Y', 12); fsDeny = true; await e.page.locator('#gear').click(); await e.page.locator('#cin').click();
+    await e.page.waitForFunction(() => /not allowed/.test(document.querySelector('#cl').textContent)); fsDeny = false;
+    await e.page.locator('#cout').click(); await e.page.waitForFunction(() => /Not set up/.test(document.querySelector('#cl').textContent));
+    eq(await e.page.evaluate(() => localStorage.getItem('read20.cloud')), null); eq(await sec(e.page), 720, 'her time stays on the phone');
   });
   await test('offline: the service worker caches the app and it reopens with no network', async () => {
     const o = await newPage(br, { sw: true, today: TODAY }); const { page, ctx } = o;

@@ -3,6 +3,7 @@
 (function () {
   "use strict";
   const C = window.R20Core, B = window.R20Books;
+  const CL = window.R20Cloud;
   const KEY = "read20.v1";
   const $ = s => document.querySelector(s);
   const esc = s => String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
@@ -32,7 +33,7 @@
     try { localStorage.setItem(KEY, JSON.stringify(S)); store.fail = false; } catch (e) { store.fail = true; }
     const now = Date.now();
     if (store.ready && (force || now - store.idbAt > 5000)) { store.idbAt = now; const copy = JSON.stringify(S); idb("readwrite", st => st.put(copy, "log")).catch(() => {}); }
-    paintWarn();
+    paintWarn(); if (CL) CL.schedule();
   }
   async function recover() {
     try {
@@ -40,6 +41,20 @@
       const other = C.sanitize(JSON.parse(raw)), merged = C.merge(S, other);
       if (C.total(merged) > C.total(S)) { S = merged; try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {} if (ui.book) paintTimer(); else route(); }
     } catch (e) {}
+  }
+  /* The saved copy in the cloud has been merged in: keep whichever has more, never the other way round. */
+  function adopt(merged) {
+    const m = C.merge(S, merged); if (JSON.stringify(m) === JSON.stringify(S)) return;
+    S = m; try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {}
+    store.idbAt = 0; if (ui.book) paintTimer(); else if (!document.querySelector(".overlay")) route();
+  }
+  function cloudLine() {
+    const st = CL.status;
+    if (st === "ok") return "☁️ Backed up as " + esc(CL.email) + (CL.at ? " · " + new Date(CL.at).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }) : "");
+    if (st === "signedin" || st === "loading") return "☁️ Checking the cloud…";
+    if (st === "offline") return CL.email ? "☁️ Signed in, but no connection right now. It will back up when there is signal." : "☁️ No connection right now. Try again when there is signal.";
+    if (st === "denied") return "⚠️ The cloud backup is not allowed for this account yet. Ask Dad to publish the Read 20 rules.";
+    return "";
   }
   function warnHtml() { return '<div class="warn" id="warn" role="alert"' + (store.fail ? "" : " hidden") + '>⚠️ This phone is not letting the app save. Open Read 20 from the home-screen icon (not a private tab), or tap ⚙️ and save a backup.</div>'; }
   function paintWarn() { const w = $("#warn"); if (w) w.hidden = !store.fail; }
@@ -129,7 +144,7 @@
     const lv = B.LEVELS.find(l => l.n === ui.level), list = B.books.filter(b => b.level === ui.level);
     const readIn = list.filter(b => fin[b.id]).length;
     $("#view").innerHTML = `
-    <header class="top"><h1>📖 Read ${S.goal}</h1><button class="icon" id="gear" aria-label="Settings">⚙️</button></header>
+    <header class="top"><h1>📖 Read ${S.goal}</h1><span class="cloudbadge" id="cloudbadge" title="Backed up online" ${CL.status === "ok" ? "" : "hidden"}>☁️✓</span><button class="icon" id="gear" aria-label="Settings">⚙️</button></header>
     ${warnHtml()}
     <section class="today ${done ? "ok" : ""}">
       <div class="ringbox">${ring(sec, goal)}<div class="rtxt"><b>${Math.floor(sec / 60)}</b><span>min</span></div></div>
@@ -144,14 +159,14 @@
     <div class="levels" role="tablist" aria-label="Levels">${B.LEVELS.map(l => `<button role="tab" aria-selected="${l.n === ui.level}" class="lv ${l.n === ui.level ? "on" : ""}" data-lv="${l.n}"><span>${l.icon}</span>Level ${l.n}</button>`).join("")}</div>
     <p class="lvinfo"><b>${esc(lv.name)}</b> · ${esc(lv.sub)}<br><small>${readIn} of ${list.length} read</small></p>
     <div class="shelf">${list.map(b => `<button class="cover" data-id="${esc(b.id)}" style="--c:${esc(b.color)}" aria-label="${esc(b.title)}${fin[b.id] ? ", read" : ""}"><span class="ce">${esc(b.cover)}</span><span class="ct">${esc(b.title)}</span>${fin[b.id] ? '<span class="check" aria-hidden="true">✓</span>' : ""}</button>`).join("")}</div>
-    ${C.total(S) >= 600 && (!S.bk || C.daysSince(S.bk, k) >= 7) ? '<section class="nudge"><b>Keep her reading safe 💾</b><p>Her log lives on this phone. Save a backup file so a lost or reset phone can never take it away.</p><button class="btn alt" id="bknow">Save a backup now</button></section>' : ""}
+    ${C.total(S) >= 600 && !CL.enabled() && (!S.bk || C.daysSince(S.bk, k) >= 7) ? '<section class="nudge"><b>Keep her reading safe ☁️</b><p>Her log lives on this phone. A parent can sign in with Google once to back it up online. She never has to sign in.</p><button class="btn alt" id="bknow">Set up the backup</button></section>' : ""}
     <button class="btn alt" id="manual">＋ Log a book from home</button>
     <p class="fine">Stories are free to share: written for this app, or old public-domain rhymes and fables. Everything stays on this phone.</p>`;
     nav("books");
     $("#gear").onclick = openSettings;
     $("#next").onclick = () => go("b/" + nx.id);
     $("#manual").onclick = openManual;
-    if ($("#bknow")) $("#bknow").onclick = () => { backup(); renderShelf(); };
+    if ($("#bknow")) $("#bknow").onclick = openSettings;
     document.querySelectorAll(".lv").forEach(b => (b.onclick = () => { ui.level = +b.dataset.lv; renderShelf(); }));
     const on = document.querySelector(".lv.on"); if (on && on.scrollIntoView) on.scrollIntoView({ inline: "center", block: "nearest" });
     document.querySelectorAll(".cover").forEach(b => (b.onclick = () => go("b/" + b.dataset.id)));
@@ -308,7 +323,13 @@
       <label>Reading goal each night<select id="sg">${C.GOALS.map(g => `<option ${g === S.goal ? "selected" : ""} value="${g}">${g} minutes</option>`).join("")}</select></label>
       <label>Word size<select id="sz"><option value="0">Big</option><option value="1">Bigger</option><option value="2">Biggest</option></select></label>
       <label class="chk"><input type="checkbox" id="ss" ${S.say ? "checked" : ""}> Say a word out loud when it is tapped</label>
-      <h3 class="subh">Back up her log</h3>
+      <h3 class="subh">Cloud backup (for a parent)</h3>
+      <p class="fine left">Sign in with Google once and her log is kept online, so a lost or new phone gets it back. She never needs to sign in to read.</p>
+      <p class="fine left" id="cl" role="status"></p>
+      <button class="btn" id="cin" hidden>Sign in with Google</button>
+      <button class="btn alt" id="cnow" hidden>Back up now</button>
+      <button class="btn alt" id="cout" hidden>Sign out of the backup</button>
+      <h3 class="subh">Or save a file</h3>
       <p class="fine left">${S.bk ? "Last backup: " + esc(S.bk) : "No backup saved yet."} The file is saved on this phone; keep it somewhere safe.</p>
       <button class="btn alt" id="sb">💾 Save a backup file</button>
       <label class="btn alt filebtn">📂 Restore from a backup file<input type="file" id="sr" accept=".json,application/json" hidden></label>
@@ -316,9 +337,19 @@
       <button class="btn danger" id="se">Erase the reading log</button>
       <div class="row"><button class="btn" id="sd">Done</button></div>`);
     $("#sz").value = String(S.size);
+    const paintCloud = () => {
+      if (!$("#cl")) return; const st = CL.status, on = st === "ok" || st === "signedin" || st === "denied" || (st === "offline" && CL.email);
+      $("#cl").textContent = cloudLine() || (st === "signedout" && CL.msg ? CL.msg : "Not set up yet.");
+      $("#cin").hidden = on || st === "loading"; $("#cnow").hidden = !(st === "ok" || st === "offline" && CL.email); $("#cout").hidden = !on;
+    };
+    CL.onchange = () => { paintCloud(); if (!$("#cl")) CL.onchange = () => {}; };
+    paintCloud();
+    $("#cin").onclick = () => CL.signIn();
+    $("#cnow").onclick = () => CL.syncNow();
+    $("#cout").onclick = () => CL.signOut();
     $("#sb").onclick = () => { backup(); $("#sm").textContent = "Backup saved to this phone's Downloads."; };
     $("#sr").onchange = e => restore(e.target.files[0], msg => ($("#sm").textContent = msg));
-    $("#se").onclick = () => { if (confirm("Erase every night in the reading log? This cannot be undone.")) { S.days = {}; save(); closeOverlay(o); route(); } };
+    $("#se").onclick = () => { if (confirm("Erase every night in the reading log" + (CL.status === "ok" ? ", including the cloud backup" : "") + "? This cannot be undone.")) { S.days = {}; S.bk = ""; save(true); if (CL.status === "ok") CL.overwrite(); closeOverlay(o); route(); } };
     $("#sd").onclick = () => { S.name = $("#sn").value.replace(/[\u0000-\u001f]/g, "").trim().slice(0, 20); S.goal = +$("#sg").value; S.size = +$("#sz").value; S.say = $("#ss").checked; save(); closeOverlay(o); route(); };
   }
 
@@ -354,10 +385,11 @@
     load();
     window.addEventListener("hashchange", route);
     window.addEventListener("pagehide", () => save(true));
-    document.addEventListener("visibilitychange", () => { if (document.hidden) save(true); });
+    document.addEventListener("visibilitychange", () => { if (document.hidden) { save(true); CL.flush(); } });
     try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist(); } catch (e) {} // ask Chrome never to clear her log to free space
     if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {});
     route(); recover().then(() => { store.ready = true; save(true); });
+    CL.init({ get: () => S, apply: adopt, onchange: () => { if (!ui.book && !document.querySelector(".overlay")) { const h = $("#cloudbadge"); if (h) h.hidden = CL.status !== "ok"; } } });
   }
   window.R20App = { init, _state: () => S };
 })();

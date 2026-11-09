@@ -52,6 +52,16 @@ service cloud.firestore {
         && request.resource.data.picks is map && request.resource.data.picks.size() <= 40;
       allow delete: if gpOwner();
     }
+    // ---------- Read 20 (apps/read20): optional cloud backup of one reader's log ----------
+    // One document per signed-in Google account, readable and writable only by that account.
+    // The log is one JSON string (about 20 KB for a year of nightly reading).
+    match /r20_users/{uid} {
+      allow read: if request.auth != null && request.auth.uid == uid;
+      allow create, update: if request.auth != null && request.auth.uid == uid
+        && request.resource.data.keys().hasOnly(['log', 'updated'])
+        && request.resource.data.log is string && request.resource.data.log.size() <= 400000;
+      allow delete: if request.auth != null && request.auth.uid == uid;
+    }
     match /gp_weeks/{key} {
       allow read, write: if gpPlayer();
     }

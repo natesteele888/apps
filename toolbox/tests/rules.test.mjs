@@ -3,7 +3,7 @@
 import { test, before, after, beforeEach } from 'node:test';
 import { readFileSync } from 'node:fs';
 import { initializeTestEnvironment, assertSucceeds, assertFails } from '@firebase/rules-unit-testing';
-import { doc, getDoc, setDoc, getDocs, collection } from 'firebase/firestore';
+import { doc, getDoc, setDoc, getDocs, collection, deleteDoc } from 'firebase/firestore';
 
 const OWNER = 'owner@example.com';
 let env;
@@ -78,4 +78,34 @@ test('Picks invite codes: good code joins, wrong or switched-off code does not',
   await assertFails(join('guesser', 'WRONG'));
   await assertFails(join('late', 'OFF'));
   await assertFails(join('sneaky', 'OWNER'));
+});
+
+// ---------- Read 20 cloud backup (r20_users/<uid>) ----------
+const r20 = (uid, email = 'parent@example.com') => env.authenticatedContext(uid, { email, email_verified: true }).firestore();
+const r20Data = { log: '{"v":1,"days":{}}', updated: 1 };
+
+test('read20: a signed-in account can create, read, update and delete its own backup', async () => {
+  const db = r20('parentA');
+  await assertSucceeds(setDoc(doc(db, 'r20_users/parentA'), r20Data));
+  await assertSucceeds(getDoc(doc(db, 'r20_users/parentA')));
+  await assertSucceeds(setDoc(doc(db, 'r20_users/parentA'), { ...r20Data, log: '{"v":1,"days":{"2026-11-08":{}}}' }));
+  await assertSucceeds(deleteDoc(doc(db, 'r20_users/parentA')));
+});
+test('read20: nobody can read or write another account\'s backup, and signed-out visitors get nothing', async () => {
+  await env.withSecurityRulesDisabled(async (ctx) => { await setDoc(doc(ctx.firestore(), 'r20_users/parentA'), r20Data); });
+  await assertFails(getDoc(doc(r20('parentB'), 'r20_users/parentA')));
+  await assertFails(setDoc(doc(r20('parentB'), 'r20_users/parentA'), r20Data));
+  await assertFails(deleteDoc(doc(r20('parentB'), 'r20_users/parentA')));
+  await assertFails(getDoc(doc(anon(), 'r20_users/parentA')));
+  await assertFails(setDoc(doc(anon(), 'r20_users/parentA'), r20Data));
+});
+test('read20: the backup document only accepts a log string of a sane size', async () => {
+  const db = r20('parentA');
+  await assertFails(setDoc(doc(db, 'r20_users/parentA'), { log: 5, updated: 1 }));
+  await assertFails(setDoc(doc(db, 'r20_users/parentA'), { log: 'x'.repeat(400001), updated: 1 }));
+  await assertFails(setDoc(doc(db, 'r20_users/parentA'), { ...r20Data, extra: 'nope' }));
+});
+test('read20: a backup account is not a Gameday Picks player or the owner', async () => {
+  await assertFails(getDoc(doc(r20('parentA'), 'gp_players/player1')));
+  await assertFails(getDoc(doc(r20('parentA'), 'projects/p1')));
 });
