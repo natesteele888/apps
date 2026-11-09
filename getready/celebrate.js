@@ -4,8 +4,8 @@
 (function (root) {
   "use strict";
   const X = {};
-  X.STYLES = ["disco", "jacks", "floss", "roof", "twirl"];
-  X.NAMES = { disco: "Disco", jacks: "Jumping jacks", floss: "The floss", roof: "Raise the roof", twirl: "Twirl" };
+  X.STYLES = ["disco", "jacks", "floss", "roof", "twirl", "twerk", "griddy"];
+  X.NAMES = { disco: "Disco", jacks: "Jumping jacks", floss: "The floss", roof: "Raise the roof", twirl: "Twirl", twerk: "Twerk", griddy: "The Griddy" };
   const BG = [["#020617", "#1d4ed8"], ["#000000", "#0a58ff"], ["#071733", "#38a1ff"], ["#050505", "#2563eb"], ["#0a1f4d", "#60a5fa"]];
   const CONF = ["#ffffff", "#2f8cff", "#60a5fa", "#93c5fd", "#1d4ed8", "#ffd84d"];
   const TAU = Math.PI * 2;
@@ -18,6 +18,12 @@
     else if (style === "jacks") { const a = (1 + c) / 2; p.ra = 15 + 150 * a; p.la = -p.ra; p.rh = 5 + 24 * a; p.lh = -p.rh; p.dy = -16 * a; p.re = 6; p.le = -6; }
     else if (style === "floss") { p.ra = -65 * s + 10; p.la = -65 * s - 10; p.re = 22; p.le = -22; p.dx = 30 * s; p.rot = 7 * s; p.rh = 10; p.lh = -10; p.rk = 18 * Math.abs(c); p.lk = 18 * Math.abs(c); p.dy = 6 * Math.abs(c); }
     else if (style === "roof") { p.ra = 145; p.la = -145; p.re = 55 * s; p.le = 55 * -s; p.rh = 16; p.lh = -16; p.rk = 28 * Math.abs(s); p.lk = 28 * Math.abs(s); p.dy = 12 * Math.abs(s); }
+    else if (style === "twerk") { // deep squat, hands on knees, fast hip shake and bounce
+      const f = Math.sin(b * 2.5); p.ra = 38; p.la = -38; p.re = 18; p.le = -18; p.rh = 30; p.lh = -30; p.rk = 52; p.lk = 52; p.dy = 10 + 7 * Math.abs(f); p.dx = 14 * f; p.rot = 12 * f;
+    }
+    else if (style === "griddy") { // arms out like wings, quick alternating foot shuffles
+      p.ra = 98 + 22 * c; p.la = -(98 - 22 * c); p.re = 20; p.le = -20; p.rh = 10 + 30 * Math.max(0, s); p.lh = -(10 + 30 * Math.max(0, -s)); p.rk = 20 * Math.max(0, s); p.lk = 20 * Math.max(0, -s); p.dx = 8 * s; p.dy = 6 * Math.abs(c); p.rot = 5 * c;
+    }
     else { p.ra = 105; p.la = -105; p.re = 10; p.le = -10; p.sx = Math.cos(t * 3.4); p.dy = -22 * Math.abs(Math.sin(b / 2)); p.rh = 12 + 10 * s; p.lh = -(12 + 10 * s); }
     return p;
   };

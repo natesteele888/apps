@@ -86,8 +86,13 @@ const doAll = (s, k) => C.itemsFor(s, k).forEach(i => { if (!C.isChecked(s, k, i
     const it = ['a', 'b', 'c'].map(id => ({ id, name: id })); eq(C.moveItem(it, 'a', 1).map(x => x.id).join(''), 'bac'); eq(C.moveItem(it, 'a', -1).map(x => x.id).join(''), 'abc'); eq(C.moveItem(it, 'c', 1).map(x => x.id).join(''), 'abc');
     for (let i = 0; i < 200; i++) { const n = C.pick(5, 2); assert.ok(n >= 0 && n < 5 && n !== 2); } eq(C.pick(1, 0), 0); eq(C.pick(5, -1, () => 0.9999), 4);
   });
-  await test('celebration: every dance pose is finite for a whole minute and the arms really move', () => {
-    for (const st of X.STYLES) { let lo = 1e9, hi = -1e9; for (let t = 0; t < 60; t += 0.037) { const p = X.pose(st, t); for (const v of Object.values(p)) assert.ok(Number.isFinite(v), st + ' ' + t); const m = p.ra + p.re + p.sx * 100; lo = Math.min(lo, m); hi = Math.max(hi, m); } assert.ok(hi - lo > 20, st + ' arm swing ' + (hi - lo)); }
+  await test('celebration: every dance (including twerk and the Griddy) is finite for a whole minute and really moves', () => {
+    assert.ok(X.STYLES.includes('twerk') && X.STYLES.includes('griddy')); for (const st of X.STYLES) assert.ok(X.NAMES[st], st + ' has a name');
+    for (const st of X.STYLES) {
+      const lo = {}, hi = {};
+      for (let t = 0; t < 60; t += 0.037) { const p = X.pose(st, t); for (const [k, v] of Object.entries(p)) { assert.ok(Number.isFinite(v), st + ' ' + k + ' ' + t); lo[k] = Math.min(lo[k] ?? 1e9, v); hi[k] = Math.max(hi[k] ?? -1e9, v); } }
+      assert.ok(Math.max(...Object.keys(lo).map(k => (hi[k] - lo[k]) * (k === 'sx' ? 100 : 1))) > 20, st + ' moves');
+    }
   });
 
   const srv = await startServer('getready'); const br = await launch();

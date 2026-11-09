@@ -2243,7 +2243,7 @@
           [
             "🕺",
             "Full-screen celebration",
-            "Finish the list and a random dance plays. Add your own GIFs to the mix."
+            "Finish the list and a random dance plays: disco, the floss, the twerk, the Griddy and more. Add your own GIFs too."
           ]
         ],
         "facts": [
@@ -2282,8 +2282,12 @@
         "shots": [
           "mock"
         ],
-        "version": "1.1.0",
+        "version": "1.2.0",
         "history": [
+          {
+            "v": "1.2.0",
+            "t": "Get Ready: two new celebration dances, the twerk and the Griddy"
+          },
           {
             "v": "1.1.0",
             "t": "Get Ready: separate lists for different days (weekend, Mon/Thu, Tue/Fri), copy a list, switch a day's list"
