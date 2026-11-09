@@ -130,7 +130,7 @@ button, input, select, textarea { font: inherit; color: inherit; }
 [data-theme="paper"] .photopin { background: #fff; }
 [data-theme="paper"] .photopin::after { border-top-color: #fff; }
 .leaflet-marker-icon:hover .photopin, .leaflet-marker-icon:focus-visible .photopin { transform: scale(1.06); }
-.fov { filter: blur(.6px); }
+.mapwrap .fov { filter: blur(.6px); }
 .leaflet-popup-content-wrapper { background: var(--bg) !important; color: var(--ink) !important; border: 1px solid var(--line); border-radius: var(--r) !important; box-shadow: 0 8px 24px rgba(0, 0, 0, .35) !important; }
 .leaflet-popup-tip { background: var(--bg) !important; border: 1px solid var(--line); box-shadow: none !important; }
 .leaflet-popup-content { margin: 0 !important; width: 200px !important; }

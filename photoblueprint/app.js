@@ -42,12 +42,12 @@
     return m;
   }
   const mpp = (lat, zoom) => 156543.03392 * Math.cos(lat * Math.PI / 180) / Math.pow(2, zoom);
-  // The field-of-view cone: a soft, unstroked sector from the spot in the direction the camera faced, as wide as the lens sees,
-  // 52 screen pixels long at any zoom. On the main map it only shows once you are close in (minZoom), so it never clutters the photos.
+  // The field-of-view cone: a sector from the spot in the direction the camera faced, as wide as the lens sees, 52 screen pixels
+  // long at any zoom. Shown on a sheet's own map and in the editor; the main map shows only the photos (Nathan, 2026-11-09).
   function addWedge(map, s, color, opts) {
     if (s.heading == null) return null;
     const o = opts || {}, minZoom = o.minZoom || 0;
-    const poly = L.polygon([], { color: color || accent(), weight: 0, stroke: false, fillOpacity: o.fillOpacity == null ? .18 : o.fillOpacity, interactive: false, className: "fov" });
+    const poly = L.polygon([], { color: color || accent(), weight: o.stroke ? 1.2 : 0, stroke: !!o.stroke, opacity: .8, fillOpacity: o.fillOpacity == null ? .18 : o.fillOpacity, interactive: false, className: "fov" });
     const upd = () => {
       poly.setLatLngs(C.wedge(s.lat, s.lon, s.heading, C.fov(s.focal, s.sensor) || 60, mpp(s.lat, map.getZoom()) * (o.length || 52), 16));
       if (map.getZoom() >= minZoom) { if (!map.hasLayer(poly)) poly.addTo(map); } else if (map.hasLayer(poly)) map.removeLayer(poly);
@@ -167,7 +167,7 @@
       const mk = L.marker([s.lat, s.lon], { icon: s.thumb ? photoIcon(s, size, mine ? "me" : "") : pinIcon(mine ? "me" : ""), title: s.title, alt: s.title, riseOnHover: true, keyboard: true });
       mk.on("click", () => go("#s/" + s.id));
       if (s.thumb) photoMarkers.push([mk, s, mine]);
-      group.addLayer(mk); addWedge(map, s, null, { minZoom: 13 });
+      group.addLayer(mk);
     }
     map.on("zoomend", () => { const z = photoSize(map.getZoom()); if (z === size) return; size = z; for (const [mk, s, mine] of photoMarkers) mk.setIcon(photoIcon(s, size, mine ? "me" : "")); });
     group.addTo(map);
@@ -252,7 +252,7 @@
     if (where) {
       const map = makeMap($("#mini"), { scrollWheelZoom: false, zoomControl: true });
       map.setView([s.lat, s.lon], 15);
-      L.marker([s.lat, s.lon], { icon: pinIcon(mine ? "me" : ""), interactive: false }).addTo(map); addWedge(map, s);
+      L.marker([s.lat, s.lon], { icon: pinIcon(mine ? "me" : ""), interactive: false }).addTo(map); addWedge(map, s, null, { stroke: true, fillOpacity: .22, length: 70 });
       requestAnimationFrame(() => map.invalidateSize());
     }
     $("#share").onclick = () => share(s, mine);
