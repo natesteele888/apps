@@ -2142,7 +2142,7 @@
         "ac": "#6c4ff0",
         "install": true,
         "access": "Open",
-        "desc": "A book shop of short, free stories for first-grade readers, from easy to harder. Words are big, and tapping a word highlights it so a reader can keep her place. A timer starts when a story opens and carries across stories up to 20 minutes, and a calendar log keeps every night and every story. A Sounds board lets her tap letters, hear each sound, and blend them. Everything stays on the phone.",
+        "desc": "A book shop of short, free stories for first-grade readers, from easy to harder. Words are big, and tapping a word highlights it so a reader can keep her place. A timer starts when a story opens and carries across stories up to 20 minutes, and a calendar log keeps every night and every story. Everything stays on the phone.",
         "feats": [
           [
             "📚",
@@ -2158,11 +2158,6 @@
             "⏱️",
             "20-minute timer",
             "Starts on the first story and carries into the next, with a cheer at 20."
-          ],
-          [
-            "🔤",
-            "Sound board",
-            "Tap letters to hear their sounds, drop them in boxes and blend them into words."
           ]
         ],
         "facts": [
