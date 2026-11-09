@@ -92,6 +92,15 @@ const TODAY = '2026-11-08';
     })));
     assert.ok(seen.size > 400, 'checked ' + seen.size);
   });
+  await test('core: two phones on the same day add up; the same phone never double counts; old saves still count', () => {
+    const a = C.empty(), b = C.empty(); C.dev = 'dad'; C.addSeconds(a, TODAY, 'x', 840); C.dev = 'mom'; C.addSeconds(b, TODAY, 'y', 600); C.addManual(b, TODAY, 'Paper', 5);
+    const m = C.merge(a, b); eq(C.daySec(m, TODAY), 840 + 600 + 300, 'both homes add up'); eq(m.days[TODAY].books.x.sec, 840); eq(m.days[TODAY].books.y.sec, 600); eq(m.days[TODAY].extra.length, 1);
+    eq(C.daySec(C.merge(m, a), TODAY), 1740, 'merging again changes nothing'); eq(C.daySec(C.merge(a, m), TODAY), 1740); eq(C.daySec(C.merge(C.merge(m, b), a), TODAY), 1740);
+    C.dev = 'dad'; C.addSeconds(m, TODAY, 'x', 60); eq(C.daySec(m, TODAY), 1800, 'dad reads a minute more'); eq(C.daySec(C.merge(b, m), TODAY), 1800, 'and mom gets it without losing hers');
+    const round = C.sanitize(JSON.parse(JSON.stringify(C.serialize(m)))); eq(C.daySec(round, TODAY), 1800); assert.ok(!('sec' in JSON.parse(JSON.stringify(C.serialize(m))).days[TODAY]), 'only the parts are saved');
+    const old = C.sanitize({ days: { [TODAY]: { sec: 900, books: { z: { sec: 900, fin: 1 } }, extra: [] } } }); eq(C.daySec(old, TODAY), 900); C.dev = 'new'; C.addSeconds(old, TODAY, 'z', 100); eq(C.daySec(old, TODAY), 1000, 'old data plus new reading');
+    eq(C.daySec(C.merge(old, C.sanitize({ days: { [TODAY]: { sec: 900, books: { z: { sec: 900, fin: 1 } }, extra: [] } } })), TODAY), 1000, 'the same old save from the cloud is not added twice'); C.dev = 'local';
+  });
   await test('core: damaged saves are cleaned up', () => {
     const s = C.sanitize({ name: 'A'.repeat(50) + '\u0007', goal: 7, size: 9, say: 'yes', days: { 'bad': { sec: 5 }, '2026-11-08': { sec: -4, books: { x: { sec: 'q', fin: 1 } }, extra: [{ title: 5, sec: 1e9 }, null] } } });
     eq(s.name.length, 20); eq(s.goal, 20); eq(s.size, 2); eq(s.say, false); eq(Object.keys(s.days).length, 1); eq(s.days[TODAY].sec, 0); eq(s.days[TODAY].books.x.fin, 1); eq(s.days[TODAY].extra[0].sec, 86400);
@@ -230,7 +239,7 @@ const TODAY = '2026-11-08';
   });
   await test('celebration: Back keeps reading; "stop" lands on the shelf and not back in the story', async () => {
     const seed = async page => {
-      await page.evaluate(k => { R20App._state().days[k] = { sec: 1198, done: 0, books: {}, extra: [] }; }, TODAY);
+      await page.evaluate(k => { R20App._state().days[k] = R20Core.derive({ done: 0, parts: { old: { sec: 1198, books: {}, extra: [] } } }); }, TODAY);
       await page.locator('.cover', { hasText: 'Sam the Cat' }).click(); await page.waitForSelector('.reader');
       await page.clock.runFor(4000); await page.locator('#party').waitFor(); await settle(page);
     };
@@ -249,13 +258,13 @@ const TODAY = '2026-11-08';
     const p2 = await ctx.newPage(); await p2.addInitScript(d => { window.__today = d; }, TODAY); await p2.goto(srv.url);
     await p2.waitForFunction(() => window.R20App._state().days[window.__today] && window.R20App._state().days[window.__today].sec >= 10, null, { timeout: 5000 });
     const back = await sec(p2); assert.ok(back >= 10, 'recovered ' + back);
-    eq(await p2.evaluate(() => JSON.parse(localStorage.getItem('read20.v1')).days[window.__today].sec >= 10), true, 'main copy refilled');
+    eq(await p2.evaluate(() => Object.values(JSON.parse(localStorage.getItem('read20.v1')).days[window.__today].parts).reduce((n, p) => n + p.sec, 0) >= 10), true, 'main copy refilled');
   });
   await test('saving: a backup file restores into a brand new phone, adds time and rejects other files', async () => {
     const a = await mk(); await a.page.locator('#manual').click(); await a.page.fill('#mt', 'Paper Book'); await a.page.fill('#mm', '14'); await a.page.locator('#ms').click(); await a.page.waitForSelector('.cover');
     await a.page.locator('#gear').click(); const dl = a.page.waitForEvent('download'); await a.page.locator('#sb').click(); const d = await dl;
     assert.ok(/^read20-backup-2026-11-08\.json$/.test(d.suggestedFilename()), d.suggestedFilename());
-    const path = await d.path(); const j = JSON.parse(require('fs').readFileSync(path, 'utf8')); eq(j.app, 'read20'); eq(j.data.days[TODAY].sec, 840); eq(j.data.bk, TODAY);
+    const path = await d.path(); const j = JSON.parse(require('fs').readFileSync(path, 'utf8')); eq(j.app, 'read20'); eq(C.sanitize(j.data).days[TODAY].sec, 840); eq(j.data.bk, TODAY);
     const b = await mk(); eq(await sec(b.page), 0);
     await b.page.locator('#gear').click(); await b.page.setInputFiles('#sr', path); await b.page.waitForFunction(() => /Restored/.test(document.querySelector('#sm').textContent));
     eq(await sec(b.page), 840); await b.page.setInputFiles('#sr', path); await b.page.waitForTimeout(300); eq(await sec(b.page), 840, 'restoring twice does not double');
@@ -289,11 +298,11 @@ const TODAY = '2026-11-08';
     await ctx.exposeFunction('__fsGet', async p => { if (fsDeny) return { __deny: true }; return cloudDb.has(p) ? cloudDb.get(p) : null; });
     await ctx.exposeFunction('__fsSet', async (p, d) => { cloudDb.set(p, d); });
     await ctx.route(/gstatic\.com\/firebasejs/, r => { hits++; opts.offline ? r.abort() : r.fulfill({ contentType: 'text/javascript', body: FAKE_FB }); });
-    const o = await newPage(br, { context: ctx, today: TODAY }); await o.page.clock.install({ time: new Date('2026-11-08T19:00:00') });
-    await o.page.goto(srv.url); await o.page.waitForSelector('.cover'); o.hits = () => hits; return o;
+    const o = await newPage(br, { context: ctx, today: TODAY }); await o.page.clock.install({ time: new Date('2026-11-08T19:00:00') }); if (opts.uid) await o.page.addInitScript(u => { window.__uid = u; }, opts.uid);
+    await o.page.goto(srv.url + (opts.hash || '')); await o.page.waitForSelector('.cover'); o.hits = () => hits; return o;
   };
   const logMin = async (page, title, min) => { await page.locator('#manual').click(); await page.fill('#mt', title); await page.fill('#mm', String(min)); await page.locator('#ms').click(); await page.waitForSelector('.cover'); };
-  const cloudSec = (day) => { const d = cloudDb.get('r20_users/parent1'); return d ? (JSON.parse(d.log).days[day] || { sec: 0 }).sec : -1; };
+  const cloudSec = (day, path = 'r20_users/parent1') => { const d = cloudDb.get(path); return d ? (C.sanitize(JSON.parse(d.log)).days[day] || { sec: 0 }).sec : -1; };
 
   await test('cloud: reading never loads or needs Google; nothing is sent until a parent signs in', async () => {
     cloudDb.clear(); const a = await mkPhone(); await a.page.locator('.cover', { hasText: 'Sam the Cat' }).click(); await a.page.waitForSelector('.reader');
@@ -319,7 +328,7 @@ const TODAY = '2026-11-08';
     await logMin(a.page, 'Book A', 10); await logMin(b.page, 'Book B', 5);
     for (const p of [a.page, b.page]) { await p.locator('#gear').click(); await p.locator('#cin').click(); await p.waitForFunction(() => /Backed up as/.test(document.querySelector('#cl').textContent)); await p.locator('#sd').click(); }
     await a.page.locator('#gear').click(); await a.page.locator('#cnow').click(); await a.page.waitForTimeout(400); await a.page.locator('#sd').click();
-    eq(cloudSec(TODAY), 600, 'same day: the bigger total wins, not the sum'); 
+    eq(cloudSec(TODAY), 900, 'two phones, same day: both readings count (10 + 5 minutes)'); 
     await a.page.reload(); await a.page.waitForSelector('.cover'); await a.page.waitForFunction(() => document.querySelector('#cloudbadge') && !document.querySelector('#cloudbadge').hidden);
     await logMin(b.page, 'Book C', 20); // b now ahead
     await b.page.locator('#gear').click(); await b.page.locator('#cnow').click(); await b.page.waitForTimeout(400); await b.page.locator('#sd').click();
@@ -364,6 +373,40 @@ const TODAY = '2026-11-08';
     const b = await page.locator('.w').nth(0).boundingBox(); await page.mouse.move(b.x + b.width / 2, b.y + b.height / 2); await page.mouse.down(); await page.waitForTimeout(600); await page.mouse.up(); await page.locator('.wordpop').waitFor();
     await page.locator('#wphear').click(); await page.waitForTimeout(150); assert.ok((await page.evaluate(() => window.__said)).some(x => /^sam@0\.75/.test(x)));
     const n = await mkAudio({ speech: false }); eq(await n.page.locator('#bsay').count(), 0, 'no Say it button without a voice');
+  });
+  await test('family link: one log for two homes, each phone with its own Google account; both homes\' minutes add up', async () => {
+    cloudDb.clear(); fsDeny = false;
+    const a = await mkPhone({ uid: 'dad1' }); await logMin(a.page, 'Dad reading', 10);
+    await a.page.locator('#gear').click(); await a.page.locator('#cin').click(); await a.page.waitForFunction(() => /Backed up as/.test(document.querySelector('#cl').textContent));
+    eq(await a.page.locator('#shsend').isVisible(), false); await a.page.locator('#shmake').click(); await a.page.waitForFunction(() => /Sharing is on/.test(document.querySelector('#shmsg').textContent));
+    const key = await a.page.evaluate(() => window.R20Cloud.shareKey()); assert.ok(/^[a-z2-7]{20}$/.test(key), 'a 20 character code'); assert.ok(cloudDb.has('r20_shared/' + key), 'the log is in the shared document');
+    eq(await a.page.locator('#shsend').isVisible(), true); eq(await a.page.locator('#shstop').isVisible(), true);
+    const link = await a.page.evaluate(() => window.R20Cloud.link()); assert.ok(link.endsWith('#join=' + key), link); assert.ok(/Code: \w{5}-\w{5}-\w{5}-\w{5}/.test(await a.page.locator('#shmsg').innerText()));
+    await a.page.screenshot({ path: SHOTS + '/read20-share.png', fullPage: false }); await a.page.locator('#sd').click();
+    // the other home opens the link on a different phone, with a different Google account
+    const b = await mkPhone({ uid: 'mom1', hash: '#join=' + key }); await b.page.locator('#jyes').waitFor(); assert.ok(/own.*Google account/.test(await b.page.locator('.sheet').innerText()));
+    eq(await sec(b.page), 0); await b.page.locator('#jyes').click(); await b.page.waitForFunction(() => /Joined/.test(document.querySelector('#jmsg').textContent)); eq(await sec(b.page), 600, 'her 10 minutes came over');
+    eq(await b.page.evaluate(() => location.hash), '', 'the link is cleaned out of the address');
+    await b.page.locator('#jno').click(); await logMin(b.page, 'Mom reading', 5);   // the same day, on the other phone
+    await b.page.locator('#gear').click(); await b.page.locator('#cnow').click(); await b.page.waitForTimeout(400); await b.page.locator('#sd').click();
+    eq(cloudSec(TODAY, 'r20_shared/' + key), 900, 'shared log has both homes');
+    await a.page.locator('#gear').click(); await a.page.locator('#cnow').click(); await a.page.waitForTimeout(400); await a.page.locator('#sd').click();
+    eq(await sec(a.page), 900, 'dad sees mom\'s 5 minutes on top of his 10, not instead of them');
+    assert.ok(!cloudDb.has('r20_users/mom1') || cloudSec(TODAY, 'r20_users/mom1') <= 0, 'mom\'s phone does not use a personal document once shared');
+    // a third phone typing the code instead of using the link
+    const c = await mkPhone({ uid: 'gma1' }); await c.page.locator('#gear').click(); await c.page.fill('#jcode', 'junk'); await c.page.locator('#jgo').click(); assert.ok(/does not look like/.test(await c.page.locator('#shmsg').innerText()));
+    await c.page.fill('#jcode', (await a.page.evaluate(() => window.R20Cloud.pretty())).toUpperCase()); await c.page.locator('#jgo').click(); await c.page.locator('#jyes').waitFor(); await c.page.locator('#jyes').click();
+    await c.page.waitForFunction(() => /Joined/.test(document.querySelector('#jmsg').textContent)); eq(await sec(c.page), 900);
+  });
+  await test('family link: not-yet-published rules, bad links and stopping the share are handled without losing anything', async () => {
+    cloudDb.clear(); const a = await mkPhone({ uid: 'dad2' }); await logMin(a.page, 'X', 12); await a.page.locator('#gear').click(); await a.page.locator('#cin').click();
+    await a.page.waitForFunction(() => /Backed up as/.test(document.querySelector('#cl').textContent)); fsDeny = true; await a.page.locator('#shmake').click();
+    await a.page.waitForFunction(() => /Could not make the link/.test(document.querySelector('#shmsg').textContent)); eq(await a.page.evaluate(() => window.R20Cloud.shareKey()), ''); eq(await sec(a.page), 720); fsDeny = false;
+    await a.page.locator('#shmake').click(); await a.page.waitForFunction(() => /Sharing is on/.test(document.querySelector('#shmsg').textContent)); await a.page.locator('#shstop').click();
+    eq(await a.page.evaluate(() => window.R20Cloud.shareKey()), ''); eq(await a.page.locator('#shmake').isVisible(), true); eq(await sec(a.page), 720, 'stopping keeps the minutes on the phone');
+    const bad = await mkPhone({ hash: '#join=notacode' }); eq(await bad.page.locator('.sheet').count(), 0, 'a broken link opens nothing'); eq(await bad.page.locator('.cover').count() > 0, true);
+    const p = await bad.page.evaluate(() => [window.R20Cloud.parseKey('https://x.github.io/apps/read20/#join=abcdefghijklmnopqrst'), window.R20Cloud.parseKey('ABCDE-FGHIJ-KLMNO-PQRST'), window.R20Cloud.parseKey('abcdefghij'), window.R20Cloud.parseKey('abcdefghijklmnopqrs1'), window.R20Cloud.parseKey('')]);
+    eq(p.join('|'), 'abcdefghijklmnopqrst|abcdefghijklmnopqrst|||');
   });
   await test('offline: the service worker caches the app and it reopens with no network', async () => {
     const o = await newPage(br, { sw: true, today: TODAY }); const { page, ctx } = o;

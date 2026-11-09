@@ -30,22 +30,22 @@
     catch (e) { S = C.empty(); try { if (raw) localStorage.setItem(KEY + ".damaged", raw); } catch (e2) {} } // keep a damaged save instead of writing over it
   }
   function save(force) {
-    try { localStorage.setItem(KEY, JSON.stringify(S)); store.fail = false; } catch (e) { store.fail = true; }
+    try { localStorage.setItem(KEY, JSON.stringify(C.serialize(S))); store.fail = false; } catch (e) { store.fail = true; }
     const now = Date.now();
-    if (store.ready && (force || now - store.idbAt > 5000)) { store.idbAt = now; const copy = JSON.stringify(S); idb("readwrite", st => st.put(copy, "log")).catch(() => {}); }
+    if (store.ready && (force || now - store.idbAt > 5000)) { store.idbAt = now; const copy = JSON.stringify(C.serialize(S)); idb("readwrite", st => st.put(copy, "log")).catch(() => {}); }
     paintWarn(); if (CL) CL.schedule();
   }
   async function recover() {
     try {
       const raw = await idb("readonly", st => st.get("log")); if (!raw) return;
       const other = C.sanitize(JSON.parse(raw)), merged = C.merge(S, other);
-      if (C.total(merged) > C.total(S)) { S = merged; try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {} if (ui.book) paintTimer(); else route(); }
+      if (C.total(merged) > C.total(S)) { S = merged; try { localStorage.setItem(KEY, JSON.stringify(C.serialize(S))); } catch (e) {} if (ui.book) paintTimer(); else route(); }
     } catch (e) {}
   }
   /* The saved copy in the cloud has been merged in: keep whichever has more, never the other way round. */
   function adopt(merged) {
-    const m = C.merge(S, merged); if (JSON.stringify(m) === JSON.stringify(S)) return;
-    S = m; try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {}
+    const m = C.merge(S, merged); if (JSON.stringify(C.serialize(m)) === JSON.stringify(C.serialize(S))) return;
+    S = m; try { localStorage.setItem(KEY, JSON.stringify(C.serialize(S))); } catch (e) {}
     store.idbAt = 0; if (ui.book) paintTimer(); else if (!document.querySelector(".overlay")) route();
   }
   function cloudLine() {
@@ -73,6 +73,7 @@
       if (!ui.book || ui.book.id !== h.slice(2)) { ui.book = byId[h.slice(2)]; ui.page = 0; ui.finishedNow = false; }
       ui.paused = false; ui.hl = -1; renderReader(); startTimer();
     } else if (h === "log") { ui.book = null; renderLog(); }
+    else if (h.startsWith("join=")) { const key = CL.parseKey(h); try { history.replaceState(null, "", location.pathname + location.search); } catch (e) {} ui.book = null; renderShelf(); if (key) openJoin(key); }
     else { ui.book = null; renderShelf(); }
   }
   const go = h => { if (location.hash.replace(/^#/, "") === h) route(); else location.hash = h; };
@@ -343,11 +344,20 @@
       <button class="btn" id="cin" hidden>Sign in with Google</button>
       <button class="btn alt" id="cnow" hidden>Back up now</button>
       <button class="btn alt" id="cout" hidden>Sign out of the backup</button>
+      <h3 class="subh">Share with her other home</h3>
+      <p class="fine left" id="shmsg" role="status"></p>
+      <button class="btn" id="shmake" hidden>Create a family link</button>
+      <button class="btn" id="shsend" hidden>📤 Send the family link</button>
+      <button class="btn alt" id="shcopy" hidden>Copy the link</button>
+      <button class="btn alt" id="shstop" hidden>Stop sharing on this phone</button>
+      <label class="fine left">Got a link or code from the other home?<input id="jcode" placeholder="Paste it here" autocomplete="off"></label>
+      <button class="btn alt" id="jgo">Join their log</button>
       <h3 class="subh">Something wrong?</h3>
       <button class="btn alt" type="button" onclick="window.nateHealth&&nateHealth.report()">Send a problem report</button>
       <h3 class="subh">Or save a file</h3>
       <p class="fine left">${S.bk ? "Last backup: " + esc(S.bk) : "No backup saved yet."} The file is saved on this phone; keep it somewhere safe.</p>
       <button class="btn alt" id="sb">💾 Save a backup file</button>
+      <button class="btn alt" id="sbs">📤 Send a backup file…</button>
       <label class="btn alt filebtn">📂 Restore from a backup file<input type="file" id="sr" accept=".json,application/json" hidden></label>
       <p class="fine left" id="sm" role="status"></p>
       <button class="btn danger" id="se">Erase the reading log</button>
@@ -361,12 +371,20 @@
       if (!$("#cl")) return; const st = CL.status, on = st === "ok" || st === "signedin" || st === "denied" || (st === "offline" && CL.email);
       $("#cl").textContent = cloudLine() || (st === "signedout" && CL.msg ? CL.msg : "Not set up yet.");
       $("#cin").hidden = on || st === "loading"; $("#cnow").hidden = !(st === "ok" || st === "offline" && CL.email); $("#cout").hidden = !on;
+      const key = CL.shareKey(); $("#shmake").hidden = !(on && !key); $("#shsend").hidden = $("#shcopy").hidden = $("#shstop").hidden = !key;
+      $("#shmsg").textContent = key ? "Sharing is on. Her minutes from both homes add up. Code: " + CL.pretty(key) : on ? "Make one link and text it to the other home. They open it, sign in with their own Google account, and both phones share one log, so nobody needs your Google account." : "Sign in above first, then you can make a family link.";
     };
     CL.onchange = () => { paintCloud(); if (!$("#cl")) CL.onchange = () => {}; };
     paintCloud();
     $("#cin").onclick = () => CL.signIn();
+    $("#shmake").onclick = async () => { $("#shmsg").textContent = "Making the link…"; const k = await CL.makeShare(); paintCloud(); if (!k) $("#shmsg").textContent = "Could not make the link. Check the signal, and that the cloud backup is allowed."; };
+    $("#shsend").onclick = () => shareLink($("#shmsg"));
+    $("#shcopy").onclick = async () => { try { await navigator.clipboard.writeText(CL.link()); $("#shmsg").textContent = "Link copied. Paste it into a text message."; } catch (e) { $("#shmsg").textContent = CL.link(); } };
+    $("#shstop").onclick = () => { CL.leave(); paintCloud(); };
+    $("#jgo").onclick = () => { const k = CL.parseKey($("#jcode").value); if (!k) { $("#shmsg").textContent = "That does not look like a Read 20 link or code."; return; } openJoin(k); };
     $("#cnow").onclick = () => CL.syncNow();
     $("#cout").onclick = () => CL.signOut();
+    $("#sbs").onclick = () => sendBackup(m => ($("#sm").textContent = m));
     $("#sb").onclick = () => { backup(); $("#sm").textContent = "Backup saved to this phone's Downloads."; };
     $("#sr").onchange = e => restore(e.target.files[0], msg => ($("#sm").textContent = msg));
     $("#se").onclick = () => { if (confirm("Erase every night in the reading log" + (CL.status === "ok" ? ", including the cloud backup" : "") + "? This cannot be undone.")) { S.days = {}; S.bk = ""; save(true); if (CL.status === "ok") CL.overwrite(); closeOverlay(o); route(); } };
@@ -391,12 +409,41 @@
     $("#wpdone").onclick = () => closeOverlay(o); $("#wpdone").focus();
   }
 
+  /* ---------- family link: one log for two homes ---------- */
+  async function shareLink(msgEl) {
+    const url = CL.link(), text = "Join our Read 20 reading log. Open this link and sign in with your own Google account:";
+    try { if (navigator.share) { await navigator.share({ title: "Read 20 family link", text, url }); return; } } catch (e) { if (e && e.name === "AbortError") return; }
+    try { await navigator.clipboard.writeText(url); msgEl.textContent = "Link copied. Paste it into a text message."; } catch (e) { msgEl.textContent = url; }
+  }
+  function openJoin(key) {
+    const o = sheet(`<h2>Join this reading log?</h2>
+      <p>This phone and the phone that sent the link will share <b>one</b> reading log. Her minutes from both homes add up, and each of you signs in with your <b>own</b> Google account.</p>
+      <p class="fine left" id="jmsg" role="status"></p>
+      <div class="row"><button class="btn alt" id="jno">Not now</button><button class="btn" id="jyes">Join</button></div>`);
+    const prev = CL.onchange;
+    const update = () => {
+      if (!$("#jmsg")) { CL.onchange = prev; return; }
+      const st = CL.status, mine = CL.shareKey() === key;
+      $("#jmsg").textContent = st === "ok" && mine ? "✓ Joined! You and the other home now share one log." : st === "denied" ? "Sharing is not turned on yet. Ask Dad to publish the Read 20 rules in Firebase." : st === "offline" ? "No signal right now. Try again when you have signal." : st === "loading" || st === "signedin" ? "Joining…" : "";
+      if (st === "ok" && mine) { $("#jyes").hidden = true; $("#jno").textContent = "Done"; }
+    };
+    CL.onchange = () => { prev(); update(); };
+    $("#jno").onclick = () => closeOverlay(o);
+    $("#jyes").onclick = async () => { $("#jmsg").textContent = "Joining…"; $("#jyes").disabled = true; const ok = await CL.join(key); $("#jyes").disabled = false; if (!ok && CL.status !== "denied" && CL.status !== "offline") $("#jmsg").textContent = CL.status === "ok" ? "" : "Sign in with Google to finish joining."; update(); };
+  }
+
   /* ---------- backup and restore ---------- */
+  function backupText() { S.bk = today(); save(true); return JSON.stringify({ app: "read20", v: 1, saved: new Date().toISOString(), data: C.serialize(S) }, null, 1); }
   function backup() {
-    S.bk = today(); save(true);
-    const blob = new Blob([JSON.stringify({ app: "read20", v: 1, saved: new Date().toISOString(), data: S }, null, 1)], { type: "application/json" });
+    const blob = new Blob([backupText()], { type: "application/json" });
     const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = "read20-backup-" + today() + ".json";
     document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+  }
+  /* Opens the phone's share sheet (text message, email...) with the backup file attached. */
+  async function sendBackup(say) {
+    const f = new File([backupText()], "read20-backup-" + today() + ".json", { type: "application/json" });
+    try { if (navigator.canShare && navigator.canShare({ files: [f] })) { await navigator.share({ files: [f], title: "Read 20 backup" }); say("Sent. On the other phone: Settings, Restore from a backup file."); return; } } catch (e) { if (e && e.name === "AbortError") return; }
+    backup(); say("This phone cannot share files, so it was saved to Downloads instead.");
   }
   function restore(file, say) {
     if (!file) return;
@@ -420,14 +467,15 @@
   }
 
   function init() {
+    try { let d = localStorage.getItem("read20.dev"); if (!d) { d = Math.random().toString(36).slice(2, 10); localStorage.setItem("read20.dev", d); } C.dev = d; } catch (e) { C.dev = "t" + Math.random().toString(36).slice(2, 8); }
     load();
     window.addEventListener("hashchange", route);
     window.addEventListener("pagehide", () => save(true));
     document.addEventListener("visibilitychange", () => { if (document.hidden) { save(true); CL.flush(); } });
     try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist(); } catch (e) {} // ask Chrome never to clear her log to free space
     if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {});
-    route(); recover().then(() => { store.ready = true; save(true); });
     CL.init({ get: () => S, apply: adopt, onchange: () => { if (!ui.book && !document.querySelector(".overlay")) { const h = $("#cloudbadge"); if (h) h.hidden = CL.status !== "ok"; } } });
+    route(); recover().then(() => { store.ready = true; save(true); });
   }
   window.R20App = { init, _state: () => S };
 })();

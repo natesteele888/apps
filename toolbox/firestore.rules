@@ -54,12 +54,12 @@ service cloud.firestore {
     }
     // ---------- Read 20 (apps/read20): optional cloud backup of one reader's log ----------
     // One document per signed-in Google account, readable and writable only by that account.
-    // The log is one JSON string (about 20 KB for a year of nightly reading).
+    // The log is one JSON string (roughly 150 KB for a year of nightly reading, so the limit is 900 KB).
     match /r20_users/{uid} {
       allow read: if request.auth != null && request.auth.uid == uid;
       allow create, update: if request.auth != null && request.auth.uid == uid
         && request.resource.data.keys().hasOnly(['log', 'updated'])
-        && request.resource.data.log is string && request.resource.data.log.size() <= 400000;
+        && request.resource.data.log is string && request.resource.data.log.size() <= 900000;
       allow delete: if request.auth != null && request.auth.uid == uid;
     }
     // ---------- Photo Blueprint (apps/photoblueprint): photos pinned to where they were shot ----------
@@ -114,6 +114,18 @@ service cloud.firestore {
           && request.resource.data.keys().hasOnly(['img', 'updated'])
           && request.resource.data.img is string && request.resource.data.img.size() <= 600000;
       }
+    }
+    // ---------- Read 20 family link: one shared log for two homes ----------
+    // The document id is a long random code that only people given the family link know. Any Google sign-in can
+    // get, create or update the one document it knows the id of; nobody can list them, and nothing can be deleted
+    // (erasing writes an empty log). Anonymous sessions are excluded.
+    match /r20_shared/{key} {
+      allow get: if request.auth != null && request.auth.token.firebase.sign_in_provider == 'google.com'
+        && key.matches('[a-z2-7]{20}');
+      allow create, update: if request.auth != null && request.auth.token.firebase.sign_in_provider == 'google.com'
+        && key.matches('[a-z2-7]{20}')
+        && request.resource.data.keys().hasOnly(['log', 'updated'])
+        && request.resource.data.log is string && request.resource.data.log.size() <= 900000;
     }
     match /gp_weeks/{key} {
       allow read, write: if gpPlayer();

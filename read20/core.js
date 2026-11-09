@@ -15,6 +15,30 @@
   const int = (x, lo, hi, dflt) => { x = Math.round(Number(x)); return isFinite(x) ? Math.min(hi, Math.max(lo, x)) : dflt; };
   const clean = (s, n) => String(s == null ? "" : s).replace(/[\u0000-\u001f\u007f‪-‮⁦-⁩]/g, "").trim().slice(0, n);
 
+  /* Each phone keeps its own running counts for a day (a "part"), so two phones reading on the same day add up instead of one
+     overwriting the other. The day's totals (sec, books, extra) are worked out from the parts. */
+  C.dev = "local";
+  const cleanPart = p => {
+    if (!p || typeof p !== "object") return null;
+    const out = { sec: int(p.sec, 0, 86400, 0), books: {}, extra: [] };
+    const books = p.books && typeof p.books === "object" ? p.books : {};
+    for (const id of Object.keys(books).slice(0, 200)) { const b = books[id] || {}; out.books[clean(id, 60)] = { sec: int(b.sec, 0, 86400, 0), fin: b.fin ? 1 : 0 }; }
+    (Array.isArray(p.extra) ? p.extra : []).slice(0, 50).forEach(e => { if (e && typeof e === "object") out.extra.push({ title: clean(e.title, 60) || "A book from home", sec: int(e.sec, 0, 86400, 0) }); });
+    return out.sec || Object.keys(out.books).length || out.extra.length ? out : null;
+  };
+  C.derive = d => {
+    d.sec = 0; d.books = {}; d.extra = [];
+    for (const dev of Object.keys(d.parts).sort()) {
+      const p = d.parts[dev]; d.sec += p.sec;
+      for (const id of Object.keys(p.books)) { const b = d.books[id] || (d.books[id] = { sec: 0, fin: 0 }); b.sec += p.books[id].sec; b.fin = b.fin || p.books[id].fin; }
+      p.extra.forEach(e => d.extra.push(e));
+    }
+    d.sec = Math.min(d.sec, 86400); return d;
+  };
+  const myPart = d => (d.parts || (d.parts = {}))[C.dev] || (d.parts[C.dev] = { sec: 0, books: {}, extra: [] });
+  /* What gets saved and sent: only the parts (the totals are rebuilt on load). */
+  C.serialize = s => { const o = Object.assign({}, s, { days: {} }); for (const k of Object.keys(s.days)) o.days[k] = { done: s.days[k].done, parts: s.days[k].parts }; return o; };
+
   /* Anything read back from storage goes through here, so a damaged save can't break the app. */
   C.sanitize = raw => {
     const s = C.empty();
@@ -27,22 +51,15 @@
     const days = raw.days && typeof raw.days === "object" ? raw.days : {};
     for (const k of Object.keys(days)) {
       if (!C.parseDay(k)) continue;
-      const d = days[k] || {};
-      const out = { sec: int(d.sec, 0, 86400, 0), done: d.done ? 1 : 0, books: {}, extra: [] };
-      const books = d.books && typeof d.books === "object" ? d.books : {};
-      for (const id of Object.keys(books).slice(0, 200)) {
-        const b = books[id] || {};
-        out.books[clean(id, 60)] = { sec: int(b.sec, 0, 86400, 0), fin: b.fin ? 1 : 0 };
-      }
-      (Array.isArray(d.extra) ? d.extra : []).slice(0, 50).forEach(e => {
-        if (e && typeof e === "object") out.extra.push({ title: clean(e.title, 60) || "A book from home", sec: int(e.sec, 0, 86400, 0) });
-      });
-      s.days[k] = out;
+      const d = days[k] || {}, out = { sec: 0, done: d.done ? 1 : 0, books: {}, extra: [], parts: {} };
+      if (d.parts && typeof d.parts === "object") Object.keys(d.parts).slice(0, 12).forEach(dev => { const p = cleanPart(d.parts[dev]); if (p) out.parts[clean(dev, 12) || "x"] = p; });
+      else { const p = cleanPart(d); if (p) out.parts.old = p; }   // a save from before phones were tracked separately: it all belongs to "old"
+      C.derive(out); s.days[k] = out;
     }
     return s;
   };
 
-  C.day = (s, k, make) => { if (!s.days[k] && make) s.days[k] = { sec: 0, done: 0, books: {}, extra: [] }; return s.days[k]; };
+  C.day = (s, k, make) => { if (!s.days[k] && make) s.days[k] = { sec: 0, done: 0, books: {}, extra: [], parts: {} }; return s.days[k]; };
   C.daySec = (s, k) => (s.days[k] ? s.days[k].sec : 0);
   C.goalSec = s => s.goal * 60;
   C.isDone = (s, k) => C.daySec(s, k) >= C.goalSec(s);
@@ -52,16 +69,15 @@
     sec = Math.floor(sec); if (!(sec > 0)) return 0;
     const d = C.day(s, k, true);
     sec = Math.min(sec, 86400 - d.sec); if (sec <= 0) return 0;
-    d.sec += sec;
-    const b = d.books[id] || (d.books[id] = { sec: 0, fin: 0 });
-    b.sec += sec;
+    const p = myPart(d); p.sec += sec; (p.books[id] || (p.books[id] = { sec: 0, fin: 0 })).sec += sec;
+    C.derive(d);
     return sec;
   };
-  C.finish = (s, k, id) => { const d = C.day(s, k, true); (d.books[id] || (d.books[id] = { sec: 0, fin: 0 })).fin = 1; };
+  C.finish = (s, k, id) => { const d = C.day(s, k, true); (myPart(d).books[id] || (myPart(d).books[id] = { sec: 0, fin: 0 })).fin = 1; C.derive(d); };
   C.addManual = (s, k, title, min) => {
     min = Math.round(Number(min)); if (!(min >= 1) || !C.parseDay(k)) return false; min = Math.min(min, 240);
     const d = C.day(s, k, true); if (d.sec + min * 60 > 86400) return false;
-    d.sec += min * 60; d.extra.push({ title: clean(title, 60) || "A book from home", sec: min * 60 });
+    const p = myPart(d); p.sec += min * 60; p.extra.push({ title: clean(title, 60) || "A book from home", sec: min * 60 }); C.derive(d);
     return true;
   };
   C.finishedIds = s => { const out = {}; for (const k of Object.keys(s.days)) for (const id of Object.keys(s.days[k].books)) if (s.days[k].books[id].fin) out[id] = (out[id] || 0) + 1; return out; };
@@ -99,9 +115,14 @@
     for (const k of Object.keys(o.days)) {
       const x = out.days[k], y = o.days[k];
       if (!x) { out.days[k] = y; continue; }
-      x.sec = Math.max(x.sec, y.sec); x.done = x.done || y.done;
-      for (const id of Object.keys(y.books)) { const t = x.books[id]; if (!t) x.books[id] = y.books[id]; else { t.sec = Math.max(t.sec, y.books[id].sec); t.fin = t.fin || y.books[id].fin; } }
-      const sum = e => e.reduce((n, v) => n + v.sec, 0); if (sum(y.extra) > sum(x.extra)) x.extra = y.extra;
+      x.done = x.done || y.done;
+      for (const dev of Object.keys(y.parts)) {
+        const px = x.parts[dev], py = y.parts[dev]; if (!px) { x.parts[dev] = py; continue; }
+        px.sec = Math.max(px.sec, py.sec);
+        for (const id of Object.keys(py.books)) { const t = px.books[id]; if (!t) px.books[id] = py.books[id]; else { t.sec = Math.max(t.sec, py.books[id].sec); t.fin = t.fin || py.books[id].fin; } }
+        const sum = e => e.reduce((n, v) => n + v.sec, 0); if (sum(py.extra) > sum(px.extra)) px.extra = py.extra;
+      }
+      C.derive(x);
     }
     return out;
   };
