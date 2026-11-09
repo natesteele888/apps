@@ -80,11 +80,23 @@
         "autoShots": [],
         "latest": {
           "d": "Nov 9, 2026",
-          "t": "Add Photo Blueprint: a map pin and a blueprint sheet for every photo",
-          "url": "https://github.com/natesteele888/apps/commit/0703fc26a8adb30a49aac14e7fa196d02b876228"
+          "t": "Read 20: family link so two homes share one log (each with their own Google account), and phones' minutes add up",
+          "url": "https://github.com/natesteele888/apps/commit/65d24d33c75674efda0ac57494114fff8bb52b21"
         },
-        "version": "1.2.2",
+        "version": "1.2.5",
         "history": [
+          {
+            "v": "1.2.5",
+            "t": "Read 20: family link so two homes share one log (each with their own Google account), and phones' minutes add up"
+          },
+          {
+            "v": "1.2.4",
+            "t": "Toolbox: open with no signal right after an update"
+          },
+          {
+            "v": "1.2.3",
+            "t": "Every app: a health check on open, a problem log, and a Something wrong? report"
+          },
           {
             "v": "1.2.1",
             "t": "Add Photo Blueprint: a map pin and a blueprint sheet for every photo"
@@ -92,18 +104,6 @@
           {
             "v": "1.2.0",
             "t": "Get Ready: Google sign-in backup, and always load the freshest copy"
-          },
-          {
-            "v": "1.1.9",
-            "t": "Read 20: optional Google sign-in and cloud backup (a parent signs in once; reading never needs it)"
-          },
-          {
-            "v": "1.1.8",
-            "t": "Installs: never start them inside the Toolbox"
-          },
-          {
-            "v": "1.1.7",
-            "t": "Toolbox: actually keep the Firebase code so the app opens with no signal"
           }
         ]
       }
@@ -191,12 +191,16 @@
         ],
         "autoShots": [],
         "latest": {
-          "d": "Nov 8, 2026",
-          "t": "Where Do I Go?: make the Slow button and play scrubber easier to tap",
-          "url": "https://github.com/natesteele888/apps/commit/9e56bdfebbb05013ddade466d342f485e6a55736"
+          "d": "Nov 9, 2026",
+          "t": "Every app: a health check on open, a problem log, and a Something wrong? report",
+          "url": "https://github.com/natesteele888/apps/commit/7ddeb6fa079516aa640b631af5c91b15a547d5ba"
         },
-        "version": "1.2.0",
+        "version": "1.2.1",
         "history": [
+          {
+            "v": "1.2.1",
+            "t": "Every app: a health check on open, a problem log, and a Something wrong? report"
+          },
           {
             "v": "1.2.0",
             "t": "Where Do I Go?: make the Slow button and play scrubber easier to tap"
@@ -212,10 +216,6 @@
           {
             "v": "1.1.7",
             "t": "Where Do I Go: open offline right after the first visit"
-          },
-          {
-            "v": "1.1.6",
-            "t": "Where Do I Go: saved rules, team and quiz scores now stick; shared install pop-up"
           }
         ],
         "caps": [
@@ -311,12 +311,24 @@
         ],
         "autoShots": [],
         "latest": {
-          "d": "Nov 7, 2026",
-          "t": "Gameday Picks: open with no signal",
-          "url": "https://github.com/natesteele888/apps/commit/4b76ca76c7e9ac1c147b28ffccdfe499b0eb78c7"
+          "d": "Nov 9, 2026",
+          "t": "Gameday Picks: open with no signal after a first visit",
+          "url": "https://github.com/natesteele888/apps/commit/22faa19ff25d475c8502b6659498848f98801e30"
         },
-        "version": "1.0.4",
+        "version": "1.0.7",
         "history": [
+          {
+            "v": "1.0.7",
+            "t": "Gameday Picks: open with no signal after a first visit"
+          },
+          {
+            "v": "1.0.6",
+            "t": "Gameday Picks: MLB, NBA and NHL alongside the NFL"
+          },
+          {
+            "v": "1.0.5",
+            "t": "Every app: a health check on open, a problem log, and a Something wrong? report"
+          },
           {
             "v": "1.0.4",
             "t": "Gameday Picks: open with no signal"
@@ -324,14 +336,6 @@
           {
             "v": "1.0.3",
             "t": "Install pop-up for every app, and a one-tap-each install checklist"
-          },
-          {
-            "v": "1.0.2",
-            "t": "Gameday Picks: keep your scroll position after making a pick"
-          },
-          {
-            "v": "1.0.1",
-            "t": "Gameday Picks: a real installable app with Google sign-in and invite codes"
           }
         ],
         "caps": [
@@ -539,12 +543,20 @@
         ],
         "autoShots": [],
         "latest": {
-          "d": "Nov 7, 2026",
-          "t": "Gridiron Hub: show the Milford logo, point three stray pages at the real ones",
-          "url": "https://github.com/natesteele888/ASL-Bengals/commit/4622f80cdf3f7023be4633631c7ec056e1ada975"
+          "d": "Nov 9, 2026",
+          "t": "Gridiron Hub: open with no signal after the very first visit",
+          "url": "https://github.com/natesteele888/ASL-Bengals/commit/df6ff0dd34da23c17469954cf680b2bbbddab19d"
         },
-        "version": "1.5.4",
+        "version": "1.5.6",
         "history": [
+          {
+            "v": "1.5.6",
+            "t": "Gridiron Hub: open with no signal after the very first visit"
+          },
+          {
+            "v": "1.5.5",
+            "t": "Gridiron Hub: make the menu button and Sign up switch easy to tap"
+          },
           {
             "v": "1.5.4",
             "t": "Gridiron Hub: show the Milford logo, point three stray pages at the real ones"
@@ -556,14 +568,6 @@
           {
             "v": "1.5.2",
             "t": "Add the shared install pop-up"
-          },
-          {
-            "v": "1.5.1",
-            "t": "Gridiron Hub: require team sign-in to read rosters, RSVPs and messages"
-          },
-          {
-            "v": "1.5.0",
-            "t": "Gridiron Hub: unlock the already-built RSVP/roster/message board, make messages two-way, add read receipts"
           }
         ],
         "caps": [
@@ -930,11 +934,19 @@
         "autoShots": [],
         "latest": {
           "d": "Nov 9, 2026",
-          "t": "Power Program: the Back gesture closes an exercise card instead of leaving the app",
-          "url": "https://github.com/natesteele888/fitness-hub/commit/3389d0f9936ca0024842b8a1cfb30bf90758e5fd"
+          "t": "Power Program: add the shared problem report and save check",
+          "url": "https://github.com/natesteele888/fitness-hub/commit/7e7ac1b37d6414aa38ff18634ab11d730a3dc930"
         },
-        "version": "1.3.2",
+        "version": "1.3.4",
         "history": [
+          {
+            "v": "1.3.4",
+            "t": "Power Program: add the shared problem report and save check"
+          },
+          {
+            "v": "1.3.3",
+            "t": "Power Program: reload with no signal instead of a browser error"
+          },
           {
             "v": "1.3.2",
             "t": "Power Program: the Back gesture closes an exercise card instead of leaving the app"
@@ -946,14 +958,6 @@
           {
             "v": "1.3.0",
             "t": "Brain pointer: start each session from the current code, not an old copy"
-          },
-          {
-            "v": "1.2.9",
-            "t": "Toast the Power Program's sync failures instead of only updating a quiet line"
-          },
-          {
-            "v": "1.2.8",
-            "t": "Power Program: open offline right after the first visit"
           }
         ],
         "caps": [
@@ -1167,31 +1171,31 @@
         ],
         "autoShots": [],
         "latest": {
-          "d": "Nov 8, 2026",
-          "t": "Take the admin email out of the public sponsor backend file",
-          "url": "https://github.com/natesteele888/sponsor-banner-inventory/commit/089321da1f7ee1170c0822641db25884c38e8047"
+          "d": "Nov 9, 2026",
+          "t": "Say why when the map can't load, instead of a blank box",
+          "url": "https://github.com/natesteele888/sponsor-banner-inventory/commit/d63960766fe7ba567299b2d71375a100e1304e9d"
         },
-        "version": "1.1.6",
+        "version": "1.2.0",
         "history": [
+          {
+            "v": "1.2.0",
+            "t": "Say why when the map can't load, instead of a blank box"
+          },
+          {
+            "v": "1.1.9",
+            "t": "Open with no signal instead of a browser error page"
+          },
+          {
+            "v": "1.1.8",
+            "t": "Say 'check your signal' when a save or new banner can't get through"
+          },
+          {
+            "v": "1.1.7",
+            "t": "Keep the banner list showing after Sign out and back in"
+          },
           {
             "v": "1.1.6",
             "t": "Take the admin email out of the public sponsor backend file"
-          },
-          {
-            "v": "1.1.5",
-            "t": "Offer Try again when the banner list can't load"
-          },
-          {
-            "v": "1.1.4",
-            "t": "Make the Back gesture close a banner instead of leaving the app"
-          },
-          {
-            "v": "1.1.3",
-            "t": "Show that a new banner was added"
-          },
-          {
-            "v": "1.1.2",
-            "t": "Let Drop pin work on more than one banner per visit"
           }
         ],
         "caps": [
@@ -1281,12 +1285,20 @@
         ],
         "autoShots": [],
         "latest": {
-          "d": "Nov 8, 2026",
-          "t": "Make the Directions link on the invitation easy to tap",
-          "url": "https://github.com/natesteele888/events/commit/4ba159ca854630ca3538a7e11a43dfcf8307c66b"
+          "d": "Nov 9, 2026",
+          "t": "Tell hosts when the signal drops on Save, password reset and the guest list",
+          "url": "https://github.com/natesteele888/events/commit/f8aa2a0d69324bdd5f724fe3912c489148d48633"
         },
-        "version": "1.2.7",
+        "version": "1.2.9",
         "history": [
+          {
+            "v": "1.2.9",
+            "t": "Tell hosts when the signal drops on Save, password reset and the guest list"
+          },
+          {
+            "v": "1.2.8",
+            "t": "Don't make a second RSVP when a returning guest's signal drops"
+          },
           {
             "v": "1.2.7",
             "t": "Make the Directions link on the invitation easy to tap"
@@ -1298,14 +1310,6 @@
           {
             "v": "1.2.5",
             "t": "Fix Add to calendar for events that end after midnight"
-          },
-          {
-            "v": "1.2.4",
-            "t": "Warn before leaving the event builder with unsaved changes"
-          },
-          {
-            "v": "1.2.3",
-            "t": "Say check your signal instead of event gone when a read fails"
           }
         ],
         "caps": [
@@ -1396,12 +1400,16 @@
         ],
         "autoShots": [],
         "latest": {
-          "d": "Nov 7, 2026",
-          "t": "Add Eight Count: cheer and dance counts, lock in together, record and review",
-          "url": "https://github.com/natesteele888/apps/commit/eec8574b42926c58c39794a6f2950994482088c3"
+          "d": "Nov 9, 2026",
+          "t": "Every app: a health check on open, a problem log, and a Something wrong? report",
+          "url": "https://github.com/natesteele888/apps/commit/7ddeb6fa079516aa640b631af5c91b15a547d5ba"
         },
-        "version": "1.0.1",
+        "version": "1.0.2",
         "history": [
+          {
+            "v": "1.0.2",
+            "t": "Every app: a health check on open, a problem log, and a Something wrong? report"
+          },
           {
             "v": "1.0.1",
             "t": "Add Eight Count: cheer and dance counts, lock in together, record and review"
@@ -1493,12 +1501,16 @@
         ],
         "autoShots": [],
         "latest": {
-          "d": "Nov 7, 2026",
-          "t": "Play Board: draw plays and watch them move",
-          "url": "https://github.com/natesteele888/apps/commit/a233cca14adad3e101fe7881d93fb5b7891f49ea"
+          "d": "Nov 9, 2026",
+          "t": "Every app: a health check on open, a problem log, and a Something wrong? report",
+          "url": "https://github.com/natesteele888/apps/commit/7ddeb6fa079516aa640b631af5c91b15a547d5ba"
         },
-        "version": "1.0.1",
+        "version": "1.0.2",
         "history": [
+          {
+            "v": "1.0.2",
+            "t": "Every app: a health check on open, a problem log, and a Something wrong? report"
+          },
           {
             "v": "1.0.1",
             "t": "Play Board: draw plays and watch them move"
@@ -1589,12 +1601,16 @@
         ],
         "autoShots": [],
         "latest": {
-          "d": "Nov 8, 2026",
-          "t": "Locker: size season numbers to the screen so they never overlap",
-          "url": "https://github.com/natesteele888/apps/commit/2598442edf151912caf2cb425a309c7d5485ac47"
+          "d": "Nov 9, 2026",
+          "t": "Every app: a health check on open, a problem log, and a Something wrong? report",
+          "url": "https://github.com/natesteele888/apps/commit/7ddeb6fa079516aa640b631af5c91b15a547d5ba"
         },
-        "version": "1.0.2",
+        "version": "1.0.3",
         "history": [
+          {
+            "v": "1.0.3",
+            "t": "Every app: a health check on open, a problem log, and a Something wrong? report"
+          },
           {
             "v": "1.0.2",
             "t": "Locker: size season numbers to the screen so they never overlap"
@@ -1690,12 +1706,16 @@
         ],
         "autoShots": [],
         "latest": {
-          "d": "Nov 8, 2026",
-          "t": "Practice Clock: run practice by the minute with a big countdown",
-          "url": "https://github.com/natesteele888/apps/commit/89f382c9ae5da8e56965eb1fb646a8ccb091222f"
+          "d": "Nov 9, 2026",
+          "t": "Every app: a health check on open, a problem log, and a Something wrong? report",
+          "url": "https://github.com/natesteele888/apps/commit/7ddeb6fa079516aa640b631af5c91b15a547d5ba"
         },
-        "version": "1.0.1",
+        "version": "1.0.2",
         "history": [
+          {
+            "v": "1.0.2",
+            "t": "Every app: a health check on open, a problem log, and a Something wrong? report"
+          },
           {
             "v": "1.0.1",
             "t": "Practice Clock: run practice by the minute with a big countdown"
@@ -1787,12 +1807,16 @@
         ],
         "autoShots": [],
         "latest": {
-          "d": "Nov 8, 2026",
-          "t": "Who's Where: the family sports week, with conflicts flagged",
-          "url": "https://github.com/natesteele888/apps/commit/adb88b0e5ff06b44531ee7f9af32dc442eca3b2a"
+          "d": "Nov 9, 2026",
+          "t": "Every app: a health check on open, a problem log, and a Something wrong? report",
+          "url": "https://github.com/natesteele888/apps/commit/7ddeb6fa079516aa640b631af5c91b15a547d5ba"
         },
-        "version": "1.0.1",
+        "version": "1.0.2",
         "history": [
+          {
+            "v": "1.0.2",
+            "t": "Every app: a health check on open, a problem log, and a Something wrong? report"
+          },
           {
             "v": "1.0.1",
             "t": "Who's Where: the family sports week, with conflicts flagged"
@@ -1885,12 +1909,16 @@
         ],
         "autoShots": [],
         "latest": {
-          "d": "Nov 8, 2026",
-          "t": "Tournament Pack: keep game times inside their column",
-          "url": "https://github.com/natesteele888/apps/commit/4822d93dd687d14ff68b41127b2a3c9cfed45c6c"
+          "d": "Nov 9, 2026",
+          "t": "Every app: a health check on open, a problem log, and a Something wrong? report",
+          "url": "https://github.com/natesteele888/apps/commit/7ddeb6fa079516aa640b631af5c91b15a547d5ba"
         },
-        "version": "1.0.3",
+        "version": "1.0.4",
         "history": [
+          {
+            "v": "1.0.4",
+            "t": "Every app: a health check on open, a problem log, and a Something wrong? report"
+          },
           {
             "v": "1.0.3",
             "t": "Tournament Pack: keep game times inside their column"
@@ -1995,12 +2023,16 @@
         ],
         "autoShots": [],
         "latest": {
-          "d": "Nov 8, 2026",
-          "t": "Walk-Up: the mixer fits a phone with no scrolling",
-          "url": "https://github.com/natesteele888/apps/commit/0e313cef4c2cadcbbb3e530e90f29aceac7a11a0"
+          "d": "Nov 9, 2026",
+          "t": "Every app: a health check on open, a problem log, and a Something wrong? report",
+          "url": "https://github.com/natesteele888/apps/commit/7ddeb6fa079516aa640b631af5c91b15a547d5ba"
         },
-        "version": "1.0.5",
+        "version": "1.0.6",
         "history": [
+          {
+            "v": "1.0.6",
+            "t": "Every app: a health check on open, a problem log, and a Something wrong? report"
+          },
           {
             "v": "1.0.5",
             "t": "Walk-Up: the mixer fits a phone with no scrolling"
@@ -2016,10 +2048,6 @@
           {
             "v": "1.0.2",
             "t": "Walk-Up: ask a parent for a player's song by text or email"
-          },
-          {
-            "v": "1.0.1",
-            "t": "Walk-Up: record, polish and play every player's walk-up music"
           }
         ],
         "caps": [
@@ -2109,12 +2137,16 @@
         ],
         "autoShots": [],
         "latest": {
-          "d": "Nov 8, 2026",
-          "t": "Scoreboard: cast to a TV, plus an on-deck lower third",
-          "url": "https://github.com/natesteele888/apps/commit/604bc99c4fd659d8bf950943c7c17054fb154dd2"
+          "d": "Nov 9, 2026",
+          "t": "Every app: a health check on open, a problem log, and a Something wrong? report",
+          "url": "https://github.com/natesteele888/apps/commit/7ddeb6fa079516aa640b631af5c91b15a547d5ba"
         },
-        "version": "1.0.2",
+        "version": "1.0.3",
         "history": [
+          {
+            "v": "1.0.3",
+            "t": "Every app: a health check on open, a problem log, and a Something wrong? report"
+          },
           {
             "v": "1.0.2",
             "t": "Scoreboard: cast to a TV, plus an on-deck lower third"
@@ -2210,12 +2242,16 @@
         ],
         "autoShots": [],
         "latest": {
-          "d": "Nov 8, 2026",
-          "t": "Film Lite: leave the tag list its full room on small phones",
-          "url": "https://github.com/natesteele888/apps/commit/6882608a8c965cb6ecf9c3774b34c71a8772cf7c"
+          "d": "Nov 9, 2026",
+          "t": "Every app: a health check on open, a problem log, and a Something wrong? report",
+          "url": "https://github.com/natesteele888/apps/commit/7ddeb6fa079516aa640b631af5c91b15a547d5ba"
         },
-        "version": "1.0.2",
+        "version": "1.0.3",
         "history": [
+          {
+            "v": "1.0.3",
+            "t": "Every app: a health check on open, a problem log, and a Something wrong? report"
+          },
           {
             "v": "1.0.2",
             "t": "Film Lite: leave the tag list its full room on small phones"
@@ -2302,33 +2338,33 @@
           "store/shots/read20-4.webp",
           "store/shots/read20-5.webp"
         ],
-        "version": "1.0.8",
+        "version": "1.1.3",
         "history": [
           {
-            "v": "1.0.8",
-            "t": "Read 20: keep the Next button on screen on small phones"
+            "v": "1.1.3",
+            "t": "Read 20: an abandoned family link can't join a phone later"
           },
           {
-            "v": "1.0.7",
-            "t": "Read 20: press and hold a word to see its syllables and letter sounds"
+            "v": "1.1.2",
+            "t": "Read 20: family link so two homes share one log (each with their own Google account), and phones' minutes add up"
           },
           {
-            "v": "1.0.6",
-            "t": "Read 20: save from the Log screen, and fix the total (was minutes labeled hours)"
+            "v": "1.1.1",
+            "t": "Read 20: remove the Sounds board and its letter-sound clips"
           },
           {
-            "v": "1.0.5",
-            "t": "Read 20: optional Google sign-in and cloud backup (a parent signs in once; reading never needs it)"
+            "v": "1.1.0",
+            "t": "Every app: a health check on open, a problem log, and a Something wrong? report"
           },
           {
-            "v": "1.0.4",
-            "t": "Read 20: keep her reading time safe (second copy, permanent storage, backup file, save warning)"
+            "v": "1.0.9",
+            "t": "Read 20: Sounds board (hear letter sounds, build and blend them) and sturdier audio"
           }
         ],
         "latest": {
           "d": "Nov 9, 2026",
-          "t": "Read 20: keep the Next button on screen on small phones",
-          "url": "https://github.com/natesteele888/apps/commit/6205fa758d1fdc77d991d1574e9e72aef264efb2"
+          "t": "Read 20: an abandoned family link can't join a phone later",
+          "url": "https://github.com/natesteele888/apps/commit/58c1451f3182a9c7c430d22610877d81d464a888"
         },
         "caps": [
           "A shelf of short stories, and tonight's reading at a glance",
@@ -2412,8 +2448,16 @@
           "store/shots/getready-5.webp",
           "store/shots/getready-6.webp"
         ],
-        "version": "1.0.3",
+        "version": "1.0.5",
         "history": [
+          {
+            "v": "1.0.5",
+            "t": "App Store: real screenshots with demo data for every app, and a week-in-the-life view"
+          },
+          {
+            "v": "1.0.4",
+            "t": "Every app: a health check on open, a problem log, and a Something wrong? report"
+          },
           {
             "v": "1.0.3",
             "t": "Get Ready: Google sign-in backup, and always load the freshest copy"
@@ -2429,8 +2473,8 @@
         ],
         "latest": {
           "d": "Nov 9, 2026",
-          "t": "Get Ready: Google sign-in backup, and always load the freshest copy",
-          "url": "https://github.com/natesteele888/apps/commit/f384386b4bedb9185e203d8b269b84d1b1a84977"
+          "t": "App Store: real screenshots with demo data for every app, and a week-in-the-life view",
+          "url": "https://github.com/natesteele888/apps/commit/d1c76706b9bf39553a8a6de616d22fbf3dcf0109"
         },
         "caps": [
           "Check things off with a picture of each item beside it",
@@ -2519,14 +2563,30 @@
         ],
         "latest": {
           "d": "Nov 9, 2026",
-          "t": "Add Photo Blueprint: a map pin and a blueprint sheet for every photo",
-          "url": "https://github.com/natesteele888/apps/commit/0703fc26a8adb30a49aac14e7fa196d02b876228"
+          "t": "Photo Blueprint: the direction cone stays on the sheet, off the main map",
+          "url": "https://github.com/natesteele888/apps/commit/d1e7a87eff792f1eb242df39c72075c3c50bdb33"
         },
-        "version": "1.0.1",
+        "version": "1.0.8",
         "history": [
           {
-            "v": "1.0.1",
-            "t": "Add Photo Blueprint: a map pin and a blueprint sheet for every photo"
+            "v": "1.0.8",
+            "t": "Photo Blueprint: the direction cone stays on the sheet, off the main map"
+          },
+          {
+            "v": "1.0.7",
+            "t": "Photo Blueprint: a clean photo marker on the map"
+          },
+          {
+            "v": "1.0.6",
+            "t": "Every app: a health check on open, a problem log, and a Something wrong? report"
+          },
+          {
+            "v": "1.0.5",
+            "t": "Photo Blueprint: a clean pointer under the photo marker"
+          },
+          {
+            "v": "1.0.4",
+            "t": "Photo Blueprint: the photo is the map marker; tap it to open the sheet"
           }
         ],
         "caps": [
