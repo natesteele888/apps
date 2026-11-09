@@ -3,12 +3,12 @@
 (function () {
   "use strict";
   const C = window.SPCore, X = window.SPExif, F = window.SPFigures, S = window.SPStore, L = window.L;
-  const VERSION = "1.0.0", APP_URL = "https://natesteele888.github.io/apps/photoblueprint/";
+  const VERSION = "1.1.0", APP_URL = "https://natesteele888.github.io/apps/photoblueprint/";
   const $ = (s, r) => (r || document).querySelector(s), $$ = (s, r) => Array.from((r || document).querySelectorAll(s));
   const view = $("#view"), nav = $("#nav"), feedEl = $("#feed"), toastEl = $("#toast");
   const esc = s => String(s == null ? "" : s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
   const state = { feed: S.settings.get("feed", "all"), theme: S.settings.get("theme", "blueprint"), units: S.settings.get("units", "m"),
-    pub: null, pubAt: 0, mine: null, maps: [], draft: null, image: "", chips: [], seq: 0, mapView: S.settings.get("mapView", null) };
+    pub: null, pubAt: 0, mine: null, maps: [], draft: null, image: "", chips: [], seq: 0, mapView: S.settings.get("mapView", null), clearMap: S.settings.get("clearMap", false) };
   const TILES = "https://tile.openstreetmap.org/{z}/{x}/{y}.png", ATTR = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>';
   const accent = () => getComputedStyle(document.documentElement).getPropertyValue("--accent").trim() || "#8fd3ff";
   const ICONS = {
@@ -104,6 +104,19 @@
     if (!exif) state.chips = ["no camera notes in this file"]; else if (!state.chips.length) state.chips = ["picture updated; your notes kept"];
   }
 
+  /* ---------- place search (OpenStreetMap's Nominatim; free, light use, one request per search) ---------- */
+  async function geocode(text) {
+    const url = "https://nominatim.openstreetmap.org/search?format=jsonv2&limit=6&q=" + encodeURIComponent(text);
+    const r = await fetch(url, { headers: { "Accept-Language": navigator.language || "en" }, cache: "no-store" });
+    if (!r.ok) throw new Error("search");
+    return (await r.json()).map(x => {
+      const parts = String(x.display_name || "").split(", ");
+      const big = /country|state|county|region|province/.test(x.addresstype || x.type || "");
+      return { lat: +x.lat, lon: +x.lon, short: parts.slice(0, 2).join(", "), rest: parts.slice(2).join(", "), zoom: big ? 9 : (/city|town|village|suburb|municipality/.test(x.addresstype || x.type || "") ? 13 : 16) };
+    });
+  }
+  function applyMapStyle() { document.documentElement.dataset.map = state.clearMap ? "clear" : "blueprint"; }
+
   /* ---------- nav and feed ---------- */
   function setNav(r) {
     $$("a", nav).forEach(a => { if (a.dataset.r === r) a.setAttribute("aria-current", "page"); else a.removeAttribute("aria-current"); });
@@ -122,9 +135,10 @@
   async function screenMap() {
     setNav("map"); view.className = "full";
     view.innerHTML = `<div class="mapwrap"><div class="map" id="map" aria-label="Map of where photos were taken"></div>
-      <div class="mapui br"><button class="btn round" id="locate" aria-label="Show my location" title="My location">${ICONS.locate}</button></div>
+      <div class="mapui br"><button class="btn sm" id="style" aria-pressed="${state.clearMap}" title="Plain street map or blueprint tint">${state.clearMap ? "Blueprint" : "Clear map"}</button><button class="btn round" id="locate" aria-label="Show my location" title="My location">${ICONS.locate}</button></div>
       <div class="mapmsg" id="mapmsg" hidden></div></div>`;
     const map = makeMap($("#map"));
+    $("#style").onclick = () => { state.clearMap = !state.clearMap; S.settings.set("clearMap", state.clearMap); applyMapStyle(); $("#style").textContent = state.clearMap ? "Blueprint" : "Clear map"; $("#style").setAttribute("aria-pressed", String(state.clearMap)); };
     if (state.mapView) map.setView(state.mapView.c, state.mapView.z); else map.setView([30, -20], 2);
     map.on("moveend", () => { const c = map.getCenter(); state.mapView = { c: [C.round(c.lat, 5), C.round(c.lng, 5)], z: map.getZoom() }; S.settings.set("mapView", state.mapView); });
     const msg = $("#mapmsg");
@@ -277,8 +291,10 @@
         <label class="field" style="margin-top:12px"><span class="lbl">Title</span><input data-k="title" value="${esc(d.title)}" maxlength="120" placeholder="What the photo is" autocomplete="off"></label>
       </section>
       <section class="panel"><h2>2 · Where you stood</h2>
+        <div class="search"><input type="search" id="q" placeholder="Search a place, park or address" autocomplete="off" enterkeyhint="search" aria-label="Search for a place"><button type="button" class="btn sm" id="qgo">Search</button></div>
+        <ul class="results" id="qres" hidden></ul>
         <div class="edmap" id="edmap"><div class="map" id="map"></div><div class="mapui tl"><button type="button" class="btn sm" id="locate">${ICONS.locate} My spot</button></div><div class="aimbar" id="aimbar" hidden><span>Tap the map where the camera pointed</span><button type="button" id="aimoff">Done</button></div></div>
-        <p class="hint" id="coords">${C.isLatLon(d.lat, d.lon) ? esc(C.fmtCoord(d.lat, d.lon)) : "Tap the map to drop the pin where you were standing. Drag it to adjust."}</p>
+        <p class="hint" id="coords">${C.isLatLon(d.lat, d.lon) ? esc(C.fmtCoord(d.lat, d.lon)) : "Search for the place, then tap the map to drop the pin where you were standing. Drag it to adjust."}</p>
         <label class="field"><span class="lbl">Facing</span>
           <div class="dial"><input type="range" id="heading" min="0" max="359" step="1" value="${d.heading == null ? 0 : d.heading}" aria-label="Direction the camera faced, degrees"><output id="hout">${d.heading == null ? "not set" : C.headingName(d.heading) + " " + d.heading + "°"}</output></div></label>
         <div class="row"><button type="button" class="btn sm" id="aim">Aim on the map</button><button type="button" class="btn sm" id="noheading">No direction</button></div>
@@ -360,6 +376,27 @@
     function aimMode(on) { aiming = on; aimbar.hidden = !on; edmap.classList.toggle("aim", on); if (on && map.getZoom() < 14 && C.isLatLon(d.lat, d.lon)) map.setView([d.lat, d.lon], 16); }
     $("#aim").onclick = () => aimMode(true); $("#aimoff").onclick = () => aimMode(false);
     $("#locate").onclick = () => locate(map, ll => setPin(ll[0], ll[1]));
+    // Place search: type a place, pick a result, the map goes there and the pin drops on it (drag to fine-tune).
+    const q = $("#q"), qres = $("#qres"), qgo = $("#qgo");
+    let qseq = 0;
+    async function search() {
+      const text = q.value.trim(); if (!text) return;
+      const seq = ++qseq; qgo.disabled = true; qres.hidden = false; qres.innerHTML = `<li class="msg">Searching…</li>`;
+      try {
+        const hits = await geocode(text);
+        if (seq !== qseq) return;
+        qres.innerHTML = hits.length ? hits.map((h, i) => `<li><button type="button" data-i="${i}"><b>${esc(h.short)}</b><small>${esc(h.rest)}</small></button></li>`).join("") : `<li class="msg">Nothing found. Try the town or a nearby landmark.</li>`;
+        qres.querySelectorAll("button").forEach(b => b.onclick = () => {
+          const h = hits[+b.dataset.i]; setPin(h.lat, h.lon); map.setView([h.lat, h.lon], h.zoom); qres.hidden = true; q.value = h.short;
+          if (!d.place) { d.place = h.short; const pl = $('[data-k="place"]'); if (pl) pl.value = h.short; }
+          toast("Pin dropped on " + h.short + ". Drag it to the exact spot.", 3500);
+        });
+      } catch (e) { if (seq === qseq) qres.innerHTML = `<li class="msg">Couldn't search right now. Check your signal, or tap the map.</li>`; }
+      qgo.disabled = false;
+    }
+    qgo.onclick = search;
+    q.addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); search(); } });
+    q.addEventListener("input", () => { if (!q.value.trim()) qres.hidden = true; });
     requestAnimationFrame(() => map.invalidateSize());
     // Sharing needs an account.
     const pub = $("#pub"), pubhint = $("#pubhint"), signinrow = $("#signinrow");
@@ -467,7 +504,7 @@
   window.addEventListener("hashchange", route);
 
   /* ---------- start ---------- */
-  applyTheme();
+  applyTheme(); applyMapStyle();
   S.cloud.onchange = () => {};
   const prevChange = () => {};
   // Keep the data callbacks: screens set their own onchange, this one always runs too.

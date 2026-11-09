@@ -1,7 +1,7 @@
 // Photo Blueprint service worker: the app opens with no signal (your own sheets live on the phone).
 // Network first, so a fix shows up right away; the saved copy is only used offline. Map tiles and Firebase
 // data are never cached here: tiles are the map provider's, and sheets live in the phone's own store.
-const CACHE = "photoblueprint-v1";
+const CACHE = "photoblueprint-v2";
 const SHELL = ["./", "photoblueprint.css", "core.js", "exif.js", "figures.js", "store.js", "app.js", "vendor/leaflet.js", "vendor/leaflet.css", "manifest.json", "/apps/icons/photoblueprint-192.png"];
 self.addEventListener("install", e => {
   self.skipWaiting();

@@ -144,7 +144,16 @@ const GPS = [[0x0001, 2, 'N'], [0x0002, 5, [[41, 1], [6, 1], [36, 1]]], [0x0003,
   /* ---------- the app ---------- */
   const server = await startServer('photoblueprint');
   const browser = await launch();
-  const block = async page => { await page.route(/tile\.openstreetmap\.org|www\.gstatic\.com|google\.com\/maps/, r => r.abort()); };
+  const block = async page => {
+    await page.route(/tile\.openstreetmap\.org|www\.gstatic\.com|google\.com\/maps/, r => r.abort());
+    // The place search answers from a canned list, keyed on the query text.
+    await page.route(/nominatim\.openstreetmap\.org/, r => {
+      const q = decodeURIComponent((r.request().url().match(/[?&]q=([^&]*)/) || [])[1] || '');
+      const hits = /pier/i.test(q) ? [{ lat: '41.5081', lon: '-81.6954', display_name: 'Edgewater Pier, Edgewater Park, Cleveland, Ohio, United States', addresstype: 'pier', type: 'pier' }, { lat: '41.4993', lon: '-81.6944', display_name: 'Cleveland, Cuyahoga County, Ohio, United States', addresstype: 'city', type: 'city' }] : /offline/i.test(q) ? null : [];
+      if (hits === null) return r.abort();
+      r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(hits) });
+    });
+  };
   // A real JPEG (drawn in the browser) with our Exif block spliced in, so the editor can decode it and read the notes.
   async function photo(page, withGps = true) {
     const dataUrl = await page.evaluate(() => { const c = document.createElement('canvas'); c.width = 640; c.height = 480; const g = c.getContext('2d'); const gr = g.createLinearGradient(0, 0, 640, 480); gr.addColorStop(0, '#f5b942'); gr.addColorStop(1, '#2b5f9e'); g.fillStyle = gr; g.fillRect(0, 0, 640, 480); g.fillStyle = '#fff'; g.beginPath(); g.arc(480, 120, 50, 0, 7); g.fill(); return c.toDataURL('image/jpeg', 0.8); });
@@ -204,6 +213,32 @@ const GPS = [[0x0001, 2, 'N'], [0x0002, 5, [[41, 1], [6, 1], [36, 1]]], [0x0003,
     assert.ok((await page.getAttribute('.sheet a[href*="google.com/maps"]', 'href')).includes('41.11,-81.5'));
     await page.waitForSelector('#mini .leaflet-overlay-pane path');
     await page.screenshot({ path: path.join(SHOTS, 'photoblueprint-sheet.png'), fullPage: true });
+    eq(errors.length, 0, errors.join(' | ')); await page.close();
+  });
+  await test('app: searching a place drops the pin there; the editor map is a plain street map', async () => {
+    const { page, errors } = await open();
+    await page.goto(server.url + '#new'); await page.waitForSelector('#q');
+    eq(await page.evaluate(() => getComputedStyle(document.querySelector('.edmap .leaflet-tile-pane')).filter), 'none', 'no blueprint tint in the editor');
+    await page.fill('#q', 'Edgewater pier'); await page.press('#q', 'Enter');
+    await page.waitForSelector('#qres button'); eq(await page.locator('#qres button').count(), 2);
+    assert.ok((await page.textContent('#qres')).includes('Edgewater Pier, Edgewater Park'));
+    await page.click('#qres button >> nth=0'); await page.waitForSelector('.pin.me');
+    assert.ok(/41\.50810° N, 81\.69540° W/.test(await page.textContent('#coords')), await page.textContent('#coords'));
+    eq(await page.inputValue('[data-k="place"]'), 'Edgewater Pier, Edgewater Park', 'place filled from the result');
+    eq(await page.locator('#qres').isHidden(), true, 'results close after a pick');
+    await page.fill('#q', 'zzzz nowhere'); await page.click('#qgo'); await page.waitForFunction(() => /Nothing found/.test(document.querySelector('#qres').textContent));
+    await page.fill('#q', 'offline place'); await page.click('#qgo'); await page.waitForFunction(() => /Couldn't search/.test(document.querySelector('#qres').textContent));
+    await page.screenshot({ path: path.join(SHOTS, 'photoblueprint-editor-search.png') });
+    eq(errors.length, 0, errors.join(' | ')); await page.close();
+  });
+  await test('app: the main map has a Clear map toggle that sticks', async () => {
+    const { page, errors } = await open();
+    await page.goto(server.url + '#map'); await page.waitForSelector('#style');
+    eq(await page.textContent('#style'), 'Clear map'); eq(await page.evaluate(() => document.documentElement.dataset.map), 'blueprint');
+    await page.click('#style'); eq(await page.evaluate(() => document.documentElement.dataset.map), 'clear'); eq(await page.textContent('#style'), 'Blueprint');
+    eq(await page.evaluate(() => getComputedStyle(document.querySelector('.mapwrap .leaflet-tile-pane')).filter), 'none');
+    await page.reload(); await page.waitForSelector('#style'); eq(await page.evaluate(() => document.documentElement.dataset.map), 'clear', 'remembered');
+    await page.click('#style'); eq(await page.evaluate(() => document.documentElement.dataset.map), 'blueprint');
     eq(errors.length, 0, errors.join(' | ')); await page.close();
   });
   await test('app: the saved sheet is on the contact sheet and the map; opening it twice is fine; Back returns', async () => {

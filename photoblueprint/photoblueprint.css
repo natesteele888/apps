@@ -106,6 +106,10 @@ button, input, select, textarea { font: inherit; color: inherit; }
 /* Street tiles redrawn as a blueprint: grey map → inverted → tinted to the sheet's blue. */
 [data-theme="blueprint"] .leaflet-tile-pane { filter: grayscale(1) invert(1) brightness(.78) contrast(1.15) sepia(1) hue-rotate(185deg) saturate(2.6); opacity: .9; }
 [data-theme="paper"] .leaflet-tile-pane { filter: grayscale(1) contrast(1.05) sepia(.55) hue-rotate(185deg) saturate(1.6) brightness(1.02); opacity: .85; }
+/* A plain, readable street map: always in the editor (you are choosing a spot), and on the main map when "Clear map" is on. */
+[data-map="clear"] .leaflet-tile-pane, .edmap .leaflet-tile-pane { filter: none; opacity: 1; }
+[data-map="clear"] .mapwrap .map, .edmap .map { background: #e8e4dc; }
+.edmap .pin i { box-shadow: 0 0 0 2px rgba(255, 255, 255, .9); }
 .leaflet-control-attribution { background: var(--bg) !important; color: var(--ink3) !important; font: 10px/1.4 var(--mono) !important; border-top-left-radius: var(--r); }
 .leaflet-control-attribution a { color: var(--ink2) !important; }
 .leaflet-bar { border: 1px solid var(--line) !important; box-shadow: none !important; border-radius: var(--r) !important; overflow: hidden; }
@@ -208,7 +212,16 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .drop svg { width: 44px; height: 44px; fill: none; stroke: currentColor; stroke-width: 1.2; }
 .chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0 0; }
 .chips span { font: 11px/1 var(--mono); padding: 6px 8px; border: 1px solid var(--line2); border-radius: var(--r); color: var(--ink2); }
-.edmap { height: 300px; position: relative; border: 1px solid var(--line); border-radius: var(--r); overflow: hidden; }
+.search { display: flex; gap: 8px; margin: 0 0 8px; }
+.search input { flex: 1; min-width: 0; min-height: 44px; padding: 8px 10px; border: 1px solid var(--line); border-radius: var(--r); background: var(--card); color: var(--ink); font: 14px var(--sans); }
+.search input::placeholder { color: var(--ink3); }
+.results { list-style: none; margin: 0 0 8px; padding: 0; border: 1px solid var(--line); border-radius: var(--r); background: var(--bg); max-height: 240px; overflow: auto; }
+.results li + li { border-top: 1px solid var(--line2); }
+.results button { display: block; width: 100%; text-align: left; padding: 9px 12px; min-height: 44px; background: transparent; border: 0; color: inherit; font: 14px/1.3 var(--sans); cursor: pointer; }
+.results button b { display: block; font-weight: 500; }
+.results button small { display: block; color: var(--ink3); font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.results .msg { padding: 10px 12px; color: var(--ink3); font-size: 13px; }
+.edmap { height: 320px; position: relative; border: 1px solid var(--line); border-radius: var(--r); overflow: hidden; }
 .edmap .map { font-size: 12px; }
 .edmap.aim { cursor: crosshair; }
 .aimbar { position: absolute; left: 10px; right: 10px; top: 10px; z-index: 400; background: var(--accent); color: var(--accent-ink); font: 500 12px/1.3 var(--mono); padding: 8px 10px; border-radius: var(--r); display: flex; justify-content: space-between; gap: 8px; align-items: center; }
