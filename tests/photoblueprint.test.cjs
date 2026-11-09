@@ -303,10 +303,16 @@ const GPS = [[0x0001, 2, 'N'], [0x0002, 5, [[41, 1], [6, 1], [36, 1]]], [0x0003,
     await page.goBack(); await page.waitForSelector('.card'); eq(page.url().split('#')[1], 'sheets');
     await page.click('.card'); await page.waitForSelector('.sheet #mini.leaflet-container');
     await page.click('a[data-r="map"]'); await page.waitForSelector('.photopin.me img'); eq(await page.locator('.photopin').count(), 1, 'the photo is the marker');
+    eq(await page.locator('.photopin .minedot').count(), 1, 'your own photo gets a small dot, not a dashed frame');
+    const fit = await page.evaluate(() => { const p = document.querySelector('.photopin'), i = p.querySelector('img'); const r = e => { const b = e.getBoundingClientRect(); return { x: Math.round(b.x), y: Math.round(b.y), w: Math.round(b.width), h: Math.round(b.height) }; }; return { pin: r(p), img: r(i), pad: getComputedStyle(p).padding, imgCss: getComputedStyle(i).width + ' x ' + getComputedStyle(i).height + ' max ' + getComputedStyle(i).maxWidth + '/' + getComputedStyle(i).maxHeight + ' pos ' + getComputedStyle(i).position + ' margin ' + getComputedStyle(i).margin }; });
+    assert.ok(fit.img.x >= fit.pin.x && fit.img.y >= fit.pin.y && fit.img.x + fit.img.w <= fit.pin.x + fit.pin.w + 1 && fit.img.y + fit.img.h <= fit.pin.y + fit.pin.h + 1 && fit.img.w > 40, 'the photo sits inside its frame: ' + JSON.stringify(fit));
+    eq(await page.locator('.leaflet-overlay-pane path').count(), 1, 'close in: the field-of-view cone is drawn');
     const big = await page.evaluate(() => document.querySelector('.photopin').getBoundingClientRect().width); assert.ok(big >= 60, 'close up: a big print ' + big);
     await page.evaluate(() => window.SPApp.state.maps[0].setZoom(7, { animate: false })); await page.waitForTimeout(300);
     const small = await page.evaluate(() => document.querySelector('.photopin').getBoundingClientRect().width); assert.ok(small < big, 'zoomed out: a smaller print ' + small + ' < ' + big);
-    eq(await page.locator('.leaflet-overlay-pane path').count(), 1, 'the wedge is still drawn');
+    eq(await page.locator('.leaflet-overlay-pane path').count(), 0, 'zoomed out: the cone is hidden so the photos stay clean');
+    await page.evaluate(() => window.SPApp.state.maps[0].setZoom(16, { animate: false })); await page.waitForTimeout(300);
+    eq(await page.locator('.leaflet-overlay-pane path').count(), 1, 'back in close: the cone returns');
     await page.screenshot({ path: path.join(SHOTS, 'photoblueprint-map.png') });
     await page.click('.photopin'); await page.waitForURL(/#s\//); await page.waitForSelector('.sheet .tb'); assert.ok((await page.textContent('.sheet .tb')).includes('Pier at dawn'), 'tapping the photo opens its sheet');
     eq(errors.length, 0, errors.join(' | ')); await page.close();

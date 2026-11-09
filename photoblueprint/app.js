@@ -32,7 +32,7 @@
   const photoSize = z => z >= 13 ? 64 : z >= 9 ? 48 : 34;
   function photoIcon(s, size, cls) {
     const pt = Math.round(size * 0.18);
-    return L.divIcon({ className: "", html: `<div class="photopin ${cls || ""}" style="width:${size}px;height:${size}px"><img src="${s.thumb}" alt=""></div>`, iconSize: [size, size + pt], iconAnchor: [size / 2, size + pt] });
+    return L.divIcon({ className: "", html: `<div class="photopin ${cls || ""}" style="width:${size}px;height:${size}px"><img src="${s.thumb}" alt="">${cls === "me" ? '<i class="minedot" title="Yours"></i>' : ""}</div>`, iconSize: [size, size + pt], iconAnchor: [size / 2, size + pt] });
   }
   function makeMap(el, opts) {
     const m = L.map(el, Object.assign({ zoomControl: true, attributionControl: true, worldCopyJump: true }, opts || {}));
@@ -42,12 +42,17 @@
     return m;
   }
   const mpp = (lat, zoom) => 156543.03392 * Math.cos(lat * Math.PI / 180) / Math.pow(2, zoom);
-  // The field-of-view wedge: 60 screen pixels long at any zoom, as wide as the lens sees.
-  function addWedge(map, s, color) {
+  // The field-of-view cone: a soft, unstroked sector from the spot in the direction the camera faced, as wide as the lens sees,
+  // 52 screen pixels long at any zoom. On the main map it only shows once you are close in (minZoom), so it never clutters the photos.
+  function addWedge(map, s, color, opts) {
     if (s.heading == null) return null;
-    const poly = L.polygon([], { color: color || accent(), weight: 1.2, fillOpacity: .16, interactive: false });
-    const upd = () => poly.setLatLngs(C.wedge(s.lat, s.lon, s.heading, C.fov(s.focal, s.sensor) || 60, mpp(s.lat, map.getZoom()) * 60));
-    upd(); poly.addTo(map); map.on("zoomend", upd);
+    const o = opts || {}, minZoom = o.minZoom || 0;
+    const poly = L.polygon([], { color: color || accent(), weight: 0, stroke: false, fillOpacity: o.fillOpacity == null ? .18 : o.fillOpacity, interactive: false, className: "fov" });
+    const upd = () => {
+      poly.setLatLngs(C.wedge(s.lat, s.lon, s.heading, C.fov(s.focal, s.sensor) || 60, mpp(s.lat, map.getZoom()) * (o.length || 52), 16));
+      if (map.getZoom() >= minZoom) { if (!map.hasLayer(poly)) poly.addTo(map); } else if (map.hasLayer(poly)) map.removeLayer(poly);
+    };
+    upd(); map.on("zoomend", upd);
     return { poly, upd };
   }
 
@@ -162,7 +167,7 @@
       const mk = L.marker([s.lat, s.lon], { icon: s.thumb ? photoIcon(s, size, mine ? "me" : "") : pinIcon(mine ? "me" : ""), title: s.title, alt: s.title, riseOnHover: true, keyboard: true });
       mk.on("click", () => go("#s/" + s.id));
       if (s.thumb) photoMarkers.push([mk, s, mine]);
-      group.addLayer(mk); addWedge(map, s);
+      group.addLayer(mk); addWedge(map, s, null, { minZoom: 13 });
     }
     map.on("zoomend", () => { const z = photoSize(map.getZoom()); if (z === size) return; size = z; for (const [mk, s, mine] of photoMarkers) mk.setIcon(photoIcon(s, size, mine ? "me" : "")); });
     group.addTo(map);
