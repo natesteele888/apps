@@ -44,8 +44,9 @@
       '.t{flex:1;min-width:0}.t b{display:block;font-size:15px}.t small{opacity:.7;font-size:13px}' +
       'button{font:inherit;font-weight:700;border-radius:999px;cursor:pointer;padding:9px 16px;border:0}' +
       '.go{background:#1d7a4d;color:#fff}.x{background:transparent;color:inherit;opacity:.65;padding:9px 8px}' +
+      '.two{flex-wrap:wrap;justify-content:flex-end}.two .t{flex:1 1 calc(100% - 52px)}' +
       'button:focus-visible{outline:3px solid #3ddc97;outline-offset:2px}' +
-      '</style><div class="bar" role="dialog" aria-label="Install app">' +
+      '</style><div class="bar' + (withButton ? " two" : "") + '" role="dialog" aria-label="Install app">' +
       (ic ? '<img alt="" src="' + ic.replace(/"/g, "&quot;") + '">' : "") +
       '<div class="t"><b></b><small></small></div>' +
       (withButton ? '<button class="go" type="button">Install</button>' : "") +
@@ -83,6 +84,7 @@
      moment Chrome does offer. "Not now" hides it for a week; an app already on this phone's home screen is left alone. */
   var ios = /iP(hone|ad|od)/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
   var android = /Android/i.test(navigator.userAgent);
+  var miniBrowser = android && /; wv\)/.test(navigator.userAgent); /* inside another app (Android marks those "wv") */
   function installedHere() { try { return !!localStorage.getItem("nate.installed:" + DIR); } catch (e) { return false; } }
   function howTo(force) {
     if (!document.body || (!force && (host || installedHere()))) return;
@@ -94,12 +96,15 @@
       return;
     }
     show(["Add " + appName() + " to your home screen", android
-      ? (asked ? "Already installed? It's in your app drawer. If not, open this page in your browser and tap Install." : "Tap ⋮ in Chrome, then Add to Home screen (or Install app).")
+      ? (miniBrowser ? "You're inside another app. Open this page in your browser to add it."
+        : asked ? "Already installed? It's in your app drawer. If not, open this page in your browser and tap Install."
+        : "Tap ⋮ in Chrome, then Add to Home screen (or Install app).")
       : "In your browser's menu, choose Install app or Add to Home screen."], false);
-    /* No Install offer on Android usually means this page is open in an app's mini-browser (Android hides Install
-       there): offer a one-tap jump into the real browser. */
-    if (android && host) {
+    /* Android hides Install inside an app's mini-browser, so offer a one-tap jump into the real browser there and
+       from the install page. In Chrome itself the page is already in the browser: no jump, no squeezed text. */
+    if ((miniBrowser || (android && asked)) && host) {
       var root = host.shadowRoot || host, x = root.querySelector(".x"), b = document.createElement("button");
+      root.querySelector(".bar").classList.add("two");
       b.className = "go"; b.type = "button"; b.textContent = "Open in browser";
       b.onclick = function () {
         var pkg = /SamsungBrowser/.test(navigator.userAgent) ? "com.sec.android.app.sbrowser" : "com.android.chrome";

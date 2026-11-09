@@ -177,12 +177,26 @@ const GPS = [[0x0001, 2, 'N'], [0x0002, 5, [[41, 1], [6, 1], [36, 1]]], [0x0003,
     const { ctx, page, errors } = await installPage(ANDROID);
     await page.goto(server.url); await page.waitForFunction(() => Array.from(document.body.children).some(e => e.shadowRoot && e.shadowRoot.querySelector('.bar')), null, { timeout: 6000 });
     const t = await barText(page); assert.ok(t.includes('Add Photo Blueprint to your home screen') && /Add to Home screen/.test(t), t);
-    assert.ok(t.includes('Open in browser'), 'Android gets a jump to the real browser');
+    assert.ok(!t.includes('Open in browser'), 'Android Chrome is already the browser: no jump button');
     await page.evaluate(() => { const h = Array.from(document.body.children).find(e => e.shadowRoot && e.shadowRoot.querySelector('.bar')); h.shadowRoot.querySelector('.x').click(); });
     eq(await barText(page), '', 'bar gone after Not now');
     await page.reload(); await page.waitForTimeout(3800); eq(await barText(page), '', 'stays away after Not now');
     await page.goto(server.url + '#me'); await page.click('#install'); assert.ok((await barText(page)).includes('home screen'), 'Me brings it back on demand');
     eq(errors.length, 0, errors.join(' | ')); await ctx.close();
+  });
+  await test('install pop-up: a mini-browser or the install page gets Open in browser, and two buttons leave the text its full width', async () => {
+    const WV = ANDROID.replace('Pixel 8)', 'Pixel 8; wv)');
+    const barBox = page => page.evaluate(() => { const r = Array.from(document.body.children).find(e => e.shadowRoot && e.shadowRoot.querySelector('.bar')).shadowRoot; return { text: r.querySelector('.t').getBoundingClientRect().width, height: r.querySelector('.bar').getBoundingClientRect().height, buttons: r.querySelectorAll('button').length }; });
+    const hasBar = page => page.waitForFunction(() => Array.from(document.body.children).some(e => e.shadowRoot && e.shadowRoot.querySelector('.bar')), null, { timeout: 6000 });
+    const mini = await installPage(WV);
+    await mini.page.goto(server.url); await hasBar(mini.page);
+    const t = await barText(mini.page); assert.ok(t.includes('Open in browser') && t.includes('inside another app'), t);
+    const m = await barBox(mini.page); eq(m.buttons, 2, 'two buttons'); assert.ok(m.text > 250, 'text column ' + m.text); assert.ok(m.height < 170, 'bar height ' + m.height);
+    eq(mini.errors.length, 0, mini.errors.join(' | ')); await mini.ctx.close();
+    const asked = await installPage(ANDROID);
+    await asked.page.goto(server.url + '?install'); await hasBar(asked.page);
+    assert.ok((await barText(asked.page)).includes('Open in browser'), 'the install page keeps the jump');
+    eq(asked.errors.length, 0, asked.errors.join(' | ')); await asked.ctx.close();
   });
   await test('install pop-up: iPhone gets the Share-button steps; an installed app and a home-screen launch get nothing', async () => {
     const { ctx, page, errors } = await installPage(IPHONE);
