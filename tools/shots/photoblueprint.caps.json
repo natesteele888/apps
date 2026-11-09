@@ -1,0 +1,11 @@
+{
+  "id": "photoblueprint",
+  "caps": [
+    "Every photo gets a pin at the exact spot it was shot from",
+    "A contact sheet of your photos, each with how it was shot",
+    "A blueprint sheet: stance, camera height, gear and exposure",
+    "The stance drawn to scale, with every setting in a neat table",
+    "A mini map of where you stood, and the story of the shot",
+    "Tap the map to drop the pin, then aim where the lens pointed"
+  ]
+}
