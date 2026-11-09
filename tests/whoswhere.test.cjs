@@ -1071,6 +1071,8 @@ const evByTitle = (st, title, date) => st.events.filter(e => e.title === title &
     for (const [w, h, tag] of sizes) {
       const { page, errors } = await withSample({ ctx: { viewport: { width: w, height: h } } });
       const problems = [];
+      const brand = await page.evaluate(() => { const e = document.querySelector('.brand'); return { clipped: e.scrollWidth > e.clientWidth || e.scrollHeight > e.clientHeight + 1, lines: Math.round(e.clientHeight / parseFloat(getComputedStyle(e).lineHeight)) }; });
+      if (brand.clipped || brand.lines > 1) problems.push('header title clipped or wrapped: ' + JSON.stringify(brand));
       for (const t of ['week', 'month', 'attention', 'people']) {
         await tab(page, t); if (t === 'attention') await page.click('[data-act=horizon][data-n="0"]'); await page.waitForTimeout(80);
         const o = await overflow(page); if (o > 0) problems.push(t + ' overflows by ' + o);

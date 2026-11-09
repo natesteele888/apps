@@ -329,6 +329,7 @@ async function newPlay(page, { sport, variant, start, name }) {
   await page.click('.back'); await page.waitForSelector('.card');
   const names = await page.locator('.card-t').allTextContents();
   ok(names.includes('Edit test') && names.includes('Touch test') && names.includes('Pick and roll'), 'saved plays persist after reload', names);
+  ok(await page.$$eval('.card-t', t => t.every(x => x.scrollWidth <= x.clientWidth && x.scrollHeight <= x.clientHeight + 1)), 'library card titles are not cut off sideways');
   const cardsBefore = await page.locator('.card').count();
   await page.click('.card:has(.card-t:text-is("Edit test")) .card-more');
   await page.click('.sheet .row-btn:has-text("Duplicate")');

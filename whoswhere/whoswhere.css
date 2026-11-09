@@ -36,10 +36,10 @@ a { color: var(--accent); }
   background: rgba(10,15,31,.94); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); border-bottom: 1px solid var(--line);
 }
 .top-row { display: flex; align-items: center; gap: 8px; }
-.brand { flex: 1 1 auto; min-width: 0; font-family: var(--num); font-weight: 700; font-size: 28px; letter-spacing: .02em; line-height: 1.1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.brand { flex: 1 1 auto; min-width: 0; font-family: var(--num); font-weight: 700; font-size: 28px; letter-spacing: .02em; line-height: 1.1; white-space: nowrap; }
 .icon-btn { flex: 0 0 auto; width: 48px; height: 48px; border-radius: 50%; display: grid; place-items: center; color: var(--text); background: var(--panel); border: 1px solid var(--line); }
 .icon-btn svg { width: 22px; height: 22px; }
-.add-top { flex: 0 0 auto; min-height: 48px; padding: 0 16px 0 12px; gap: 4px; }
+.add-top { flex: 0 0 auto; min-height: 48px; padding: 0 12px 0 10px; gap: 4px; white-space: nowrap; }
 .add-top svg { width: 20px; height: 20px; }
 .filters { display: flex; gap: 8px; margin: 8px -12px 0; padding: 2px 12px 2px; overflow-x: auto; scrollbar-width: none; }
 .filters::-webkit-scrollbar { display: none; }
@@ -308,10 +308,12 @@ h3.label.sec { margin: 14px 2px 8px; }
   .print-only .pnone { color: #555; margin: 2pt 0; }
 }
 
-@media (max-width: 359px) {
-  .brand { font-size: 24px; }
+@media (max-width: 430px) {
   .add-top span { display: none; }
   .add-top { padding: 0; width: 48px; justify-content: center; }
+}
+@media (max-width: 359px) {
+  .brand { font-size: 24px; }
   .ev { grid-template-columns: 66px 1fr; gap: 8px; }
   .ev-time b { font-size: 22px; }
   .ev-time small { display: block; margin-top: 1px; }

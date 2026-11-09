@@ -165,8 +165,9 @@
   }
 
   var cat = "Arms";
-  function openCell(r, si, ci, b) {
+  function openCell(r, si, ci, b, keepCat) {
     var s = r.sections[si], c = s.counts[ci], g = gIndex(r, si, ci);
+    if (!keepCat) { var cur = (c.m[b] || "").toLowerCase(); Object.keys(EC.MOVES).forEach(function (k) { if (EC.MOVES[k].some(function (m) { return m.toLowerCase() === cur; })) cat = k; }); }
     var chips = EC.MOVES[cat].map(function (m) { return '<button type="button" class="chip" data-m="' + esc(m) + '">' + esc(m) + "</button>"; }).join("");
     var tabs = Object.keys(EC.MOVES).map(function (k) { return '<button type="button" class="pill" data-cat="' + k + '" aria-pressed="' + (k === cat) + '">' + k + "</button>"; }).join("");
     var dots = c.m.map(function (_, i) { return '<button type="button" class="dot' + (i === b ? " on" : "") + '" data-b="' + i + '" aria-label="Beat ' + (i + 1) + '">' + (i + 1) + "</button>"; }).join("");
@@ -178,7 +179,7 @@
     $("#cf", sh).onsubmit = function (e) { e.preventDefault(); put($("#cv", sh).value); if (b < 7) openCell(r, si, ci, b + 1); else closeSheet(); };
     $("[data-s=prev]", sh).onclick = function () { put($("#cv", sh).value); openCell(r, si, ci, (b + 7) % 8); };
     $$(".dot", sh).forEach(function (d) { d.onclick = function () { put($("#cv", sh).value); openCell(r, si, ci, +d.dataset.b); }; });
-    $$("[data-cat]", sh).forEach(function (p) { p.onclick = function () { put($("#cv", sh).value); cat = p.dataset.cat; openCell(r, si, ci, b); }; });
+    $$("[data-cat]", sh).forEach(function (p) { p.onclick = function () { put($("#cv", sh).value); cat = p.dataset.cat; openCell(r, si, ci, b, true); }; });
     $$(".chip", sh).forEach(function (ch) { ch.onclick = function () { put(ch.dataset.m); if (b < 7) openCell(r, si, ci, b + 1); else closeSheet(); }; });
   }
 

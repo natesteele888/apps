@@ -100,7 +100,8 @@ code{font-family:ui-monospace,Menlo,monospace;font-size:13px;background:var(--pa
 .toast{position:fixed;left:50%;bottom:calc(18px + env(safe-area-inset-bottom));transform:translateX(-50%);background:var(--panel-2);border:1px solid var(--line);padding:9px 16px;border-radius:var(--r);font-size:13.5px;opacity:0;pointer-events:none;transition:opacity .25s;z-index:9}
 .toast.on{opacity:1}
 [hidden]{display:none!important}
-@media(max-width:520px){header h1{font-size:32px}.badge{width:46px;height:46px;font-size:18px}.mid{width:36px}table{font-size:11.5px}}
+@media(max-width:520px){nav.views{gap:12px;font-size:14.5px}nav.views button{white-space:normal;line-height:1.15;flex:0 1 auto}header h1{font-size:32px}.badge{width:46px;height:46px;font-size:18px}.mid{width:36px}table{font-size:11.5px}}
+@media(max-width:360px){nav.views{gap:8px;font-size:13px}}
 </style>
 <script src="https://natesteele888.github.io/apps/install.js" defer></script><script src="https://natesteele888.github.io/apps/health.js" defer></script>
 </head>
@@ -227,7 +228,7 @@ function renderPicks(){
   const mine=(S.picks[S.sel]||{})[S.user.uid]||{};
   const open=games.filter(([,g])=>!started(g));const pickedOpen=open.filter(([id])=>mine[id]).length;
   v.innerHTML=`<div class="pills" role="group" aria-label="${sp.weekly?"Week":"Day"}">${keys.map(k=>`<button class="pill" data-wk="${k}" aria-pressed="${k===S.sel}">${C.label(k,today())}</button>`).join("")}</div>
-    <div class="status"><span>${S.loading&&!games.length?"Loading games…":games.length?`${open.length?`${pickedOpen} of ${open.length} open games picked`:"All games have started"}`:`No ${sp.name} games ${sp.weekly?"this week":"on this day"}.`}</span><button class="btn small" id="refresh">Refresh scores</button></div>
+    <div class="status"><span>${S.loading&&!games.length?"Loading games…":games.length?`${open.length?`${pickedOpen} of ${open.length} open ${open.length===1?"game":"games"} picked`:"All games have started"}`:`No ${sp.name} games ${sp.weekly?"this week":"on this day"}.`}</span><button class="btn small" id="refresh">Refresh scores</button></div>
     <div class="games">${games.map(([id,g])=>gameCard(id,g,mine)).join("")||`<p class="empty">${S.loading?"":`Pick another ${sp.noun} above.`}</p>`}</div>`;
   v.querySelectorAll("[data-wk]").forEach(b=>b.onclick=()=>{S.sel=b.dataset.wk;S.selBy[S.sport]=S.sel;render();loadSlate(S.sel)});
   $("#refresh").onclick=()=>loadSlate(S.sel);

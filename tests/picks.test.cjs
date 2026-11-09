@@ -112,7 +112,7 @@ const event = (id, date, away, home, state, done) => ({ id, date, competitions: 
     await page.click('.side[data-t="FFF"]'); await page.waitForSelector('.side.mine');
     const w = await page.evaluate(() => window.__writes.filter(x => x[0] === 'gp_picks'));
     eq(w.length, 1); eq(w[0][1], 'me1_mlb-' + TODAY); eq(w[0][2].week, 'mlb-' + TODAY); eq(Object.values(w[0][2].picks)[0], 'FFF');
-    assert.ok(/1 of 1 open games picked/.test(await page.textContent('.status')));
+    assert.ok(/1 of 1 open game picked/.test(await page.textContent('.status')));
     await page.click('.side[data-t="FFF"]'); await page.waitForFunction(() => !document.querySelector('.side.mine')); // tap again to clear
     await page.click('.side[data-t="EEE"]'); await page.waitForSelector('.side.mine');
     // a finished game that another player picked shows their name and their result on the board
@@ -133,6 +133,8 @@ const event = (id, date, away, home, state, done) => ({ id, date, competitions: 
     await page.goto(server.url); await page.waitForSelector('.game');
     eq(await page.evaluate(() => document.documentElement.scrollWidth), 320);
     const tabs = await page.$$eval('[data-sport]', b => b.map(x => x.getBoundingClientRect().height)); assert.ok(tabs.every(h => h >= 44), 'tabs are tappable: ' + tabs.join(','));
+    await page.evaluate(() => { window.__data.gp_players.me1.code = 'OWNER'; window.__notify(); }); await page.waitForSelector('[data-view=admin]'); // the owner has a fourth tab
+    assert.ok(await page.$$eval('nav.views', n => n.every(x => x.scrollWidth <= x.clientWidth)), 'view tabs fit without scrolling');
     await page.screenshot({ path: path.join(SHOTS, 'picks-small.png') });
     eq(errors.length, 0, errors.join(' | ')); await ctx.close();
   });
