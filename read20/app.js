@@ -10,8 +10,39 @@
   const byId = {}; B.books.forEach(b => (byId[b.id] = b));
 
   let S = C.empty();
-  function load() { try { S = C.sanitize(JSON.parse(localStorage.getItem(KEY))); } catch (e) { S = C.empty(); } }
-  function save() { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {} }
+  /* Saving: the log is written to localStorage on every tick (instant, survives a closed app) and mirrored into
+     IndexedDB every few seconds as a second copy. If either one is lost, the other brings the time back. */
+  const store = { fail: false, idbAt: 0, ready: false }; // ready: the second copy has been read, so it is safe to write to it
+  function idb(mode, fn) {
+    return new Promise((res, rej) => {
+      try {
+        const rq = indexedDB.open("read20", 1);
+        rq.onupgradeneeded = () => rq.result.createObjectStore("s");
+        rq.onerror = () => rej(rq.error);
+        rq.onsuccess = () => { const db = rq.result, tx = db.transaction("s", mode), r = fn(tx.objectStore("s")); tx.oncomplete = () => { db.close(); res(r && r.result); }; tx.onerror = tx.onabort = () => { db.close(); rej(tx.error); }; };
+      } catch (e) { rej(e); }
+    });
+  }
+  function load() {
+    let raw = null;
+    try { raw = localStorage.getItem(KEY); S = C.sanitize(JSON.parse(raw)); }
+    catch (e) { S = C.empty(); try { if (raw) localStorage.setItem(KEY + ".damaged", raw); } catch (e2) {} } // keep a damaged save instead of writing over it
+  }
+  function save(force) {
+    try { localStorage.setItem(KEY, JSON.stringify(S)); store.fail = false; } catch (e) { store.fail = true; }
+    const now = Date.now();
+    if (store.ready && (force || now - store.idbAt > 5000)) { store.idbAt = now; const copy = JSON.stringify(S); idb("readwrite", st => st.put(copy, "log")).catch(() => {}); }
+    paintWarn();
+  }
+  async function recover() {
+    try {
+      const raw = await idb("readonly", st => st.get("log")); if (!raw) return;
+      const other = C.sanitize(JSON.parse(raw)), merged = C.merge(S, other);
+      if (C.total(merged) > C.total(S)) { S = merged; try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {} if (ui.book) paintTimer(); else route(); }
+    } catch (e) {}
+  }
+  function warnHtml() { return '<div class="warn" id="warn" role="alert"' + (store.fail ? "" : " hidden") + '>⚠️ This phone is not letting the app save. Open Read 20 from the home-screen icon (not a private tab), or tap ⚙️ and save a backup.</div>'; }
+  function paintWarn() { const w = $("#warn"); if (w) w.hidden = !store.fail; }
 
   const ui = { level: 1, month: null, sel: null, book: null, page: 0, paused: false, idle: false, acc: 0, last: 0, lastAct: 0, timer: 0, finishedNow: false, hl: -1 };
 
@@ -99,6 +130,7 @@
     const readIn = list.filter(b => fin[b.id]).length;
     $("#view").innerHTML = `
     <header class="top"><h1>📖 Read ${S.goal}</h1><button class="icon" id="gear" aria-label="Settings">⚙️</button></header>
+    ${warnHtml()}
     <section class="today ${done ? "ok" : ""}">
       <div class="ringbox">${ring(sec, goal)}<div class="rtxt"><b>${Math.floor(sec / 60)}</b><span>min</span></div></div>
       <div class="ttxt">
@@ -112,12 +144,14 @@
     <div class="levels" role="tablist" aria-label="Levels">${B.LEVELS.map(l => `<button role="tab" aria-selected="${l.n === ui.level}" class="lv ${l.n === ui.level ? "on" : ""}" data-lv="${l.n}"><span>${l.icon}</span>Level ${l.n}</button>`).join("")}</div>
     <p class="lvinfo"><b>${esc(lv.name)}</b> · ${esc(lv.sub)}<br><small>${readIn} of ${list.length} read</small></p>
     <div class="shelf">${list.map(b => `<button class="cover" data-id="${esc(b.id)}" style="--c:${esc(b.color)}" aria-label="${esc(b.title)}${fin[b.id] ? ", read" : ""}"><span class="ce">${esc(b.cover)}</span><span class="ct">${esc(b.title)}</span>${fin[b.id] ? '<span class="check" aria-hidden="true">✓</span>' : ""}</button>`).join("")}</div>
+    ${C.total(S) >= 600 && (!S.bk || C.daysSince(S.bk, k) >= 7) ? '<section class="nudge"><b>Keep her reading safe 💾</b><p>Her log lives on this phone. Save a backup file so a lost or reset phone can never take it away.</p><button class="btn alt" id="bknow">Save a backup now</button></section>' : ""}
     <button class="btn alt" id="manual">＋ Log a book from home</button>
     <p class="fine">Stories are free to share: written for this app, or old public-domain rhymes and fables. Everything stays on this phone.</p>`;
     nav("books");
     $("#gear").onclick = openSettings;
     $("#next").onclick = () => go("b/" + nx.id);
     $("#manual").onclick = openManual;
+    if ($("#bknow")) $("#bknow").onclick = () => { backup(); renderShelf(); };
     document.querySelectorAll(".lv").forEach(b => (b.onclick = () => { ui.level = +b.dataset.lv; renderShelf(); }));
     const on = document.querySelector(".lv.on"); if (on && on.scrollIntoView) on.scrollIntoView({ inline: "center", block: "nearest" });
     document.querySelectorAll(".cover").forEach(b => (b.onclick = () => go("b/" + b.dataset.id)));
@@ -137,6 +171,7 @@
         <div class="tm" id="tm"><div class="tmrow"><b id="tmnum">0:00</b><span id="tmgoal"></span></div><div class="tmtrack"><i id="tmbar"></i></div></div>
         <button class="icon" id="pause" aria-label="Pause the timer">⏸</button>
       </header>
+      ${warnHtml()}
       <div class="idle" id="idlebox" hidden>Still reading? Tap anywhere to keep the timer going.</div>
       <div class="pic ${cnt > 2 ? "m3" : cnt > 1 ? "m2" : ""}" aria-hidden="true">${esc(emo)}</div>
       ${end ? `<div class="the-end"><h2>The End</h2><p>${esc(bk.title)}</p><button class="btn big" id="more">Pick another story</button><button class="btn alt" id="again">Read it again</button></div>`
@@ -273,11 +308,39 @@
       <label>Reading goal each night<select id="sg">${C.GOALS.map(g => `<option ${g === S.goal ? "selected" : ""} value="${g}">${g} minutes</option>`).join("")}</select></label>
       <label>Word size<select id="sz"><option value="0">Big</option><option value="1">Bigger</option><option value="2">Biggest</option></select></label>
       <label class="chk"><input type="checkbox" id="ss" ${S.say ? "checked" : ""}> Say a word out loud when it is tapped</label>
+      <h3 class="subh">Back up her log</h3>
+      <p class="fine left">${S.bk ? "Last backup: " + esc(S.bk) : "No backup saved yet."} The file is saved on this phone; keep it somewhere safe.</p>
+      <button class="btn alt" id="sb">💾 Save a backup file</button>
+      <label class="btn alt filebtn">📂 Restore from a backup file<input type="file" id="sr" accept=".json,application/json" hidden></label>
+      <p class="fine left" id="sm" role="status"></p>
       <button class="btn danger" id="se">Erase the reading log</button>
       <div class="row"><button class="btn" id="sd">Done</button></div>`);
     $("#sz").value = String(S.size);
+    $("#sb").onclick = () => { backup(); $("#sm").textContent = "Backup saved to this phone's Downloads."; };
+    $("#sr").onchange = e => restore(e.target.files[0], msg => ($("#sm").textContent = msg));
     $("#se").onclick = () => { if (confirm("Erase every night in the reading log? This cannot be undone.")) { S.days = {}; save(); closeOverlay(o); route(); } };
     $("#sd").onclick = () => { S.name = $("#sn").value.replace(/[\u0000-\u001f]/g, "").trim().slice(0, 20); S.goal = +$("#sg").value; S.size = +$("#sz").value; S.say = $("#ss").checked; save(); closeOverlay(o); route(); };
+  }
+
+  /* ---------- backup and restore ---------- */
+  function backup() {
+    S.bk = today(); save(true);
+    const blob = new Blob([JSON.stringify({ app: "read20", v: 1, saved: new Date().toISOString(), data: S }, null, 1)], { type: "application/json" });
+    const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = "read20-backup-" + today() + ".json";
+    document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+  }
+  function restore(file, say) {
+    if (!file) return;
+    const r = new FileReader();
+    r.onload = () => {
+      try {
+        const j = JSON.parse(r.result);
+        if (!j || j.app !== "read20" || !j.data) throw new Error("not a Read 20 backup");
+        const before = C.total(S); S = C.merge(S, j.data); save(true);
+        say("Restored. " + Math.round((C.total(S) - before) / 60) + " minutes added back.");
+      } catch (e) { say("That file is not a Read 20 backup."); }
+    };
+    r.onerror = () => say("Could not read that file."); r.readAsText(file);
   }
 
   /* ---------- bottom bar ---------- */
@@ -290,9 +353,11 @@
   function init() {
     load();
     window.addEventListener("hashchange", route);
-    window.addEventListener("pagehide", save);
+    window.addEventListener("pagehide", () => save(true));
+    document.addEventListener("visibilitychange", () => { if (document.hidden) save(true); });
+    try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist(); } catch (e) {} // ask Chrome never to clear her log to free space
     if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {});
-    route();
+    route(); recover().then(() => { store.ready = true; save(true); });
   }
   window.R20App = { init, _state: () => S };
 })();

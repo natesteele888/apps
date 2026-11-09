@@ -57,6 +57,19 @@ const TODAY = '2026-11-08';
     C.addSeconds(s, '2026-11-02', 'a', 1200); const st = C.monthStats(s, 2026, 10); eq(st.nights, 1); eq(st.sec, 900 + 1200);
     eq(C.fmtClock(125), '2:05'); eq(C.fmtMin(30), 'under 1 min'); eq(C.fmtMin(0), '0 min'); eq(C.fmtMin(1200), '20 min');
   });
+  await test('core: merging two saves never loses time (restore, second-copy recovery)', () => {
+    const a = C.empty(), b = C.empty();
+    C.addSeconds(a, TODAY, 'x', 300); C.addSeconds(a, '2026-11-07', 'x', 1200); C.finish(a, '2026-11-07', 'x');
+    C.addSeconds(b, TODAY, 'x', 840); C.addSeconds(b, TODAY, 'y', 60); C.addSeconds(b, '2026-11-01', 'z', 600); C.addManual(b, '2026-11-01', 'Paper', 5); b.name = 'Pat';
+    const m = C.merge(a, b);
+    eq(C.daySec(m, TODAY), 900 - 0 === 900 ? 900 : 0, 'bigger day wins'); // b: 840 + 60 = 900
+    eq(C.daySec(m, '2026-11-07'), 1200); eq(m.days['2026-11-07'].books.x.fin, 1, 'finished mark kept'); eq(m.days[TODAY].books.x.sec, 840); eq(m.days[TODAY].books.y.sec, 60);
+    eq(C.daySec(m, '2026-11-01'), 600 + 300); eq(m.days['2026-11-01'].extra[0].title, 'Paper'); eq(m.name, 'Pat');
+    eq(C.total(m), 900 + 1200 + 900); eq(C.total(C.merge(m, C.empty())), C.total(m), 'merging nothing changes nothing'); eq(C.total(C.merge(C.empty(), m)), C.total(m));
+    eq(C.merge(a, a).days[TODAY].sec, 300, 'same save twice does not double');
+    eq(C.daysSince('2026-11-01', '2026-11-08'), 7); eq(C.daysSince('2026-10-31', '2026-11-08'), 8);
+    eq(C.sanitize({ bk: 'junk' }).bk, ''); eq(C.sanitize({ bk: '2026-11-08' }).bk, '2026-11-08');
+  });
   await test('core: damaged saves are cleaned up', () => {
     const s = C.sanitize({ name: 'A'.repeat(50) + '\u0007', goal: 7, size: 9, say: 'yes', days: { 'bad': { sec: 5 }, '2026-11-08': { sec: -4, books: { x: { sec: 'q', fin: 1 } }, extra: [{ title: 5, sec: 1e9 }, null] } } });
     eq(s.name.length, 20); eq(s.goal, 20); eq(s.size, 2); eq(s.say, false); eq(Object.keys(s.days).length, 1); eq(s.days[TODAY].sec, 0); eq(s.days[TODAY].books.x.fin, 1); eq(s.days[TODAY].extra[0].sec, 86400);
@@ -170,6 +183,41 @@ const TODAY = '2026-11-08';
     const b = await mk(); await seed(b.page);
     await b.page.locator('#stop').click(); await settle(b.page); eq(await overlays(b.page), 0); await b.page.waitForSelector('.cover'); eq(await b.page.locator('.reader').count(), 0, 'on the shelf');
     eq(b.errors.length, 0, b.errors.join('|'));
+  });
+  await test('saving: if the main copy is wiped, the second copy brings her minutes back on the next open', async () => {
+    const { page } = await mk(); await page.locator('.cover', { hasText: 'Sam the Cat' }).click(); await page.waitForSelector('.reader');
+    await page.clock.runFor(14000); await page.locator('.w').first().click(); await page.clock.runFor(1000);
+    await page.waitForTimeout(400); const had = await sec(page); assert.ok(had >= 13, 'had ' + had);
+    // pretend the browser dropped localStorage while the page was closed: new tab on the same site data
+    const ctx = page.context(); await page.evaluate(() => { window.addEventListener('pagehide', e => e.stopImmediatePropagation(), true); localStorage.clear(); });
+    const p2 = await ctx.newPage(); await p2.addInitScript(d => { window.__today = d; }, TODAY); await p2.goto(srv.url);
+    await p2.waitForFunction(() => window.R20App._state().days[window.__today] && window.R20App._state().days[window.__today].sec >= 10, null, { timeout: 5000 });
+    const back = await sec(p2); assert.ok(back >= 10, 'recovered ' + back);
+    eq(await p2.evaluate(() => JSON.parse(localStorage.getItem('read20.v1')).days[window.__today].sec >= 10), true, 'main copy refilled');
+  });
+  await test('saving: a backup file restores into a brand new phone, adds time and rejects other files', async () => {
+    const a = await mk(); await a.page.locator('#manual').click(); await a.page.fill('#mt', 'Paper Book'); await a.page.fill('#mm', '14'); await a.page.locator('#ms').click(); await a.page.waitForSelector('.cover');
+    await a.page.locator('#gear').click(); const dl = a.page.waitForEvent('download'); await a.page.locator('#sb').click(); const d = await dl;
+    assert.ok(/^read20-backup-2026-11-08\.json$/.test(d.suggestedFilename()), d.suggestedFilename());
+    const path = await d.path(); const j = JSON.parse(require('fs').readFileSync(path, 'utf8')); eq(j.app, 'read20'); eq(j.data.days[TODAY].sec, 840); eq(j.data.bk, TODAY);
+    const b = await mk(); eq(await sec(b.page), 0);
+    await b.page.locator('#gear').click(); await b.page.setInputFiles('#sr', path); await b.page.waitForFunction(() => /Restored/.test(document.querySelector('#sm').textContent));
+    eq(await sec(b.page), 840); await b.page.setInputFiles('#sr', path); await b.page.waitForTimeout(300); eq(await sec(b.page), 840, 'restoring twice does not double');
+    require('fs').writeFileSync(SHOTS + '/junk.json', '{"hello":1}'); await b.page.setInputFiles('#sr', SHOTS + '/junk.json');
+    await b.page.waitForFunction(() => /not a Read 20 backup/.test(document.querySelector('#sm').textContent)); eq(await sec(b.page), 840);
+  });
+  await test('saving: warns when the phone will not save; keeps a damaged save instead of writing over it; asks for permanent storage', async () => {
+    const o = await newPage(br, { today: TODAY }); await o.page.addInitScript(() => { Storage.prototype.setItem = function () { throw new Error('quota'); }; });
+    await o.page.goto(srv.url); await o.page.waitForSelector('.cover'); assert.ok(await o.page.locator('#warn').isVisible(), 'warning shown');
+    const q = await newPage(br, { today: TODAY }); await q.page.addInitScript(() => { if (!sessionStorage.x) { sessionStorage.x = 1; localStorage.setItem('read20.v1', '{bad'); } window.__persist = 0; if (navigator.storage) navigator.storage.persist = () => { window.__persist++; return Promise.resolve(true); }; });
+    await q.page.goto(srv.url); await q.page.waitForSelector('.cover');
+    eq(await q.page.evaluate(() => localStorage.getItem('read20.v1.damaged')), '{bad'); eq(await q.page.evaluate(() => window.__persist), 1); assert.ok(!(await q.page.locator('#warn').isVisible()));
+  });
+  await test('saving: the backup reminder shows once there are 10+ minutes and no recent backup, and goes away after a backup', async () => {
+    const { page } = await mk(); assert.ok(!(await page.locator('#bknow').count()));
+    await page.locator('#manual').click(); await page.fill('#mm', '12'); await page.locator('#ms').click(); await page.waitForSelector('.cover');
+    assert.ok(await page.locator('#bknow').isVisible()); const dl = page.waitForEvent('download'); await page.locator('#bknow').click(); await dl; await page.waitForSelector('.cover');
+    eq(await page.locator('#bknow').count(), 0);
   });
   await test('offline: the service worker caches the app and it reopens with no network', async () => {
     const o = await newPage(br, { sw: true, today: TODAY }); const { page, ctx } = o;
