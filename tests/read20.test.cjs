@@ -340,58 +340,25 @@ const TODAY = '2026-11-08';
     eq(await e.page.evaluate(() => localStorage.getItem('read20.cloud')), null); eq(await sec(e.page), 720, 'her time stays on the phone');
   });
 
-  /* ============ sounds board and audio ============ */
+  /* ============ audio ============ */
   const FAKE_SPEECH = `(function(){ window.__said = []; window.__cancels = 0; window.__busy = false;
     window.SpeechSynthesisUtterance = function (t) { this.text = t; };
     Object.defineProperty(window, 'speechSynthesis', { configurable: true, value: { get speaking() { return window.__busy; }, pending: false, cancel: function () { window.__cancels++; window.__busy = false; }, resume: function () {}, speak: function (u) { window.__said.push(u.text + '@' + u.rate + '/' + u.lang); }, getVoices: function () { return [{ lang: 'en-GB', localService: true, name: 'b' }, { lang: 'en-US', localService: true, name: 'a' }]; } } }); })();`;
-  const mkAudio = async (opts = {}) => { const o = await newPage(br, { today: TODAY }); if (opts.speech !== false) await o.page.addInitScript(FAKE_SPEECH); else await o.page.addInitScript(() => { Object.defineProperty(window, 'speechSynthesis', { configurable: true, value: undefined }); }); await o.page.goto(srv.url + '#sounds'); await o.page.waitForSelector('.rack'); return o; };
+  const mkAudio = async (opts = {}) => { const o = await newPage(br, { today: TODAY }); if (opts.speech !== false) await o.page.addInitScript(FAKE_SPEECH); else await o.page.addInitScript(() => { Object.defineProperty(window, 'speechSynthesis', { configurable: true, value: undefined }); }); await o.page.goto(srv.url); await o.page.waitForSelector('.cover'); return o; };
   const tapKey = (page, key) => page.locator('.tile[data-key="' + key + '"]').click();
   const played = page => page.evaluate(() => window.R20Audio.log.slice());
 
-  await test('sounds: every letter sound has a clip file, and every clip loads and decodes in the browser', async () => {
-    const ids = require('../apps/read20/board.js') && null; // (the id list lives in the page)
-    const { page } = await mkAudio(); const list = await page.evaluate(() => window.R20SoundIds);
-    assert.ok(list.length >= 40); for (const id of list) assert.ok(require('fs').existsSync(path_.join(__dirname, '../apps/read20/sounds/' + id + '.mp3')) && require('fs').statSync(path_.join(__dirname, '../apps/read20/sounds/' + id + '.mp3')).size > 1500, id);
-    await page.waitForFunction(n => window.R20Audio.ready >= n, list.length, { timeout: 15000 }); eq(await page.evaluate(() => Object.keys(window.R20Audio.bufs).length), list.length);
-    eq(await page.evaluate(() => Object.values(window.R20Audio.bufs).every(b => b.duration > 0.1 && b.duration < 1.2)), true, 'clips are 0.1 to 1.2 seconds');
-  });
-  await test('sounds: tap a letter to hear it, tap again to add it; boxes, back, clear, vowels short and long', async () => {
-    const { page } = await mkAudio(); await tapKey(page, 'cc'); eq((await played(page)).join(), 'k', 'c says the k sound'); eq(await page.locator('.slot.full').count(), 0);
-    assert.ok(await page.locator('.slot.next').count(), 'next box is marked'); await tapKey(page, 'cc'); eq(await page.locator('.slot.full').count(), 1);
-    await tapKey(page, 'va'); await tapKey(page, 'va'); await tapKey(page, 'ct'); await tapKey(page, 'ct'); eq(await page.locator('#bword').innerText(), 'c a t');
-    eq((await played(page)).join(), 'k,k,a,a,t,t'); eq(await page.locator('#bplay').isEnabled(), true); eq(await page.locator('#bblend').isEnabled(), true);
-    await page.locator('#bback').click(); eq(await page.locator('#bword').innerText(), 'c a'); await page.locator('#bclear').click(); eq(await page.locator('.slot.full').count(), 0); eq(await page.locator('#bplay').isDisabled(), true);
-    await page.locator('#blong').click(); await tapKey(page, 'va'); eq((await played(page)).slice(-1)[0], 'a_long'); assert.ok(await page.locator('.rack.v .mk').count() === 5, 'long vowels are marked');
-    await page.locator('.slot').nth(2).click(); eq(await page.locator('.slot').nth(2).innerText(), 'a'); eq(await page.locator('.slot.full').count(), 1, 'a tapped box takes the selected letter');
-    await page.locator('#tteams').click(); await tapKey(page, 'tshsh'); eq((await played(page)).slice(-1)[0], 'sh'); await page.locator('.slot').nth(0).click(); eq(await page.locator('.slot').nth(0).innerText(), 'sh');
-    await page.locator('#tcons').click(); for (const k of ['cb', 'cb', 'cd', 'cd', 'cf', 'cf', 'cg', 'cg', 'ch', 'ch']) await tapKey(page, k); assert.ok(/full/.test(await page.locator('#bmsg').innerText()), 'a full board says so'); await page.screenshot({ path: SHOTS + '/read20-sounds.png' });
-  });
-  await test('sounds: drag a letter to a box; letters played in order; a real word is celebrated, a made-up one is kindly noted', async () => {
-    const { page } = await mkAudio(); const drag = async (key, i) => { const a = await page.locator('.tile[data-key="' + key + '"]').boundingBox(), b = await page.locator('.slot').nth(i).boundingBox();
-      await page.mouse.move(a.x + a.width / 2, a.y + a.height / 2); await page.mouse.down(); await page.mouse.move(a.x + a.width / 2 + 20, a.y + 20, { steps: 3 }); await page.mouse.move(b.x + b.width / 2, b.y + b.height / 2, { steps: 5 }); await page.mouse.up(); };
-    await drag('cc', 1); eq(await page.locator('.slot').nth(1).innerText(), 'c'); await drag('va', 2); await drag('ct', 3);
-    await page.locator('.slot').nth(0).click(); eq(await page.locator('.slot.full').count(), 3, 'tapping an empty box with nothing picked does nothing');
-    eq(await page.locator('#bword').innerText(), 'c a t'); const before = (await played(page)).length;
-    await page.locator('#bplay').click(); await page.waitForFunction(() => /You made/.test(document.querySelector('#bmsg').textContent), null, { timeout: 8000 }); eq(await page.locator('#bmsg').innerText(), '🎉 You made “cat”!');
-    eq((await played(page)).slice(before, before + 3).join(), 'k,a,t', 'played left to right'); await page.waitForTimeout(500); assert.ok((await page.evaluate(() => window.__said)).some(x => /^cat@/.test(x)), 'the word is also spoken');
-    await page.locator('#bclear').click(); for (const k of ['cz', 'va', 'ct']) await tapKey(page, k), await tapKey(page, k);
-    await page.locator('#bblend').click(); await page.waitForFunction(() => /not a word/.test(document.querySelector('#bmsg').textContent), null, { timeout: 8000 });
-  });
-  await test('sounds: the Sounds tab is in the bottom bar and does not count toward the nightly reading time', async () => {
-    const { page } = await mk(); await page.locator('#nav button[data-go="sounds"]').click(); await page.waitForSelector('.rack'); await page.clock.runFor(30000); eq(await sec(page), 0);
-    await page.locator('#nav button[data-go=""]').click(); await page.waitForSelector('.cover'); eq(await page.locator('#nav button').count(), 3);
-  });
   await test('audio: speech is used the way Chrome needs (language, voice, a pause after cancel); settings has a sound test; the chime shares one engine', async () => {
     const { page } = await mkAudio(); const c0 = await page.evaluate(() => window.__cancels); await page.evaluate(() => { window.__busy = true; window.R20Audio.speak('hello', 0.8); });
     eq(await page.evaluate(() => window.__cancels), c0 + 1, 'cancels the old line'); eq((await page.evaluate(() => window.__said)).length, 0, 'does not speak in the same instant as cancel'); await page.waitForTimeout(250);
     eq((await page.evaluate(() => window.__said)).join(), 'hello@0.8/en-US'); eq(await page.evaluate(() => window.R20Audio.info().voices), 2);
-    await page.evaluate(() => { location.hash = ''; }); await page.waitForSelector('.cover'); await page.locator('#gear').click(); await page.locator('#stest').click();
+    await page.locator('#gear').click(); await page.locator('#stest').click();
     await page.waitForFunction(() => /You should hear a beep and then a voice/.test(document.querySelector('#stm').textContent)); await page.waitForTimeout(900); assert.ok((await page.evaluate(() => window.__said)).some(x => /Can you hear me/.test(x)));
     await page.locator('#sd').click();
     const a = await page.evaluate(() => { const c = window.R20Audio.ctx(); window.R20Audio.chime(); window.R20Audio.chime(); return window.R20Audio.ctx() === c; }); eq(a, true);
   });
-  await test('audio: popup buttons and tapped words speak through the same voice; no voice on the phone hides the speaker buttons', async () => {
-    const { page } = await mkAudio(); await page.evaluate(() => { location.hash = ''; }); await page.waitForSelector('.cover'); await page.locator('#gear').click(); await page.locator('#ss').check(); await page.locator('#sd').click();
+  await test('audio: popup buttons and tapped words speak through the same voice; no voice on the phone hides the speaker button', async () => {
+    const { page } = await mkAudio(); await page.locator('#gear').click(); await page.locator('#ss').check(); await page.locator('#sd').click();
     await page.locator('.cover', { hasText: 'Sam the Cat' }).click(); await page.waitForSelector('.reader'); await page.locator('.w').nth(3).click(); await page.waitForTimeout(150);
     assert.ok((await page.evaluate(() => window.__said)).some(x => /^cat@/.test(x)), 'tapped word spoken');
     const b = await page.locator('.w').nth(0).boundingBox(); await page.mouse.move(b.x + b.width / 2, b.y + b.height / 2); await page.mouse.down(); await page.waitForTimeout(600); await page.mouse.up(); await page.locator('.wordpop').waitFor();

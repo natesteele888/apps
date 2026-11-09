@@ -1,10 +1,9 @@
 /* Read 20: all the sound in one place. One shared Web Audio context (phones only let a page make sound after a tap, so it is
-   unlocked on the first touch), the letter-sound clips, a chime, and the phone's speech voice.
-   Letter sounds are small mp3 clips in read20/sounds/ made by tools/read20-sounds.py. */
+   unlocked on the first touch), a chime, and the phone's speech voice. */
 (function (root) {
   "use strict";
-  const A = { log: [], bufs: {}, ready: 0 };
-  let ctx = null, loading = {}, token = 0, utt = null, voice = null, unlocked = false;
+  const A = { log: [] };
+  let ctx = null, utt = null, voice = null, unlocked = false;
 
   A.ctx = () => {
     if (ctx) return ctx;
@@ -18,46 +17,7 @@
   };
   ["pointerdown", "touchstart", "keydown"].forEach(ev => root.addEventListener && root.addEventListener(ev, A.unlock, { capture: true, passive: true }));
 
-  A.load = id => {
-    if (A.bufs[id]) return Promise.resolve(A.bufs[id]);
-    if (loading[id]) return loading[id];
-    const c = A.ctx(); if (!c) return Promise.reject(new Error("no audio"));
-    loading[id] = fetch("sounds/" + id + ".mp3").then(r => { if (!r.ok) throw new Error("missing " + id); return r.arrayBuffer(); })
-      .then(buf => new Promise((res, rej) => c.decodeAudioData(buf, res, rej)))   // callback form: older Safari has no promise version
-      .then(b => { A.bufs[id] = b; A.ready++; return b; })
-      .catch(e => { delete loading[id]; throw e; });
-    return loading[id];
-  };
-  A.preload = ids => Promise.all(ids.map(id => A.load(id).catch(() => null)));
-
-  /* Play one clip. Resolves when it has finished, or after `early` (0 to 1) of it has played (for blending). */
-  A.play = (id, opt) => {
-    opt = opt || {}; A.log.push(id);
-    return A.load(id).then(b => new Promise(res => {
-      const c = ctx; A.unlock();
-      const s = c.createBufferSource(); s.buffer = b; if (opt.rate) s.playbackRate.value = opt.rate;
-      const g = c.createGain(); g.gain.value = opt.gain || 1; s.connect(g); g.connect(c.destination);
-      const dur = b.duration / (opt.rate || 1); let done = false; const fin = () => { if (!done) { done = true; res(); } };
-      s.onended = fin; s.start(0);
-      setTimeout(fin, (opt.early ? dur * opt.early : dur + 0.4) * 1000);   // never hang if a phone forgets to say the clip ended
-    })).catch(() => {});
-  };
-  A.sleep = ms => new Promise(r => setTimeout(r, ms));
-  /* Play clips one after another. step(i) is called as each one starts. Returns false if stopped early. */
-  A.sequence = async (ids, o) => {
-    o = o || {}; const mine = ++token;
-    for (let i = 0; i < ids.length; i++) {
-      if (mine !== token) return false;
-      if (o.step) o.step(i);
-      await A.play(ids[i], { rate: o.rate, early: o.early });
-      if (mine !== token) return false;
-      if (o.gap && i < ids.length - 1) await A.sleep(o.gap);
-    }
-    if (mine !== token) return false;
-    if (o.step) o.step(-1);
-    return true;
-  };
-  A.stop = () => { token++; try { if (root.speechSynthesis) root.speechSynthesis.cancel(); } catch (e) {} };
+  A.stop = () => { try { if (root.speechSynthesis) root.speechSynthesis.cancel(); } catch (e) {} };
 
   /* A bright four-note chime (the 20 minutes are done) and a single beep (the sound test). */
   A.chime = () => A.tones([523, 659, 784, 1047], 0.18);

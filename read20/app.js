@@ -3,7 +3,7 @@
 (function () {
   "use strict";
   const C = window.R20Core, B = window.R20Books;
-  const CL = window.R20Cloud, WD = window.R20Words, AU = window.R20Audio, BD = window.R20Board;
+  const CL = window.R20Cloud, WD = window.R20Words, AU = window.R20Audio;
   const KEY = "read20.v1";
   const $ = s => document.querySelector(s);
   const esc = s => String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
@@ -68,17 +68,14 @@
   /* ---------- routing: #  (shelf), #log, #b/<id> (reading) ---------- */
   function route() {
     const h = location.hash.replace(/^#/, "");
-    stopTimer(); BD.unmount();
+    stopTimer();
     if (h.startsWith("b/") && byId[h.slice(2)]) {
       if (!ui.book || ui.book.id !== h.slice(2)) { ui.book = byId[h.slice(2)]; ui.page = 0; ui.finishedNow = false; }
       ui.paused = false; ui.hl = -1; renderReader(); startTimer();
     } else if (h === "log") { ui.book = null; renderLog(); }
-    else if (h === "sounds") { ui.book = null; renderSounds(); }
     else { ui.book = null; renderShelf(); }
   }
   const go = h => { if (location.hash.replace(/^#/, "") === h) route(); else location.hash = h; };
-
-  function renderSounds() { $("#view").innerHTML = '<div id="soundsview"></div>'; BD.mount($("#soundsview")); nav("sounds"); }
 
   /* ---------- timer ---------- */
   function startTimer() {
@@ -418,7 +415,7 @@
   /* ---------- bottom bar ---------- */
   function nav(on) {
     const n = $("#nav"); n.hidden = false;
-    n.innerHTML = `<button class="${on === "books" ? "on" : ""}" data-go="">📚<span>Books</span></button><button class="${on === "sounds" ? "on" : ""}" data-go="sounds">🔤<span>Sounds</span></button><button class="${on === "log" ? "on" : ""}" data-go="log">🗓️<span>My Log</span></button>`;
+    n.innerHTML = `<button class="${on === "books" ? "on" : ""}" data-go="">📚<span>Books</span></button><button class="${on === "log" ? "on" : ""}" data-go="log">🗓️<span>My Log</span></button>`;
     n.querySelectorAll("button").forEach(b => (b.onclick = () => go(b.dataset.go)));
   }
 
