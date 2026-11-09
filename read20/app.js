@@ -3,7 +3,7 @@
 (function () {
   "use strict";
   const C = window.R20Core, B = window.R20Books;
-  const CL = window.R20Cloud;
+  const CL = window.R20Cloud, WD = window.R20Words;
   const KEY = "read20.v1";
   const $ = s => document.querySelector(s);
   const esc = s => String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
@@ -191,6 +191,7 @@
       <div class="pic ${cnt > 2 ? "m3" : cnt > 1 ? "m2" : ""}" aria-hidden="true">${esc(emo)}</div>
       ${end ? `<div class="the-end"><h2>The End</h2><p>${esc(bk.title)}</p><button class="btn big" id="more">Pick another story</button><button class="btn alt" id="again">Read it again</button></div>`
         : `<p class="text" id="text">${pg.text.split(/\s+/).map((w, i) => `<span class="w" role="button" tabindex="0" data-i="${i}">${esc(w)}</span>`).join(" ")}</p>`}
+      ${end ? "" : '<p class="hint">👆 Press and hold a word to break it into sounds</p>'}
       <footer class="rnav">
         <button class="pgbtn" id="prev" ${ui.page === 0 ? "disabled" : ""} aria-label="Previous page">◀</button>
         <div class="pgnum" aria-live="polite">${end ? "The End" : "Page " + (ui.page + 1) + " of " + n}</div>
@@ -211,7 +212,14 @@
     } else {
       document.querySelectorAll(".w").forEach(w => {
         const hit = () => { const i = +w.dataset.i; ui.hl = ui.hl === i ? -1 : i; paintHl(); if (ui.hl >= 0) say(w.textContent.replace(/[^\w']/g, "")); };
-        w.onclick = hit; w.onkeydown = e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); hit(); } };
+        let t = 0, x0 = 0, y0 = 0;
+        const stop = () => { clearTimeout(t); t = 0; };
+        w.onpointerdown = e => { if (e.button) return; x0 = e.clientX; y0 = e.clientY; stop(); t = setTimeout(() => { t = 0; ui.lp = true; setTimeout(() => (ui.lp = false), 700); ui.hl = +w.dataset.i; paintHl(); openWord(w.textContent); }, 450); };
+        w.onpointermove = e => { if (t && Math.hypot(e.clientX - x0, e.clientY - y0) > 12) stop(); };
+        w.onpointerup = w.onpointercancel = w.onpointerleave = stop;
+        w.oncontextmenu = e => e.preventDefault();
+        w.onclick = () => { if (ui.lp) { ui.lp = false; return; } hit(); };
+        w.onkeydown = e => { if (e.key === "Enter" && e.shiftKey || e.key === "?") { e.preventDefault(); ui.hl = +w.dataset.i; paintHl(); openWord(w.textContent); } else if (e.key === "Enter" || e.key === " ") { e.preventDefault(); hit(); } };
       });
       paintHl();
     }
@@ -361,6 +369,24 @@
     $("#sr").onchange = e => restore(e.target.files[0], msg => ($("#sm").textContent = msg));
     $("#se").onclick = () => { if (confirm("Erase every night in the reading log" + (CL.status === "ok" ? ", including the cloud backup" : "") + "? This cannot be undone.")) { S.days = {}; S.bk = ""; save(true); if (CL.status === "ok") CL.overwrite(); closeOverlay(o); route(); } };
     $("#sd").onclick = () => { S.name = $("#sn").value.replace(/[\u0000-\u001f]/g, "").trim().slice(0, 20); S.goal = +$("#sg").value; S.size = +$("#sz").value; S.say = $("#ss").checked; save(); closeOverlay(o); route(); };
+  }
+
+  /* ---------- press and hold: syllables and sounds ---------- */
+  function speak(text) { try { if (!window.speechSynthesis) return; speechSynthesis.cancel(); const u = new SpeechSynthesisUtterance(text); u.rate = 0.75; speechSynthesis.speak(u); } catch (e) {} }
+  function openWord(raw) {
+    const a = WD.analyze(raw); if (!a) return;
+    const can = !!window.speechSynthesis, n = a.syllables.length;
+    const sounds = sy => sy.sounds.map(c => `<i class="${c.silent ? "silent" : ""}"${c.silent ? ' title="silent e"' : ""}>${esc(c.t)}</i>`).join("");
+    const chips = a.syllables.map((sy, i) => `<button class="syl c${i % 4}" data-i="${i}" ${can ? "" : "disabled"} aria-label="${esc(sy.text)}"><span class="st">${esc(sy.text)}</span>${a.tricky ? "" : `<span class="snd">${sounds(sy)}</span>`}</button>`).join('<span class="dot" aria-hidden="true">·</span>');
+    const o = sheet(`<div class="wordpop">
+      <h2 class="wp-word">${esc(a.text)}</h2>
+      <p class="wp-sub">${a.tricky ? "🧠 A tricky word! It does not sound out the way it looks. Look at it and remember it." : n + " syllable" + (n === 1 ? "" : "s") + (can ? " · tap a part to hear it" : "")}</p>
+      <div class="wp-syl">${chips}</div>
+      ${can ? '<button class="btn alt" id="wphear">🔊 Say the whole word</button>' : ""}
+      <button class="btn" id="wpdone">Got it</button></div>`);
+    o.querySelectorAll(".syl").forEach(b => (b.onclick = () => { o.querySelectorAll(".syl").forEach(x => x.classList.remove("on")); b.classList.add("on"); speak(a.syllables[+b.dataset.i].text); }));
+    if ($("#wphear")) $("#wphear").onclick = () => speak(a.word.replace(/-/g, " "));
+    $("#wpdone").onclick = () => closeOverlay(o); $("#wpdone").focus();
   }
 
   /* ---------- backup and restore ---------- */
