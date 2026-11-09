@@ -445,6 +445,9 @@
       <div class="row" style="margin-top:12px">${u ? `<button class="btn" id="signout">Sign out</button><button class="btn" id="syncnow">Sync now</button>` : `<button class="btn pri" id="signin">Sign in with Google</button>`}</div>
       <p class="hint" style="margin-top:10px">Signing in keeps your sheets in your account across phones and lets you share them with everyone. Reading never needs it.</p>
     </section>
+    <section class="panel"><h2>On your phone</h2>
+      <div class="toggle"><div><b>Home screen</b><small>Opens full screen, works with no signal</small></div><button class="btn sm" id="install">Add to home screen</button></div>
+    </section>
     <section class="panel"><h2>Look</h2>
       <div class="toggle"><div><b>Sheet</b><small>White lines on blue, or blue ink on paper</small></div><div class="seg"><button type="button" data-theme="blueprint" aria-pressed="${state.theme === "blueprint"}">Blueprint</button><button type="button" data-theme="paper" aria-pressed="${state.theme === "paper"}">Paper</button></div></div>
       <div class="toggle"><div><b>Units</b><small>Camera height and distances</small></div><div class="seg"><button type="button" data-units="m" aria-pressed="${state.units === "m"}">Metres</button><button type="button" data-units="ft" aria-pressed="${state.units === "ft"}">Feet</button></div></div>
@@ -469,6 +472,7 @@
       const t = e.target.closest("[data-theme]"); if (t) { state.theme = t.dataset.theme; S.settings.set("theme", state.theme); applyTheme(); rerender(); }
       const un = e.target.closest("[data-units]"); if (un) { state.units = un.dataset.units; S.settings.set("units", state.units); rerender(); }
     });
+    $("#install").onclick = () => { if (window.nateInstall) window.nateInstall.show(); else toast(/iP(hone|ad)/.test(navigator.userAgent) ? "Tap Share, then Add to Home Screen." : "In Chrome, tap ⋮ then Add to Home screen.", 5000); };
     $("#export").onclick = async () => {
       const recs = await S.local.all();
       const blob = new Blob([JSON.stringify({ app: "photoblueprint", v: 1, exported: new Date().toISOString(), sheets: recs })], { type: "application/json" });

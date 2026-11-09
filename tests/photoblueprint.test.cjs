@@ -160,6 +160,45 @@ const GPS = [[0x0001, 2, 'N'], [0x0002, 5, [[41, 1], [6, 1], [36, 1]]], [0x0003,
     const jpeg = Buffer.from(dataUrl.split(',')[1], 'base64');
     return { name: 'pier.jpg', mimeType: 'image/jpeg', buffer: withExif(jpeg, buildTiff(true, IFD0, EXIF, withGps ? GPS : null)) };
   }
+  // The shared install pop-up (install.js) on this app: it must show on the first open, on Android and iPhone alike.
+  const installJs = require('fs').readFileSync(path.join(__dirname, '..', 'apps', 'install.js'), 'utf8');
+  async function installPage(ua, extra) {
+    const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, userAgent: ua, serviceWorkers: 'block', ...(extra || {}) });
+    const page = await ctx.newPage(); const errors = [];
+    page.on('pageerror', e => errors.push(e.message));
+    await page.route(/natesteele888\.github\.io\/apps\/install\.js/, r => r.fulfill({ status: 200, contentType: 'application/javascript', body: installJs }));
+    await page.route(/fonts\.|tile\.openstreetmap|www\.gstatic/, r => r.abort());
+    return { ctx, page, errors };
+  }
+  const barText = page => page.evaluate(() => { const h = Array.from(document.body.children).find(e => e.shadowRoot && e.shadowRoot.querySelector('.bar')); return h ? h.shadowRoot.querySelector('.bar').textContent : ''; });
+  const ANDROID = 'Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Mobile Safari/537.36';
+  const IPHONE = 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1';
+  await test('install pop-up: shows on the first open on Android, Not now hides it for a week, Me can bring it back', async () => {
+    const { ctx, page, errors } = await installPage(ANDROID);
+    await page.goto(server.url); await page.waitForFunction(() => Array.from(document.body.children).some(e => e.shadowRoot && e.shadowRoot.querySelector('.bar')), null, { timeout: 6000 });
+    const t = await barText(page); assert.ok(t.includes('Add Photo Blueprint to your home screen') && /Add to Home screen/.test(t), t);
+    assert.ok(t.includes('Open in browser'), 'Android gets a jump to the real browser');
+    await page.evaluate(() => { const h = Array.from(document.body.children).find(e => e.shadowRoot && e.shadowRoot.querySelector('.bar')); h.shadowRoot.querySelector('.x').click(); });
+    eq(await barText(page), '', 'bar gone after Not now');
+    await page.reload(); await page.waitForTimeout(3800); eq(await barText(page), '', 'stays away after Not now');
+    await page.goto(server.url + '#me'); await page.click('#install'); assert.ok((await barText(page)).includes('home screen'), 'Me brings it back on demand');
+    eq(errors.length, 0, errors.join(' | ')); await ctx.close();
+  });
+  await test('install pop-up: iPhone gets the Share-button steps; an installed app and a home-screen launch get nothing', async () => {
+    const { ctx, page, errors } = await installPage(IPHONE);
+    await page.goto(server.url); await page.waitForFunction(() => Array.from(document.body.children).some(e => e.shadowRoot && e.shadowRoot.querySelector('.bar')), null, { timeout: 6000 });
+    assert.ok(/Share button/.test(await barText(page)) && /Add to Home Screen/.test(await barText(page)), await barText(page));
+    await ctx.close();
+    const two = await installPage(ANDROID);
+    await two.page.addInitScript(() => { try { localStorage.setItem('nate.installed:/apps/photoblueprint/', '1'); } catch (e) {} });
+    await two.page.goto(server.url); await two.page.waitForTimeout(3800); eq(await barText(two.page), '', 'already installed: no bar');
+    await two.ctx.close();
+    const three = await installPage(ANDROID); await three.page.emulateMedia({ media: 'screen' });
+    await three.page.addInitScript(() => { const mm = window.matchMedia; window.matchMedia = q => /standalone/.test(q) ? { matches: true } : mm.call(window, q); });
+    await three.page.goto(server.url); await three.page.waitForTimeout(3800); eq(await barText(three.page), '', 'opened from the home screen: no bar');
+    eq(three.errors.length, 0, three.errors.join(' | ')); await three.ctx.close();
+  });
+
   // One browser context for the app tests, so the sheet saved on this "phone" is there for the next test (IndexedDB is per context).
   const shared = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, acceptDownloads: true, serviceWorkers: 'block' });
   await shared.addInitScript(() => { try { if (!localStorage.getItem('sp.feed')) localStorage.setItem('sp.feed', '"mine"'); } catch (e) {} });

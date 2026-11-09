@@ -1,10 +1,12 @@
 /* Nate's apps: shared "Add to home screen" pop-up.
    Every app loads this one file:
      <script src="https://natesteele888.github.io/apps/install.js" defer></script>
-   It shows a small bar when Chrome says the app can be installed, and hides itself
-   once the app is installed or opened from the home screen. "Not now" hides it for
-   a week. Opening an app with ?install or #install shows it right away (the install
-   page in the Toolbox uses that). No data is stored except that one "not now" date. */
+   It shows a small bar on the first open in a browser tab (how to add it, with an Install
+   button when Chrome offers one), and hides itself once the app is installed or opened from
+   the home screen. "Not now" hides it for a week. Opening an app with ?install or #install
+   shows it right away (the install page in the Toolbox uses that). An app's own settings can
+   call window.nateInstall.show(). No data is stored except the "not now" date and an
+   "installed here" mark. */
 (function () {
   if (window.__nateInstall) return; window.__nateInstall = true;
   var standalone = matchMedia("(display-mode: standalone)").matches || matchMedia("(display-mode: fullscreen)").matches || navigator.standalone;
@@ -76,21 +78,26 @@
     show([appName() + " is on your home screen", "Long-press its icon and drop it on another to make a folder."], false);
     setTimeout(hide, 6000);
   });
-  /* Opened from the install page but Chrome hasn't offered to install yet: tell how. */
-  /* iPhone and iPad never offer an Install pop-up: show how to add it with the Share button instead. */
+  /* First open in a browser tab: say how to add it right away, without waiting for Chrome's own offer (which can
+     take a moment or a second visit) and on iPhone and iPad, which never offer. The bar gains an Install button the
+     moment Chrome does offer. "Not now" hides it for a week; an app already on this phone's home screen is left alone. */
   var ios = /iP(hone|ad|od)/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
-  if (ios && (asked || !later())) setTimeout(function () {
-    if (host || !document.body) return;
-    var chromeIOS = /CriOS/.test(navigator.userAgent);
-    show(["Add " + appName() + " to your home screen", chromeIOS ? "Tap the Share button (top right), then Add to Home Screen." : "Tap the Share button (square with an arrow), then Add to Home Screen."], false);
-  }, 2500);
-
-  /* No Install offer usually means: already installed, or this page is open in an app's mini-browser
-     (Android hides Install there). On Android, offer a one-tap jump into the real browser. */
-  if (asked && !ios) setTimeout(function () {
-    if (deferred || host || !document.body) return;
-    var android = /Android/i.test(navigator.userAgent);
-    show(["Install " + appName(), android ? "Already installed? It's in your app drawer. If not, open this page in your browser and tap Install." : "Tap ⋮ in Chrome, then Install app (or Add to home screen)."], false);
+  var android = /Android/i.test(navigator.userAgent);
+  function installedHere() { try { return !!localStorage.getItem("nate.installed:" + DIR); } catch (e) { return false; } }
+  function howTo(force) {
+    if (!document.body || (!force && (host || installedHere()))) return;
+    if (host) hide();
+    if (deferred) { show(["Add " + appName() + " to your home screen", "Opens full screen, like a real app."], true); return; }
+    if (ios) {
+      var chromeIOS = /CriOS/.test(navigator.userAgent);
+      show(["Add " + appName() + " to your home screen", chromeIOS ? "Tap the Share button (top right), then Add to Home Screen." : "Tap the Share button (square with an arrow), then Add to Home Screen."], false);
+      return;
+    }
+    show(["Add " + appName() + " to your home screen", android
+      ? (asked ? "Already installed? It's in your app drawer. If not, open this page in your browser and tap Install." : "Tap ⋮ in Chrome, then Add to Home screen (or Install app).")
+      : "In your browser's menu, choose Install app or Add to Home screen."], false);
+    /* No Install offer on Android usually means this page is open in an app's mini-browser (Android hides Install
+       there): offer a one-tap jump into the real browser. */
     if (android && host) {
       var root = host.shadowRoot || host, x = root.querySelector(".x"), b = document.createElement("button");
       b.className = "go"; b.type = "button"; b.textContent = "Open in browser";
@@ -100,5 +107,8 @@
       };
       x.parentNode.insertBefore(b, x);
     }
-  }, 4000);
+  }
+  if (asked || !later()) setTimeout(function () { howTo(false); }, asked ? 1500 : 3000);
+  /* An app can offer it again from its own settings: window.nateInstall.show() */
+  window.nateInstall = { show: function () { howTo(true); } };
 })();
