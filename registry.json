@@ -2228,7 +2228,7 @@
         "ac": "#2f8cff",
         "install": true,
         "access": "Open",
-        "desc": "A daily checklist for getting out the door ready for school: medicine, vitamins, school bag, water and whatever else the morning needs. Add or remove items any time, snap a photo of each item so it's easy to recognize, set optional timers and reminders, and when every box is checked a random full-screen dance celebrates. No end date. Everything stays on the phone.",
+        "desc": "A daily checklist for getting out the door ready for school: medicine, vitamins, school bag, water and whatever else the morning needs. Make a different list for different days (a weekend list, or one for Mon/Thu and another for Tue/Fri), add or remove items any time, snap a photo of each item so it's easy to recognize, set optional timers and reminders, and when every box is checked a random full-screen dance celebrates. No end date. Everything stays on the phone.",
         "feats": [
           [
             "📸",
@@ -2243,7 +2243,7 @@
           [
             "🕺",
             "Full-screen celebration",
-            "Finish the list and a random dance plays. Add your own GIFs to the mix."
+            "Finish the list and a random dance plays: disco, the floss, the twerk, the Griddy and more. Add your own GIFs too."
           ]
         ],
         "facts": [
@@ -2258,9 +2258,9 @@
             "times and days you pick"
           ],
           [
-            "Streak",
-            "School days",
-            "weekends never break it"
+            "Lists",
+            "Per day",
+            "assign each list to days"
           ]
         ],
         "news": {
@@ -2282,8 +2282,16 @@
         "shots": [
           "mock"
         ],
-        "version": "1.0.0",
+        "version": "1.2.0",
         "history": [
+          {
+            "v": "1.2.0",
+            "t": "Get Ready: two new celebration dances, the twerk and the Griddy"
+          },
+          {
+            "v": "1.1.0",
+            "t": "Get Ready: separate lists for different days (weekend, Mon/Thu, Tue/Fri), copy a list, switch a day's list"
+          },
           {
             "v": "1.0.0",
             "t": "Add Get Ready: school-morning checklist with photos, timers, reminders, streaks and a dance celebration"

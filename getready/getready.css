@@ -136,3 +136,8 @@ input[type=time].inp { width: 130px; flex: none; font-size: 18px; font-weight: 7
 .gifrow:first-child { border-top: 0; }
 .gifrow span { flex: 1; min-width: 0; overflow-wrap: anywhere; font-size: 15px; }
 @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+.pickrow { display: flex; align-items: center; gap: 10px; margin-top: 14px; font-size: 14px; color: var(--mute); }
+.pickrow span { flex: none; }
+.pickrow .inp { flex: 1; min-width: 0; }
+.chips.days { flex-wrap: nowrap; gap: 6px; }
+.chips.days .chip { flex: 1 1 0; min-width: 0; padding: 0; }

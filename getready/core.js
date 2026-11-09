@@ -22,40 +22,55 @@
     return [...new Set(a.map(Number).filter(n => Number.isInteger(n) && n >= 0 && n <= 6))].sort((x, y) => x - y);
   };
 
-  /* A fresh start: generic school-morning items you can change, and two reminders. */
+  const stdItems = () => [
+    { id: "med", name: "Morning medicine", timer: 0 }, { id: "vit", name: "Vitamins", timer: 0 }, { id: "teeth", name: "Brush teeth", timer: 120 },
+    { id: "bag", name: "School bag", timer: 0 }, { id: "water", name: "Water bottle", timer: 0 }, { id: "lunch", name: "Lunch", timer: 0 }
+  ];
+  const weekendItems = () => [{ id: C.uid(), name: "Morning medicine", timer: 0 }, { id: C.uid(), name: "Vitamins", timer: 0 }, { id: C.uid(), name: "Water bottle", timer: 0 }];
+  const defReminders = () => [
+    { id: "r1", label: "Time to start getting ready", time: "07:00", days: [1, 2, 3, 4, 5], on: 1 },
+    { id: "r2", label: "Bag, water and shoes. Almost time to go!", time: "07:30", days: [1, 2, 3, 4, 5], on: 1 }
+  ];
+  /* A fresh start: a school-days list and a weekend list you can change, and two reminders.
+     Each list is used on the weekdays you give it (a day belongs to at most one list). */
   C.defaults = () => ({
-    v: 1,
-    items: [
-      { id: "med", name: "Morning medicine", timer: 0 },
-      { id: "vit", name: "Vitamins", timer: 0 },
-      { id: "teeth", name: "Brush teeth", timer: 120 },
-      { id: "bag", name: "School bag", timer: 0 },
-      { id: "water", name: "Water bottle", timer: 0 },
-      { id: "lunch", name: "Lunch", timer: 0 }
-    ],
-    reminders: [
-      { id: "r1", label: "Time to start getting ready", time: "07:00", days: [1, 2, 3, 4, 5], on: 1 },
-      { id: "r2", label: "Bag, water and shoes. Almost time to go!", time: "07:30", days: [1, 2, 3, 4, 5], on: 1 }
-    ],
-    school: [1, 2, 3, 4, 5],
-    days: {}, fired: {}, timer: null, gifs: [], sound: 1
+    v: 2,
+    lists: [{ id: "school", name: "School days", days: [1, 2, 3, 4, 5], items: stdItems() }, { id: "weekend", name: "Weekend", days: [0, 6], items: weekendItems() }],
+    reminders: defReminders(), days: {}, fired: {}, timer: null, gifs: [], sound: 1
   });
 
   /* Anything read back from storage goes through here, so a damaged save can't break the app. */
   C.sanitize = raw => {
     const d = C.defaults();
     if (!raw || typeof raw !== "object") return d;
-    const s = { v: 1, items: d.items, reminders: d.reminders, school: dayList(raw.school, d.school), days: {}, fired: {}, timer: null, gifs: [], sound: raw.sound === 0 || raw.sound === false ? 0 : 1 };
-    if (Array.isArray(raw.items)) {
-      const seen = new Set();
-      s.items = [];
-      raw.items.slice(0, 60).forEach(i => {
+    const s = { v: 2, lists: d.lists, reminders: d.reminders, days: {}, fired: {}, timer: null, gifs: [], sound: raw.sound === 0 || raw.sound === false ? 0 : 1 };
+    const seen = new Set();
+    const cleanItems = arr => {
+      const out = [];
+      (Array.isArray(arr) ? arr : []).slice(0, 60).forEach(i => {
         if (!i || typeof i !== "object") return;
         const id = clean(i.id, 30) || C.uid(), name = clean(i.name, 40);
         if (!name || seen.has(id)) return;
         seen.add(id);
-        s.items.push({ id, name, timer: C.TIMERS.includes(i.timer) ? i.timer : 0 });
+        out.push({ id, name, timer: C.TIMERS.includes(i.timer) ? i.timer : 0 });
       });
+      return out;
+    };
+    if (Array.isArray(raw.lists)) {
+      const taken = new Set(), ids = new Set();
+      s.lists = [];
+      raw.lists.slice(0, 12).forEach(l => {
+        if (!l || typeof l !== "object") return;
+        let id = clean(l.id, 30) || C.uid(); if (ids.has(id)) id = C.uid(); ids.add(id);
+        const days = dayList(l.days, []).filter(x => !taken.has(x)); days.forEach(x => taken.add(x));
+        s.lists.push({ id, name: clean(l.name, 30) || "My list", days, items: cleanItems(l.items) });
+      });
+    } else if (Array.isArray(raw.items)) {
+      /* An older save had one list for every day: it becomes "School days" on the days it was used for school,
+         and the other days get a small weekend list. */
+      const school = dayList(raw.school, [1, 2, 3, 4, 5]), off = [0, 1, 2, 3, 4, 5, 6].filter(x => !school.includes(x));
+      s.lists = [{ id: "school", name: "School days", days: school, items: cleanItems(raw.items) }];
+      if (off.length) s.lists.push({ id: "weekend", name: "Weekend", days: off, items: cleanItems(weekendItems()) });
     }
     if (Array.isArray(raw.reminders)) {
       const seen = new Set();
@@ -75,6 +90,7 @@
       const src = v.c && typeof v.c === "object" ? v.c : {};
       Object.keys(src).slice(0, 80).forEach(id => { if (src[id]) c[clean(id, 30)] = 1; });
       s.days[k] = { c, done: v.done ? 1 : 0 };
+      if (typeof v.l === "string" && v.l) s.days[k].l = clean(v.l, 30);
     });
     const fired = raw.fired && typeof raw.fired === "object" ? raw.fired : {};
     Object.keys(fired).slice(0, 40).forEach(id => { if (C.parseDay(fired[id])) s.fired[clean(id, 30)] = fired[id]; });
@@ -89,16 +105,38 @@
   };
 
   /* ---------- the checklist ---------- */
-  C.isSchoolDay = (s, k) => s.school.includes(C.dow(k));
+  /* Which list a day uses: the one picked for that day, else the list assigned to its weekday, else none (a day off). */
+  C.listFor = (s, k) => {
+    const r = s.days[k], pick = r && r.l && s.lists.find(l => l.id === r.l);
+    return pick || s.lists.find(l => l.days.includes(C.dow(k))) || null;
+  };
+  C.itemsFor = (s, k) => { const l = C.listFor(s, k); return l ? l.items : []; };
+  C.hasList = (s, k) => !!C.listFor(s, k);
+  C.findItem = (s, id) => { for (const l of s.lists) { const i = l.items.find(x => x.id === id); if (i) return i; } return null; };
+  C.listOf = (s, id) => s.lists.find(l => l.items.some(i => i.id === id)) || null;
+  C.activeDays = s => [...new Set([].concat(...s.lists.map(l => l.days)))].sort((a, b) => a - b);
+  /* Give a list its weekdays; a weekday can only belong to one list, so it is taken from any other. */
+  C.setListDays = (s, id, days) => {
+    const l = s.lists.find(x => x.id === id); if (!l) return;
+    l.days = dayList(days, []);
+    s.lists.forEach(o => { if (o !== l) o.days = o.days.filter(d => !l.days.includes(d)); });
+  };
+  /* Use a different list for one date only (clearing it when it is just the usual list). */
+  C.setDayList = (s, k, id) => {
+    const usual = s.lists.find(l => l.days.includes(C.dow(k)));
+    if (!id || (usual && usual.id === id)) { if (s.days[k]) delete s.days[k].l; }
+    else if (s.lists.some(l => l.id === id)) { const r = s.days[k] || (s.days[k] = { c: {}, done: 0 }); r.l = id; }
+    return C.settle(s, k);
+  };
   C.isChecked = (s, k, id) => !!(s.days[k] && s.days[k].c[id]);
-  C.count = (s, k) => s.items.filter(i => C.isChecked(s, k, i.id)).length;
-  C.isComplete = (s, k) => s.items.length > 0 && C.count(s, k) === s.items.length;
+  C.count = (s, k) => C.itemsFor(s, k).filter(i => C.isChecked(s, k, i.id)).length;
+  C.isComplete = (s, k) => { const n = C.itemsFor(s, k).length; return n > 0 && C.count(s, k) === n; };
   C.isDone = (s, k) => !!(s.days[k] && s.days[k].done);
   const rec = (s, k) => s.days[k] || (s.days[k] = { c: {}, done: 0 });
 
   /* Tick or untick one item. "justDone" is true only on the tap that finishes the whole list for the first time. */
   C.toggle = (s, k, id) => {
-    if (!s.items.some(i => i.id === id)) return { checked: false, justDone: false };
+    if (!C.itemsFor(s, k).some(i => i.id === id)) return { checked: false, justDone: false };
     const r = rec(s, k);
     if (r.c[id]) delete r.c[id]; else r.c[id] = 1;
     return { checked: !!r.c[id], justDone: C.settle(s, k) };
@@ -114,14 +152,14 @@
   };
   C.resetDay = (s, k) => { delete s.days[k]; };
 
-  /* Days in a row with the whole list ticked. Non-school days are skipped (they never break it; a done one adds to it).
+  /* Days in a row with the whole list ticked. Days with no list are skipped (they never break it; a done one adds to it).
      A day that is not finished yet does not break the streak. */
   C.streak = (s, today) => {
     let k = today, n = 0;
     if (!C.isDone(s, k)) k = C.addDays(k, -1);
     for (let guard = 0; guard < 800; guard++) {
       if (C.isDone(s, k)) n++;
-      else if (C.isSchoolDay(s, k)) break;
+      else if (C.hasList(s, k)) break;
       k = C.addDays(k, -1);
     }
     return n;
