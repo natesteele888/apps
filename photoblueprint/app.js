@@ -3,7 +3,7 @@
 (function () {
   "use strict";
   const C = window.SPCore, X = window.SPExif, F = window.SPFigures, S = window.SPStore, L = window.L;
-  const VERSION = "1.1.0", APP_URL = "https://natesteele888.github.io/apps/photoblueprint/";
+  const VERSION = "1.2.0", APP_URL = "https://natesteele888.github.io/apps/photoblueprint/";
   const $ = (s, r) => (r || document).querySelector(s), $$ = (s, r) => Array.from((r || document).querySelectorAll(s));
   const view = $("#view"), nav = $("#nav"), feedEl = $("#feed"), toastEl = $("#toast");
   const esc = s => String(s == null ? "" : s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
@@ -28,6 +28,12 @@
   const h = s => C.fmtHeight(s.height, state.units);
   const isMine = s => !!(s._local || (S.cloud.user && s.uid === S.cloud.user.uid));
   function pinIcon(cls) { return L.divIcon({ className: "", html: '<div class="pin ' + (cls || "") + '"><i></i></div>', iconSize: [22, 22], iconAnchor: [11, 11], popupAnchor: [0, -12] }); }
+  // The photo itself as the map marker: a small print with a pointer down to the exact spot. Smaller when zoomed out.
+  const photoSize = z => z >= 13 ? 64 : z >= 9 ? 48 : 34;
+  function photoIcon(s, size, cls) {
+    const pt = Math.round(size * 0.18);
+    return L.divIcon({ className: "", html: `<div class="photopin ${cls || ""}" style="width:${size}px;height:${size}px"><img src="${s.thumb}" alt=""></div>`, iconSize: [size, size + pt], iconAnchor: [size / 2, size + pt] });
+  }
   function makeMap(el, opts) {
     const m = L.map(el, Object.assign({ zoomControl: true, attributionControl: true, worldCopyJump: true }, opts || {}));
     L.tileLayer(TILES, { maxZoom: 19, attribution: ATTR, crossOrigin: true }).addTo(m);
@@ -149,14 +155,16 @@
     if (!state.maps.includes(map)) return; // moved on while loading
     const pins = sheets.filter(s => C.isLatLon(s.lat, s.lon));
     if (!pins.length) { msg.hidden = false; msg.innerHTML = state.feed === "mine" ? `No pins yet. <a href="#new">Make your first sheet</a>: a photo, the spot you stood, and how you shot it.` : `Nobody has pinned a photo yet. <a href="#new">Be the first</a>.`; return; }
-    const group = L.featureGroup();
+    const group = L.featureGroup(), photoMarkers = [];
+    let size = photoSize(map.getZoom());
     for (const s of pins) {
-      const mk = L.marker([s.lat, s.lon], { icon: pinIcon(isMine(s) ? "me" : ""), title: s.title, alt: s.title });
-      mk.bindPopup(`<a class="pop" href="#s/${esc(s.id)}">${s.thumb ? `<img src="${s.thumb}" alt="">` : ""}<b>${esc(s.title)}</b><small>${esc(C.exposureLine(s) || C.posture(s.posture).name)}</small><small>${esc(C.sheetNo(s.id))}${s.author ? " · " + esc(s.author) : ""}</small></a>`, { closeButton: true });
-      mk.on("popupopen", () => { const el = mk.getElement(); if (el) el.querySelector(".pin").classList.add("sel"); });
-      mk.on("popupclose", () => { const el = mk.getElement(); if (el) el.querySelector(".pin").classList.remove("sel"); });
+      const mine = isMine(s);
+      const mk = L.marker([s.lat, s.lon], { icon: s.thumb ? photoIcon(s, size, mine ? "me" : "") : pinIcon(mine ? "me" : ""), title: s.title, alt: s.title, riseOnHover: true, keyboard: true });
+      mk.on("click", () => go("#s/" + s.id));
+      if (s.thumb) photoMarkers.push([mk, s, mine]);
       group.addLayer(mk); addWedge(map, s);
     }
+    map.on("zoomend", () => { const z = photoSize(map.getZoom()); if (z === size) return; size = z; for (const [mk, s, mine] of photoMarkers) mk.setIcon(photoIcon(s, size, mine ? "me" : "")); });
     group.addTo(map);
     if (!state.mapView || !state.mapView.seen) { map.fitBounds(group.getBounds().pad(0.25), { maxZoom: 15 }); state.mapView = Object.assign(state.mapView || {}, { seen: true }); }
   }

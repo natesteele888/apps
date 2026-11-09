@@ -288,10 +288,13 @@ const GPS = [[0x0001, 2, 'N'], [0x0002, 5, [[41, 1], [6, 1], [36, 1]]], [0x0003,
     await page.click('.card'); await page.waitForSelector('.sheet #mini.leaflet-container');
     await page.goBack(); await page.waitForSelector('.card'); eq(page.url().split('#')[1], 'sheets');
     await page.click('.card'); await page.waitForSelector('.sheet #mini.leaflet-container');
-    await page.click('a[data-r="map"]'); await page.waitForSelector('.pin.me'); eq(await page.locator('.pin').count(), 1);
-    await page.click('.pin'); await page.waitForSelector('.pop'); assert.ok(/Pier at dawn/.test(await page.textContent('.pop'))); eq(await page.locator('.pin.sel').count(), 1);
+    await page.click('a[data-r="map"]'); await page.waitForSelector('.photopin.me img'); eq(await page.locator('.photopin').count(), 1, 'the photo is the marker');
+    const big = await page.evaluate(() => document.querySelector('.photopin').getBoundingClientRect().width); assert.ok(big >= 60, 'close up: a big print ' + big);
+    await page.evaluate(() => window.SPApp.state.maps[0].setZoom(7, { animate: false })); await page.waitForTimeout(300);
+    const small = await page.evaluate(() => document.querySelector('.photopin').getBoundingClientRect().width); assert.ok(small < big, 'zoomed out: a smaller print ' + small + ' < ' + big);
+    eq(await page.locator('.leaflet-overlay-pane path').count(), 1, 'the wedge is still drawn');
     await page.screenshot({ path: path.join(SHOTS, 'photoblueprint-map.png') });
-    await page.click('.pop'); await page.waitForSelector('.sheet .tb');
+    await page.click('.photopin'); await page.waitForURL(/#s\//); await page.waitForSelector('.sheet .tb'); assert.ok((await page.textContent('.sheet .tb')).includes('Pier at dawn'), 'tapping the photo opens its sheet');
     eq(errors.length, 0, errors.join(' | ')); await page.close();
   });
   await test('app: share copies a link that opens the sheet without the picture; Save a copy starts a new sheet', async () => {
@@ -363,7 +366,7 @@ const GPS = [[0x0001, 2, 'N'], [0x0002, 5, [[41, 1], [6, 1], [36, 1]]], [0x0003,
     await ctx.setOffline(true);
     await page.reload(); await page.waitForSelector('.sheet .tb'); assert.ok((await page.textContent('.sheet')).includes('Offline pier'));
     await page.goto(server.url + '#map'); await page.waitForSelector('.leaflet-container'); assert.ok((await page.textContent('body')).includes('PHOTO BLUEPRINT'));
-    await page.click('[data-feed="mine"]'); await page.waitForSelector('.pin.me');
+    await page.click('[data-feed="mine"]'); await page.waitForSelector('.photopin.me');
     await page.goto(server.url + '#s/' + id); await page.waitForSelector('.sheet .tb'); assert.ok((await page.textContent('.sheet')).includes('Offline pier'));
     await ctx.setOffline(false);
     eq(errors.filter(e => !/ERR_INTERNET_DISCONNECTED|Failed to fetch/.test(e)).length, 0, errors.join(' | ')); await ctx.close();
