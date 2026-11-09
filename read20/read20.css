@@ -116,3 +116,7 @@ h1,h2,h3{margin:0;line-height:1.15}
 .subh{margin:20px 0 4px;font-size:1.05rem}
 .fine.left{text-align:left;margin:4px 0}
 .filebtn{display:flex;align-items:center;justify-content:center;cursor:pointer}
+
+.cloudbadge{margin-left:auto;margin-right:10px;font-size:.95rem;font-weight:700;color:var(--grn)}
+.cloudbadge[hidden]{display:none}
+.btn[hidden],.nudge[hidden]{display:none}
