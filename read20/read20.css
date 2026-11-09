@@ -108,6 +108,7 @@ h1,h2,h3{margin:0;line-height:1.15}
 .row{display:flex;gap:10px}.row .btn{margin-top:16px}
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
 @media (min-height:760px){.pic{min-height:240px}}
+@media (max-height:640px){.pic{min-height:160px;font-size:6rem}}
 
 .warn{background:#ffe3e3;border:2px solid #f0a8a8;border-radius:14px;padding:10px 12px;margin:8px 0;font-weight:700}
 .warn[hidden]{display:none}
