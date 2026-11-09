@@ -188,6 +188,26 @@ h1{font-size:34px;line-height:1.1;margin:2px 0 0;letter-spacing:-.02em;font-weig
 .shots{display:flex;gap:12px;overflow-x:auto;padding:14px 0 6px;scroll-snap-type:x mandatory;scrollbar-width:none}
 .shots::-webkit-scrollbar{display:none}
 .shots img,.shots .mock{flex:none;width:230px;aspect-ratio:390/844;border-radius:24px;object-fit:cover;scroll-snap-align:start;box-shadow:0 0 0 1px var(--line),0 8px 20px rgba(0,0,0,.08);background:#111}
+.shots figure{flex:none;width:230px;margin:0;scroll-snap-align:start}
+.shots figure img{width:100%;scroll-snap-align:none}
+.shots figcaption{font-size:12.5px;line-height:1.35;color:var(--muted);padding:8px 4px 0;text-align:center}
+/* the week journey (Big Picture) */
+.journey .moments{list-style:none;margin:16px 0 0;padding:0}
+.moment{position:relative;display:grid;grid-template-columns:46px 1fr;gap:12px;padding-bottom:20px}
+.moment:not(:last-child)::before{content:"";position:absolute;left:22px;top:48px;bottom:2px;width:3px;border-radius:3px;background:linear-gradient(var(--mc),color-mix(in srgb,var(--mc) 15%,transparent))}
+.moment .dot{width:46px;height:46px;border-radius:50%;display:grid;place-items:center;font-size:23px;background:color-mix(in srgb,var(--mc) 18%,var(--card));box-shadow:0 0 0 2px var(--mc)}
+.moment .when{font-size:12px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--mc)}
+.moment h4{margin:1px 0 4px;font-size:19px;line-height:1.2}
+.moment p{margin:0 0 10px;font-size:14.5px;color:var(--muted)}
+.mapps{display:flex;flex-wrap:wrap;gap:8px}
+.mapp{display:flex;align-items:center;gap:8px;padding:5px 12px 5px 5px;border-radius:16px;background:var(--card2);border:1px solid var(--line);text-align:left;max-width:100%}
+.mapp img{width:34px;height:34px;border-radius:22%;flex:none}
+.mapp b{display:block;font-size:14px;line-height:1.15}
+.mapp small{display:block;font-size:11.5px;color:var(--muted);line-height:1.2}
+.under summary{cursor:pointer;font-weight:700;font-size:17px;list-style:none;display:flex;justify-content:space-between;align-items:center}
+.under summary::after{content:"+";font-size:22px;color:var(--muted)}
+.under[open] summary::after{content:"–"}
+.under summary::-webkit-details-marker{display:none}
 .dsec{padding:14px 0;border-top:1px solid var(--line)}
 .dsec h3{margin:0 0 8px;font-size:20px}
 .dsec p{margin:0 0 8px}
@@ -355,32 +375,24 @@ function renderApps(){
 }
 
 /* ===== Big Picture ===== */
-const GROUPS=[
-  {k:"football",n:"ASL Bengals football",ids:["bengals","gridiron"],x:150,y:110,ny:120},
-  {k:"baseball",n:"LYBS baseball & softball",ids:["dashboard","ballclub","situations","cards","sponsor-banners"],x:450,y:110,ny:400},
-  {k:"family",n:"Everyday",ids:["fitness","cube","picks","events"],x:150,y:370,ny:680},
-  {k:"builder",n:"Behind the scenes",ids:["toolbox"],x:450,y:370,ny:1500},
-  {k:"team",n:"Practice & game day",ids:["practiceclock","scoreboard","tournamentpack","whoswhere","walkup"],x:150,y:630,ny:960},
-  {k:"team",n:"Player & team skills",ids:["eightcount","playboard","locker","filmlite"],x:450,y:630,ny:1240},
-  {k:"creative",n:"Photo & creative",ids:["photoblueprint"],x:150,y:890,ny:1760}
+/* The week, from the front door to the last out. Each moment is a feeling the family wants, and the apps that give it to them.
+   Apps are matched by id; any app not placed below shows up in "Also in the toolbox" so a new app is never lost. */
+const MOMENTS=[
+  {e:"🌅",when:"Morning",h:"Everyone gets out the door ready",p:"Medicine, vitamins, school bag and water checked off with a picture of each, plus a short workout in the off-season. Nothing forgotten, nothing nagged.",c:"--family",ids:["getready","fitness"]},
+  {e:"📅",when:"The week",h:"Everyone knows where to be",p:"One week for every kid, driver and snack job, with clashes flagged before they happen, and invitations that gather the answers for you.",c:"--team",ids:["whoswhere","events","tournamentpack"]},
+  {e:"🎯",when:"Practice",h:"Practice runs on time, and everyone knows their job",p:"Timed blocks with a big countdown, plays drawn and animated, counts that lock a team together, and a trainer for “what do I do if it comes to me?”",c:"--baseball",ids:["practiceclock","playboard","eightcount","situations"]},
+  {e:"🏟️",when:"Game day",h:"Game day just works",p:"A big scoreboard on the fence, every player's walk-up music from the dugout, and the plays and signals in everyone's pocket.",c:"--football",ids:["scoreboard","walkup","bengals"]},
+  {e:"📈",when:"After the game",h:"Every player sees their own progress",p:"A season notebook that grows up with the athlete, clips to review and tag, and a puzzle timer for the kid who wants to get faster at anything.",c:"--creative",ids:["locker","filmlite","cube"]},
+  {e:"🌙",when:"Evening",h:"Wind down the good way",p:"Twenty minutes of nightly reading with a log that fills itself in, then a little friendly competition and a map of the best photo spots.",c:"--family",ids:["read20","picks","photoblueprint"]},
+  {e:"🏆",when:"The whole league",h:"A volunteer league that runs smoothly",p:"The board gets one place for registrations, schedules and sponsor banners. Families get their teams, and the kids get trading cards.",c:"--baseball",ids:["dashboard","ballclub","cards","sponsor-banners","gridiron"]}
 ];
-const LINKS=[["situations","ballclub","trainer moving into"],["bengals","gridiron","team → organization"],["dashboard","ballclub","board ↔ families"],["cards","ballclub","same teams"],["sponsor-banners","dashboard","same board sign-in"],["fitness","bengals","off-season"],["toolbox","bengals",""],["toolbox","dashboard",""],["toolbox","situations",""],["toolbox","cube",""],["practiceclock","eightcount",""],["practiceclock","scoreboard",""],["scoreboard","tournamentpack",""],["scoreboard","walkup",""],["whoswhere","tournamentpack",""],["tournamentpack","ballclub",""],["playboard","situations",""],["locker","fitness",""],["eightcount","walkup",""],["photoblueprint","picks","same sign-in"],["photoblueprint","tournamentpack","same map"]];
-function webSVG(){
-  const narrow=innerWidth<620;const VW=narrow?380:600,VH=narrow?1860:1020;
-  const G=narrow?GROUPS.map(g=>({...g,x:190,y:g.ny})):GROUPS;
-  const pos={};G.forEach(g=>{const n=g.ids.length;g.ids.forEach((id,i)=>{const t=n===1?0:(i/(n)*Math.PI*2)-Math.PI/2;const r=n===1?0:(n>2?78:62);pos[id]={x:g.x+r*Math.cos(t),y:g.y+r*Math.sin(t)+(n===1?0:8)}})});
-  const col=k=>getComputedStyle(document.documentElement).getPropertyValue("--"+k).trim();
-  let s=`<svg class="web" viewBox="0 0 ${VW} ${VH}" role="img" aria-labelledby="webT"><title id="webT">How the apps connect: football, baseball, practice and game day, player and team skills, everyday and behind-the-scenes groups with links between apps</title>`;
-  G.forEach(g=>{s+=`<circle cx="${g.x}" cy="${g.y+8}" r="${g.ids.length>2?128:g.ids.length>1?108:62}" fill="${col(g.k)}" fill-opacity=".09" stroke="${col(g.k)}" stroke-opacity=".35" stroke-dasharray="4 6"/>
-    <text x="${g.x}" y="${g.y-(g.ids.length>2?118:g.ids.length>1?98:56)}" text-anchor="middle" font-size="13" font-weight="700" fill="${col(g.k)}">${esc(g.n)}</text>`});
-  LINKS.forEach(([a,b,l])=>{const p=pos[a],q=pos[b];const mx=(p.x+q.x)/2,my=(p.y+q.y)/2-18;
-    s+=`<path d="M${p.x},${p.y} Q${mx},${my} ${q.x},${q.y}" fill="none" stroke="currentColor" stroke-opacity="${l?.45:.16}" stroke-width="${l?2:1.5}" ${l?"":'stroke-dasharray="3 5"'}/>`;
-    if(l&&!narrow)s+=`<text x="${mx}" y="${my+6}" text-anchor="middle" font-size="10.5" fill="currentColor" fill-opacity=".7" paint-order="stroke" stroke="var(--card)" stroke-width="4">${esc(l)}</text>`});
-  APPS.forEach(a=>{const p=pos[a.id];if(!p)return;s+=`<g class="node" data-app="${a.id}" tabindex="0" role="button" aria-label="${esc(a.name)}">
-    <circle class="ring" cx="${p.x}" cy="${p.y}" r="27" fill="var(--card)" stroke="${a.ac}" stroke-width="2.5"/>
-    <image href="${a.icon}" x="${p.x-20}" y="${p.y-20}" width="40" height="40" clip-path="inset(0 round 10px)"/>
-    <text x="${p.x}" y="${p.y+42}" text-anchor="middle" font-size="11.5" font-weight="600" fill="currentColor">${esc(a.name.replace("Offseason ","").replace(" Coaching App",""))}</text></g>`});
-  return s+`</svg>`;
+function journeySection(){
+  const placed=new Set(),chip=a=>`<button class="mapp" data-app="${a.id}" aria-label="Open ${esc(a.name)}">${icon(a,"")}<span><b>${esc(a.name.replace("Offseason ","").replace(" Coaching App",""))}</b><small>${esc(a.sub)}</small></span></button>`;
+  const rows=MOMENTS.map(m=>{const xs=m.ids.map(byId).filter(Boolean);xs.forEach(a=>placed.add(a.id));if(!xs.length)return"";
+    return `<li class="moment" style="--mc:var(${m.c})"><span class="dot" aria-hidden="true">${m.e}</span><div><div class="when">${esc(m.when)}</div><h4>${esc(m.h)}</h4><p>${esc(m.p)}</p><div class="mapps">${xs.map(chip).join("")}</div></div></li>`}).join("");
+  const rest=APPS.filter(a=>!placed.has(a.id));
+  const more=rest.length?`<li class="moment" style="--mc:var(--builder)"><span class="dot" aria-hidden="true">🧰</span><div><div class="when">Behind the scenes</div><h4>Where it all gets made</h4><p>${rest.some(a=>a.id==="toolbox")?"The Toolbox is where each app is planned, fixed and launched. It is just for the builder.":"More from the same workshop."}</p><div class="mapps">${rest.map(chip).join("")}</div></div></li>`:"";
+  return `<section class="bp journey" style="color:var(--text)"><h3>A week with these apps</h3><p>Follow a week from the front door to the last out. Tap any app to see it.</p><ol class="moments">${rows}${more}</ol></section>`;
 }
 /* newest change first (the date only orders the list, it is never shown); identical changes across apps become one row */
 function newsFeed(){
@@ -394,26 +406,27 @@ function newsRow(g){return g.apps.length>1
 function renderBig(){
   const used={};APPS.forEach(a=>a.parts.forEach(p=>used[p]=(used[p]||0)+1));
   const top=Object.entries(used).sort((a,b)=>b[1]-a[1]);
-  return header("Big Picture",`These aren't ${(NUMW[APPS.length]||APPS.length).toLowerCase()} separate projects. They're one system for a youth sports community, built a piece at a time and sharing the same building blocks.`)+
-  `<section class="bp" style="color:var(--text)"><h3>How it all connects</h3><p>Tap any app to open it. Solid lines are real hand-offs between apps.</p>${webSVG()}</section>
-  <section class="bp"><h3>By the numbers</h3><div class="stats">
-    <div class="stat"><b>${APPS.filter(a=>a.url).length}</b><span>live apps</span></div>
+  const live=APPS.filter(a=>a.url).length;
+  return header("Big Picture",`Not ${(NUMW[APPS.length]||APPS.length).toLowerCase()} separate projects, but one family of apps built around a sports family's real week, from getting out the door to the last out.`)+
+  journeySection()+
+  `<section class="bp"><h3>Who it's for</h3><p>Every app is made for someone specific. Tap one to see which apps fit.</p>
+    <div class="parts" style="margin-top:12px">${Object.entries(ROLES).filter(([k])=>k!=="curious").map(([k,n])=>{const xs=APPS.filter(a=>a.for.includes(k));if(!xs.length)return"";return `<div class="part"><span class="em">${ROLE_E[k]||"⭐"}</span><span><b>${esc(n)}</b><span>${xs.map(a=>esc(a.name)).join(", ")}</span></span><span class="count">${xs.length}<small>app${xs.length>1?"s":""}</small></span></div>`}).join("")}</div></section>
+  <section class="bp"><h3>At a glance</h3><div class="stats">
+    <div class="stat"><b>${live}</b><span>live apps</span></div>
     <div class="stat"><b>${APPS.filter(a=>a.install).length}</b><span>install on a phone</span></div>
-    <div class="stat"><b>${top.length}</b><span>shared building blocks</span></div>
-    <div class="stat"><b>${APPS.filter(a=>a.cat==="baseball").length}</b><span>league apps</span></div></div></section>
-  <section class="bp"><h3>What's new</h3><p>Recent changes across the system, straight from each app's own changelog.</p>
-    ${newsFeed().map(newsRow).join("")}</section>
-  <section class="bp"><h3>Shared building blocks</h3><p>Solve it once, reuse it everywhere. Each block below shows up in several apps.</p>
-    <div class="parts">${top.map(([k,n])=>{const p=PARTS[k];const who=APPS.filter(a=>a.parts.includes(k));return `<div class="part"><span class="em">${p.e}</span><span><b>${esc(p.n)}</b><span>${esc(p.d)}</span></span><span class="count">${n}<small>app${n>1?"s":""}</small></span></div>`}).join("")}</div></section>
-  <section class="bp"><h3>Who it's for</h3><p>Every app points at someone specific. Tap one to see which apps fit.</p>
-    <div class="parts">${Object.entries(ROLES).filter(([k])=>k!=="curious").map(([k,n])=>{const xs=APPS.filter(a=>a.for.includes(k));if(!xs.length)return"";return `<div class="part"><span class="em">${ROLE_E[k]||"⭐"}</span><span><b>${esc(n)}</b><span>${xs.map(a=>esc(a.name)).join(", ")}</span></span><span class="count">${xs.length}<small>app${xs.length>1?"s":""}</small></span></div>`}).join("")}</div></section>
+    <div class="stat"><b>${APPS.filter(a=>a.parts.includes("offline")).length}</b><span>work with no signal</span></div>
+    <div class="stat"><b>${APPS.filter(a=>a.for.includes("parent")).length}</b><span>made for parents</span></div></div></section>
+  <section class="bp"><h3>What's new</h3><p>Recent changes across the apps, straight from each one's own changelog.</p>
+    <div style="margin-top:12px">${newsFeed().map(newsRow).join("")}</div></section>
   <section class="bp"><h3>How an idea becomes an app</h3><p>The same loop, every time, with Claude as the development partner.</p>
     <div class="flow">
       <div><b>Spot a real problem</b>A coach, a parent or the league board needs something a spreadsheet can't do.</div>
       <div><b>Sketch it with Claude</b>Describe it in plain words, look at a working draft the same day, and react to it.</div>
-      <div><b>Reuse the building blocks</b>Sign-in, security rules and install-on-phone come from apps that already work.</div>
-      <div><b>Ship to real families</b>Share one link, watch how people use it, and keep the next steps in the Toolbox.</div>
-    </div></section>`;
+      <div><b>Try it with real people</b>Share one link, watch how a family or a team actually uses it, and fix what is awkward.</div>
+      <div><b>Keep what works</b>Good ideas from one app (sign-in, calendar reminders, install on a phone) carry into the next.</div>
+    </div></section>
+  <section class="bp"><details class="under"><summary>Under the hood, for the curious</summary><p style="margin-top:8px">Solve it once, reuse it everywhere. These building blocks show up in several apps.</p>
+    <div class="parts" style="margin-top:12px">${top.map(([k,n])=>{const p=PARTS[k];return `<div class="part"><span class="em">${p.e}</span><span><b>${esc(p.n)}</b><span>${esc(p.d)}</span></span><span class="count">${n}<small>app${n>1?"s":""}</small></span></div>`}).join("")}</div></details></section>`;
 }
 
 /* ===== Search ===== */
@@ -445,11 +458,11 @@ function renderAbout(){
   <div class="chips">${["Firebase & Firestore","Security rules","Service workers / PWA","Offline-first","Google sign-in","SVG & animation","Responsive & accessible UI","Rules engines"].map(s=>`<span class="chip">${esc(s)}</span>`).join("")}</div>
   <p style="margin:14px 0 6px;font-weight:700;color:var(--text)">Design</p>
   <div class="chips">${["iOS-style UI","Dark mode theming","Micro-interactions","Icon & brand systems","Information architecture","Plain-spoken copy"].map(s=>`<span class="chip">${esc(s)}</span>`).join("")}</div>
-  <p style="margin:16px 0 0">Every app on this page shares parts with at least one other — ${Object.keys(PARTS).length} reusable building blocks mapped so far. That shared memory is the real engine behind it: it remembers what broke, what worked and what's already built, so the next app starts ahead instead of from zero. <button data-tab-go="big" style="color:var(--blue);font-weight:600">See how they connect →</button></p>
+  <p style="margin:16px 0 0">Every app is built for a real moment in a family's week, and they share what works, so the next one starts ahead instead of from zero. <button data-tab-go="big" style="color:var(--blue);font-weight:600">See how they fit together →</button></p>
   </section>`+
   cats.map(k=>`<div class="sect"><h3>${CATS[k].e} ${esc(CATS[k].n)}</h3></div>${APPS.filter(a=>a.cat===k).map(appRow).join("")}`).join("")+
   (SOON.length?`<div class="sect"><h3>In the works</h3></div>${SOON.map(([e,n,d])=>`<div class="soonrow"><span class="ic">${e}</span><span><b>${esc(n)}</b><span>${esc(d)}</span></span></div>`).join("")}`:"")+`
-  <section class="bp"><h3>How it fits together</h3><p>See which apps hand off to each other and which pieces they share.</p><p><button data-tab-go="big" style="color:var(--blue);font-weight:600">Open the Big Picture</button> · <a href="https://github.com/natesteele888" target="_blank" rel="noopener" style="color:var(--blue);font-weight:600">GitHub</a></p></section>`;
+  <section class="bp"><h3>How it fits together</h3><p>Follow a week with these apps, from the front door to the last out.</p><p><button data-tab-go="big" style="color:var(--blue);font-weight:600">Open the Big Picture</button> · <a href="https://github.com/natesteele888" target="_blank" rel="noopener" style="color:var(--blue);font-weight:600">GitHub</a></p></section>`;
 }
 
 /* ===== QR codes: scan to open an app (flyers, team pages, the side of a bag) ===== */
@@ -490,7 +503,7 @@ function openApp(id,fromHash){
       ${a.facts.map(f=>`<div><small>${esc(f[0])}</small><b>${esc(f[1])}</b><span>${esc(f[2])||"&nbsp;"}</span></div>`).join("")}
       <div><small>Access</small><b>${a.access==="Open"?"🔓":"🔑"}</b><span>${esc(a.access)}</span></div>
     </div>
-    <div class="shots" aria-label="Screenshots">${a.shots.map(s=>s==="mock"?mockScreen():`<img src="${s}" alt="${esc(a.name)} screenshot" loading="lazy">`).join("")}</div>
+    <div class="shots" aria-label="Screenshots">${a.shots.map((s,i)=>s==="mock"?mockScreen():`<figure class="shotf"><img src="${s}" alt="${esc(a.caps[i]?a.name+": "+a.caps[i]:a.name+" screenshot")}" loading="lazy">${a.caps[i]?`<figcaption>${esc(a.caps[i])}</figcaption>`:""}</figure>`).join("")}</div>
     <div class="dsec"><p>${esc(a.desc)}</p>${a.status==="down"?`<p class="notice">⚠️ ${esc(a.name)} isn't answering right now. It's usually back in a few minutes.</p>`:""}${a.access!=="Open"&&a.url?`<p class="notice">🔑 Some screens need a ${esc(a.access.toLowerCase())} so team and family info stays private.</p>`:""}${!a.url?`<p class="notice">🔒 This one is just for me. The code is public; the data stays behind sign-in.</p>`:""}</div>
     ${a.news||a.ver?`<div class="dsec"><h3>What's new</h3><div class="new">${a.ver?`<small>Version ${esc(a.ver)}</small>`:""}${a.news?`<div>${esc(a.news.t)}</div>`:""}${(e=>e.length?`<details><summary>Version history</summary><ul class="hist">${e.map(h=>`<li><b>v${esc(h.v)}</b><span>${esc(h.t)}</span></li>`).join("")}</ul></details>`:"")(a.hist.filter(h=>!a.news||h.t!==a.news.t))}</div></div>`:""}
     ${a.feats.length?`<div class="dsec"><h3>Highlights</h3><div class="feat">${a.feats.map(([e,t,d])=>`<div><span class="e">${e}</span><span><b>${esc(t)}</b><span>${esc(d)}</span></span></div>`).join("")}</div></div>`:""}
@@ -540,7 +553,7 @@ function fromCatalog(j){
   const out=[];(j.apps||[]).forEach(x=>{if(x.store===false||x.retired||!x.listing)return;const L=x.listing;
     out.push({id:x.id,name:x.name,sub:L.sub||x.sub||"",cat:CATS[L.cat]?L.cat:"family",ac:L.ac||"#2f6df6",icon:`../icons/${x.id}-192.png`,
       url:x.private?"":x.live,install:L.install!==false,access:x.private?"Private":(L.access||"Open"),
-      shots:(L.shots||[]).map(s=>s==="mock"?s:"../"+s),desc:L.desc||"",feats:L.feats||[],facts:L.facts||[],
+      shots:(L.shots||[]).map(s=>s==="mock"?s:"../"+s),caps:L.caps||[],desc:L.desc||"",feats:L.feats||[],facts:L.facts||[],
       ver:L.version||"",hist:L.history||[],status:L.status||"",news:(L.news&&L.news.pin)?L.news:(L.latest||L.news||null),parts:(L.parts||[]).filter(p=>PARTS[p]),tie:L.tie||"",rel:L.rel||[],for:L.for&&L.for.length?L.for:["curious"]})});
   const ids=new Set(out.map(a=>a.id));out.forEach(a=>a.rel=a.rel.filter(r=>ids.has(r)));
   return out;
