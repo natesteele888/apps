@@ -141,3 +141,5 @@ input[type=time].inp { width: 130px; flex: none; font-size: 18px; font-weight: 7
 .pickrow .inp { flex: 1; min-width: 0; }
 .chips.days { flex-wrap: nowrap; gap: 6px; }
 .chips.days .chip { flex: 1 1 0; min-width: 0; padding: 0; }
+.cloudbadge { font-size: 14px; font-weight: 700; color: var(--blue2); margin-left: 6px; }
+.nudge { border-color: var(--blue-d); }

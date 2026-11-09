@@ -34,7 +34,7 @@
   /* A fresh start: a school-days list and a weekend list you can change, and two reminders.
      Each list is used on the weekdays you give it (a day belongs to at most one list). */
   C.defaults = () => ({
-    v: 2,
+    v: 2, mod: 0,
     lists: [{ id: "school", name: "School days", days: [1, 2, 3, 4, 5], items: stdItems() }, { id: "weekend", name: "Weekend", days: [0, 6], items: weekendItems() }],
     reminders: defReminders(), days: {}, fired: {}, timer: null, gifs: [], sound: 1
   });
@@ -43,7 +43,7 @@
   C.sanitize = raw => {
     const d = C.defaults();
     if (!raw || typeof raw !== "object") return d;
-    const s = { v: 2, lists: d.lists, reminders: d.reminders, days: {}, fired: {}, timer: null, gifs: [], sound: raw.sound === 0 || raw.sound === false ? 0 : 1 };
+    const s = { v: 2, lists: d.lists, reminders: d.reminders, days: {}, fired: {}, timer: null, gifs: [], sound: raw.sound === 0 || raw.sound === false ? 0 : 1, mod: Math.max(0, Math.round(Number(raw.mod)) || 0) };
     const seen = new Set();
     const cleanItems = arr => {
       const out = [];
@@ -89,7 +89,7 @@
       const v = days[k] || {}, c = {};
       const src = v.c && typeof v.c === "object" ? v.c : {};
       Object.keys(src).slice(0, 80).forEach(id => { if (src[id]) c[clean(id, 30)] = 1; });
-      s.days[k] = { c, done: v.done ? 1 : 0 };
+      s.days[k] = { c, done: v.done ? 1 : 0, m: Math.max(0, Math.round(Number(v.m)) || 0) };
       if (typeof v.l === "string" && v.l) s.days[k].l = clean(v.l, 30);
     });
     const fired = raw.fired && typeof raw.fired === "object" ? raw.fired : {};
@@ -124,21 +124,23 @@
   /* Use a different list for one date only (clearing it when it is just the usual list). */
   C.setDayList = (s, k, id) => {
     const usual = s.lists.find(l => l.days.includes(C.dow(k)));
-    if (!id || (usual && usual.id === id)) { if (s.days[k]) delete s.days[k].l; }
-    else if (s.lists.some(l => l.id === id)) { const r = s.days[k] || (s.days[k] = { c: {}, done: 0 }); r.l = id; }
+    if (!id || (usual && usual.id === id)) { if (s.days[k]) { delete s.days[k].l; stamp(s.days[k]); } }
+    else if (s.lists.some(l => l.id === id)) { const r = rec(s, k); r.l = id; stamp(r); }
     return C.settle(s, k);
   };
   C.isChecked = (s, k, id) => !!(s.days[k] && s.days[k].c[id]);
   C.count = (s, k) => C.itemsFor(s, k).filter(i => C.isChecked(s, k, i.id)).length;
   C.isComplete = (s, k) => { const n = C.itemsFor(s, k).length; return n > 0 && C.count(s, k) === n; };
   C.isDone = (s, k) => !!(s.days[k] && s.days[k].done);
-  const rec = (s, k) => s.days[k] || (s.days[k] = { c: {}, done: 0 });
+  const rec = (s, k) => s.days[k] || (s.days[k] = { c: {}, done: 0, m: 0 });
+  const stamp = r => { r.m = Math.max(Date.now(), (r.m || 0) + 1); }; // always newer than the last change, even within the same millisecond
 
   /* Tick or untick one item. "justDone" is true only on the tap that finishes the whole list for the first time. */
   C.toggle = (s, k, id) => {
     if (!C.itemsFor(s, k).some(i => i.id === id)) return { checked: false, justDone: false };
     const r = rec(s, k);
     if (r.c[id]) delete r.c[id]; else r.c[id] = 1;
+    stamp(r);
     return { checked: !!r.c[id], justDone: C.settle(s, k) };
   };
   /* Re-check whether the day is complete (also after an item is added or removed). Returns true when it newly became done. */
@@ -146,11 +148,11 @@
     const r = s.days[k];
     if (!r) return false;
     const full = C.isComplete(s, k);
-    if (full && !r.done) { r.done = 1; return true; }
-    if (!full && r.done) r.done = 0;
+    if (full && !r.done) { r.done = 1; stamp(r); return true; }
+    if (!full && r.done) { r.done = 0; stamp(r); }
     return false;
   };
-  C.resetDay = (s, k) => { delete s.days[k]; };
+  C.resetDay = (s, k) => { const r = rec(s, k); r.c = {}; r.done = 0; delete r.l; stamp(r); }; // kept as an empty, newer record so a cloud copy can't bring the old check marks back
 
   /* Days in a row with the whole list ticked. Days with no list are skipped (they never break it; a done one adds to it).
      A day that is not finished yet does not break the streak. */
@@ -172,6 +174,29 @@
     [a[i], a[j]] = [a[j], a[i]];
     return a;
   };
+
+  /* ---------- merging with the cloud copy ----------
+     Each day record carries the time it last changed ("m"): the newer copy of a day wins, so unticking something sticks and a
+     finished day (and so the streak) is never lost. The lists, reminders and settings travel together under one "mod" time: the
+     newer set wins. Timers and "already fired" marks stay on the phone. GIFs picked from a phone's files stay on that phone.
+     "preferRemote" is for the first time a phone links to an account: the account's lists win over a phone that was never edited. */
+  C.merge = (mine, theirs, preferRemote) => {
+    const a = C.sanitize(mine), b = C.sanitize(theirs), useB = !!preferRemote || b.mod > a.mod, base = useB ? b : a;
+    const out = JSON.parse(JSON.stringify(base));
+    out.days = {};
+    new Set(Object.keys(a.days).concat(Object.keys(b.days))).forEach(k => {
+      const x = a.days[k], y = b.days[k]; let w;
+      if (!x) w = y; else if (!y) w = x;
+      else if (y.m > x.m) w = y; else if (x.m > y.m) w = x;
+      else { w = { c: Object.assign({}, y.c, x.c), done: x.done || y.done ? 1 : 0, m: x.m }; const l = x.l || y.l; if (l) w.l = l; }
+      out.days[k] = JSON.parse(JSON.stringify(w));
+    });
+    out.gifs = base.gifs.filter(g => g.kind === "url").concat(a.gifs.filter(g => g.kind === "file"));
+    out.fired = a.fired; out.timer = a.timer; out.mod = Math.max(a.mod, b.mod);
+    return C.sanitize(out);
+  };
+  /* The copy that goes to the cloud: no timer or fired marks. */
+  C.forCloud = s => JSON.stringify(Object.assign({}, s, { fired: {}, timer: null }));
 
   /* ---------- timers ---------- */
   C.fmt = sec => { sec = Math.max(0, Math.round(sec)); return Math.floor(sec / 60) + ":" + pad(sec % 60); };

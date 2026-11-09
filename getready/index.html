@@ -19,7 +19,7 @@
 </head>
 <body>
 <div id="app">
-  <header id="top"><span class="brand">Get Ready</span><span class="tabname" id="tabname"></span></header>
+  <header id="top"><span class="brand">Get Ready <span class="cloudbadge" id="cloud" hidden title="Backed up online">☁️✓</span></span><span class="tabname" id="tabname"></span></header>
   <div id="toasts" aria-live="polite"></div>
   <main id="view" tabindex="-1"></main>
   <nav class="nav" id="nav" aria-label="Sections"></nav>
@@ -30,6 +30,7 @@
 <noscript><p style="padding:24px;font-family:sans-serif;color:#fff">Get Ready needs JavaScript turned on to work.</p></noscript>
 <script src="core.js"></script>
 <script src="db.js"></script>
+<script src="cloud.js"></script>
 <script src="celebrate.js"></script>
 <script src="app.js"></script>
 </body>
