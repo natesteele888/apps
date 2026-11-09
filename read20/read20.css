@@ -63,7 +63,7 @@ h1,h2,h3{margin:0;line-height:1.15}
 .pic.m2{font-size:5.6rem}.pic.m3{font-size:4rem;word-break:break-all}
 .text{flex:1;display:flex;flex-wrap:wrap;align-content:center;justify-content:center;gap:2px 0;text-align:center;margin:10px 0;font-weight:700;line-height:1.6}
 .s0 .text{font-size:2.1rem}.s1 .text{font-size:2.7rem}.s2 .text{font-size:3.3rem}
-.w{display:inline-block;padding:0 10px;margin:0 1px;border-radius:14px;cursor:pointer;border:3px solid transparent;transition:background .1s}
+.w{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;display:inline-block;padding:0 10px;margin:0 1px;border-radius:14px;cursor:pointer;border:3px solid transparent;transition:background .1s}
 .w.hl{background:var(--hl);border-color:#e0b800;box-shadow:0 3px 0 #e0b800}
 .rnav{display:flex;align-items:center;gap:12px;padding:6px 0}
 .pgbtn{width:84px;height:68px;border-radius:22px;border:0;background:var(--card);border:2px solid var(--line);font-size:1.7rem;box-shadow:0 4px 0 var(--line)}
@@ -121,3 +121,18 @@ h1,h2,h3{margin:0;line-height:1.15}
 .cloudbadge[hidden]{display:none}
 .btn[hidden],.nudge[hidden]{display:none}
 .keep{background:#e8f0ff;border:2px solid #b8cdf5;border-radius:22px;padding:14px;margin:14px 0}.keep h3{margin:0 0 6px}.keep p{margin:2px 0}.keep .ok{color:#177a46;font-weight:700}.keep .cl2{color:var(--soft);font-size:.92rem}
+
+.hint{text-align:center;color:var(--soft);font-size:.85rem;margin:0 0 4px}
+.wordpop{text-align:center}
+.wp-word{font-size:2.6rem;letter-spacing:.02em}
+.wp-sub{color:var(--soft);margin:4px 0 14px}
+.wp-syl{display:flex;flex-wrap:wrap;align-items:flex-start;justify-content:center;gap:6px;margin-bottom:8px}
+.dot{font-size:2rem;font-weight:700;color:var(--soft);align-self:center}
+.syl{border:3px solid transparent;border-radius:22px;padding:10px 14px;min-width:84px;display:flex;flex-direction:column;align-items:center;gap:8px;background:#f1ecff}
+.syl.c1{background:#fff3c4}.syl.c2{background:#dff7e8}.syl.c3{background:#ffe0e6}
+.syl.on{border-color:var(--ink)}
+.syl .st{font-size:2.2rem;font-weight:700;line-height:1}
+.syl .snd{display:flex;flex-wrap:wrap;justify-content:center;gap:4px}
+.syl .snd i{font-style:normal;font-weight:700;font-size:1.25rem;background:#fff;border-radius:10px;padding:2px 9px;min-width:30px;border:2px solid var(--line)}
+.syl .snd i.silent{opacity:.45;border-style:dashed}
+.syl:disabled{opacity:1}

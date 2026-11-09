@@ -2,6 +2,7 @@
 const assert = require('assert');
 const C = require('../apps/read20/core.js');
 const B = require('../apps/read20/books.js');
+const WD = require('../apps/read20/words.js');
 const { launch, startServer, newPage, SHOTS } = require('./lib.cjs');
 const results = [];
 async function test(name, fn) {
@@ -69,6 +70,26 @@ const TODAY = '2026-11-08';
     eq(C.merge(a, a).days[TODAY].sec, 300, 'same save twice does not double');
     eq(C.daysSince('2026-11-01', '2026-11-08'), 7); eq(C.daysSince('2026-10-31', '2026-11-08'), 8);
     eq(C.sanitize({ bk: 'junk' }).bk, ''); eq(C.sanitize({ bk: '2026-11-08' }).bk, '2026-11-08');
+  });
+  await test('words: syllables and sound chunks are right for hand-checked words', () => {
+    const syl = w => WD.analyze(w).text, snd = w => WD.analyze(w).syllables.map(s => s.sounds.map(c => (c.silent ? '(' + c.t + ')' : c.t)).join(' ')).join(' | ');
+    eq(syl('rabbit'), 'rab·bit'); eq(syl('puppy'), 'pup·py'); eq(syl('spider'), 'spi·der'); eq(syl('together'), 'to·geth·er'); eq(syl('snowman'), 'snow·man'); eq(syl('grasshopper'), 'grass·hop·per');
+    eq(syl('jumping'), 'jump·ing'); eq(syl('running'), 'run·ning'); eq(syl('little'), 'lit·tle'); eq(syl('twinkle'), 'twin·kle'); eq(syl('garden'), 'gar·den'); eq(syl('windows'), 'win·dows');
+    eq(syl('cat'), 'cat'); eq(syl('cake'), 'cake'); eq(syl('jumped'), 'jumped'); eq(syl('played'), 'played'); eq(syl('horses'), 'hors·es'); eq(syl('tomatoes'), 'to·ma·toes');
+    eq(snd('ship'), 'sh i p'); eq(snd('cat'), 'c a t'); eq(snd('cake'), 'c a k (e)'); eq(snd('high'), 'h igh'); eq(snd('jumped'), 'j u m p ed'); eq(snd('sheep'), 'sh ee p'); eq(snd('thank'), 'th a nk');
+    eq(snd('little'), 'l i t | t le'); eq(snd('rabbit'), 'r a b | b i t'); eq(snd('stuck'), 's t u ck'); eq(snd('likes'), 'l i k (e) s'); eq(snd('knocked'), 'kn o ck ed');
+    assert.ok(WD.analyze('said').tricky && WD.analyze('the').tricky && WD.analyze('was').tricky && !WD.analyze('cat').tricky && !WD.analyze('he').tricky);
+    eq(WD.analyze('"Wolf!').word, 'wolf'); eq(WD.analyze("King's,").word, 'king'); eq(WD.analyze('Rib-bit!"').text, 'rib·bit'); eq(WD.analyze('123'), null); eq(WD.analyze(''), null);
+  });
+  await test('words: every word in every story breaks apart cleanly (letters add back up, 1 to 4 syllables, sounds add back up)', () => {
+    const seen = new Set();
+    B.books.forEach(b => b.pages.forEach(p => p.text.split(/\s+/).forEach(raw => {
+      const a = WD.analyze(raw); if (!a) { assert.ok(!/[a-z]/i.test(raw), 'could not analyze "' + raw + '"'); return; } if (seen.has(a.word)) return; seen.add(a.word);
+      const letters = a.word.replace(/[-']/g, ''); eq(a.syllables.map(s => s.text).join('').replace(/'/g, '').toLowerCase(), letters, a.word + ' syllables add back up');
+      assert.ok(a.syllables.length >= 1 && a.syllables.length <= 4, a.word + ' has ' + a.syllables.length);
+      a.syllables.forEach(s => { eq(s.sounds.map(c => c.t).join(''), s.text.replace(/'/g, '').toLowerCase(), a.word + ' sounds add back up'); assert.ok(s.sounds.length >= 1); });
+    })));
+    assert.ok(seen.size > 400, 'checked ' + seen.size);
   });
   await test('core: damaged saves are cleaned up', () => {
     const s = C.sanitize({ name: 'A'.repeat(50) + '\u0007', goal: 7, size: 9, say: 'yes', days: { 'bad': { sec: 5 }, '2026-11-08': { sec: -4, books: { x: { sec: 'q', fin: 1 } }, extra: [{ title: 5, sec: 1e9 }, null] } } });
@@ -157,6 +178,31 @@ const TODAY = '2026-11-08';
     await page.locator('#kcloud').click(); await page.locator('#cin').waitFor(); await page.locator('#sd').click();
     await page.locator('#gear').click(); await page.locator('#cin').waitFor(); await page.locator('#sd').click();
     await page.screenshot({ path: SHOTS + '/read20-log-keep.png', fullPage: true });
+  });
+  await test('press and hold: a word opens a pop-up with its syllables and sounds; a quick tap only highlights', async () => {
+    const { page } = await mk(); await page.locator('.lv[data-lv="4"]').click(); await page.locator('.cover', { hasText: 'Pete the Bee' }).click(); await page.waitForSelector('.reader');
+    const w = page.locator('.w').first(); const press = async (loc, ms) => { const b = await loc.boundingBox(); await page.mouse.move(b.x + b.width / 2, b.y + b.height / 2); await page.mouse.down(); await page.clock.runFor(ms); await page.mouse.up(); };
+    await press(w, 100); eq(await page.locator('.wordpop').count(), 0, 'quick tap: no pop-up'); eq(await page.locator('.w.hl').count(), 1);
+    await press(w, 100); eq(await page.locator('.w.hl').count(), 0, 'second tap clears');
+    for (let i = 0; i < 6; i++) await page.locator('#nextp').click(); // "Pete takes it home to the hive."
+    const target = page.locator('.w', { hasText: 'takes' }); await press(target, 600); await page.locator('.wordpop').waitFor();
+    eq((await page.locator('.wp-word').innerText()).toLowerCase(), 'takes'); assert.ok(/^1 syllable/.test(await page.locator('.wp-sub').innerText()));
+    eq(await page.locator('.snd i').allInnerTexts().then(a => a.join(' ')), 't a k e s'); eq(await page.locator('.snd i.silent').innerText(), 'e');
+    eq(await page.locator('.w.hl').count(), 1, 'the pressed word is highlighted'); await page.screenshot({ path: SHOTS + '/read20-word.png' });
+    await page.locator('#wpdone').click(); await page.waitForTimeout(100); eq(await page.locator('.wordpop').count(), 0); eq(await page.locator('.w.hl').count(), 1, 'closing the pop-up does not clear the highlight');
+    await page.locator('#nextp').isEnabled(); const hive = page.locator('.w', { hasText: 'hive' }); await press(hive, 600); await page.locator('.wordpop').waitFor();
+    eq(await page.locator('.syl').count(), 1); await page.locator('#wpdone').click();
+    await page.locator('#prev').click(); await page.locator('#prev').click(); await page.locator('#prev').click(); // "Zoom! Pete lands on the rose."
+  });
+  await test('press and hold: syllable chips for long words, tricky words get a note, and reading time keeps counting', async () => {
+    const { page } = await mk(); await page.locator('.lv[data-lv="3"]').click(); await page.locator('.cover', { hasText: 'Hickory Dickory Dock' }).click(); await page.waitForSelector('.reader');
+    const press = async (loc, ms) => { const b = await loc.boundingBox(); await page.mouse.move(b.x + b.width / 2, b.y + b.height / 2); await page.mouse.down(); await page.clock.runFor(ms); await page.mouse.up(); };
+    const before = await sec(page); await press(page.locator('.w').first(), 700); await page.locator('.wordpop').waitFor();
+    eq((await page.locator('.syl .st').allInnerTexts()).join('-').toLowerCase(), 'hick-o-ry'); eq(await page.locator('.syl').count(), 3);
+    await page.locator('.syl').nth(1).click(); assert.ok(await page.locator('.syl.on').count() === 1); await page.clock.runFor(5000); assert.ok((await sec(page)) >= before + 5, 'timer kept going while the pop-up was open');
+    await page.locator('#wpdone').click(); await page.locator('#nextp').click(); const the = page.locator('.w', { hasText: /^The$/ }).first(); await press(the, 600); await page.locator('.wordpop').waitFor();
+    assert.ok(/tricky/i.test(await page.locator('.wp-sub').innerText())); eq(await page.locator('.snd').count(), 0, 'no sound chips for a tricky word');
+    await page.keyboard.press('Escape'); await page.locator('#wpdone').click(); eq(await page.locator('.pgnum').innerText(), 'Page 2 of 5', 'pressing did not turn the page');
   });
   await test('log from home + settings: minutes count, goal changes, name shows; survives reload', async () => {
     const { page, ctx } = await mk(); await page.locator('#manual').click();
