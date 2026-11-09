@@ -3,7 +3,7 @@
 (function () {
   "use strict";
   const C = window.R20Core, B = window.R20Books;
-  const CL = window.R20Cloud, WD = window.R20Words;
+  const CL = window.R20Cloud, WD = window.R20Words, AU = window.R20Audio, BD = window.R20Board;
   const KEY = "read20.v1";
   const $ = s => document.querySelector(s);
   const esc = s => String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
@@ -62,26 +62,23 @@
   const ui = { level: 1, month: null, sel: null, book: null, page: 0, paused: false, idle: false, acc: 0, last: 0, lastAct: 0, timer: 0, finishedNow: false, hl: -1 };
 
   /* ---------- sound, speech ---------- */
-  function chime() {
-    try {
-      const AC = window.AudioContext || window.webkitAudioContext; if (!AC) return;
-      const ctx = new AC(), t = ctx.currentTime;
-      [523, 659, 784, 1047].forEach((f, i) => { const o = ctx.createOscillator(), g = ctx.createGain(); o.frequency.value = f; o.connect(g); g.connect(ctx.destination); g.gain.setValueAtTime(0.0001, t + i * 0.18); g.gain.exponentialRampToValueAtTime(0.25, t + i * 0.18 + 0.02); g.gain.exponentialRampToValueAtTime(0.0001, t + i * 0.18 + 0.5); o.start(t + i * 0.18); o.stop(t + i * 0.18 + 0.55); });
-    } catch (e) {}
-  }
-  function say(w) { try { if (!S.say || !window.speechSynthesis) return; speechSynthesis.cancel(); const u = new SpeechSynthesisUtterance(w); u.rate = 0.8; speechSynthesis.speak(u); } catch (e) {} }
+  function chime() { AU.chime(); }
+  function say(w) { if (S.say) AU.speak(w, 0.8); }
 
   /* ---------- routing: #  (shelf), #log, #b/<id> (reading) ---------- */
   function route() {
     const h = location.hash.replace(/^#/, "");
-    stopTimer();
+    stopTimer(); BD.unmount();
     if (h.startsWith("b/") && byId[h.slice(2)]) {
       if (!ui.book || ui.book.id !== h.slice(2)) { ui.book = byId[h.slice(2)]; ui.page = 0; ui.finishedNow = false; }
       ui.paused = false; ui.hl = -1; renderReader(); startTimer();
     } else if (h === "log") { ui.book = null; renderLog(); }
+    else if (h === "sounds") { ui.book = null; renderSounds(); }
     else { ui.book = null; renderShelf(); }
   }
   const go = h => { if (location.hash.replace(/^#/, "") === h) route(); else location.hash = h; };
+
+  function renderSounds() { $("#view").innerHTML = '<div id="soundsview"></div>'; BD.mount($("#soundsview")); nav("sounds"); }
 
   /* ---------- timer ---------- */
   function startTimer() {
@@ -341,6 +338,8 @@
       <label>Reading goal each night<select id="sg">${C.GOALS.map(g => `<option ${g === S.goal ? "selected" : ""} value="${g}">${g} minutes</option>`).join("")}</select></label>
       <label>Word size<select id="sz"><option value="0">Big</option><option value="1">Bigger</option><option value="2">Biggest</option></select></label>
       <label class="chk"><input type="checkbox" id="ss" ${S.say ? "checked" : ""}> Say a word out loud when it is tapped</label>
+      <button class="btn alt" id="stest">🔊 Test the sound</button>
+      <p class="fine left" id="stm" role="status"></p>
       <h3 class="subh">Cloud backup (for a parent)</h3>
       <p class="fine left">Sign in with Google once and her log is kept online, so a lost or new phone gets it back. She never needs to sign in to read.</p>
       <p class="fine left" id="cl" role="status"></p>
@@ -355,6 +354,10 @@
       <button class="btn danger" id="se">Erase the reading log</button>
       <div class="row"><button class="btn" id="sd">Done</button></div>`);
     $("#sz").value = String(S.size);
+    $("#stest").onclick = () => {
+      AU.unlock(); const ok = AU.beep(), i = AU.info(); if (i.speech) setTimeout(() => AU.speak("Hello! Can you hear me?", 0.85), 700);
+      $("#stm").textContent = !ok ? "This browser cannot make sound." : "You should hear a beep" + (i.speech ? " and then a voice" : "") + ". " + (i.speech ? (i.voices ? "" : "This phone has not loaded a speaking voice yet; try again in a few seconds. ") : "This phone has no speaking voice, so word-reading is off. Letter sounds still work. ") + "If you hear nothing: turn the media volume up and make sure the phone is not on silent.";
+    };
     const paintCloud = () => {
       if (!$("#cl")) return; const st = CL.status, on = st === "ok" || st === "signedin" || st === "denied" || (st === "offline" && CL.email);
       $("#cl").textContent = cloudLine() || (st === "signedout" && CL.msg ? CL.msg : "Not set up yet.");
@@ -372,10 +375,10 @@
   }
 
   /* ---------- press and hold: syllables and sounds ---------- */
-  function speak(text) { try { if (!window.speechSynthesis) return; speechSynthesis.cancel(); const u = new SpeechSynthesisUtterance(text); u.rate = 0.75; speechSynthesis.speak(u); } catch (e) {} }
+  function speak(text) { AU.speak(text, 0.75); }
   function openWord(raw) {
     const a = WD.analyze(raw); if (!a) return;
-    const can = !!window.speechSynthesis, n = a.syllables.length;
+    const can = AU.canSpeak(), n = a.syllables.length;
     const sounds = sy => sy.sounds.map(c => `<i class="${c.silent ? "silent" : ""}"${c.silent ? ' title="silent e"' : ""}>${esc(c.t)}</i>`).join("");
     const chips = a.syllables.map((sy, i) => `<button class="syl c${i % 4}" data-i="${i}" ${can ? "" : "disabled"} aria-label="${esc(sy.text)}"><span class="st">${esc(sy.text)}</span>${a.tricky ? "" : `<span class="snd">${sounds(sy)}</span>`}</button>`).join('<span class="dot" aria-hidden="true">·</span>');
     const o = sheet(`<div class="wordpop">
@@ -413,7 +416,7 @@
   /* ---------- bottom bar ---------- */
   function nav(on) {
     const n = $("#nav"); n.hidden = false;
-    n.innerHTML = `<button class="${on === "books" ? "on" : ""}" data-go="">📚<span>Books</span></button><button class="${on === "log" ? "on" : ""}" data-go="log">🗓️<span>My Log</span></button>`;
+    n.innerHTML = `<button class="${on === "books" ? "on" : ""}" data-go="">📚<span>Books</span></button><button class="${on === "sounds" ? "on" : ""}" data-go="sounds">🔤<span>Sounds</span></button><button class="${on === "log" ? "on" : ""}" data-go="log">🗓️<span>My Log</span></button>`;
     n.querySelectorAll("button").forEach(b => (b.onclick = () => go(b.dataset.go)));
   }
 
