@@ -1,6 +1,6 @@
 {
   "about": "The one list of Nathan's apps. Live links, which apps show where, and each app's App Store listing (text, highlights, screenshots) all come from here. Edit listings and icons in the Toolbox; the sync job copies them here. Don't hand-edit text in store/index.html.",
-  "updated": "2026-11-08",
+  "updated": "2026-11-09",
   "toolbox": "https://natesteele888.github.io/apps/toolbox/",
   "store": "https://natesteele888.github.io/apps/store/",
   "apps": [
@@ -701,31 +701,31 @@
           }
         ],
         "latest": {
-          "d": "Nov 7, 2026",
-          "t": "Replace Select's login codes",
-          "url": "https://github.com/natesteele888/lybs-ballclub/commit/0143d80763b6a535324b446bf39151e666595793"
+          "d": "Nov 9, 2026",
+          "t": "Fix extra-base-hit/relay plays: stop sending a corner infielder to cover second",
+          "url": "https://github.com/natesteele888/lybs-ballclub/commit/ff4b38e42e65279bb2d981bf23ce77c8ef3e2ce3"
         },
-        "version": "1.23.8",
+        "version": "1.24.4",
         "history": [
           {
-            "v": "1.23.8",
-            "t": "Replace Select's login codes"
+            "v": "1.24.3",
+            "t": "Fix extra-base-hit/relay plays: stop sending a corner infielder to cover second"
           },
           {
-            "v": "1.23.7",
-            "t": "team-registry: say plainly that Select's codes have not been replaced yet"
+            "v": "1.24.2",
+            "t": "Make Ballclub's small buttons and links easier to tap"
           },
           {
-            "v": "1.23.6",
-            "t": "Gate sign-in: move an old-password account over instead of locking the team out"
+            "v": "1.24.1",
+            "t": "Show the last-seen team data with no signal"
           },
           {
-            "v": "1.23.3",
-            "t": "responsibilities.csv: keep this data file's CRLF line endings"
+            "v": "1.24.0",
+            "t": "Keep Google sign-in usable with no signal"
           },
           {
-            "v": "1.23.2",
-            "t": "Situations trainer: don't throw home with a runner already in from third"
+            "v": "1.23.9",
+            "t": "Show a message and Try again when a tab can't load"
           }
         ]
       }
@@ -1901,11 +1901,23 @@
         ],
         "latest": {
           "d": "Nov 8, 2026",
-          "t": "Walk-Up: ask a parent for a player's song by text or email",
-          "url": "https://github.com/natesteele888/apps/commit/bd5c5d0d84d069665c7fc39b18e1d6955840a4cd"
+          "t": "Walk-Up: the mixer fits a phone with no scrolling",
+          "url": "https://github.com/natesteele888/apps/commit/0e313cef4c2cadcbbb3e530e90f29aceac7a11a0"
         },
-        "version": "1.0.2",
+        "version": "1.0.5",
         "history": [
+          {
+            "v": "1.0.5",
+            "t": "Walk-Up: the mixer fits a phone with no scrolling"
+          },
+          {
+            "v": "1.0.4",
+            "t": "Walk-Up: simpler mixer, Power Program colors and a baseball icon"
+          },
+          {
+            "v": "1.0.3",
+            "t": "Walk-Up: name the player when a song file can't be read"
+          },
           {
             "v": "1.0.2",
             "t": "Walk-Up: ask a parent for a player's song by text or email"
