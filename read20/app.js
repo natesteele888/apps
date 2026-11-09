@@ -428,7 +428,7 @@
       if (st === "ok" && mine) { $("#jyes").hidden = true; $("#jno").textContent = "Done"; }
     };
     CL.onchange = () => { prev(); update(); };
-    $("#jno").onclick = () => closeOverlay(o);
+    $("#jno").onclick = () => { if (CL.shareKey() !== key) CL.forgetJoin(); closeOverlay(o); };
     $("#jyes").onclick = async () => { $("#jmsg").textContent = "Joining…"; $("#jyes").disabled = true; const ok = await CL.join(key); $("#jyes").disabled = false; if (!ok && CL.status !== "denied" && CL.status !== "offline") $("#jmsg").textContent = CL.status === "ok" ? "" : "Sign in with Google to finish joining."; update(); };
   }
 
