@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://www.gstatic.com https://apis.google.com; connect-src 'self' https://*.googleapis.com; frame-src https://*.firebaseapp.com https://accounts.google.com; img-src 'self' data: https:; style-src 'self' 'unsafe-inline'; base-uri 'none'; form-action 'none'; object-src 'none'">
+<meta name="robots" content="noindex">
+<title>App numbers</title>
+<style>
+:root{--bg:#f6f7f5;--card:#fff;--ink:#14201b;--dim:#5d6b65;--line:#dde4e0;--acc:#1f7a52;--bar:#cfe6da}
+@media(prefers-color-scheme:dark){:root{--bg:#0f1513;--card:#17211d;--ink:#eef3f0;--dim:#9aaaa3;--line:#2c3b35;--acc:#5fd39a;--bar:#24443a}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;padding:16px 16px calc(24px + env(safe-area-inset-bottom))}
+main{max-width:720px;margin:0 auto}
+h1{font-size:26px;margin:4px 0 2px}
+.sub{color:var(--dim);margin:0 0 16px}
+a{color:var(--acc)}
+.tiles{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px}
+.tile{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px 12px}
+.tile b{display:block;font-size:26px;font-variant-numeric:tabular-nums}
+.tile span{color:var(--dim);font-size:12.5px}
+table{width:100%;border-collapse:collapse;background:var(--card);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+th,td{padding:10px 8px;text-align:right;border-bottom:1px solid var(--line);font-variant-numeric:tabular-nums}
+th:first-child,td:first-child{text-align:left}
+th{font-size:12px;color:var(--dim);font-weight:600;text-transform:uppercase;letter-spacing:.3px}
+tr:last-child td{border-bottom:0}
+.spark{display:inline-flex;gap:2px;align-items:flex-end;height:18px;vertical-align:middle}
+.spark i{width:6px;background:var(--acc);border-radius:2px 2px 0 0;min-height:2px;opacity:.85}
+.btn{display:inline-block;min-height:44px;padding:11px 18px;border-radius:12px;border:0;background:var(--acc);color:#fff;font:600 15px system-ui,sans-serif;cursor:pointer}
+.note{color:var(--dim);font-size:13px;margin-top:12px}
+.msg{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px}
+@media(max-width:420px){.hide-s{display:none}}
+</style>
+</head>
+<body>
+<main>
+  <p class="sub" style="margin:0"><a href="./">&larr; Toolbox</a></p>
+  <h1>App numbers</h1>
+  <p class="sub">Phones that opened each app, and home-screen installs. Anonymous: a random code per phone, no names.</p>
+  <div id="out"><div class="msg">Loading…</div></div>
+  <p class="note">An <b>open</b> counts each phone once per app per week. An <b>install</b> counts a phone the first time it opens the app from its home screen. Counting started Nov 10, 2026, so earlier installs show up the next time those phones open the app.</p>
+</main>
+<script src="https://www.gstatic.com/firebasejs/11.6.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/11.6.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/11.6.0/firebase-firestore-compat.js"></script>
+<script>
+const FIREBASE_CONFIG={apiKey:"AIzaSyDT_wGN93U4oM70orIU8flSAnvXHApqW2A",authDomain:"nates-toolbox.firebaseapp.com",projectId:"nates-toolbox",storageBucket:"nates-toolbox.firebasestorage.app",messagingSenderId:"567737923830",appId:"1:567737923830:web:b597b5d71e7c7a73c4d4d7"};
+const out=document.getElementById("out");
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+// Same key install.js sends: github.io → first two folders; any other host → its first label.
+function keyOf(url){try{const u=new URL(url),segs=u.pathname.replace(/[^/]*\.[a-z0-9]+$/i,"").split("/").filter(Boolean);
+  return (/\.github\.io$/.test(u.hostname)?segs.slice(0,2):[u.hostname.split(".")[0]]).join("-").replace(/[^A-Za-z0-9-]/g,"-").slice(0,60)||u.hostname.split(".")[0];}catch(_){return "";}}
+function isoWeek(t){const d=new Date(t);d.setHours(0,0,0,0);d.setDate(d.getDate()+3-(d.getDay()+6)%7);const y=d.getFullYear(),w=1+Math.round(((d-new Date(y,0,4))/864e5-3+(new Date(y,0,4).getDay()+6)%7)/7);return y+"-W"+(w<10?"0":"")+w;}
+const WEEKS=[0,1,2,3,4,5,6,7].map(i=>isoWeek(Date.now()-i*7*864e5)).reverse(); // oldest → this week
+function signInView(why){out.innerHTML=`<div class="msg"><p style="margin-top:0">${esc(why)}</p><button class="btn" id="go">Sign in with Google</button></div>`;
+  document.getElementById("go").onclick=()=>{const p=new firebase.auth.GoogleAuthProvider();p.setCustomParameters({prompt:"select_account"});
+    firebase.auth().signInWithPopup(p).catch(e=>{if(e&&/popup/.test(e.code||""))firebase.auth().signInWithRedirect(p);});};}
+async function load(){
+  out.innerHTML=`<div class="msg">Counting…</div>`;
+  const db=firebase.firestore();
+  let names={};
+  try{const r=await fetch("../registry.json",{cache:"no-store"}).then(r=>r.json());(r.apps||[]).forEach(a=>{const k=keyOf(a.live||"");if(k)names[k]=a.name;});}catch(_){}
+  let ins,ops;
+  try{[ins,ops]=await Promise.all([db.collection("app_installs").get(),db.collection("app_opens").where("week","in",WEEKS).get()]);}
+  catch(e){out.innerHTML=`<div class="msg">${/permission/i.test(e&&e.code||"")?"This account can't read the numbers. Sign in with the Toolbox owner's Google account.":"Couldn't load the numbers. Check your signal and reload."}</div>`;return;}
+  const A={},row=k=>A[k]||(A[k]={installs:0,weeks:Object.fromEntries(WEEKS.map(w=>[w,0]))});
+  const phones=new Set(),phonesNow=new Set();
+  ins.forEach(d=>{const x=d.data();row(x.app).installs++;});
+  ops.forEach(d=>{const x=d.data(),pid=d.id.split("~")[2];row(x.app).weeks[x.week]++;phones.add(pid);if(x.week===WEEKS[7])phonesNow.add(pid);});
+  const keys=Object.keys(A).sort((a,b)=>A[b].weeks[WEEKS[7]]-A[a].weeks[WEEKS[7]]||A[b].installs-A[a].installs||a.localeCompare(b));
+  const totalInstalls=keys.reduce((s,k)=>s+A[k].installs,0);
+  if(!keys.length){out.innerHTML=`<div class="msg">No counts yet. They start arriving as soon as a phone opens one of the apps.</div>`;return;}
+  out.innerHTML=`<div class="tiles"><div class="tile"><b>${phonesNow.size}</b><span>phones this week</span></div><div class="tile"><b>${phones.size}</b><span>phones in 8 weeks</span></div><div class="tile"><b>${totalInstalls}</b><span>installs</span></div></div>
+  <table><thead><tr><th>App</th><th>This week</th><th class="hide-s">Last week</th><th>8 weeks</th><th>Installs</th></tr></thead><tbody>
+  ${keys.map(k=>{const w=A[k].weeks,max=Math.max(1,...WEEKS.map(x=>w[x]));
+    return `<tr><td>${esc(names[k]||k)}</td><td>${w[WEEKS[7]]}</td><td class="hide-s">${w[WEEKS[6]]}</td><td><span class="spark" title="${WEEKS.map(x=>x+": "+w[x]).join(", ")}">${WEEKS.map(x=>`<i style="height:${Math.max(2,Math.round(18*w[x]/max))}px"></i>`).join("")}</span></td><td>${A[k].installs}</td></tr>`;}).join("")}
+  </tbody></table>`;
+}
+try{firebase.initializeApp(FIREBASE_CONFIG);
+  firebase.auth().onAuthStateChanged(u=>{if(u)load();else signInView("Sign in to see how many phones use your apps.");});}
+catch(e){out.innerHTML=`<div class="msg">Couldn't start. Check your signal and reload.</div>`;}
+</script>
+</body>
+</html>
