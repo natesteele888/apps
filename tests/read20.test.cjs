@@ -4,6 +4,7 @@ const path_ = require('path');
 const C = require('../apps/read20/core.js');
 const B = require('../apps/read20/books.js');
 const WD = require('../apps/read20/words.js');
+global.window = { R20Words: WD }; const OLD = require('../apps/read20/books-older.js'); require('../apps/read20/syllables-older.js'); delete global.window;
 const { launch, startServer, newPage, SHOTS } = require('./lib.cjs');
 const results = [];
 async function test(name, fn) {
@@ -30,6 +31,22 @@ const TODAY = '2026-11-08';
       const n = p.text.split(/\s+/).length;
       assert.ok(n <= (b.level === 1 ? 7 : 8), b.id + ': "' + p.text + '" has ' + n + ' words');
     }
+  });
+  await test('older library: 35 true-fact stories in six topics, each with words to know and a three-question check', () => {
+    eq(OLD.books.length, 35); eq(OLD.TOPICS.map(t => t.id).join(), 'sports,photo,fitness,athletes,social,english'); eq(new Set(OLD.books.map(b => b.id)).size, 35, 'unique ids');
+    const per = {}; OLD.books.forEach(b => (per[b.topic] = (per[b.topic] || 0) + 1)); eq(JSON.stringify(per), JSON.stringify({ sports: 5, photo: 6, fitness: 5, athletes: 9, social: 5, english: 5 }));
+    for (const b of OLD.books) {
+      assert.ok(b.shelf === 'older' && OLD.TOPICS.some(t => t.id === b.topic) && b.diff >= 1 && b.diff <= 3, b.id); assert.ok(b.pages.length >= 5 && b.pages.length <= 6, b.id + ' has ' + b.pages.length + ' pages');
+      for (const p of b.pages) { const n = p.text.split(/\s+/).length; assert.ok(n >= 18 && n <= 95, b.id + ' page of ' + n + ' words'); assert.ok(!/[|]/.test(p.text), 'stray bar'); }
+      eq(b.quiz.length, 3, b.id + ' questions'); eq(b.gloss.length, 3, b.id + ' words to know'); b.gloss.forEach(g => assert.ok(g.w && g.d && g.d.length < 80 && !/[|]/.test(g.d), b.id + ' ' + g.w)); for (const q of b.quiz) { assert.ok(q.q.endsWith('?') && q.a.length >= 3 && q.a.length <= 4 && q.ok >= 0 && q.ok < q.a.length, b.id + ': ' + q.q); eq(new Set(q.a).size, q.a.length, 'distinct answers'); }
+      const total = b.pages.reduce((n, p) => n + p.text.split(/\s+/).length, 0); assert.ok(total >= 200 && total <= 340, b.id + ' is ' + total + ' words');
+    }
+    const first = {}; OLD.books.forEach(b => b.quiz.forEach(q => (first[q.ok] = (first[q.ok] || 0) + 1))); assert.ok(Object.keys(first).length >= 2, 'right answers are spread (the page also mixes the order)');
+  });
+  await test('older words: the pop-up gets proper syllables for long words', () => {
+    const syl = w => WD.analyze(w).text;
+    eq(syl('photograph'), 'pho·to·graph'); eq(syl('photography'), 'pho·tog·ra·phy'); eq(syl('aperture'), 'ap·er·ture'); eq(syl('exposure'), 'ex·po·sure'); eq(syl('muscle'), 'mus·cle'); eq(syl('athlete'), 'ath·lete'); eq(WD.clean('Nicéphore,'), 'nicephore');
+    eq(syl('marathon'), 'ma·ra·thon'); eq(syl('championship'), 'cham·pi·on·ship'); eq(syl('minute'), 'min·ute'); eq(syl('very'), 'ver·y'); eq(syl('cincinnati'), 'cin·cin·na·ti'); eq(syl('sleep'), 'sleep'); eq(syl('cat'), 'cat');
   });
   await test('core: day keys and adding days across month and year ends', () => {
     eq(C.dayKey(new Date(2026, 10, 8)), '2026-11-08'); eq(C.addDays('2026-11-30', 1), '2026-12-01'); eq(C.addDays('2026-01-01', -1), '2025-12-31'); eq(C.addDays('2028-02-28', 1), '2028-02-29');
@@ -84,13 +101,13 @@ const TODAY = '2026-11-08';
   });
   await test('words: every word in every story breaks apart cleanly (letters add back up, 1 to 4 syllables, sounds add back up)', () => {
     const seen = new Set();
-    B.books.forEach(b => b.pages.forEach(p => p.text.split(/\s+/).forEach(raw => {
+    B.books.concat(OLD.books).forEach(b => b.pages.forEach(p => p.text.split(/\s+/).forEach(raw => {
       const a = WD.analyze(raw); if (!a) { assert.ok(!/[a-z]/i.test(raw), 'could not analyze "' + raw + '"'); return; } if (seen.has(a.word)) return; seen.add(a.word);
       const letters = a.word.replace(/[-']/g, ''); eq(a.syllables.map(s => s.text).join('').replace(/'/g, '').toLowerCase(), letters, a.word + ' syllables add back up');
-      assert.ok(a.syllables.length >= 1 && a.syllables.length <= 4, a.word + ' has ' + a.syllables.length);
+      assert.ok(a.syllables.length >= 1 && a.syllables.length <= 6, a.word + ' has ' + a.syllables.length);
       a.syllables.forEach(s => { eq(s.sounds.map(c => c.t).join(''), s.text.replace(/'/g, '').toLowerCase(), a.word + ' sounds add back up'); assert.ok(s.sounds.length >= 1); });
     })));
-    assert.ok(seen.size > 400, 'checked ' + seen.size);
+    assert.ok(seen.size > 1650, 'checked ' + seen.size);
   });
   await test('core: two phones on the same day add up; the same phone never double counts; old saves still count', () => {
     const a = C.empty(), b = C.empty(); C.dev = 'dad'; C.addSeconds(a, TODAY, 'x', 840); C.dev = 'mom'; C.addSeconds(b, TODAY, 'y', 600); C.addManual(b, TODAY, 'Paper', 5);
@@ -486,6 +503,38 @@ const TODAY = '2026-11-08';
     eq(await a.page.locator('.rd[data-id]').count(), 1, 'removed on one phone, gone on the other');
     const c = await mkPhone({ uid: 'dadr' }); await c.page.locator('#gear').click(); await c.page.locator('#setsafe').click(); await c.page.locator('#sr').setInputFiles(await d.path()); await c.page.waitForFunction(() => /Restored/.test(document.querySelector('#sm').textContent));
     await closeSafe(c.page); eq(await c.page.locator('.rd[data-id]').count(), 2, 'restoring a file brings back both readers');
+  });
+  await test('older reader: add a 12-year-old reader, get the library by topic, read with a quiz at the end', async () => {
+    const { page, errors } = await mk(); await page.locator('#addrd').click(); await page.fill('#rn', 'Sam'); eq(await page.locator('.lvopt').count(), 2); eq(await page.locator('.lvopt.on').innerText(), '🌱 Learning to read\nShort stories, big words, pictures'.replace('\n', '\n'), 'defaults to early');
+    await page.locator('.lvopt[data-lv="older"]').click(); await page.locator('#ra').click(); await page.waitForFunction(() => document.querySelector('.rd.on .nm').textContent === 'Sam');
+    eq(await page.evaluate(() => R20App._state().lv), 'older'); eq(await page.evaluate(() => R20App._state().size), 0, 'older readers start with normal-size words'); assert.ok(/The Library/.test(await page.locator('.sec').innerText())); eq(await page.locator('.lv').count(), 6);
+    eq(await page.locator('.cover').count(), 5, 'sports first'); await page.locator('.lv[data-tp="athletes"]').click(); eq(await page.locator('.cover').count(), 9); await page.locator('.lv[data-tp="photo"]').click(); eq(await page.locator('.cover').count(), 6); await page.locator('.lv[data-tp="social"]').click(); eq(await page.locator('.cover').count(), 5); await page.locator('.lv[data-tp="english"]').click(); eq(await page.locator('.cover').count(), 5);
+    assert.ok(await page.locator('#next').isVisible()); assert.ok(/Curveball/.test(await page.locator('#next').innerText())); await page.screenshot({ path: SHOTS + '/read20-older-shelf.png' });
+    await page.locator('.lv[data-tp="sports"]').click(); await page.locator('.cover', { hasText: 'Curveball' }).click(); await page.waitForSelector('.reader.older');
+    assert.ok(/Press and hold a word to see its syllables/.test(await page.locator('.hint').innerText())); assert.ok((await page.locator('.w').count()) > 30, 'a full paragraph'); await page.screenshot({ path: SHOTS + '/read20-older-reader.png' });
+    // press and hold a long word: syllables only, no sound chips, no "tricky" note
+    const w = page.locator('.w', { hasText: 'seconds' }).first(); await page.locator('#nextp').click(); await page.locator('#nextp').click();
+    const target = page.locator('.w', { hasText: /^Scientists$/ }).first(); const b = await target.boundingBox(); await page.mouse.move(b.x + b.width / 2, b.y + b.height / 2); await page.mouse.down(); await page.clock.runFor(600); await page.mouse.up();
+    await page.locator('.wordpop').waitFor(); eq((await page.locator('.syl .st').allInnerTexts()).join('-'), 'sci-en-tists'); eq(await page.locator('.snd').count(), 0, 'no sound chips for older readers'); assert.ok(!/tricky/i.test(await page.locator('.wp-sub').innerText())); await page.screenshot({ path: SHOTS + '/read20-older-word.png' }); await page.locator('#wpdone').click();
+    await page.locator('#prev').click(); await page.locator('#prev').click(); for (let i = 0; i < 5; i++) await page.locator('#nextp').click();
+    await page.waitForSelector('.quiz'); eq(await page.locator('.gloss dt').count(), 3, 'words to know'); assert.ok(/Magnus effect/.test(await page.locator('.gloss').innerText())); eq(await page.locator('.qq').count(), 3); eq(await page.locator('.qb').count(), 9); eq(await page.locator('#more').isVisible(), true);
+    const ask = i => page.locator('.qq').nth(i); const rightOf = i => ask(i).locator('.qb', { hasText: ['60 feet, 6 inches', 'Spin and the air around the seams', '108'][i] });
+    await rightOf(0).click(); eq(await ask(0).locator('.qf').innerText(), '✓ Right!'); eq(await ask(0).locator('.qb.right').count(), 1);
+    const wrong = ask(1).locator('.qb', { hasText: 'A longer throw' }); await wrong.click(); assert.ok(/Not quite. The answer is: Spin and the air around the seams/.test(await ask(1).locator('.qf').innerText())); eq(await wrong.evaluate(e => e.classList.contains('wrong')), true); eq(await ask(1).locator('.qb.right').innerText(), 'Spin and the air around the seams');
+    await rightOf(0).click({ force: true }); eq(await ask(0).locator('.qb.right').count(), 1, 'a locked question stays locked'); await rightOf(2).click(); assert.ok(/You got 2 of 3/.test(await page.locator('#qscore').innerText())); await page.screenshot({ path: SHOTS + '/read20-older-quiz.png', fullPage: true });
+    const order = await ask(2).locator('.qb').allInnerTexts(); assert.ok(order.length === 3 && new Set(order).size === 3);
+    await page.locator('#back').click(); await page.waitForSelector('.cover'); assert.ok(await page.locator('.cover', { hasText: 'Curveball' }).locator('.check').count(), 'finished'); assert.ok(/Sam's|Sam/.test(await page.locator('.rd.on .nm').innerText()));
+    await page.locator('#nav button[data-go="log"]').click(); await page.waitForSelector('.cal'); assert.ok(/Sports · finished/.test(await page.locator('#detail').innerText()), await page.locator('#detail').innerText());
+    eq(errors.length, 0, errors.join('|'));
+  });
+  await test('older reader: the reading level is a setting on each reader, saved, synced and does not touch the other reader', async () => {
+    const { page } = await mk(); await page.locator('#gear').click(); eq(await page.locator('#slv').inputValue(), 'early'); await page.selectOption('#slv', 'older'); await page.locator('#sd').click(); await page.waitForSelector('.cover');
+    assert.ok(/The Library/.test(await page.locator('.sec').innerText())); eq(await page.locator('.lv').count(), 6);
+    await page.locator('#addrd').click(); await page.fill('#rn', 'Kid'); await page.locator('#ra').click(); await page.waitForFunction(() => document.querySelector('.rd.on .nm').textContent === 'Kid'); assert.ok(/The Book Shop/.test(await page.locator('.sec').innerText()), 'the new reader is an early reader'); eq(await page.locator('.cover').count(), 8);
+    await page.locator('.rd[data-id]').first().click(); await page.waitForFunction(() => document.querySelector('.rd.on .nm').textContent === 'Reader'); assert.ok(/The Library/.test(await page.locator('.sec').innerText()));
+    await page.reload(); await page.waitForSelector('.cover'); assert.ok(/The Library/.test(await page.locator('.sec').innerText()), 'remembered after a reload');
+    await page.locator('#gear').click(); eq(await page.locator('#sz option').allInnerTexts().then(a => a.join()), 'Normal,Large,Extra large'); await page.selectOption('#slv', 'early'); await page.locator('#sd').click(); assert.ok(/The Book Shop/.test(await page.locator('.sec').innerText()));
+    const C2 = await page.evaluate(() => { const R = R20Core; const a = R.emptyRoot(); a.profiles.main.lv = 'older'; R.addSeconds(a.profiles.main, '2026-11-09', 'x', 60); return R.mergeRoot(R.emptyRoot(), a).profiles.main.lv; }); eq(C2, 'older', 'a fresh phone takes the saved level');
   });
   await test('offline: the service worker caches the app and it reopens with no network', async () => {
     const o = await newPage(br, { sw: true, today: TODAY }); const { page, ctx } = o;

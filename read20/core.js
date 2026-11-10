@@ -12,7 +12,7 @@
 
   C.GOALS = [10, 15, 20, 25, 30];
   C.AVATARS = ["🦊", "🐻", "🐼", "🦁", "🐯", "🐸", "🐵", "🦄", "🐙", "🐢", "🦋", "🐬"];
-  C.empty = () => ({ v: 1, name: "", av: "", goal: 20, size: 1, say: false, bk: "", days: {} });
+  C.empty = () => ({ v: 1, name: "", av: "", lv: "early", goal: 20, size: 1, say: false, bk: "", days: {} });
   const int = (x, lo, hi, dflt) => { x = Math.round(Number(x)); return isFinite(x) ? Math.min(hi, Math.max(lo, x)) : dflt; };
   const clean = (s, n) => String(s == null ? "" : s).replace(/[\u0000-\u001f\u007f‪-‮⁦-⁩]/g, "").trim().slice(0, n);
 
@@ -46,6 +46,7 @@
     if (!raw || typeof raw !== "object") return s;
     s.name = clean(raw.name, 20);
     s.av = C.AVATARS.includes(raw.av) ? raw.av : "";
+    s.lv = raw.lv === "older" ? "older" : "early";   // which shelf: early readers (learning to read) or older readers (about grades 5 and up)
     s.goal = C.GOALS.includes(raw.goal) ? raw.goal : 20;
     s.size = int(raw.size, 0, 2, 1);
     s.say = raw.say === true;
@@ -111,7 +112,7 @@
      finished mark. Used to restore a backup and to recover from the second copy of the log. */
   C.merge = (a, b) => {
     const out = C.sanitize(a), o = C.sanitize(b);
-    if (!Object.keys(out.days).length && Object.keys(o.days).length) { out.goal = o.goal; out.size = o.size; out.say = o.say; } // a fresh phone takes the saved settings
+    if (!Object.keys(out.days).length && Object.keys(o.days).length) { out.goal = o.goal; out.size = o.size; out.say = o.say; out.lv = o.lv; } // a fresh phone takes the saved settings
     if (!out.name && o.name) out.name = o.name;
     if (!out.av && o.av) out.av = o.av;
     if (!out.bk || (o.bk && o.bk > out.bk)) out.bk = o.bk;
