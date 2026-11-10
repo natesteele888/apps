@@ -52,8 +52,8 @@
       await db.runTransaction(async tx => {
         const snap = await tx.get(r);
         let remote = null; try { remote = snap.exists ? JSON.parse(snap.data().log) : null; } catch (e) {}
-        const mine = getS(), merged = force ? mine : C.merge(mine, remote || C.empty());
-        const text = JSON.stringify(C.serialize(merged));
+        const mine = getS(), merged = force ? mine : C.mergeRoot(mine, remote || C.emptyRoot());
+        const text = JSON.stringify(C.serializeRoot(merged));
         if (!snap.exists || snap.data().log !== text) tx.set(r, { log: text, updated: fb.firestore.FieldValue.serverTimestamp() });
         cloud.merged = merged;
       });
