@@ -97,6 +97,10 @@ code{font-family:ui-monospace,Menlo,monospace;font-size:13px;background:var(--pa
 .gate .box{max-width:360px}
 .gate img{width:96px;height:96px;border-radius:22px;margin:0 auto 12px;display:block}
 .gate h1{font-size:46px;margin:0}
+.gate .or{margin:18px 0 6px;color:var(--ink-dim);font-size:13.5px}
+.gate form.card{text-align:left;margin-top:8px}
+.gate .tall{position:relative;font-size:13.5px}.gate .tall::after{content:"";position:absolute;inset:-12px -6px}
+.gate .row{display:flex;justify-content:space-between;gap:10px;align-items:center;margin-top:12px}
 .toast{position:fixed;left:50%;bottom:calc(18px + env(safe-area-inset-bottom));transform:translateX(-50%);background:var(--panel-2);border:1px solid var(--line);padding:9px 16px;border-radius:var(--r);font-size:13.5px;opacity:0;pointer-events:none;transition:opacity .25s;z-index:9}
 .toast.on{opacity:1}
 [hidden]{display:none!important}
@@ -110,7 +114,8 @@ code{font-family:ui-monospace,Menlo,monospace;font-size:13px;background:var(--pa
 <script>
 "use strict";
 /* Gameday Picks: NFL, MLB, NBA and NHL picks for invited players (NFL by the week, the others by the day).
-   Sign in with Google. The owner is in automatically; everyone else joins once with an invite code.
+   Sign in with Google, or with an email and password (for friends without a Google account).
+   The owner is in automatically; everyone else joins once with an invite code, and any player can share theirs.
    Data lives in Firebase (nates-toolbox project, gp_* collections), protected by Firestore rules. */
 const FIREBASE_CONFIG={apiKey:"AIzaSyDT_wGN93U4oM70orIU8flSAnvXHApqW2A",authDomain:"nates-toolbox.firebaseapp.com",projectId:"nates-toolbox",storageBucket:"nates-toolbox.firebasestorage.app",messagingSenderId:"567737923830",appId:"1:567737923830:web:b597b5d71e7c7a73c4d4d7"};
 const C=window.GPCore;
@@ -132,12 +137,13 @@ function render(){
   // keep the page position and the focused pick button through a redraw
   const y=window.scrollY,fb=document.activeElement,fg=fb&&fb.dataset&&fb.dataset.g,ft=fb&&fb.dataset&&fb.dataset.t;
   $("#app").innerHTML=`<header><div><h1>Gameday Picks</h1><p>Pick a side, every game day, all season.</p></div>
-    <div class="me"><b>${esc(S.me.name)}</b>${rec.total?`${rec.w}-${rec.l} · ${Math.round(rec.w/rec.total*100)}%`:"No results yet"}<br><button class="linkbtn" id="rename">rename</button> · <button class="linkbtn" id="out">sign out</button> · <button class="linkbtn" type="button" onclick="window.nateHealth&&nateHealth.report()">something wrong?</button></div></header>
+    <div class="me"><b>${esc(S.me.name)}</b>${rec.total?`${rec.w}-${rec.l} · ${Math.round(rec.w/rec.total*100)}%`:"No results yet"}<br>${S.isOwner?"":`<button class="linkbtn" id="inv">invite friends</button> · `}<button class="linkbtn" id="rename">rename</button> · <button class="linkbtn" id="out">sign out</button> · <button class="linkbtn" type="button" onclick="window.nateHealth&&nateHealth.report()">something wrong?</button></div></header>
     <div class="sports" role="group" aria-label="League">${C.ORDER.map(id=>`<button type="button" data-sport="${id}" aria-pressed="${S.sport===id}">${C.SPORTS[id].emoji} ${C.SPORTS[id].name}</button>`).join("")}</div>
     <nav class="views">${views.map(([k,n])=>`<button data-view="${k}" ${S.view===k?'aria-current="page"':""}>${n}</button>`).join("")}</nav>
     <section id="view"></section>`;
   $("#out").onclick=()=>firebase.auth().signOut();
   $("#rename").onclick=rename;
+  if($("#inv"))$("#inv").onclick=()=>share(S.me.code);
   document.querySelectorAll("[data-view]").forEach(b=>b.onclick=()=>{S.view=b.dataset.view;render();window.scrollTo(0,0)});
   document.querySelectorAll("[data-sport]").forEach(b=>b.onclick=()=>{if(S.sport===b.dataset.sport)return;S.sport=b.dataset.sport;store("gp.sport",S.sport);S.sel=null;ensureSel();render()});
   ({picks:renderPicks,board:renderBoard,stats:renderStats,admin:renderAdmin})[S.view]();
@@ -145,11 +151,42 @@ function render(){
   window.scrollTo(0,y);
 }
 function renderSignIn(){
+  // someone arriving on an invite link is probably new, so open the email form on "Create account"
+  const invited=!!store("gp.code");let mode=invited?"new":"old";
   $("#app").innerHTML=`<div class="gate"><div class="box"><img src="/apps/icons/picks-192.png" alt=""><h1>Gameday Picks</h1>
-    <p style="color:var(--ink-dim)">NFL, MLB, NBA and NHL picks with your crew. Sign in with Google to play.</p>
-    <button class="btn gold" id="si">Sign in with Google</button><p class="err" id="siErr"></p></div></div>`;
+    <p style="color:var(--ink-dim)">NFL, MLB, NBA and NHL picks with your crew. Sign in to play.</p>
+    <button class="btn gold" id="si">Sign in with Google</button><p class="err" id="siErr"></p>
+    <p class="or">No Google account? Use any email instead.</p>
+    <form class="card" id="ef" novalidate>
+      <label class="field">Email<input id="em" type="email" autocomplete="email" inputmode="email" autocapitalize="off" spellcheck="false" required></label>
+      <label class="field">Password<input id="pw" type="password" minlength="6" required></label>
+      <p class="err" id="eErr" role="alert"></p>
+      <button class="btn gold" id="eGo" style="width:100%"></button>
+      <div class="row"><button type="button" class="linkbtn tall" id="eMode"></button><button type="button" class="linkbtn tall" id="eReset">Forgot password?</button></div>
+    </form></div></div>`;
   $("#si").onclick=signIn;
+  const paint=()=>{const n=mode==="new";$("#eGo").textContent=n?"Create account":"Sign in";$("#eMode").textContent=n?"Have an account? Sign in":"New here? Create an account";
+    $("#pw").autocomplete=n?"new-password":"current-password";$("#pw").placeholder=n?"At least 6 characters":"";$("#eReset").hidden=n;$("#eErr").textContent=""};
+  paint();
+  $("#eMode").onclick=()=>{mode=mode==="new"?"old":"new";paint()};
+  $("#eReset").onclick=async()=>{const em=$("#em").value.trim();if(!em){$("#eErr").textContent="Type your email first, then tap Forgot password.";$("#em").focus();return}
+    try{await firebase.auth().sendPasswordResetEmail(em);$("#eErr").textContent="";toast("If that email has an account, a reset link is on its way.")}catch(e){$("#eErr").textContent=authMsg(e)}};
+  $("#ef").onsubmit=async e=>{e.preventDefault();const em=$("#em").value.trim(),pw=$("#pw").value;
+    if(!em||!pw){$("#eErr").textContent="Enter your email and a password.";return}
+    if(mode==="new"&&pw.length<6){$("#eErr").textContent="Use at least 6 characters for the password.";return}
+    const b=$("#eGo");b.disabled=true;b.textContent=mode==="new"?"Creating…":"Signing in…";$("#eErr").textContent="";
+    try{const a=firebase.auth();await(mode==="new"?a.createUserWithEmailAndPassword(em,pw):a.signInWithEmailAndPassword(em,pw))}
+    catch(err){if(!$("#ef"))return;b.disabled=false;paint();$("#eErr").textContent=authMsg(err,mode)}};
 }
+function authMsg(e,mode){const c=(e&&e.code)||"";
+  if(c==="auth/email-already-in-use")return"That email already has an account. Tap \u201cHave an account? Sign in\u201d.";
+  if(c==="auth/invalid-email"||c==="auth/missing-email")return"That doesn't look like an email address.";
+  if(c==="auth/weak-password")return"Use at least 6 characters for the password.";
+  if(/auth\/(wrong-password|user-not-found|invalid-credential|invalid-login-credentials)/.test(c))return mode==="new"?"Couldn't create that account. Check the email and try again.":"That email and password don't match. New here? Tap Create an account.";
+  if(c==="auth/operation-not-allowed")return"Email sign-in isn't switched on yet. Ask whoever sent you the link.";
+  if(c==="auth/too-many-requests")return"Too many tries. Wait a few minutes and try again.";
+  if(c==="auth/network-request-failed")return"No connection. Check your signal and try again.";
+  return"That didn't work. Try again.";}
 function renderJoin(){
   const code=(new URLSearchParams(location.search).get("code")||store("gp.code")||"").toUpperCase();
   $("#app").innerHTML=`<div class="gate"><div class="box" style="text-align:left"><img src="/apps/icons/picks-192.png" alt=""><h1 style="text-align:center">Join the picks</h1>
@@ -157,7 +194,7 @@ function renderJoin(){
     <label class="field">Invite code<input id="jcode" value="${esc(code)}" autocomplete="off" autocapitalize="characters" required></label>
     <label class="field">Your name<input id="jname" maxlength="24" value="${esc((S.user.displayName||"").split(" ")[0])}" required></label>
     <p class="err" id="jerr"></p><button class="btn gold">Join</button></form>
-    <p style="text-align:center"><button class="linkbtn" id="out">Use a different Google account</button></p></div></div>`;
+    <p style="text-align:center"><button class="linkbtn tall" id="out">Use a different account</button></p></div></div>`;
   $("#out").onclick=()=>firebase.auth().signOut();
   $("#join").onsubmit=async e=>{e.preventDefault();const c=$("#jcode").value.trim().toUpperCase(),n=$("#jname").value.trim().slice(0,24);if(!c||!n)return;
     $("#jerr").textContent="";try{await db.doc("gp_players/"+S.user.uid).set({name:n,code:c,joinedAt:new Date().toISOString()});store("gp.code","");history.replaceState(null,"",location.pathname)}
@@ -280,7 +317,7 @@ function inviteLink(code){return location.origin+location.pathname+"?code="+enco
 function newCode(){const a="ABCDEFGHJKMNPQRSTUVWXYZ23456789";let s="";const r=crypto.getRandomValues(new Uint8Array(6));r.forEach(n=>s+=a[n%a.length]);return s}
 function renderAdmin(){
   const byCode={};Object.values(S.players).forEach(p=>(byCode[p.code]=byCode[p.code]||[]).push(p.name));
-  $("#view").innerHTML=`<div class="card"><h2>Invite codes</h2><p>Send someone the link for a code. They sign in with Google and they're in. Turn a code off to stop new people joining with it.</p>
+  $("#view").innerHTML=`<div class="card"><h2>Invite codes</h2><p>Send someone the link for a code. They sign in with Google or any email and they're in. Players can share the code they joined with too. Turn a code off to stop new people joining with it.</p>
     <form class="field" id="nc" style="grid-template-columns:1fr auto;align-items:end"><label class="field" style="margin:0">Who it's for (just for you)<input id="ncl" maxlength="40" placeholder="e.g. Football team"></label><button class="btn gold">New code</button></form>
     <div class="list">${S.codes.map(c=>`<div class="li"><span class="grow"><b><code>${esc(c.id)}</code></b> ${esc(c.label||"")} ${c.active?"":"· <i>off</i>"}<small>${(byCode[c.id]||[]).length} joined${(byCode[c.id]||[]).length?": "+esc(byCode[c.id].join(", ")):""}</small></span>
       <button class="btn small" data-copy="${esc(c.id)}">Share link</button><button class="btn small" data-tog="${esc(c.id)}">${c.active?"Turn off":"Turn on"}</button></div>`).join("")||`<p class="status">No codes yet.</p>`}</div></div>
@@ -291,7 +328,7 @@ function renderAdmin(){
   document.querySelectorAll("[data-rm]").forEach(b=>{let armed=false;b.onclick=async()=>{if(!armed){armed=true;b.textContent="Tap again to remove";setTimeout(()=>{armed=false;b.textContent="Remove"},3000);return}
     try{await db.doc("gp_players/"+b.dataset.rm).delete();toast("Removed. Their old picks stay hidden from the board.")}catch(_){toast("Couldn't remove")}}});
 }
-async function share(code){const url=inviteLink(code);const text=`Join my NFL, MLB, NBA and NHL picks on Gameday Picks. Code: ${code}`;
+async function share(code){const url=inviteLink(code);const text=`Join my NFL, MLB, NBA and NHL picks on Gameday Picks. Sign in with Google or any email. Code: ${code}`;
   try{if(navigator.share){await navigator.share({title:"Gameday Picks",text,url});return}}catch(e){if(e&&e.name==="AbortError")return}
   try{await navigator.clipboard.writeText(text+"\n"+url);toast("Invite link copied")}catch(_){prompt("Copy this invite link",url)}}
 
