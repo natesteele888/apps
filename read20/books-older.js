@@ -467,7 +467,175 @@ When you see a long word, try breaking it into parts. Cover the prefix and suffi
 =suffix|a word part added to the end
 ?What does the root photo mean?|Light|Water|Far|0
 ?What does a biography tell about?|Someone's life|A place|A sport|0
-?What does the prefix re mean?|Again|Not|Before|0`
+?What does the prefix re mean?|Again|Not|Before|0`,
+`Drake Maye: A Quarterback From a Family of Athletes|🏈|#dbe7ff|athletes|2
+Drake Maye was born on August 30, 2002, in Charlotte, North Carolina, into a family of athletes. His father, Mark, played quarterback at the University of North Carolina. His older brother Luke played basketball there and hit a game-winning shot in the 2017 NCAA Tournament that sent the Tar Heels to the Final Four.
+Maye played football and basketball at Myers Park High School in Charlotte, and he was one of the top quarterback recruits in the country. He chose to play at North Carolina, the school his family loved. After sitting behind another quarterback for a year, he got his chance in 2022.
+That season, Maye lit up the college game. He threw for more than 4,000 yards and 38 touchdowns and was named the Atlantic Coast Conference Player of the Year. At six feet four inches, he could throw accurately and also run when a play broke down.
+In the 2024 NFL draft, the New England Patriots chose Maye with the third overall pick. Wearing a Patriots uniform means living in the shadow of Tom Brady, who led the team to six Super Bowl wins. It is a lot of pressure for a young quarterback. Maye took over as the starter during his rookie season, playing for a team that was still rebuilding.
+Maye is still early in his career, so his story is still being written. It already shows some lessons: family can shape your path, waiting your turn takes patience, and it helps to keep working when the pressure is on.
+=redshirt|to sit out a season of college play to save a year of eligibility
+=recruit|a high school player a college wants on its team
+=rookie|a player in the first year of a pro career
+?Which college did Drake Maye attend?|North Carolina|Ohio State|LSU|0
+?Which team picked him third overall in 2024?|New England Patriots|Cincinnati Bengals|Seattle Seahawks|0
+?Which two sports did he play in high school?|Football and basketball|Baseball and soccer|Golf and tennis|0`,
+
+`Jaxon Smith-Njigba: Waiting for His Turn|🏈|#fff0b3|athletes|2
+Jaxon Smith-Njigba, whose last name is pronounced in-JIG-buh, grew up in Rockwall, Texas, near Dallas. He was a standout wide receiver at Rockwall High School, and he became one of the most sought-after recruits in the country. He chose to leave Texas and play for the Ohio State Buckeyes in Columbus, Ohio.
+At Ohio State, he had to wait. The team already had two stars at wide receiver, Garrett Wilson and Chris Olave, who both became first-round NFL picks. Smith-Njigba used his time to study and practice. He became known for running precise routes, which means cutting and turning at exactly the right spot to get open.
+In 2021, he got his big chance. He caught 95 passes for 1,606 yards, which was more receiving yards in one season than any Ohio State player had ever had. In the Rose Bowl on New Year's Day 2022, he caught 15 passes for 347 yards, setting a Rose Bowl record.
+The next season did not go as planned. A hamstring injury kept him out of most of the games in 2022. Rehabilitating an injury is hard work, and it can feel discouraging. Even so, NFL teams still saw his talent. The Seattle Seahawks chose him in the first round of the 2023 draft.
+In Seattle, Smith-Njigba worked to earn a bigger role, and he has grown into one of the league's most productive receivers. His story shows that being patient and prepared can pay off. When the opportunity arrives, you want to be ready.
+=route|the path a receiver runs to get open for a pass
+=hamstring|a large muscle at the back of the thigh
+=record|the best result anyone has ever had
+?At which Ohio college did he play?|Ohio State|Cincinnati|Ohio University|0
+?How many passes did he catch in the 2022 Rose Bowl?|15|5|30|0
+?What injury slowed him down in 2022?|A hamstring injury|A broken wrist|A concussion|0`,
+
+`Justin Jefferson: The Catch Heard Around the League|🏈|#e8d6ff|athletes|2
+Justin Jefferson was born on June 16, 1999, in St. Rose, Louisiana, near New Orleans. He played at Destrehan High School. His older brother Jordan was a quarterback at Louisiana State University, known as LSU, and Justin followed him there.
+At LSU, Jefferson was a solid receiver for two seasons. His big moment came in 2019, when LSU put together one of the greatest offenses in college football history. Quarterback Joe Burrow, the same Joe Burrow who now plays for the Cincinnati Bengals, threw to a group of receivers that included Jefferson and Ja'Marr Chase. Jefferson caught 111 passes for 1,540 yards and 18 touchdowns, and LSU won the national championship.
+In the 2020 NFL draft, the Minnesota Vikings chose Jefferson with the 22nd pick. Some people thought teams had passed on him too many times. They were wrong. As a rookie, Jefferson caught passes for 1,400 yards, one of the best rookie seasons ever for a receiver.
+In 2022, Jefferson led the league with 128 catches and 1,809 yards and was named the NFL's Offensive Player of the Year. That season he also made one of the most famous catches in recent years. Against the Buffalo Bills, on fourth down with 18 yards to go, he stretched out and pulled in the ball with one hand while a defender was all over him.
+Jefferson is also known for a celebration dance called the Griddy. Fans love his joy, but his teammates and coaches talk about his work ethic. He studies defenses and practices his routes again and again. His story shows that talent plus preparation makes a star.
+=offense|the team that has the ball and is trying to score
+=draft|the yearly event where pro teams choose new players
+=work ethic|how hard and how consistently someone works
+?Which college did Jefferson play for?|LSU|Ohio State|Texas|0
+?Which NFL team drafted him?|Minnesota Vikings|Seattle Seahawks|New England Patriots|0
+?What award did he win in 2022?|Offensive Player of the Year|Rookie of the Year|MVP|0`,
+
+`Mookie Betts: Small Size, Big Game|⚾|#d4f0c4|athletes|2
+Markus Lynn Betts was born on October 7, 1992, in Nashville, Tennessee. Everyone calls him Mookie. He grew up playing baseball and basketball, and he was also a talented bowler. He has bowled perfect games, scoring a 300 with twelve strikes in a row.
+Betts went to John Overton High School in Nashville. At about five feet nine inches, he was smaller than many top players, and some teams passed on him. In the 2011 draft, the Boston Red Sox chose him in the fifth round, which is not early. He began as a second baseman, but the team moved him to the outfield, where his speed and quick reactions were a perfect fit. He made his major league debut in 2014.
+In 2018, Betts had one of the best seasons in baseball. He won the American League batting title and the Most Valuable Player award, and the Red Sox won the World Series. He also became known for his glove. He has won multiple Gold Glove awards for fielding.
+In 2020, Boston traded him to the Los Angeles Dodgers, and he signed a 12-year contract worth $365 million. The same year, he helped the Dodgers win the World Series. In 2024, the Dodgers asked him to learn a brand-new position, shortstop, because the team needed him there. He worked at it, and the Dodgers won the World Series again that year.
+Betts has said that he never wants to stop learning and getting better. His story shows that size does not decide how good a player can be. Speed, smarts and a willingness to try new things matter, too.
+=outfield|the part of a baseball field beyond the infield
+=Gold Glove|an award for the best fielder at each position
+=position|the spot a player covers on the field
+?Which team drafted Betts?|Boston Red Sox|Los Angeles Dodgers|Nashville Stars|0
+?What other sport is Betts very good at?|Bowling|Hockey|Golf|0
+?Which new position did he learn in 2024?|Shortstop|Catcher|Pitcher|0`,
+
+`Fernando Tatis Jr.: Baseball in His Blood|⚾|#ffe0b2|athletes|3
+Fernando Tatis Jr. was born on January 2, 1999, in San Pedro de Macorís, a city in the Dominican Republic that has produced many major league players. His father, Fernando Tatis Sr., was a big leaguer too. In 1999, the year Jr. was born, his dad did something no one has done before or since. On April 23, he hit two grand slams in a single inning.
+Junior grew up around baseball. At 16, he signed with the Chicago White Sox. A year later, in 2016, the White Sox traded him to the San Diego Padres in a deal for a veteran pitcher. San Diego saw a rare combination of power, speed and a strong arm.
+He reached the majors in 2019, when he was only 20 years old. He quickly became one of the most exciting players in the game. Tatis is a shortstop who can hit home runs, steal bases and make flashy plays in the field. In 2021, he hit 42 home runs, and the Padres signed him to a 14-year contract worth $340 million.
+Then he met setbacks. Injuries to his shoulder and then his wrist kept him off the field. In 2022, Major League Baseball suspended him for 80 games for breaking its rules about banned drugs. He apologized and said he had made a mistake. Taking responsibility for a mistake is not easy, and it is part of how people grow up.
+When he returned in 2023, the Padres moved him to right field. He won a Gold Glove for his play there. Tatis's story is one of talent, mistakes and a comeback, and it shows how to keep going after hard times.
+=grand slam|a home run with the bases loaded, worth four runs
+=suspend|to officially stop someone from playing for a time
+=responsibility|owning what you did, including mistakes
+?What did Tatis Sr. do on April 23, 1999?|Hit two grand slams in one inning|Pitched a perfect game|Won an MVP|0
+?Which team does Tatis Jr. play for?|San Diego Padres|Boston Red Sox|Chicago White Sox|0
+?What did he do after his suspension?|Returned and won a Gold Glove|Retired|Became a coach|0`,
+
+`Jayson Tatum: Following Kobe's Example|🏀|#dbf0d0|athletes|2
+Jayson Tatum was born on March 3, 1998, in St. Louis, Missouri. His father, Justin, played college basketball at Saint Louis University, so Jayson grew up around the game. His favorite player was Kobe Bryant. Tatum studied how Bryant moved, shot and worked, and he tried to copy it.
+At Chaminade College Preparatory School in St. Louis, Tatum was one of the best players in the country, and he was chosen to play in the McDonald's All-American Game. He played one season at Duke University, and then he entered the NBA draft.
+In 2017, the Boston Celtics chose Tatum with the third pick. As a rookie, he helped the Celtics reach the Eastern Conference Finals, only one step from the NBA Finals. He kept improving every year. By 2022, he had carried Boston all the way to the NBA Finals, but the Celtics lost to the Golden State Warriors.
+Tatum did not let it stop him. In 2023, he scored 55 points in the NBA All-Star Game, a record, and won the game's Most Valuable Player award. In 2024, he and the Celtics finally won the NBA championship, defeating the Dallas Mavericks. That summer he also won an Olympic gold medal with the United States team in Paris.
+In the 2025 playoffs, Tatum tore his Achilles tendon, a serious injury that meant a long recovery. Tatum is known for his scoring, his smooth shot and his fade-away jump shot, and also for his calm leadership. His journey shows how losing in the Finals can fuel a championship season.
+=draft pick|a player chosen by a team in the draft
+=Achilles tendon|the strong cord that connects the calf muscle to the heel
+=conference|a group of teams that play each other
+?Who was Tatum's favorite player growing up?|Kobe Bryant|Michael Jordan|Larry Bird|0
+?Which team did he win a championship with?|Boston Celtics|Dallas Mavericks|Golden State Warriors|0
+?What happened to him in the 2025 playoffs?|He tore his Achilles tendon|He retired|He won MVP|0`,
+
+`Damian Lillard: The Man From Oakland|🏀|#ffd6d6|athletes|2
+Damian Lillard, known as Dame, was born on July 15, 1990, in Oakland, California. He has said that growing up in Oakland shaped his toughness. Few big colleges recruited him, though. He chose Weber State, a small school in Ogden, Utah, where he could play right away.
+At Weber State, Lillard kept improving. In his senior year, he averaged about 24.5 points per game, one of the highest averages in the country. Scouts took notice, and in the 2012 NBA draft, the Portland Trail Blazers chose him with the sixth pick. In 2013, he was named Rookie of the Year.
+Lillard became known for shooting from far away and for making big shots at the end of games. Fans called it Dame Time. On April 23, 2019, in the playoffs, he hit a shot from about 37 feet away at the buzzer to beat the Oklahoma City Thunder and win the series, and he waved goodbye to the crowd as the ball went in. In February 2023, he scored 71 points in a single game.
+In 2021, he won an Olympic gold medal with the United States team in Tokyo. In 2023, he was traded to the Milwaukee Bucks, hoping to win a championship. In 2025, he tore his Achilles tendon, a serious injury that meant a long recovery.
+Off the court, Lillard is a rapper who performs under the name Dame D.O.L.L.A. His story is for anyone who was overlooked. He did not go to a famous school, but he outworked people and became one of the best guards of his generation.
+=overlooked|not noticed or not chosen
+=buzzer beater|a shot made just as the clock runs out
+=guard|a basketball player who handles the ball and shoots from outside
+?Where did Lillard go to college?|Weber State|Duke|Kentucky|0
+?What was the distance of his 2019 buzzer beater?|About 37 feet|About 5 feet|About 90 feet|0
+?How many points did he score in the 2023 game against Houston?|71|35|100|0`,
+
+`Ancient Egypt: Gift of the Nile|🔺|#ffe8b8|social|2
+The Greek historian Herodotus called Egypt the gift of the Nile. Almost all Egyptians lived along the river, in a thin green strip surrounded by desert. The desert protected Egypt from invaders, and the Nile gave it water, food and a highway for boats. Around 3100 BC, Upper and Lower Egypt were joined into one kingdom.
+The ruler of Egypt was the pharaoh, who was believed to be a god in human form. Egyptians believed in an afterlife, and they built great tombs for their pharaohs. The Great Pyramid of Giza was built for the pharaoh Khufu about 4,500 years ago. It was almost 480 feet tall when it was finished, and it was the tallest human-made structure in the world for thousands of years. Historians now believe it was built by thousands of skilled, paid workers, not by slaves.
+To protect the body for the afterlife, Egyptians used mummification. It took about 70 days. Workers removed the organs, dried the body with a salt called natron and wrapped it in linen. The organs were stored in special jars.
+Egyptians wrote in hieroglyphs, a system of picture symbols. Scribes wrote on papyrus, a paper-like material made from reeds. For many centuries, nobody could read hieroglyphs. Then, in 1799, French soldiers found the Rosetta Stone, which had the same message in hieroglyphs, a second Egyptian script and Greek. A scholar named Jean-François Champollion used the Greek to crack the code in 1822.
+Egyptian society had layers. At the top was the pharaoh, then officials and priests, then scribes and craftspeople, and at the bottom were the farmers, who were the majority. Egyptians also made a 365-day calendar and used geometry to measure farmland after floods.
+=pharaoh|the king of ancient Egypt
+=mummification|preserving a body so it lasts a very long time
+=scribe|a person trained to read and write
+?What did Herodotus call Egypt?|The gift of the Nile|The land of sand|The great empire|0
+?What did the Rosetta Stone help scholars do?|Read hieroglyphs|Build pyramids|Measure the Nile|0
+?Who was the pharaoh?|The ruler of Egypt|A priest|A farmer|0`,
+
+`Rome: From Republic to Empire|🏛️|#ffd8c2|social|3
+According to legend, Rome was founded in 753 BC by Romulus, who named the city after himself. For its first two and a half centuries, Rome was ruled by kings. In 509 BC, the Romans threw out their last king and created a republic. The word comes from the Latin res publica, which means a public matter.
+In the Roman Republic, citizens elected officials called consuls to lead for one year, and a council called the Senate gave advice. At first, only wealthy families called patricians held power. Ordinary citizens, known as plebeians, demanded a voice. They gained their own officials, called tribunes, and around 451 BC, the laws were written down on the Twelve Tables so that everyone could see them.
+Rome conquered Italy and then the lands around the Mediterranean Sea. It fought three wars against the city of Carthage, including one in which the general Hannibal marched elephants across the Alps. Rome also built roads, tens of thousands of miles of them, which helped move soldiers, goods and messages. This is where we get the saying, All roads lead to Rome.
+By the first century BC, powerful generals were fighting each other. One of them, Julius Caesar, became a ruler for life. In 44 BC, a group of senators who feared he wanted to be king assassinated him on the Ides of March. After years of civil war, his adopted heir Octavian became the first emperor in 27 BC and took the name Augustus. The republic was over.
+The empire brought about two centuries of peace and trade called the Pax Romana. Romans built aqueducts, arches and the Colosseum, which opened in AD 80 and held about 50,000 people. In AD 476, the western half of the empire fell. Its influence lives on in the Latin roots of English, Spanish, French and Italian, in Roman ideas about law and in the Senate of the United States.
+=republic|a government where citizens elect their leaders
+=senate|a council of leaders who advise or make laws
+=aqueduct|a bridge-like structure that carries water
+?What does the word republic come from?|res publica, a public matter|A king's name|A Greek city|0
+?Who became the first Roman emperor?|Augustus|Julius Caesar|Hannibal|0
+?In what year did the western empire fall?|AD 476|44 BC|AD 80|0`,
+
+`Why Places Are Different|🌦️|#d4f0e8|social|2
+Geography is the study of the Earth and the people who live on it. Physical geography looks at landforms, water and climate. Human geography looks at people, cultures and cities and how they use the land. It is also important to know the difference between weather and climate. Weather is what is happening outside today. Climate is the typical pattern of weather in a place over many years.
+Why are climates so different? One reason is latitude. Places near the equator get more direct sunlight, so they are warmer. Places near the poles get slanted sunlight, so they are colder. Elevation matters too. The higher up you go, the colder it gets, by about 3.5 degrees Fahrenheit for every 1,000 feet. Mountains can have snow even in hot regions.
+Nearness to water also matters. Oceans and big lakes heat and cool slowly, so places near them often have milder temperatures. Ocean currents can move warm or cold water around the world. The warm Gulf Stream is one reason Western Europe is warmer than other places at the same latitude. Mountains can also block rain, creating a dry area on the far side called a rain shadow.
+These differences create regions such as rainforests, deserts, grasslands and tundra. The Sahara in Africa is the largest hot desert on Earth. Antarctica is a desert too, because it gets very little precipitation, even though it is covered in ice.
+Geography shapes how people live. Greece's mountains and islands separated people into small city-states that traded by sea. In Ohio, which sits at a mid-latitude and is far from the ocean, there are four distinct seasons, and towns near Lake Erie can get heavy lake-effect snow. When you wonder why a place is the way it is, ask what the land, water and weather have to do with it.
+=climate|the usual weather of a place over many years
+=elevation|the height of land above sea level
+=precipitation|water falling as rain, snow, sleet or hail
+?What is the difference between weather and climate?|Climate is the long-term pattern|They are the same|Weather lasts years|0
+?Why are places near the equator warm?|They get more direct sunlight|They are low|They have no water|0
+?What is the largest hot desert on Earth?|The Sahara|The Gobi|The Mojave|0`,
+
+`Needs, Wants and Trading Cards|💰|#fff0b3|social|2
+Economics is the study of how people make choices about money, goods and resources. It starts with the difference between needs and wants. Needs are things you must have to live, such as food, water, clothing and shelter. Wants are things you would like to have but can live without, such as a new video game or a pair of cleats.
+The trouble is that resources are limited, but people's wants never end. This is called scarcity. Because of scarcity, everyone has to make choices. Whenever you choose one thing, you give up another. The most valuable thing you give up is called the opportunity cost. If you spend your fifty dollars on cleats, the opportunity cost might be the concert ticket you could have bought. Time has opportunity costs too. An hour spent gaming is an hour not spent at practice.
+Prices depend on supply and demand. Supply is how many of something are available. Demand is how many people want it. Think about sports cards. If a company prints millions of copies of a card, the supply is huge, and each card is worth little. If a card is rare and many people want it, its price goes up. One famous baseball card, the T206 Honus Wagner, sold for more than seven million dollars in 2022 because so few exist and so many collectors wanted one.
+Most of us do not make everything we use. Instead, people specialize in a job they do well and trade for the rest. Long ago, people used barter, trading goods directly. Money makes trade easier because everyone accepts it.
+A budget is a plan for your money. Income is the money you receive. Expenses are the money you spend. Whatever is left is savings. A smart habit is to save first and spend what is left. Saving a little every week adds up over time.
+=scarcity|not having enough resources to satisfy everyone's wants
+=opportunity cost|the next best thing you give up when you make a choice
+=demand|how much people want something
+?What is a need?|Something you must have to live|Something you want|A rare card|0
+?What happens to price when something is rare and many people want it?|It goes up|It goes down|It stays at zero|0
+?What is opportunity cost?|What you give up when you choose|The price on the tag|A kind of tax|0`,
+
+`Ancient China: Dynasties and the Great Wall|🐉|#ffd6d6|social|3
+Early Chinese civilization began along the Yellow River, also called the Huang He, and later spread to the Yangtze River. China was ruled by dynasties, families of kings and emperors whose rule passed from parent to child. One early dynasty, the Shang, began around 1600 BC. The philosopher Confucius, who lived about 2,500 years ago, taught about respect for family, the value of education and the importance of good leaders. His ideas shaped Chinese society for centuries.
+In 221 BC, a ruler named Qin Shi Huang brought the warring states together and became the first emperor of a united China. He standardized writing, money and weights and measures so that the whole country could trade and communicate. He built roads and canals. He also had walls joined together to defend the northern border. The Great Wall seen by tourists today was mostly built much later, by the Ming dynasty between the 1300s and 1600s. Counting all its branches, the wall is more than 13,000 miles long.
+Qin Shi Huang's tomb holds one of the greatest discoveries in history. In 1974, farmers digging a well near the city of Xi'an found pieces of a clay soldier. Archaeologists have since uncovered thousands of life-size terracotta soldiers, horses and chariots buried to guard the emperor in the afterlife. The faces of the soldiers are said to be all different.
+The Han dynasty, which ruled from 206 BC to AD 220, expanded China and opened the Silk Road trade routes. Chinese inventors came up with paper, the compass, gunpowder and printing, which are called the Four Great Inventions. They changed the world.
+Chinese is one of the oldest writing systems still in use. China's history shows how a large, long-lasting civilization can build on ideas from many generations.
+=dynasty|a family that rules a country for many years
+=emperor|the ruler of an empire
+=terracotta|a hard, brownish-red baked clay
+?Who was the first emperor of a united China?|Qin Shi Huang|Confucius|Marco Polo|0
+?What was discovered near Xi'an in 1974?|Terracotta soldiers|The Great Wall|A river|0
+?Which of these was one of the Four Great Inventions?|Paper|Electricity|The telephone|0`,
+
+`Hammurabi's Code: Rules in Stone|🪨|#e5dbff|social|2
+About 3,800 years ago, a king named Hammurabi ruled the city of Babylon in Mesopotamia. He wanted to bring order to his growing kingdom. He had a set of laws carved onto a tall black stone pillar, called a stele. It was set up in public so that people could see it. The pillar was discovered in 1901 in what is now Iran, and it is in a museum in Paris today.
+The code has 282 laws, written in cuneiform. They cover trade, farming, family life, wages, buildings and injuries. One law, for example, says that if a builder constructs a house badly and it falls down and kills the owner, the builder can be punished. Another sets the wages for workers.
+The code is famous for the idea of an eye for an eye, which means that a punishment should match the harm done. In some ways, that was an improvement over a world in which people took revenge without limits. But the laws were not equal. The punishment could be different depending on whether someone was a noble, a commoner or an enslaved person.
+Why does it matter that laws are written down? When rules are written and public, everyone can know what they are. Judges have to follow the same standard instead of making up a rule each time. The Romans carved their Twelve Tables for the same reason. In sports, the rulebook plays the same role. Players, coaches and referees all use the same set of rules.
+Modern ideas of justice go further than Hammurabi's. In the United States, people are innocent until proven guilty, and the law is supposed to apply equally to everyone. When you read about an old law, compare it with today and ask what has stayed the same and what has changed.
+=code|an organized set of laws or rules
+=stele|a tall carved stone slab used as a monument
+=justice|fair treatment under the law
+?How many laws were in Hammurabi's Code?|282|10|1,000|0
+?What was the code carved into?|A stone pillar|A wooden door|A clay cup|0
+?Why does it matter for laws to be written down?|Everyone can know the rules|Only kings can read them|It makes them longer|0`
   ];
 
   const slug = t => t.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");

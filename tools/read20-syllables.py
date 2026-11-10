@@ -30,6 +30,12 @@ OVERRIDES = {   # word: "syl-la-bles"   (hand fixes where the dictionaries disag
     "federal": "fed-er-al", "foreigners": "for-eign-ers", "hyperbole": "hy-per-bo-le", "idiom": "id-i-om", "idioms": "id-i-oms", "mediterranean": "med-i-ter-ra-ne-an",
     "meridian": "me-rid-i-an", "mesopotamia": "mes-o-po-ta-mi-a", "oasis": "o-a-sis", "philadelphia": "phil-a-del-phi-a", "society": "so-ci-e-ty", "socrates": "soc-ra-tes",
     "tele": "tel-e", "travelers": "trav-el-ers",
+    "achilles": "a-chil-les", "area": "ar-e-a", "averaged": "av-er-aged", "bryant": "bry-ant", "colosseum": "col-os-se-um", "conference": "con-fer-ence", "damian": "da-mi-an",
+    "diego": "di-e-go", "february": "feb-ru-ar-y", "general": "gen-er-al", "generals": "gen-er-als", "happening": "hap-pen-ing", "kobe": "ko-be", "mavericks": "mav-er-icks",
+    "mcdonald": "mc-don-ald", "padres": "pa-dres", "plebeians": "ple-be-ians", "preparatory": "pre-par-a-to-ry", "seattle": "se-at-tle", "temperatures": "tem-per-a-tures",
+    "veteran": "vet-er-an", "video": "vid-e-o", "yangtze": "yang-tze",
+    "available": "a-vail-a-ble", "barter": "bar-ter", "favorite": "fa-vor-ite", "flashy": "flash-y", "herodotus": "he-rod-o-tus", "overall": "o-ver-all", "olave": "o-la-ve",
+    "papyrus": "pap-y-rus", "proven": "prov-en", "rainforests": "rain-for-ests", "tribunes": "trib-unes", "italy": "it-a-ly", "economics": "ec-o-nom-ics",
 }
 
 def words():
@@ -45,7 +51,7 @@ def main():
     cmu = cmudict.dict(); a = pyphen.Pyphen(lang="en_US"); b = pyphen.Pyphen(lang="en_US", left=1, right=1)
     def count(w):
         return min(len([p for p in pr if p[-1].isdigit()]) for pr in cmu[w]) if w in cmu else None
-    ws = [w for w in words() if re.fullmatch(r"[a-z]+", w) and w not in ("bc", "jr", "th", "nba", "nfl")]
+    ws = [w for w in words() if re.fullmatch(r"[a-z]+", w) and w not in ("bc", "jr", "sr", "th", "nba", "nfl")]
     out, rules_needed = {}, []
     for w in ws:                                    # tier 1: hyphenation dictionary, checked against the pronunciation dictionary
         n = count(w)

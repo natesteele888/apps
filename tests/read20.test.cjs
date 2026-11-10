@@ -32,15 +32,16 @@ const TODAY = '2026-11-08';
       assert.ok(n <= (b.level === 1 ? 7 : 8), b.id + ': "' + p.text + '" has ' + n + ' words');
     }
   });
-  await test('older library: 35 true-fact stories in six topics, each with words to know and a three-question check', () => {
-    eq(OLD.books.length, 35); eq(OLD.TOPICS.map(t => t.id).join(), 'sports,photo,fitness,athletes,social,english'); eq(new Set(OLD.books.map(b => b.id)).size, 35, 'unique ids');
-    const per = {}; OLD.books.forEach(b => (per[b.topic] = (per[b.topic] || 0) + 1)); eq(JSON.stringify(per), JSON.stringify({ sports: 5, photo: 6, fitness: 5, athletes: 9, social: 5, english: 5 }));
+  await test('older library: 48 true-fact stories in six topics, each with words to know and a three-question check', () => {
+    eq(OLD.books.length, 48); eq(OLD.TOPICS.map(t => t.id).join(), 'sports,photo,fitness,athletes,social,english'); eq(new Set(OLD.books.map(b => b.id)).size, 48, 'unique ids');
+    const per = {}; OLD.books.forEach(b => (per[b.topic] = (per[b.topic] || 0) + 1)); eq(JSON.stringify(per), JSON.stringify({ sports: 5, photo: 6, fitness: 5, athletes: 16, social: 11, english: 5 }));
     for (const b of OLD.books) {
       assert.ok(b.shelf === 'older' && OLD.TOPICS.some(t => t.id === b.topic) && b.diff >= 1 && b.diff <= 3, b.id); assert.ok(b.pages.length >= 5 && b.pages.length <= 6, b.id + ' has ' + b.pages.length + ' pages');
       for (const p of b.pages) { const n = p.text.split(/\s+/).length; assert.ok(n >= 18 && n <= 95, b.id + ' page of ' + n + ' words'); assert.ok(!/[|]/.test(p.text), 'stray bar'); }
       eq(b.quiz.length, 3, b.id + ' questions'); eq(b.gloss.length, 3, b.id + ' words to know'); b.gloss.forEach(g => assert.ok(g.w && g.d && g.d.length < 80 && !/[|]/.test(g.d), b.id + ' ' + g.w)); for (const q of b.quiz) { assert.ok(q.q.endsWith('?') && q.a.length >= 3 && q.a.length <= 4 && q.ok >= 0 && q.ok < q.a.length, b.id + ': ' + q.q); eq(new Set(q.a).size, q.a.length, 'distinct answers'); }
       const total = b.pages.reduce((n, p) => n + p.text.split(/\s+/).length, 0); assert.ok(total >= 200 && total <= 340, b.id + ' is ' + total + ' words');
     }
+    for (const n of ['Drake Maye', 'Jaxon Smith-Njigba', 'Justin Jefferson', 'Mookie Betts', 'Fernando Tatis Jr.', 'Jayson Tatum', 'Damian Lillard']) assert.ok(OLD.books.some(b => b.topic === 'athletes' && b.title.startsWith(n)), n + ' has a biography');
     const first = {}; OLD.books.forEach(b => b.quiz.forEach(q => (first[q.ok] = (first[q.ok] || 0) + 1))); assert.ok(Object.keys(first).length >= 2, 'right answers are spread (the page also mixes the order)');
   });
   await test('older words: the pop-up gets proper syllables for long words', () => {
@@ -107,7 +108,7 @@ const TODAY = '2026-11-08';
       assert.ok(a.syllables.length >= 1 && a.syllables.length <= 6, a.word + ' has ' + a.syllables.length);
       a.syllables.forEach(s => { eq(s.sounds.map(c => c.t).join(''), s.text.replace(/'/g, '').toLowerCase(), a.word + ' sounds add back up'); assert.ok(s.sounds.length >= 1); });
     })));
-    assert.ok(seen.size > 1650, 'checked ' + seen.size);
+    assert.ok(seen.size > 1900, 'checked ' + seen.size);
   });
   await test('core: two phones on the same day add up; the same phone never double counts; old saves still count', () => {
     const a = C.empty(), b = C.empty(); C.dev = 'dad'; C.addSeconds(a, TODAY, 'x', 840); C.dev = 'mom'; C.addSeconds(b, TODAY, 'y', 600); C.addManual(b, TODAY, 'Paper', 5);
@@ -508,7 +509,7 @@ const TODAY = '2026-11-08';
     const { page, errors } = await mk(); await page.locator('#addrd').click(); await page.fill('#rn', 'Sam'); eq(await page.locator('.lvopt').count(), 2); eq(await page.locator('.lvopt.on').innerText(), '🌱 Learning to read\nShort stories, big words, pictures'.replace('\n', '\n'), 'defaults to early');
     await page.locator('.lvopt[data-lv="older"]').click(); await page.locator('#ra').click(); await page.waitForFunction(() => document.querySelector('.rd.on .nm').textContent === 'Sam');
     eq(await page.evaluate(() => R20App._state().lv), 'older'); eq(await page.evaluate(() => R20App._state().size), 0, 'older readers start with normal-size words'); assert.ok(/The Library/.test(await page.locator('.sec').innerText())); eq(await page.locator('.lv').count(), 6);
-    eq(await page.locator('.cover').count(), 5, 'sports first'); await page.locator('.lv[data-tp="athletes"]').click(); eq(await page.locator('.cover').count(), 9); await page.locator('.lv[data-tp="photo"]').click(); eq(await page.locator('.cover').count(), 6); await page.locator('.lv[data-tp="social"]').click(); eq(await page.locator('.cover').count(), 5); await page.locator('.lv[data-tp="english"]').click(); eq(await page.locator('.cover').count(), 5);
+    eq(await page.locator('.cover').count(), 5, 'sports first'); await page.locator('.lv[data-tp="athletes"]').click(); eq(await page.locator('.cover').count(), 16); await page.locator('.lv[data-tp="photo"]').click(); eq(await page.locator('.cover').count(), 6); await page.locator('.lv[data-tp="social"]').click(); eq(await page.locator('.cover').count(), 11); await page.locator('.lv[data-tp="english"]').click(); eq(await page.locator('.cover').count(), 5);
     assert.ok(await page.locator('#next').isVisible()); assert.ok(/Curveball/.test(await page.locator('#next').innerText())); await page.screenshot({ path: SHOTS + '/read20-older-shelf.png' });
     await page.locator('.lv[data-tp="sports"]').click(); await page.locator('.cover', { hasText: 'Curveball' }).click(); await page.waitForSelector('.reader.older');
     assert.ok(/Press and hold a word to see its syllables/.test(await page.locator('.hint').innerText())); assert.ok((await page.locator('.w').count()) > 30, 'a full paragraph'); await page.screenshot({ path: SHOTS + '/read20-older-reader.png' });
