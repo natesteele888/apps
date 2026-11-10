@@ -1,7 +1,7 @@
 // App shell only: the page, icons, fonts and the Firebase code it needs to open with no
 // signal. Never caches your data: that stays in Firestore's own private cache on this
 // phone, behind your sign-in (Firestore calls go to googleapis.com, which this skips).
-const CACHE = "toolbox-v10";
+const CACHE = "toolbox-v11";
 const SHELL = ["./", "app.webmanifest", "icons/icon-192.png", "../install.js", "../health.js"];
 // Same version as the <script> tags in index.html: change them together.
 const FIREBASE = ["app", "auth", "firestore"].map(n => `https://www.gstatic.com/firebasejs/11.6.0/firebase-${n}-compat.js`);

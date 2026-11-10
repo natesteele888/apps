@@ -1,0 +1,28 @@
+name: Toolbox rules tests
+# Runs toolbox/tests/rules.test.mjs against the Firestore emulator whenever the Toolbox rules or their tests change.
+on:
+  pull_request:
+    paths: ["toolbox/firestore.rules", "toolbox/tests/**", "toolbox/package*.json", ".github/workflows/toolbox-rules.yml"]
+  push:
+    branches: [main]
+    paths: ["toolbox/firestore.rules", "toolbox/tests/**", "toolbox/package*.json", ".github/workflows/toolbox-rules.yml"]
+  workflow_dispatch: {}
+permissions:
+  contents: read
+jobs:
+  rules:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: toolbox
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+      - run: npm ci
+      - run: npm test

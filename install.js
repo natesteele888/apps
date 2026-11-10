@@ -5,8 +5,9 @@
    button when Chrome offers one), and hides itself once the app is installed or opened from
    the home screen. "Not now" hides it for a week. Opening an app with ?install or #install
    shows it right away (the install page in the Toolbox uses that). An app's own settings can
-   call window.nateInstall.show(). No data is stored except the "not now" date and an
-   "installed here" mark. */
+   call window.nateInstall.show(). On the phone it stores only the "not now" date, an
+   "installed here" mark and a random phone code; the only thing it sends is the anonymous
+   app numbers count below (no names, accounts or content). */
 (function () {
   if (window.__nateInstall) return; window.__nateInstall = true;
   var standalone = matchMedia("(display-mode: standalone)").matches || matchMedia("(display-mode: fullscreen)").matches || navigator.standalone;
@@ -14,6 +15,37 @@
      Key = this app's folder, e.g. "nate.installed:/apps/situations/". Only a timestamp is stored. */
   var DIR = location.pathname.replace(/[^/]*\.[a-z0-9]+$/i, "").replace(/([^/])$/, "$1/");
   function markInstalled() { try { localStorage.setItem("nate.installed:" + DIR, String(Date.now())); } catch (e) {} }
+  /* App numbers for the owner's numbers page (toolbox/numbers.html): an anonymous count of phones that open each app
+     each week, and of home-screen installs (counted the first time it opens from the home screen). Sends only the app's
+     folder, the week and a random 16-character code made on this phone: no names, accounts or content. Each phone sends
+     at most one open per app per week and one install per app. Skipped off https, on this computer and in tests. */
+  try {
+    (function () {
+      var h = location.hostname;
+      if (location.protocol !== "https:" || /^(localhost|127\.|0\.0\.0\.0|\[)/.test(h) || navigator.webdriver) return;
+      var segs = DIR.split("/").filter(Boolean);
+      var app = (/\.github\.io$/.test(h) ? segs.slice(0, 2) : [h.split(".")[0]]).join("-").replace(/[^A-Za-z0-9-]/g, "-").slice(0, 60) || h.split(".")[0];
+      var pid = localStorage.getItem("nate.phone");
+      if (!/^[a-z0-9]{16}$/.test(pid || "")) {
+        var a = new Uint8Array(16); crypto.getRandomValues(a);
+        pid = Array.prototype.map.call(a, function (b) { return "abcdefghijklmnopqrstuvwxyz0123456789"[b % 36]; }).join("");
+        localStorage.setItem("nate.phone", pid);
+        if (localStorage.getItem("nate.phone") !== pid) return;
+      }
+      var d = new Date(); d.setHours(0, 0, 0, 0); d.setDate(d.getDate() + 3 - (d.getDay() + 6) % 7);
+      var y = d.getFullYear(), wk = 1 + Math.round(((d - new Date(y, 0, 4)) / 864e5 - 3 + (new Date(y, 0, 4).getDay() + 6) % 7) / 7);
+      var week = y + "-W" + (wk < 10 ? "0" : "") + wk;
+      function send(col, id, flag, val) {
+        if (localStorage.getItem(flag) === val || !window.fetch) return;
+        fetch("https://firestore.googleapis.com/v1/projects/nates-toolbox/databases/(default)/documents/" + col + "?documentId=" + encodeURIComponent(id), {
+          method: "POST", headers: { "Content-Type": "application/json" }, credentials: "omit", keepalive: true,
+          body: JSON.stringify({ fields: { app: { stringValue: app }, week: { stringValue: week } } })
+        }).then(function (r) { if (r.ok || r.status === 409) try { localStorage.setItem(flag, val); } catch (e) {} }, function () {});
+      }
+      send("app_opens", app + "~" + week + "~" + pid, "nate.count.open:" + app, week);
+      if (standalone) send("app_installs", app + "~" + pid, "nate.count.install:" + app, "1");
+    })();
+  } catch (e) {}
   if (standalone) { markInstalled(); return; }
   var KEY = "nate.install.later:" + location.pathname.split("/").slice(0, 3).join("/");
   var asked = /(^|[?&#])install\b/.test(location.search + location.hash);

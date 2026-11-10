@@ -241,3 +241,29 @@ test('read20 shared: the code must be 20 letters/digits, and the document only t
   await assertFails(setDoc(doc(g('dad'), 'r20_shared/' + KEY), { log: 'x'.repeat(900001), updated: 1 }));
   await assertFails(setDoc(doc(g('dad'), 'r20_shared/' + KEY), { ...r20Data, extra: 1 }));
 });
+
+// ---------- App numbers (install.js) ----------
+const PHONE = 'k3j9x0a8b7c6d5e4';
+const openDoc = { app: 'apps-picks', week: '2026-W46' };
+test('app numbers: a signed-out phone can add one install and one open per week, and nothing else', async () => {
+  await assertSucceeds(setDoc(doc(anon(), 'app_installs/apps-picks~' + PHONE), openDoc));
+  await assertSucceeds(setDoc(doc(anon(), 'app_opens/apps-picks~2026-W46~' + PHONE), openDoc));
+  await assertFails(setDoc(doc(anon(), 'app_installs/apps-picks~' + PHONE), openDoc));
+  await assertFails(getDoc(doc(anon(), 'app_installs/apps-picks~' + PHONE)));
+  await assertFails(getDocs(collection(anon(), 'app_opens')));
+  await assertFails(getDocs(collection(g('dad'), 'app_opens')));
+  await assertFails(deleteDoc(doc(anon(), 'app_opens/apps-picks~2026-W46~' + PHONE)));
+});
+test('app numbers: the id must match the app, week and a 16-character phone code, with no extra fields', async () => {
+  await assertFails(setDoc(doc(anon(), 'app_installs/cube-clock~' + PHONE), openDoc));
+  await assertFails(setDoc(doc(anon(), 'app_installs/apps-picks~short'), openDoc));
+  await assertFails(setDoc(doc(anon(), 'app_opens/apps-picks~2026-W45~' + PHONE), openDoc));
+  await assertFails(setDoc(doc(anon(), 'app_opens/apps-picks~' + PHONE), openDoc));
+  await assertFails(setDoc(doc(anon(), 'app_installs/apps-picks~' + PHONE), { ...openDoc, name: 'x' }));
+  await assertFails(setDoc(doc(anon(), 'app_installs/apps-picks~' + PHONE), { app: 'apps-picks', week: 'soon' }));
+});
+test('app numbers: the owner can read every count', async () => {
+  await env.withSecurityRulesDisabled(async (ctx) => { await setDoc(doc(ctx.firestore(), 'app_installs/apps-picks~' + PHONE), openDoc); });
+  await assertSucceeds(getDocs(collection(owner(), 'app_installs')));
+  await assertSucceeds(getDocs(collection(owner(), 'app_opens')));
+});
