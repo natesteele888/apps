@@ -1,6 +1,6 @@
 {
   "about": "The one list of Nathan's apps. Live links, which apps show where, and each app's App Store listing (text, highlights, screenshots) all come from here. Edit listings and icons in the Toolbox; the sync job copies them here. Don't hand-edit text in store/index.html.",
-  "updated": "2026-11-09",
+  "updated": "2026-11-10",
   "toolbox": "https://natesteele888.github.io/apps/toolbox/",
   "store": "https://natesteele888.github.io/apps/store/",
   "apps": [
@@ -749,11 +749,15 @@
         "autoShots": [],
         "latest": {
           "d": "Nov 9, 2026",
-          "t": "Where Do I Go: give extra-base hits a realistic roll instead of always reaching the fence",
-          "url": "https://github.com/natesteele888/lybs-ballclub/commit/b00edfedb4159d8b651a07abc135e6c428901e97"
+          "t": "Sign-in page: make View public info easy to tap",
+          "url": "https://github.com/natesteele888/lybs-ballclub/commit/f614497d750d53fa9a95e2149f0881ad8893bb6e"
         },
-        "version": "1.24.8",
+        "version": "1.24.9",
         "history": [
+          {
+            "v": "1.24.9",
+            "t": "Sign-in page: make View public info easy to tap"
+          },
           {
             "v": "1.24.7",
             "t": "Where Do I Go: give extra-base hits a realistic roll instead of always reaching the fence"
@@ -769,10 +773,6 @@
           {
             "v": "1.24.3",
             "t": "Fix extra-base-hit/relay plays: stop sending a corner infielder to cover second"
-          },
-          {
-            "v": "1.24.2",
-            "t": "Make Ballclub's small buttons and links easier to tap"
           }
         ],
         "caps": [
@@ -934,11 +934,15 @@
         "autoShots": [],
         "latest": {
           "d": "Nov 9, 2026",
-          "t": "Power Program: add the shared problem report and save check",
-          "url": "https://github.com/natesteele888/fitness-hub/commit/7e7ac1b37d6414aa38ff18634ab11d730a3dc930"
+          "t": "Power Program: the reminder builder runs from any copy of the repo",
+          "url": "https://github.com/natesteele888/fitness-hub/commit/6f0b9723f5f41826871106eda02d0380cbf5a766"
         },
-        "version": "1.3.4",
+        "version": "1.3.5",
         "history": [
+          {
+            "v": "1.3.5",
+            "t": "Power Program: the reminder builder runs from any copy of the repo"
+          },
           {
             "v": "1.3.4",
             "t": "Power Program: add the shared problem report and save check"
@@ -954,10 +958,6 @@
           {
             "v": "1.3.1",
             "t": "Power Program: make the exercise info buttons and Prev/Next easier to tap"
-          },
-          {
-            "v": "1.3.0",
-            "t": "Brain pointer: start each session from the current code, not an old copy"
           }
         ],
         "caps": [
@@ -1043,12 +1043,16 @@
         ],
         "autoShots": [],
         "latest": {
-          "d": "Nov 8, 2026",
-          "t": "Cube Clock: keep the top buttons on screen on small phones",
-          "url": "https://github.com/natesteele888/cube-clock/commit/2d6ec2afc5bff1d18e47db14ed6ad60343c0ad9a"
+          "d": "Nov 10, 2026",
+          "t": "Cube Clock: keep the timer's top buttons on screen on an upright phone",
+          "url": "https://github.com/natesteele888/cube-clock/commit/43f911a67b3e6c79b6a910904fa0820902c9d835"
         },
-        "version": "1.2.5",
+        "version": "1.2.6",
         "history": [
+          {
+            "v": "1.2.6",
+            "t": "Cube Clock: keep the timer's top buttons on screen on an upright phone"
+          },
           {
             "v": "1.2.5",
             "t": "Cube Clock: keep the top buttons on screen on small phones"
@@ -1064,10 +1068,6 @@
           {
             "v": "1.2.2",
             "t": "Cube Clock: make the small buttons and home link easier to tap"
-          },
-          {
-            "v": "1.2.1",
-            "t": "Add the shared install pop-up"
           }
         ],
         "caps": [
@@ -2562,12 +2562,16 @@
           "store/shots/photoblueprint-6.webp"
         ],
         "latest": {
-          "d": "Nov 9, 2026",
-          "t": "Photo Blueprint: the direction cone stays on the sheet, off the main map",
-          "url": "https://github.com/natesteele888/apps/commit/d1e7a87eff792f1eb242df39c72075c3c50bdb33"
+          "d": "Nov 10, 2026",
+          "t": "Photo Blueprint: make the home link in the top bar easy to tap",
+          "url": "https://github.com/natesteele888/apps/commit/0dba7dbf817642e9e8be8be0f6610b413d7a9f45"
         },
-        "version": "1.0.8",
+        "version": "1.0.9",
         "history": [
+          {
+            "v": "1.0.9",
+            "t": "Photo Blueprint: make the home link in the top bar easy to tap"
+          },
           {
             "v": "1.0.8",
             "t": "Photo Blueprint: the direction cone stays on the sheet, off the main map"
@@ -2583,10 +2587,6 @@
           {
             "v": "1.0.5",
             "t": "Photo Blueprint: a clean pointer under the photo marker"
-          },
-          {
-            "v": "1.0.4",
-            "t": "Photo Blueprint: the photo is the map marker; tap it to open the sheet"
           }
         ],
         "caps": [
