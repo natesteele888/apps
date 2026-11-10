@@ -3,7 +3,9 @@
 (function () {
   "use strict";
   const C = window.R20Core, B = window.R20Books;
-  const CL = window.R20Cloud, WD = window.R20Words, AU = window.R20Audio;
+  const CL = window.R20Cloud, WD = window.R20Words, AU = window.R20Audio, I = window.R20Icons;
+  const teen = () => S.lv === "older";   // older readers get the darker look with line icons
+  const icon = (name, fallback, size) => (teen() ? I(name, size) : fallback);
   const KEY = "read20.v1";
   const $ = s => document.querySelector(s);
   const esc = s => String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
@@ -74,9 +76,14 @@
   function say(w) { if (S.say) AU.speak(w, 0.8); }
 
   /* ---------- routing: #  (shelf), #log, #b/<id> (reading) ---------- */
+  function applyTheme() {
+    const t = teen(); document.documentElement.classList.toggle("teen", t);
+    const set = (n, v) => { const m = document.querySelector('meta[name="' + n + '"]'); if (m) m.setAttribute("content", v); };
+    set("theme-color", t ? "#0b1020" : "#fff6e3"); set("color-scheme", t ? "dark" : "light");
+  }
   function route() {
     const h = location.hash.replace(/^#/, "");
-    stopTimer();
+    stopTimer(); applyTheme();
     if (h.startsWith("b/") && byId[h.slice(2)]) {
       if (!ui.book || ui.book.id !== h.slice(2)) { ui.book = byId[h.slice(2)]; ui.page = 0; ui.finishedNow = false; }
       ui.paused = false; ui.hl = -1; renderReader(); startTimer();
@@ -110,11 +117,11 @@
     const el = $("#tm"); if (!el) return;
     const sec = C.daySec(S, today()), goal = C.goalSec(S);
     $("#tmnum").textContent = C.fmtClock(sec);
-    $("#tmgoal").textContent = sec >= goal ? "goal reached! ⭐" : "of " + C.fmtClock(goal);
+    $("#tmgoal").textContent = sec >= goal ? (teen() ? "goal reached" : "goal reached! ⭐") : "of " + C.fmtClock(goal);
     $("#tmbar").style.width = Math.min(100, sec / goal * 100) + "%";
     const st = ui.paused ? "paused" : ui.idle ? "idle" : "";
     el.className = "tm " + st;
-    $("#pause").textContent = ui.paused ? "▶" : "⏸";
+    $("#pause").innerHTML = teen() ? I(ui.paused ? "play" : "pause") : ui.paused ? "▶" : "⏸";
     $("#pause").setAttribute("aria-label", ui.paused ? "Start the timer again" : "Pause the timer");
     $("#idlebox").hidden = !ui.idle;
   }
@@ -124,7 +131,7 @@
   function celebrate() {
     chime();
     const o = document.createElement("div"); o.className = "overlay"; o.id = "party";
-    o.innerHTML = `<div class="card party" role="dialog" aria-label="Twenty minutes done"><div class="big">🎉⭐🎉</div><h2>${S.goal} minutes!</h2><p>${S.name ? esc(S.name) + ", you" : "You"} did your reading tonight. Great job!</p><button class="btn" id="keep">Keep reading</button><button class="btn alt" id="stop">I'm done tonight</button></div>`;
+    o.innerHTML = `<div class="card party" role="dialog" aria-label="Twenty minutes done"><div class="big">${teen() ? I("star", 56) : "🎉⭐🎉"}</div><h2>${S.goal} minutes!</h2><p>${S.name ? esc(S.name) + ", you" : "You"} did your reading tonight. Great job!</p><button class="btn" id="keep">Keep reading</button><button class="btn alt" id="stop">I'm done tonight</button></div>`;
     document.body.appendChild(o); trackOverlay(o);
     $("#keep").onclick = () => { closeOverlay(o); touch(); };
     $("#stop").onclick = () => closeOverlay(o, () => go(""));
@@ -150,24 +157,24 @@
     const list = older ? B.books.filter(b => b.shelf === "older" && b.topic === tp.id) : B.books.filter(b => b.level === ui.level);
     const readIn = list.filter(b => fin[b.id]).length;
     $("#view").innerHTML = `
-    <header class="top"><h1>📖 Read ${S.goal}</h1><span class="cloudbadge" id="cloudbadge" title="Backed up online" ${CL.status === "ok" ? "" : "hidden"}>☁️✓</span><button class="icon" id="gear" aria-label="Settings">⚙️</button></header>
+    <header class="top"><h1>${icon("logo", "📖 ")}Read ${S.goal}</h1><span class="cloudbadge" id="cloudbadge" title="Backed up online" ${CL.status === "ok" ? "" : "hidden"}>☁️✓</span><button class="icon" id="gear" aria-label="Settings">${icon("sliders", "⚙️")}</button></header>
     ${warnHtml()}
     <div class="readers" role="tablist" aria-label="Readers">${R.order.map(id => `<button role="tab" aria-selected="${id === R.active}" class="rd ${id === R.active ? "on" : ""}" data-id="${esc(id)}"><span class="av" aria-hidden="true">${avOf(id)}</span><span class="nm">${esc(who(R.profiles[id]))}</span></button>`).join("")}<button class="rd add" id="addrd" aria-label="Add a reader"><span class="av" aria-hidden="true">＋</span><span class="nm">Add</span></button></div>
     <section class="today ${done ? "ok" : ""}">
       <div class="ringbox">${ring(sec, goal)}<div class="rtxt"><b>${Math.floor(sec / 60)}</b><span>min</span></div></div>
       <div class="ttxt">
-        <h2>${done ? "Tonight's reading is done! ⭐" : (S.name ? esc(S.name) + ", " + (sec ? "keep going!" : "ready to read?") : (sec ? "Keep going!" : "Ready to read?"))}</h2>
+        <h2>${done ? "Tonight's reading is done!" + (teen() ? "" : " ⭐") : (S.name ? esc(S.name) + ", " + (sec ? "keep going!" : "ready to read?") : (sec ? "Keep going!" : "Ready to read?"))}</h2>
         <p>${done ? "You can read more if you want." : left + " more minute" + (left === 1 ? "" : "s") + " to go tonight."}</p>
-        <p class="streak">${streak ? "🔥 " + streak + " night" + (streak === 1 ? "" : "s") + " in a row" : "Start a streak tonight!"}</p>
+        <p class="streak">${streak ? icon("flame", "🔥", 18) + " " + streak + " night" + (streak === 1 ? "" : "s") + " in a row" : "Start a streak tonight!"}</p>
       </div>
     </section>
-    <button class="btn big" id="next"><span class="bk">${esc(nx.cover)}</span><span><small>Read next</small><br>${esc(nx.title)}</span></button>
+    <button class="btn big" id="next"><span class="bk">${older ? I(nx.topic, 34) : esc(nx.cover)}</span><span><small>Read next</small><br>${esc(nx.title)}</span></button>
     ${older ? `<h2 class="sec">The Library</h2>
-    <div class="levels" role="tablist" aria-label="Topics">${B.TOPICS.map(t => `<button role="tab" aria-selected="${t.id === tp.id}" class="lv ${t.id === tp.id ? "on" : ""}" data-tp="${t.id}"><span>${t.icon}</span>${t.name}</button>`).join("")}</div>
+    <div class="levels" role="tablist" aria-label="Topics">${B.TOPICS.map(t => `<button role="tab" aria-selected="${t.id === tp.id}" class="lv ${t.id === tp.id ? "on" : ""}" data-tp="${t.id}"><span>${I(t.id, 18)}</span>${t.name}</button>`).join("")}</div>
     <p class="lvinfo"><b>${esc(tp.name)}</b> · ${esc(tp.sub)}<br><small>${readIn} of ${list.length} read</small></p>` : `<h2 class="sec">The Book Shop</h2>
     <div class="levels" role="tablist" aria-label="Levels">${B.LEVELS.map(l => `<button role="tab" aria-selected="${l.n === ui.level}" class="lv ${l.n === ui.level ? "on" : ""}" data-lv="${l.n}"><span>${l.icon}</span>Level ${l.n}</button>`).join("")}</div>
     <p class="lvinfo"><b>${esc(lv.name)}</b> · ${esc(lv.sub)}<br><small>${readIn} of ${list.length} read</small></p>`}
-    <div class="shelf">${list.map(b => `<button class="cover" data-id="${esc(b.id)}" style="--c:${esc(b.color)}" aria-label="${esc(b.title)}${fin[b.id] ? ", read" : ""}"><span class="ce">${esc(b.cover)}</span><span class="ct">${esc(b.title)}</span>${fin[b.id] ? '<span class="check" aria-hidden="true">✓</span>' : ""}</button>`).join("")}</div>
+    <div class="shelf">${list.map(b => `<button class="cover${older ? " tp-" + b.topic : ""}" data-id="${esc(b.id)}" style="--c:${esc(b.color)}" aria-label="${esc(b.title)}${fin[b.id] ? ", read" : ""}"><span class="ce">${older ? I(b.topic, 46) : esc(b.cover)}</span><span class="ct">${esc(b.title)}</span>${older ? `<span class="pips" aria-label="difficulty ${b.diff} of 3">${"●".repeat(b.diff)}${"○".repeat(3 - b.diff)}</span>` : ""}${fin[b.id] ? `<span class="check" aria-hidden="true">${older ? I("check", 18) : "✓"}</span>` : ""}</button>`).join("")}</div>
     ${C.totalAll(R) >= 600 && !CL.enabled() && (!bkDate() || C.daysSince(bkDate(), k) >= 7) ? '<section class="nudge"><b>Keep the reading log safe ☁️</b><p>The log lives on this phone. A parent can sign in with Google once to back it up online. Readers never have to sign in.</p><button class="btn alt" id="bknow">Set up the backup</button></section>' : ""}
     <button class="btn alt" id="manual">＋ Log a book from home</button>
     <p class="fine">Stories are free to share: written for this app, or old public-domain rhymes and fables. Everything stays on this phone.</p>`;
@@ -194,23 +201,23 @@
     $("#view").innerHTML = `
     <div class="reader ${sz}${older ? " older" : ""}" style="--c:${esc(bk.color)}">
       <header class="rtop">
-        <button class="icon" id="back" aria-label="Back to the shelf">⬅</button>
+        <button class="icon" id="back" aria-label="Back to the shelf">${icon("back", "⬅")}</button>
         <div class="tm" id="tm"><div class="tmrow"><b id="tmnum">0:00</b><span id="tmgoal"></span></div><div class="tmtrack"><i id="tmbar"></i></div></div>
-        <button class="icon" id="pause" aria-label="Pause the timer">⏸</button>
+        <button class="icon" id="pause" aria-label="Pause the timer">${icon("pause", "⏸")}</button>
       </header>
       ${warnHtml()}
       <div class="idle" id="idlebox" hidden>Still reading? Tap anywhere to keep the timer going.</div>
-      <div class="pic ${older ? "sm" : cnt > 2 ? "m3" : cnt > 1 ? "m2" : ""}" aria-hidden="true">${esc(emo)}</div>
+      <div class="pic ${older ? "sm tp-" + bk.topic : cnt > 2 ? "m3" : cnt > 1 ? "m2" : ""}" aria-hidden="true">${older ? I(bk.topic, 40) : esc(emo)}</div>
       ${end ? `<div class="the-end"><h2>The End</h2><p>${esc(bk.title)}</p>${older && bk.gloss && bk.gloss.length ? glossHtml(bk) : ""}${older && bk.quiz && bk.quiz.length ? quizHtml(bk) : ""}<button class="btn big" id="more">Pick another story</button><button class="btn alt" id="again">Read it again</button></div>`
         : `<p class="text" id="text">${pg.text.split(/\s+/).map((w, i) => `<span class="w" role="button" tabindex="0" data-i="${i}">${esc(w)}</span>`).join(" ")}</p>`}
-      ${end ? "" : `<p class="hint">👆 Press and hold a word to ${older ? "see its syllables" : "break it into sounds"}</p>`}
+      ${end ? "" : `<p class="hint">${older ? "" : "👆 "}Press and hold a word to ${older ? "see its syllables" : "break it into sounds"}</p>`}
       <footer class="rnav">
-        <button class="pgbtn" id="prev" ${ui.page === 0 ? "disabled" : ""} aria-label="Previous page">◀</button>
+        <button class="pgbtn" id="prev" ${ui.page === 0 ? "disabled" : ""} aria-label="Previous page">${icon("back", "◀", 26)}</button>
         <div class="pgnum" aria-live="polite">${end ? "The End" : "Page " + (ui.page + 1) + " of " + n}</div>
-        <button class="pgbtn go" id="nextp" ${end ? "disabled" : ""} aria-label="${ui.page === n - 1 ? "Finish the story" : "Next page"}">▶</button>
+        <button class="pgbtn go" id="nextp" ${end ? "disabled" : ""} aria-label="${ui.page === n - 1 ? "Finish the story" : "Next page"}">${icon("next", "▶", 26)}</button>
       </footer>
-      <div class="tools"><button class="mini" id="sm" aria-label="Smaller words">A−</button><button class="mini" id="lg" aria-label="Bigger words">A+</button><button class="mini ${S.say ? "on" : ""}" id="spk" aria-pressed="${S.say}" aria-label="Say words out loud when tapped">🔊</button></div>
-      ${end ? '<div class="confetti" aria-hidden="true">🎉</div>' : ""}
+      <div class="tools"><button class="mini" id="sm" aria-label="Smaller words">A−</button><button class="mini" id="lg" aria-label="Bigger words">A+</button><button class="mini ${S.say ? "on" : ""}" id="spk" aria-pressed="${S.say}" aria-label="Say words out loud when tapped">${icon("volume", "🔊", 20)}</button></div>
+      ${end && !older ? '<div class="confetti" aria-hidden="true">🎉</div>' : ""}
     </div>`;
     $("#back").onclick = () => go("");
     $("#pause").onclick = () => { ui.paused = !ui.paused; ui.last = Date.now(); ui.lastAct = Date.now(); paintTimer(); };
@@ -265,13 +272,13 @@
     const names = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
     const fin = C.finishedIds(S), totalSec = C.total(S), nights = Object.keys(S.days).filter(d => C.isDone(S, d)).length;
     $("#view").innerHTML = `
-    <header class="top"><h1>🗓️ ${S.name ? esc(S.name) + "'s" : "My"} Reading Log</h1><button class="icon" id="gear" aria-label="Settings">⚙️</button></header>
-    <section class="stats"><div><b>🔥 ${C.streak(S, k)}</b><span>nights in a row</span></div><div><b>⭐ ${nights}</b><span>${S.goal}-minute nights</span></div><div><b>📚 ${Object.keys(fin).length}</b><span>stories finished</span></div><div><b>⏱ ${C.fmtTotal(totalSec)}</b><span>read in all</span></div></section>
-    <div class="mhead"><button class="icon" id="pm" aria-label="Last month">◀</button><h2>${names[m]} ${y}</h2><button class="icon" id="nm" aria-label="Next month">▶</button></div>
+    <header class="top"><h1>${icon("calendar", "🗓️ ")}${S.name ? esc(S.name) + "'s" : "My"} Reading Log</h1><button class="icon" id="gear" aria-label="Settings">${icon("sliders", "⚙️")}</button></header>
+    <section class="stats"><div><b>${icon("flame", "🔥", 20)} ${C.streak(S, k)}</b><span>nights in a row</span></div><div><b>${icon("star", "⭐", 20)} ${nights}</b><span>${S.goal}-minute nights</span></div><div><b>${icon("done", "📚", 20)} ${Object.keys(fin).length}</b><span>stories finished</span></div><div><b>${icon("clock", "⏱", 20)} ${C.fmtTotal(totalSec)}</b><span>read in all</span></div></section>
+    <div class="mhead"><button class="icon" id="pm" aria-label="Last month">${icon("back", "◀", 20)}</button><h2>${names[m]} ${y}</h2><button class="icon" id="nm" aria-label="Next month">${icon("next", "▶", 20)}</button></div>
     <p class="mfine">${st.nights} night${st.nights === 1 ? "" : "s"} done this month</p>
     <div class="cal" role="grid"><div class="dow">S</div><div class="dow">M</div><div class="dow">T</div><div class="dow">W</div><div class="dow">T</div><div class="dow">F</div><div class="dow">S</div>
     ${cells.map(c => { if (!c) return '<div class="day empty"></div>'; const s = C.daySec(S, c), dn = +c.slice(8); const cls = (C.isDone(S, c) ? "done " : s ? "some " : "") + (c === k ? "now " : "") + (c === ui.sel ? "sel" : "");
-      return `<button class="day ${cls}" data-d="${c}" aria-label="${c}${s ? ", " + C.fmtMin(s) : ""}${C.isDone(S, c) ? ", goal reached" : ""}"><b>${dn}</b><i>${C.isDone(S, c) ? "⭐" : s ? Math.round(s / 60) + "m" : ""}</i></button>`; }).join("")}</div>
+      return `<button class="day ${cls}" data-d="${c}" aria-label="${c}${s ? ", " + C.fmtMin(s) : ""}${C.isDone(S, c) ? ", goal reached" : ""}"><b>${dn}</b><i>${C.isDone(S, c) ? icon("star", "⭐", 14) : s ? Math.round(s / 60) + "m" : ""}</i></button>`; }).join("")}</div>
     <div id="detail"></div>
     <section class="keep"><h3>Keep the log safe</h3>
       <p class="ok">${store.fail ? "⚠️ This phone is not letting the app save." : "✓ Saved on this phone"}</p>
@@ -294,10 +301,10 @@
     const label = dt.toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" });
     let rows = "";
     if (d) {
-      Object.keys(d.books).forEach(id => { const b = byId[id], x = d.books[id]; if (!b) return; rows += `<li><span class="le">${esc(b.cover)}</span><span class="lt">${esc(b.title)}<small>${b.shelf === "older" ? esc(topicName(b.topic)) : "Level " + b.level}${x.fin ? " · finished ✓" : ""}</small></span><span class="lm">${C.fmtMin(x.sec)}</span></li>`; });
+      Object.keys(d.books).forEach(id => { const b = byId[id], x = d.books[id]; if (!b) return; rows += `<li><span class="le">${b.shelf === "older" ? I(b.topic, 30) : esc(b.cover)}</span><span class="lt">${esc(b.title)}<small>${b.shelf === "older" ? esc(topicName(b.topic)) : "Level " + b.level}${x.fin ? " · finished ✓" : ""}</small></span><span class="lm">${C.fmtMin(x.sec)}</span></li>`; });
       d.extra.forEach(x => { rows += `<li><span class="le">📕</span><span class="lt">${esc(x.title)}<small>from home</small></span><span class="lm">${C.fmtMin(x.sec)}</span></li>`; });
     }
-    $("#detail").innerHTML = `<section class="dcard"><h3>${esc(label)}</h3>${d && d.sec ? `<p class="dtot">${C.fmtMin(d.sec)} total${C.isDone(S, k) ? " ⭐" : ""}</p><ul class="list">${rows}</ul>` : "<p class='dtot'>No reading logged this day.</p>"}</section>`;
+    $("#detail").innerHTML = `<section class="dcard"><h3>${esc(label)}</h3>${d && d.sec ? `<p class="dtot">${C.fmtMin(d.sec)} total${C.isDone(S, k) ? (teen() ? "" : " ⭐") : ""}</p><ul class="list">${rows}</ul>` : "<p class='dtot'>No reading logged this day.</p>"}</section>`;
   }
 
   /* ---------- sheets ---------- */
@@ -358,7 +365,7 @@
       <label>Name<input id="rn" maxlength="20" autocomplete="off" placeholder="Name"></label>
       <div class="lbl">Pick a picture</div>${avatarGrid(av)}
       <div class="lbl">Reading level</div>
-      <div class="lvpick" role="radiogroup" aria-label="Reading level"><button type="button" role="radio" class="lvopt on" data-lv="early" aria-checked="true"><b>🌱 Learning to read</b><small>Short stories, big words, pictures</small></button><button type="button" role="radio" class="lvopt" data-lv="older" aria-checked="false"><b>📚 Older reader</b><small>Grades 5 and up: sports, photography, fitness and athlete stories</small></button></div>
+      <div class="lvpick" role="radiogroup" aria-label="Reading level"><button type="button" role="radio" class="lvopt on" data-lv="early" aria-checked="true"><b>🌱 Learning to read</b><small>Short stories, big words, pictures</small></button><button type="button" role="radio" class="lvopt" data-lv="older" aria-checked="false"><b>📚 Older reader</b><small>Grades 5 and up: sports, photography, fitness, athletes, social studies and English</small></button></div>
       <div class="row"><button class="btn alt" id="rc">Cancel</button><button class="btn" id="ra">Add</button></div>`);
     wireAvatars(o, a => (av = a));
     let lvl = "early"; o.querySelectorAll(".lvopt").forEach(b => (b.onclick = () => { lvl = b.dataset.lv; o.querySelectorAll(".lvopt").forEach(x => { x.classList.toggle("on", x === b); x.setAttribute("aria-checked", x === b); }); }));
@@ -556,13 +563,13 @@
   /* ---------- bottom bar ---------- */
   function nav(on) {
     const n = $("#nav"); n.hidden = false;
-    n.innerHTML = `<button class="${on === "books" ? "on" : ""}" data-go="">📚<span>Books</span></button><button class="${on === "log" ? "on" : ""}" data-go="log">🗓️<span>My Log</span></button>`;
+    n.innerHTML = `<button class="${on === "books" ? "on" : ""}" data-go="">${icon("books", "📚", 26)}<span>Books</span></button><button class="${on === "log" ? "on" : ""}" data-go="log">${icon("calendar", "🗓️", 26)}<span>My Log</span></button>`;
     n.querySelectorAll("button").forEach(b => (b.onclick = () => go(b.dataset.go)));
   }
 
   function init() {
     try { let d = localStorage.getItem("read20.dev"); if (!d) { d = Math.random().toString(36).slice(2, 10); localStorage.setItem("read20.dev", d); } C.dev = d; } catch (e) { C.dev = "t" + Math.random().toString(36).slice(2, 8); }
-    load();
+    load(); applyTheme();
     window.addEventListener("hashchange", route);
     window.addEventListener("pagehide", () => save(true));
     document.addEventListener("visibilitychange", () => { if (document.hidden) { save(true); CL.flush(); } });

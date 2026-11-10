@@ -3,7 +3,7 @@ const CACHE = "read20-v3";
 // Save the page itself at install. Without this, the first visit caches nothing
 // (the page loaded before the worker existed), so opening it offline right after
 // installing fails. Each file is added on its own so one miss can't block install.
-const SHELL = ["./", "manifest.json", "read20.css", "core.js", "books.js", "books-older.js", "cloud.js", "words.js", "syllables-older.js", "audio.js", "app.js", "boot.js", "/apps/icons/read20-192.png", "/apps/icons/read20-512.png"];
+const SHELL = ["./", "manifest.json", "read20.css", "icons.js", "core.js", "books.js", "books-older.js", "cloud.js", "words.js", "syllables-older.js", "audio.js", "app.js", "boot.js", "/apps/icons/read20-192.png", "/apps/icons/read20-512.png"];
 self.addEventListener("install", e => {
   self.skipWaiting();
   e.waitUntil(caches.open(CACHE).then(c => Promise.all(SHELL.map(u => c.add(new Request(u, {cache: "reload"})).catch(() => {})))));
