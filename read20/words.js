@@ -90,7 +90,9 @@
     return out;
   }
 
-  W.clean = word => String(word || "").toLowerCase().replace(/[’]/g, "'").replace(/^[^a-z]+|[^a-z']+$/g, "").replace(/'s$/, "");
+  /* More hand-checked syllable splits (the older-reader words, made by tools/read20-syllables.py). Hand splits above win. */
+  W.add = map => { for (const k of Object.keys(map)) if (!SYL[k]) SYL[k] = map[k]; };
+  W.clean = word => String(word || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[’]/g, "'").replace(/^[^a-z]+|[^a-z']+$/g, "").replace(/\.(?=[a-z])/g, "").replace(/'s$/, "");
   W.analyze = raw => {
     const w = W.clean(raw); if (!w || !/^[a-z'-]+$/.test(w)) return null;
     const parts = (SYL[w] || (/-/.test(w) ? w : null) || ruleSyllables(w.replace(/'/g, "")).join("-")).split("-").filter(Boolean);

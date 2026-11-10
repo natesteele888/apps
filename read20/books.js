@@ -372,7 +372,7 @@ In the morning, the sun came up. The storm was gone.|🌅`]
     const lines = block.split("\n").map(l => l.trim()).filter(Boolean);
     const [title, cover, color] = lines[0].split("|");
     books.push({
-      id: slug(title), level: +lv, title, cover, color,
+      id: slug(title), shelf: "early", level: +lv, title, cover, color,
       pages: lines.slice(1).map(l => { const i = l.lastIndexOf("|"); return { text: l.slice(0, i), pic: l.slice(i + 1) }; })
     });
   }));

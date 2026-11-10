@@ -133,8 +133,9 @@
   /* ---------- shelf ---------- */
   function nextUp() {
     const fin = C.finishedIds(S);
+    if (S.lv === "older") return B.books.find(b => b.shelf === "older" && !fin[b.id]) || B.books.find(b => b.shelf === "older");
     for (const lv of B.LEVELS) { const bk = B.books.find(b => b.level === lv.n && !fin[b.id]); if (bk) return bk; }
-    return B.books[0];
+    return B.books.find(b => b.shelf !== "older");
   }
   function ring(sec, goal) {
     const r = 54, c = 2 * Math.PI * r, p = Math.min(1, sec / goal);
@@ -143,8 +144,10 @@
   function renderShelf() {
     const k = today(), sec = C.daySec(S, k), goal = C.goalSec(S), done = sec >= goal, streak = C.streak(S, k);
     const fin = C.finishedIds(S), nx = nextUp(), left = Math.max(0, Math.ceil((goal - sec) / 60));
-    if (!ui.levelSet) { ui.level = nx.level; ui.levelSet = true; }
-    const lv = B.LEVELS.find(l => l.n === ui.level), list = B.books.filter(b => b.level === ui.level);
+    const older = S.lv === "older";
+    if (!ui.levelSet) { ui.level = nx.level || 1; ui.topic = nx.topic || "sports"; ui.levelSet = true; }
+    const lv = B.LEVELS.find(l => l.n === ui.level) || B.LEVELS[0], tp = (B.TOPICS || []).find(t => t.id === ui.topic) || (B.TOPICS || [])[0];
+    const list = older ? B.books.filter(b => b.shelf === "older" && b.topic === tp.id) : B.books.filter(b => b.level === ui.level);
     const readIn = list.filter(b => fin[b.id]).length;
     $("#view").innerHTML = `
     <header class="top"><h1>📖 Read ${S.goal}</h1><span class="cloudbadge" id="cloudbadge" title="Backed up online" ${CL.status === "ok" ? "" : "hidden"}>☁️✓</span><button class="icon" id="gear" aria-label="Settings">⚙️</button></header>
@@ -159,9 +162,11 @@
       </div>
     </section>
     <button class="btn big" id="next"><span class="bk">${esc(nx.cover)}</span><span><small>Read next</small><br>${esc(nx.title)}</span></button>
-    <h2 class="sec">The Book Shop</h2>
+    ${older ? `<h2 class="sec">The Library</h2>
+    <div class="levels" role="tablist" aria-label="Topics">${B.TOPICS.map(t => `<button role="tab" aria-selected="${t.id === tp.id}" class="lv ${t.id === tp.id ? "on" : ""}" data-tp="${t.id}"><span>${t.icon}</span>${t.name}</button>`).join("")}</div>
+    <p class="lvinfo"><b>${esc(tp.name)}</b> · ${esc(tp.sub)}<br><small>${readIn} of ${list.length} read</small></p>` : `<h2 class="sec">The Book Shop</h2>
     <div class="levels" role="tablist" aria-label="Levels">${B.LEVELS.map(l => `<button role="tab" aria-selected="${l.n === ui.level}" class="lv ${l.n === ui.level ? "on" : ""}" data-lv="${l.n}"><span>${l.icon}</span>Level ${l.n}</button>`).join("")}</div>
-    <p class="lvinfo"><b>${esc(lv.name)}</b> · ${esc(lv.sub)}<br><small>${readIn} of ${list.length} read</small></p>
+    <p class="lvinfo"><b>${esc(lv.name)}</b> · ${esc(lv.sub)}<br><small>${readIn} of ${list.length} read</small></p>`}
     <div class="shelf">${list.map(b => `<button class="cover" data-id="${esc(b.id)}" style="--c:${esc(b.color)}" aria-label="${esc(b.title)}${fin[b.id] ? ", read" : ""}"><span class="ce">${esc(b.cover)}</span><span class="ct">${esc(b.title)}</span>${fin[b.id] ? '<span class="check" aria-hidden="true">✓</span>' : ""}</button>`).join("")}</div>
     ${C.totalAll(R) >= 600 && !CL.enabled() && (!bkDate() || C.daysSince(bkDate(), k) >= 7) ? '<section class="nudge"><b>Keep the reading log safe ☁️</b><p>The log lives on this phone. A parent can sign in with Google once to back it up online. Readers never have to sign in.</p><button class="btn alt" id="bknow">Set up the backup</button></section>' : ""}
     <button class="btn alt" id="manual">＋ Log a book from home</button>
@@ -173,7 +178,7 @@
     $("#next").onclick = () => go("b/" + nx.id);
     $("#manual").onclick = openManual;
     if ($("#bknow")) $("#bknow").onclick = openSafe;
-    document.querySelectorAll(".lv").forEach(b => (b.onclick = () => { ui.level = +b.dataset.lv; renderShelf(); }));
+    document.querySelectorAll(".lv").forEach(b => (b.onclick = () => { if (b.dataset.tp) ui.topic = b.dataset.tp; else ui.level = +b.dataset.lv; renderShelf(); }));
     const on = document.querySelector(".lv.on"); if (on && on.scrollIntoView) on.scrollIntoView({ inline: "center", block: "nearest" });
     document.querySelectorAll(".cover").forEach(b => (b.onclick = () => go("b/" + b.dataset.id)));
   }
@@ -184,9 +189,10 @@
     const n = bk.pages.length;
     $("#nav").hidden = true;
     const sz = ["s0", "s1", "s2"][S.size];
-    const emo = end ? bk.cover : pg.pic, cnt = Array.from(emo).length;
+    const older = bk.shelf === "older";
+    const emo = end || older ? bk.cover : pg.pic, cnt = Array.from(emo).length;
     $("#view").innerHTML = `
-    <div class="reader ${sz}" style="--c:${esc(bk.color)}">
+    <div class="reader ${sz}${older ? " older" : ""}" style="--c:${esc(bk.color)}">
       <header class="rtop">
         <button class="icon" id="back" aria-label="Back to the shelf">⬅</button>
         <div class="tm" id="tm"><div class="tmrow"><b id="tmnum">0:00</b><span id="tmgoal"></span></div><div class="tmtrack"><i id="tmbar"></i></div></div>
@@ -194,10 +200,10 @@
       </header>
       ${warnHtml()}
       <div class="idle" id="idlebox" hidden>Still reading? Tap anywhere to keep the timer going.</div>
-      <div class="pic ${cnt > 2 ? "m3" : cnt > 1 ? "m2" : ""}" aria-hidden="true">${esc(emo)}</div>
-      ${end ? `<div class="the-end"><h2>The End</h2><p>${esc(bk.title)}</p><button class="btn big" id="more">Pick another story</button><button class="btn alt" id="again">Read it again</button></div>`
+      <div class="pic ${older ? "sm" : cnt > 2 ? "m3" : cnt > 1 ? "m2" : ""}" aria-hidden="true">${esc(emo)}</div>
+      ${end ? `<div class="the-end"><h2>The End</h2><p>${esc(bk.title)}</p>${older && bk.gloss && bk.gloss.length ? glossHtml(bk) : ""}${older && bk.quiz && bk.quiz.length ? quizHtml(bk) : ""}<button class="btn big" id="more">Pick another story</button><button class="btn alt" id="again">Read it again</button></div>`
         : `<p class="text" id="text">${pg.text.split(/\s+/).map((w, i) => `<span class="w" role="button" tabindex="0" data-i="${i}">${esc(w)}</span>`).join(" ")}</p>`}
-      ${end ? "" : '<p class="hint">👆 Press and hold a word to break it into sounds</p>'}
+      ${end ? "" : `<p class="hint">👆 Press and hold a word to ${older ? "see its syllables" : "break it into sounds"}</p>`}
       <footer class="rnav">
         <button class="pgbtn" id="prev" ${ui.page === 0 ? "disabled" : ""} aria-label="Previous page">◀</button>
         <div class="pgnum" aria-live="polite">${end ? "The End" : "Page " + (ui.page + 1) + " of " + n}</div>
@@ -215,6 +221,7 @@
       if (!ui.finishedNow) { ui.finishedNow = true; C.finish(S, today(), bk.id); save(); }
       $("#more").onclick = () => { const nx = nextUp(); go(nx && nx.id !== bk.id ? "b/" + nx.id : ""); };
       $("#again").onclick = () => { ui.page = 0; ui.hl = -1; renderReader(); startTimerKeep(); };
+      if (older && bk.quiz && bk.quiz.length) wireQuiz(bk);
     } else {
       document.querySelectorAll(".w").forEach(w => {
         const hit = () => { const i = +w.dataset.i; ui.hl = ui.hl === i ? -1 : i; paintHl(); if (ui.hl >= 0) say(w.textContent.replace(/[^\w']/g, "")); };
@@ -287,7 +294,7 @@
     const label = dt.toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" });
     let rows = "";
     if (d) {
-      Object.keys(d.books).forEach(id => { const b = byId[id], x = d.books[id]; if (!b) return; rows += `<li><span class="le">${esc(b.cover)}</span><span class="lt">${esc(b.title)}<small>Level ${b.level}${x.fin ? " · finished ✓" : ""}</small></span><span class="lm">${C.fmtMin(x.sec)}</span></li>`; });
+      Object.keys(d.books).forEach(id => { const b = byId[id], x = d.books[id]; if (!b) return; rows += `<li><span class="le">${esc(b.cover)}</span><span class="lt">${esc(b.title)}<small>${b.shelf === "older" ? esc(topicName(b.topic)) : "Level " + b.level}${x.fin ? " · finished ✓" : ""}</small></span><span class="lm">${C.fmtMin(x.sec)}</span></li>`; });
       d.extra.forEach(x => { rows += `<li><span class="le">📕</span><span class="lt">${esc(x.title)}<small>from home</small></span><span class="lm">${C.fmtMin(x.sec)}</span></li>`; });
     }
     $("#detail").innerHTML = `<section class="dcard"><h3>${esc(label)}</h3>${d && d.sec ? `<p class="dtot">${C.fmtMin(d.sec)} total${C.isDone(S, k) ? " ⭐" : ""}</p><ul class="list">${rows}</ul>` : "<p class='dtot'>No reading logged this day.</p>"}</section>`;
@@ -350,12 +357,15 @@
     const o = sheet(`<h2>Add a reader</h2><p class="fine left">Each reader gets their own log, streak, goal and word size. Swap between them on the home screen.</p>
       <label>Name<input id="rn" maxlength="20" autocomplete="off" placeholder="Name"></label>
       <div class="lbl">Pick a picture</div>${avatarGrid(av)}
+      <div class="lbl">Reading level</div>
+      <div class="lvpick" role="radiogroup" aria-label="Reading level"><button type="button" role="radio" class="lvopt on" data-lv="early" aria-checked="true"><b>🌱 Learning to read</b><small>Short stories, big words, pictures</small></button><button type="button" role="radio" class="lvopt" data-lv="older" aria-checked="false"><b>📚 Older reader</b><small>Grades 5 and up: sports, photography, fitness and athlete stories</small></button></div>
       <div class="row"><button class="btn alt" id="rc">Cancel</button><button class="btn" id="ra">Add</button></div>`);
     wireAvatars(o, a => (av = a));
+    let lvl = "early"; o.querySelectorAll(".lvopt").forEach(b => (b.onclick = () => { lvl = b.dataset.lv; o.querySelectorAll(".lvopt").forEach(x => { x.classList.toggle("on", x === b); x.setAttribute("aria-checked", x === b); }); }));
     $("#rc").onclick = () => closeOverlay(o);
     $("#ra").onclick = () => {
       const name = $("#rn").value.replace(/[\u0000-\u001f]/g, "").trim().slice(0, 20); if (!name) { $("#rn").focus(); return; }
-      const id = C.newId(), p = C.empty(); p.name = name; p.av = av; R.profiles[id] = p; R.order.push(id);
+      const id = C.newId(), p = C.empty(); p.name = name; p.av = av; p.lv = lvl; if (lvl === "older") p.size = 0; R.profiles[id] = p; R.order.push(id);
       closeOverlay(o); switchTo(id);
     };
     $("#rn").focus();
@@ -376,7 +386,8 @@
         <label>Name<input id="sn" maxlength="20" autocomplete="off" value="${esc(S.name)}" placeholder="Name"></label>
         <div class="lbl">Picture</div>${avatarGrid(av)}
         <label>Reading goal each night<select id="sg">${C.GOALS.map(g => `<option ${g === S.goal ? "selected" : ""} value="${g}">${g} minutes</option>`).join("")}</select></label>
-        <label>Word size<select id="sz"><option value="0">Big</option><option value="1">Bigger</option><option value="2">Biggest</option></select></label>
+        <label>Reading level<select id="slv"><option value="early">Learning to read</option><option value="older">Older reader (grades 5 and up)</option></select></label>
+        <label>Word size<select id="sz">${(S.lv === "older" ? ["Normal", "Large", "Extra large"] : ["Big", "Bigger", "Biggest"]).map((t, i) => `<option value="${i}">${t}</option>`).join("")}</select></label>
         <label class="chk"><input type="checkbox" id="ss" ${S.say ? "checked" : ""}> Say a word out loud when it is tapped</label>
         ${R.order.length > 1 ? `<button class="linkbtn danger" id="srm">Remove ${esc(who(S))}…</button>` : ""}
       </section>
@@ -385,7 +396,7 @@
         <button class="btn alt" id="stest">🔊 Test the sound</button><p class="fine left" id="stm" role="status"></p>
         <button class="btn alt" type="button" onclick="window.nateHealth&&nateHealth.report()">✉️ Send a problem report</button></section>
       <div class="row"><button class="btn" id="sd">Done</button></div>`);
-    $("#sz").value = String(S.size);
+    $("#sz").value = String(S.size); $("#slv").value = S.lv;
     wireAvatars(o, a => (av = a));
     $("#setsafe").onclick = openSafe;
     if ($("#srm")) $("#srm").onclick = () => removeReader(o);
@@ -393,7 +404,7 @@
       AU.unlock(); const ok = AU.beep(), i = AU.info(); if (i.speech) setTimeout(() => AU.speak("Hello! Can you hear me?", 0.85), 700);
       $("#stm").textContent = !ok ? "This browser cannot make sound." : "You should hear a beep" + (i.speech ? " and then a voice" : "") + ". " + (i.speech ? (i.voices ? "" : "This phone has not loaded a speaking voice yet; try again in a few seconds. ") : "This phone has no speaking voice, so word-reading is off. ") + "If you hear nothing: turn the media volume up and make sure the phone is not on silent.";
     };
-    $("#sd").onclick = () => { S.name = $("#sn").value.replace(/[\u0000-\u001f]/g, "").trim().slice(0, 20); S.av = av; S.goal = +$("#sg").value; S.size = +$("#sz").value; S.say = $("#ss").checked; save(); closeOverlay(o); route(); };
+    $("#sd").onclick = () => { S.name = $("#sn").value.replace(/[\u0000-\u001f]/g, "").trim().slice(0, 20); S.av = av; if ($("#slv").value !== S.lv) { S.lv = $("#slv").value; ui.levelSet = false; } S.goal = +$("#sg").value; S.size = +$("#sz").value; S.say = $("#ss").checked; save(); closeOverlay(o); route(); };
   }
 
   /* ---------- keep the log safe: online backup, sharing with another home, files ---------- */
@@ -446,13 +457,41 @@
     $("#safedone").onclick = () => { closeOverlay(o); route(); };
   }
 
+  /* ---------- "Check yourself": the questions at the end of an older-reader story ---------- */
+  const glossHtml = bk => `<section class="gloss" aria-label="Words to know"><h3>Words to know</h3><dl>${bk.gloss.map(g => `<dt>${esc(g.w)}</dt><dd>${esc(g.d)}</dd>`).join("")}</dl></section>`;
+  /* The answers are mixed up the same way every time (so the right one is not always first), chosen from the story and question. */
+  function mixed(bk, i) {
+    let h = 7; (bk.id + i).split("").forEach(c => (h = (h * 31 + c.charCodeAt(0)) % 100003));
+    const o = bk.quiz[i].a.map((t, j) => ({ t, j }));
+    for (let k = o.length - 1; k > 0; k--) { h = (h * 1103 + 12345) % 100003; const r = h % (k + 1); [o[k], o[r]] = [o[r], o[k]]; }
+    return o;
+  }
+  function quizHtml(bk) {
+    return `<section class="quiz" aria-label="Check yourself"><h3>Check yourself</h3>${bk.quiz.map((q, i) => `<div class="qq" data-i="${i}"><p class="qt">${i + 1}. ${esc(q.q)}</p><div class="qo">${mixed(bk, i).map(o => `<button type="button" class="qb" data-j="${o.j}">${esc(o.t)}</button>`).join("")}</div><p class="qf" role="status"></p></div>`).join("")}<p class="qs" id="qscore" role="status"></p></section>`;
+  }
+  function wireQuiz(bk) {
+    let got = 0, done = 0;
+    document.querySelectorAll(".qq").forEach(qq => {
+      const q = bk.quiz[+qq.dataset.i];
+      qq.querySelectorAll(".qb").forEach(b => (b.onclick = () => {
+        if (qq.classList.contains("done")) return; qq.classList.add("done"); const ok = +b.dataset.j === q.ok; done++; if (ok) got++;
+        qq.querySelectorAll(".qb").forEach(x => { x.disabled = true; if (+x.dataset.j === q.ok) x.classList.add("right"); });
+        if (!ok) b.classList.add("wrong");
+        qq.querySelector(".qf").textContent = ok ? "✓ Right!" : "Not quite. The answer is: " + q.a[q.ok];
+        if (done === bk.quiz.length) $("#qscore").textContent = "You got " + got + " of " + done + (got === done ? " 🎉" : ". Read it again and try the ones you missed!");
+      }));
+    });
+  }
+  const topicName = id => ((B.TOPICS || []).find(t => t.id === id) || { name: "Reading" }).name;
+
   /* ---------- press and hold: syllables and sounds ---------- */
   function speak(text) { AU.speak(text, 0.75); }
   function openWord(raw) {
     const a = WD.analyze(raw); if (!a) return;
+    const older = !!(ui.book && ui.book.shelf === "older"); if (older) a.tricky = false;   // older readers get the syllables only
     const can = AU.canSpeak(), n = a.syllables.length;
     const sounds = sy => sy.sounds.map(c => `<i class="${c.silent ? "silent" : ""}"${c.silent ? ' title="silent e"' : ""}>${esc(c.t)}</i>`).join("");
-    const chips = a.syllables.map((sy, i) => `<button class="syl c${i % 4}" data-i="${i}" ${can ? "" : "disabled"} aria-label="${esc(sy.text)}"><span class="st">${esc(sy.text)}</span>${a.tricky ? "" : `<span class="snd">${sounds(sy)}</span>`}</button>`).join('<span class="dot" aria-hidden="true">·</span>');
+    const chips = a.syllables.map((sy, i) => `<button class="syl c${i % 4}" data-i="${i}" ${can ? "" : "disabled"} aria-label="${esc(sy.text)}"><span class="st">${esc(sy.text)}</span>${a.tricky || older ? "" : `<span class="snd">${sounds(sy)}</span>`}</button>`).join('<span class="dot" aria-hidden="true">·</span>');
     const o = sheet(`<div class="wordpop">
       <h2 class="wp-word">${esc(a.text)}</h2>
       <p class="wp-sub">${a.tricky ? "🧠 A tricky word! It does not sound out the way it looks. Look at it and remember it." : n + " syllable" + (n === 1 ? "" : "s") + (can ? " · tap a part to hear it" : "")}</p>
