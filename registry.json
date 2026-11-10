@@ -1057,11 +1057,15 @@
         "autoShots": [],
         "latest": {
           "d": "Nov 10, 2026",
-          "t": "Cube Clock: add the shared Something wrong? report and note failed saves",
-          "url": "https://github.com/natesteele888/cube-clock/commit/cb70a0ec07454d1528396e1d82171f17a46358b7"
+          "t": "Statistics: say 1 solve, not 1 solves",
+          "url": "https://github.com/natesteele888/cube-clock/commit/6eb6ad236ed5dc16df3743e861b98b93597b75b1"
         },
-        "version": "1.2.7",
+        "version": "1.2.8",
         "history": [
+          {
+            "v": "1.2.8",
+            "t": "Statistics: say 1 solve, not 1 solves"
+          },
           {
             "v": "1.2.7",
             "t": "Cube Clock: add the shared Something wrong? report and note failed saves"
@@ -1077,10 +1081,6 @@
           {
             "v": "1.2.4",
             "t": "Tutorial cards: bottom sheet on a phone instead of a floating box"
-          },
-          {
-            "v": "1.2.3",
-            "t": "Cube Clock: show just the cube mark on narrow phones instead of a lone C"
           }
         ],
         "caps": [
@@ -2361,33 +2361,33 @@
           "store/shots/read20-4.webp",
           "store/shots/read20-5.webp"
         ],
-        "version": "1.1.4",
+        "version": "1.1.8",
         "history": [
+          {
+            "v": "1.1.8",
+            "t": "Read 20: a darker, sleeker look with line icons for older readers"
+          },
+          {
+            "v": "1.1.7",
+            "t": "Read 20: seven more athlete biographies and six more social studies stories for older readers"
+          },
+          {
+            "v": "1.1.6",
+            "t": "Read 20: an older-readers library (sports, photography, fitness, athletes, social studies, English) with words to know and a quiz"
+          },
+          {
+            "v": "1.1.5",
+            "t": "Read 20: redraw the home screen after joining a shared log (it stayed on the empty one)"
+          },
           {
             "v": "1.1.4",
             "t": "Read 20: a profile for each child, swapped on the home screen, and a much shorter Settings"
-          },
-          {
-            "v": "1.1.3",
-            "t": "Read 20: an abandoned family link can't join a phone later"
-          },
-          {
-            "v": "1.1.2",
-            "t": "Read 20: family link so two homes share one log (each with their own Google account), and phones' minutes add up"
-          },
-          {
-            "v": "1.1.1",
-            "t": "Read 20: remove the Sounds board and its letter-sound clips"
-          },
-          {
-            "v": "1.1.0",
-            "t": "Every app: a health check on open, a problem log, and a Something wrong? report"
           }
         ],
         "latest": {
           "d": "Nov 10, 2026",
-          "t": "Read 20: a profile for each child, swapped on the home screen, and a much shorter Settings",
-          "url": "https://github.com/natesteele888/apps/commit/3136e3d2cea90b746359a6c688f4bc51af236681"
+          "t": "Read 20: a darker, sleeker look with line icons for older readers",
+          "url": "https://github.com/natesteele888/apps/commit/2a42f7fbac7aefd6b91a805825c47c9cf074fe46"
         },
         "caps": [
           "A shelf of short stories, and tonight's reading at a glance",
