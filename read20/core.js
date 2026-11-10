@@ -11,7 +11,8 @@
   C.addDays = (k, n) => { const d = C.parseDay(k); d.setDate(d.getDate() + n); return C.dayKey(d); };
 
   C.GOALS = [10, 15, 20, 25, 30];
-  C.empty = () => ({ v: 1, name: "", goal: 20, size: 1, say: false, bk: "", days: {} });
+  C.AVATARS = ["🦊", "🐻", "🐼", "🦁", "🐯", "🐸", "🐵", "🦄", "🐙", "🐢", "🦋", "🐬"];
+  C.empty = () => ({ v: 1, name: "", av: "", goal: 20, size: 1, say: false, bk: "", days: {} });
   const int = (x, lo, hi, dflt) => { x = Math.round(Number(x)); return isFinite(x) ? Math.min(hi, Math.max(lo, x)) : dflt; };
   const clean = (s, n) => String(s == null ? "" : s).replace(/[\u0000-\u001f\u007f‪-‮⁦-⁩]/g, "").trim().slice(0, n);
 
@@ -44,6 +45,7 @@
     const s = C.empty();
     if (!raw || typeof raw !== "object") return s;
     s.name = clean(raw.name, 20);
+    s.av = C.AVATARS.includes(raw.av) ? raw.av : "";
     s.goal = C.GOALS.includes(raw.goal) ? raw.goal : 20;
     s.size = int(raw.size, 0, 2, 1);
     s.say = raw.say === true;
@@ -111,6 +113,7 @@
     const out = C.sanitize(a), o = C.sanitize(b);
     if (!Object.keys(out.days).length && Object.keys(o.days).length) { out.goal = o.goal; out.size = o.size; out.say = o.say; } // a fresh phone takes the saved settings
     if (!out.name && o.name) out.name = o.name;
+    if (!out.av && o.av) out.av = o.av;
     if (!out.bk || (o.bk && o.bk > out.bk)) out.bk = o.bk;
     for (const k of Object.keys(o.days)) {
       const x = out.days[k], y = o.days[k];
@@ -127,6 +130,41 @@
     return out;
   };
   C.daysSince = (from, to) => Math.round((C.parseDay(to) - C.parseDay(from)) / 864e5);
+
+  /* ---------- readers: one phone can hold several children, each with their own log and settings ---------- */
+  const ID = /^[a-z0-9]{1,12}$/;
+  C.newId = () => "p" + Math.random().toString(36).slice(2, 9);
+  C.emptyRoot = () => ({ v: 2, active: "main", order: ["main"], gone: {}, profiles: { main: C.empty() } });
+  C.blank = p => !p.name && !Object.keys(p.days).length;
+  /* Anything saved before readers existed is one log; it becomes the reader called "main" (the same id on every phone, so a
+     shared log from two phones lands on the same reader). */
+  C.sanitizeRoot = raw => {
+    const r = { v: 2, active: "main", order: [], gone: {}, profiles: {} };
+    if (raw && typeof raw === "object" && raw.profiles && typeof raw.profiles === "object") {
+      if (raw.gone && typeof raw.gone === "object") Object.keys(raw.gone).filter(i => ID.test(i)).slice(0, 50).forEach(i => (r.gone[i] = 1));
+      Object.keys(raw.profiles).filter(i => ID.test(i) && !r.gone[i]).slice(0, 12).forEach(i => (r.profiles[i] = C.sanitize(raw.profiles[i])));
+      (Array.isArray(raw.order) ? raw.order : []).forEach(i => { if (r.profiles[i] && !r.order.includes(i)) r.order.push(i); });
+      Object.keys(r.profiles).forEach(i => { if (!r.order.includes(i)) r.order.push(i); });
+      r.active = r.profiles[raw.active] ? raw.active : r.order[0];
+    } else if (raw && typeof raw === "object") { r.profiles.main = C.sanitize(raw); r.order = ["main"]; }
+    if (!r.order.length) { const e = C.emptyRoot(); e.gone = r.gone; return e; }
+    return r;
+  };
+  C.serializeRoot = r => { const o = { v: 2, active: r.active, order: r.order.slice(), gone: Object.assign({}, r.gone), profiles: {} }; r.order.forEach(i => (o.profiles[i] = C.serialize(r.profiles[i]))); return o; };
+  C.totalAll = r => r.order.reduce((n, i) => n + C.total(r.profiles[i]), 0);
+  /* Same rule as one log: only ever adds. A reader removed on either phone stays removed. */
+  C.mergeRoot = (a, b) => {
+    const A = C.sanitizeRoot(a), B = C.sanitizeRoot(b), out = { v: 2, active: A.active, order: [], gone: Object.assign({}, B.gone, A.gone), profiles: {} };
+    A.order.concat(B.order).forEach(i => {
+      if (out.gone[i] || out.profiles[i]) return;
+      out.profiles[i] = A.profiles[i] && B.profiles[i] ? C.merge(A.profiles[i], B.profiles[i]) : A.profiles[i] || B.profiles[i]; out.order.push(i);
+    });
+    const real = out.order.filter(i => !C.blank(out.profiles[i]));
+    if (real.length) out.order.filter(i => C.blank(out.profiles[i])).forEach(i => { delete out.profiles[i]; out.order.splice(out.order.indexOf(i), 1); });   // an untouched starter reader is dropped once real ones arrive
+    if (!out.order.length) return C.emptyRoot();
+    if (!out.profiles[out.active]) out.active = out.order[0];
+    return out;
+  };
   C.fmtClock = sec => { sec = Math.max(0, Math.floor(sec)); return Math.floor(sec / 60) + ":" + pad(sec % 60); };
   C.fmtTotal = sec => (sec < 3600 ? Math.round(sec / 60) + " min" : (Math.round(sec / 360) / 10) + " hr");
   C.fmtMin = sec => (sec > 0 && sec < 60 ? "under 1 min" : Math.round(sec / 60) + " min");

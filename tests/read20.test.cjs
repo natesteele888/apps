@@ -101,6 +101,18 @@ const TODAY = '2026-11-08';
     const old = C.sanitize({ days: { [TODAY]: { sec: 900, books: { z: { sec: 900, fin: 1 } }, extra: [] } } }); eq(C.daySec(old, TODAY), 900); C.dev = 'new'; C.addSeconds(old, TODAY, 'z', 100); eq(C.daySec(old, TODAY), 1000, 'old data plus new reading');
     eq(C.daySec(C.merge(old, C.sanitize({ days: { [TODAY]: { sec: 900, books: { z: { sec: 900, fin: 1 } }, extra: [] } } })), TODAY), 1000, 'the same old save from the cloud is not added twice'); C.dev = 'local';
   });
+  await test('core: readers (several children on one phone): legacy saves become "main", merges union, removed stays removed', () => {
+    const legacy = C.sanitizeRoot({ name: 'Old', days: { [TODAY]: { sec: 900, books: {}, extra: [] } } }); eq(legacy.order.join(), 'main'); eq(legacy.active, 'main'); eq(legacy.profiles.main.name, 'Old'); eq(C.totalAll(legacy), 900);
+    eq(JSON.stringify(C.sanitizeRoot(null)), JSON.stringify(C.emptyRoot())); eq(C.sanitizeRoot('junk').order.join(), 'main'); eq(C.sanitizeRoot({ profiles: {} }).order.join(), 'main');
+    const a = C.emptyRoot(); a.profiles.main.name = 'Gigi'; a.profiles.p1 = C.empty(); a.profiles.p1.name = 'Ava'; a.profiles.p1.av = '🐼'; a.order.push('p1'); a.active = 'p1';
+    const rt = C.sanitizeRoot(JSON.parse(JSON.stringify(C.serializeRoot(a)))); eq(rt.order.join(), 'main,p1'); eq(rt.active, 'p1'); eq(rt.profiles.p1.av, '🐼'); eq(C.sanitize({ av: '💣' }).av, '', 'only the picture list is allowed');
+    const b = C.emptyRoot(); C.dev = 'mom'; C.addSeconds(b.profiles.main, TODAY, 'x', 600); C.dev = 'local';
+    const m = C.mergeRoot(a, b); eq(m.order.join(), 'main,p1'); eq(m.active, 'p1', 'each phone keeps its own current reader'); eq(C.daySec(m.profiles.main, TODAY), 600); eq(m.profiles.main.name, 'Gigi');
+    eq(C.mergeRoot(C.emptyRoot(), a).order.join(), 'main,p1'); eq(C.mergeRoot(m, m).order.join(), 'main,p1');
+    const g = C.mergeRoot(a, { profiles: { p1: a.profiles.p1 }, gone: { p1: 1 }, order: ['p1'] }); eq(g.order.join(), 'main', 'removed on one phone, removed everywhere'); eq(C.mergeRoot(g, a).order.join(), 'main', 'and an old copy cannot bring it back');
+    const f = C.mergeRoot(C.emptyRoot(), { profiles: { p9: Object.assign(C.empty(), { name: 'Zed' }) }, order: ['p9'] }); eq(f.order.join(), 'p9', 'an untouched starter reader steps aside for real ones');
+    assert.ok(C.newId() !== C.newId() && /^p[a-z0-9]{1,9}$/.test(C.newId()));
+  });
   await test('core: damaged saves are cleaned up', () => {
     const s = C.sanitize({ name: 'A'.repeat(50) + '\u0007', goal: 7, size: 9, say: 'yes', days: { 'bad': { sec: 5 }, '2026-11-08': { sec: -4, books: { x: { sec: 'q', fin: 1 } }, extra: [{ title: 5, sec: 1e9 }, null] } } });
     eq(s.name.length, 20); eq(s.goal, 20); eq(s.size, 2); eq(s.say, false); eq(Object.keys(s.days).length, 1); eq(s.days[TODAY].sec, 0); eq(s.days[TODAY].books.x.fin, 1); eq(s.days[TODAY].extra[0].sec, 86400);
@@ -111,6 +123,8 @@ const TODAY = '2026-11-08';
   const srv = await startServer('read20'); const br = await launch();
   const mk = async (opts = {}) => { const o = await newPage(br, { today: TODAY, ...opts }); await o.page.clock.install({ time: new Date('2026-11-08T19:00:00') }); await o.page.goto(srv.url); await o.page.waitForSelector('.cover'); return o; };
   const near = (a, b, m) => assert.ok(Math.abs(a - b) <= 1, (m || '') + ' expected ~' + b + ' got ' + a); // the page clock keeps moving a hair between clicks
+  const openSafe = async page => { await page.locator('#gear').click(); await page.locator('#setsafe').click(); await page.locator('#cin').waitFor({ state: 'attached' }); };
+  const closeSafe = async page => { await page.locator('#safedone').click(); await page.locator('#sd').click(); };
   const sec = async page => page.evaluate(() => window.R20App._state().days[window.__today] ? window.R20App._state().days[window.__today].sec : 0);
 
   await test('shelf: shows tonight\'s ring, levels and covers', async () => {
@@ -185,8 +199,8 @@ const TODAY = '2026-11-08';
     await page.locator('#nav button[data-go="log"]').click(); await page.waitForSelector('.keep');
     assert.ok(/Saved on this phone/.test(await page.locator('.keep').innerText())); assert.ok(/30 min/.test(await page.locator('.stats').innerText()) && !/hours? read/.test(await page.locator('.stats').innerText()));
     const dl = page.waitForEvent('download'); await page.locator('#kfile').click(); const d = await dl; assert.ok(/read20-backup/.test(d.suggestedFilename()));
-    await page.locator('#kcloud').click(); await page.locator('#cin').waitFor(); await page.locator('#sd').click();
-    await page.locator('#gear').click(); await page.locator('#cin').waitFor(); await page.locator('#sd').click();
+    await page.locator('#kcloud').click(); await page.locator('#cin').waitFor(); await page.locator('#safedone').click();
+    await page.locator('#gear').click(); await page.locator('#setsafe').click(); await page.locator('#cin').waitFor(); await closeSafe(page);
     await page.screenshot({ path: SHOTS + '/read20-log-keep.png', fullPage: true });
   });
   await test('press and hold: a word opens a pop-up with its syllables and sounds; a quick tap only highlights', async () => {
@@ -258,15 +272,15 @@ const TODAY = '2026-11-08';
     const p2 = await ctx.newPage(); await p2.addInitScript(d => { window.__today = d; }, TODAY); await p2.goto(srv.url);
     await p2.waitForFunction(() => window.R20App._state().days[window.__today] && window.R20App._state().days[window.__today].sec >= 10, null, { timeout: 5000 });
     const back = await sec(p2); assert.ok(back >= 10, 'recovered ' + back);
-    eq(await p2.evaluate(() => Object.values(JSON.parse(localStorage.getItem('read20.v1')).days[window.__today].parts).reduce((n, p) => n + p.sec, 0) >= 10), true, 'main copy refilled');
+    eq(await p2.evaluate(() => Object.values(JSON.parse(localStorage.getItem('read20.v1')).profiles.main.days[window.__today].parts).reduce((n, p) => n + p.sec, 0) >= 10), true, 'main copy refilled');
   });
   await test('saving: a backup file restores into a brand new phone, adds time and rejects other files', async () => {
     const a = await mk(); await a.page.locator('#manual').click(); await a.page.fill('#mt', 'Paper Book'); await a.page.fill('#mm', '14'); await a.page.locator('#ms').click(); await a.page.waitForSelector('.cover');
-    await a.page.locator('#gear').click(); const dl = a.page.waitForEvent('download'); await a.page.locator('#sb').click(); const d = await dl;
+    await openSafe(a.page); const dl = a.page.waitForEvent('download'); await a.page.locator('#sb').click(); const d = await dl;
     assert.ok(/^read20-backup-2026-11-08\.json$/.test(d.suggestedFilename()), d.suggestedFilename());
-    const path = await d.path(); const j = JSON.parse(require('fs').readFileSync(path, 'utf8')); eq(j.app, 'read20'); eq(C.sanitize(j.data).days[TODAY].sec, 840); eq(j.data.bk, TODAY);
+    const path = await d.path(); const j = JSON.parse(require('fs').readFileSync(path, 'utf8')); eq(j.app, 'read20'); eq(C.sanitizeRoot(j.data).profiles.main.days[TODAY].sec, 840); eq(j.data.profiles.main.bk, TODAY);
     const b = await mk(); eq(await sec(b.page), 0);
-    await b.page.locator('#gear').click(); await b.page.setInputFiles('#sr', path); await b.page.waitForFunction(() => /Restored/.test(document.querySelector('#sm').textContent));
+    await openSafe(b.page); await b.page.setInputFiles('#sr', path); await b.page.waitForFunction(() => /Restored/.test(document.querySelector('#sm').textContent));
     eq(await sec(b.page), 840); await b.page.setInputFiles('#sr', path); await b.page.waitForTimeout(300); eq(await sec(b.page), 840, 'restoring twice does not double');
     require('fs').writeFileSync(SHOTS + '/junk.json', '{"hello":1}'); await b.page.setInputFiles('#sr', SHOTS + '/junk.json');
     await b.page.waitForFunction(() => /not a Read 20 backup/.test(document.querySelector('#sm').textContent)); eq(await sec(b.page), 840);
@@ -281,7 +295,7 @@ const TODAY = '2026-11-08';
   await test('saving: the backup reminder shows once there are 10+ minutes and no recent backup, and goes away after a backup', async () => {
     const { page } = await mk(); assert.ok(!(await page.locator('#bknow').count()));
     await page.locator('#manual').click(); await page.fill('#mm', '12'); await page.locator('#ms').click(); await page.waitForSelector('.cover');
-    assert.ok(await page.locator('#bknow').isVisible()); await page.locator('#bknow').click(); const dl = page.waitForEvent('download'); await page.locator('#sb').click(); await dl; await page.locator('#sd').click(); await page.waitForSelector('.cover');
+    assert.ok(await page.locator('#bknow').isVisible()); await page.locator('#bknow').click(); const dl = page.waitForEvent('download'); await page.locator('#sb').click(); await dl; await page.locator('#safedone').click(); await page.waitForSelector('.cover');
     eq(await page.locator('#bknow').count(), 0);
   });
 
@@ -302,7 +316,7 @@ const TODAY = '2026-11-08';
     await o.page.goto(srv.url + (opts.hash || '')); await o.page.waitForSelector('.cover'); o.hits = () => hits; return o;
   };
   const logMin = async (page, title, min) => { await page.locator('#manual').click(); await page.fill('#mt', title); await page.fill('#mm', String(min)); await page.locator('#ms').click(); await page.waitForSelector('.cover'); };
-  const cloudSec = (day, path = 'r20_users/parent1') => { const d = cloudDb.get(path); return d ? (C.sanitize(JSON.parse(d.log)).days[day] || { sec: 0 }).sec : -1; };
+  const cloudSec = (day, path = 'r20_users/parent1') => { const d = cloudDb.get(path); return d ? (C.sanitizeRoot(JSON.parse(d.log)).profiles.main.days[day] || { sec: 0 }).sec : -1; };
 
   await test('cloud: reading never loads or needs Google; nothing is sent until a parent signs in', async () => {
     cloudDb.clear(); const a = await mkPhone(); await a.page.locator('.cover', { hasText: 'Sam the Cat' }).click(); await a.page.waitForSelector('.reader');
@@ -314,10 +328,10 @@ const TODAY = '2026-11-08';
     assert.ok(await a.page.locator('.nudge').isVisible(), 'sign-in reminder is on the shelf'); await a.page.locator('#bknow').click();
     await a.page.locator('#cin').waitFor(); await a.page.locator('#cin').click(); await a.page.waitForFunction(() => /Backed up as parent@example.com/.test(document.querySelector('#cl').textContent));
     eq(cloudSec(TODAY), 840); eq(await a.page.locator('#cin').isVisible(), false, 'sign-in button hidden once signed in'); eq(await a.page.locator('#cout').isVisible(), true); await a.page.screenshot({ path: SHOTS + '/read20-cloud.png' });
-    await a.page.locator('#sd').click(); await a.page.waitForSelector('.cover'); assert.ok(await a.page.locator('#cloudbadge').isVisible()); eq(await a.page.locator('.nudge').count(), 0);
+    await a.page.locator('#safedone').click(); await a.page.waitForSelector('.cover'); assert.ok(await a.page.locator('#cloudbadge').isVisible()); eq(await a.page.locator('.nudge').count(), 0);
     // new phone, same parent account
-    const b = await mkPhone(); eq(await sec(b.page), 0); await b.page.locator('#gear').click(); await b.page.locator('#cin').click();
-    await b.page.waitForFunction(() => /Backed up as/.test(document.querySelector('#cl').textContent)); eq(await sec(b.page), 840, 'the 14 minutes came back'); await b.page.locator('#sd').click();
+    const b = await mkPhone(); eq(await sec(b.page), 0); await openSafe(b.page); await b.page.locator('#cin').click();
+    await b.page.waitForFunction(() => /Backed up as/.test(document.querySelector('#cl').textContent)); eq(await sec(b.page), 840, 'the 14 minutes came back'); await closeSafe(b.page);
     assert.ok(/14/.test(await b.page.locator('.rtxt b').innerText()));
     // she reads on the new phone (no sign-in prompt anywhere in the reader); it syncs on its own
     await b.page.locator('.cover', { hasText: 'Sam the Cat' }).click(); await b.page.waitForSelector('.reader'); await b.page.clock.runFor(25000); await b.page.waitForTimeout(300);
@@ -326,25 +340,25 @@ const TODAY = '2026-11-08';
   await test('cloud: two phones merge; neither loses time; signed-in phones come back signed in after a reload', async () => {
     cloudDb.clear(); const a = await mkPhone(), b = await mkPhone();
     await logMin(a.page, 'Book A', 10); await logMin(b.page, 'Book B', 5);
-    for (const p of [a.page, b.page]) { await p.locator('#gear').click(); await p.locator('#cin').click(); await p.waitForFunction(() => /Backed up as/.test(document.querySelector('#cl').textContent)); await p.locator('#sd').click(); }
-    await a.page.locator('#gear').click(); await a.page.locator('#cnow').click(); await a.page.waitForTimeout(400); await a.page.locator('#sd').click();
+    for (const p of [a.page, b.page]) { await openSafe(p); await p.locator('#cin').click(); await p.waitForFunction(() => /Backed up as/.test(document.querySelector('#cl').textContent)); await closeSafe(p); }
+    await openSafe(a.page); await a.page.locator('#cnow').click(); await a.page.waitForTimeout(400); await closeSafe(a.page);
     eq(cloudSec(TODAY), 900, 'two phones, same day: both readings count (10 + 5 minutes)'); 
     await a.page.reload().catch(() => a.page.reload()); // the sheet's closing Back navigation can abort a reload
     await a.page.waitForSelector('.cover'); await a.page.waitForFunction(() => document.querySelector('#cloudbadge') && !document.querySelector('#cloudbadge').hidden);
     await logMin(b.page, 'Book C', 20); // b now ahead
-    await b.page.locator('#gear').click(); await b.page.locator('#cnow').click(); await b.page.waitForTimeout(400); await b.page.locator('#sd').click();
-    await a.page.locator('#gear').click(); await a.page.locator('#cnow').click(); await a.page.waitForTimeout(400); await a.page.locator('#sd').click();
+    await openSafe(b.page); await b.page.locator('#cnow').click(); await b.page.waitForTimeout(400); await closeSafe(b.page);
+    await openSafe(a.page); await a.page.locator('#cnow').click(); await a.page.waitForTimeout(400); await closeSafe(a.page);
     assert.ok((await sec(a.page)) >= 1500, 'a caught up with b: ' + await sec(a.page));
   });
   await test('cloud: no signal or a blocked account never breaks reading; sign out stops syncing; erase also erases the cloud copy', async () => {
-    cloudDb.clear(); fsDeny = false; const off = await mkPhone({ offline: true }); await off.page.locator('#gear').click(); await off.page.locator('#cin').click();
-    await off.page.waitForFunction(() => /No connection/.test(document.querySelector('#cl').textContent)); await off.page.locator('#sd').click();
+    cloudDb.clear(); fsDeny = false; const off = await mkPhone({ offline: true }); await openSafe(off.page); await off.page.locator('#cin').click();
+    await off.page.waitForFunction(() => /No connection/.test(document.querySelector('#cl').textContent)); await closeSafe(off.page);
     await off.page.locator('.cover', { hasText: 'Sam the Cat' }).click(); await off.page.waitForSelector('.reader'); await off.page.clock.runFor(10000); eq(await sec(off.page), 10); eq(await off.page.locator('.warn:visible').count(), 0);
-    const d = await mkPhone(); await logMin(d.page, 'X', 12); await d.page.locator('#gear').click(); await d.page.locator('#cin').click();
+    const d = await mkPhone(); await logMin(d.page, 'X', 12); await openSafe(d.page); await d.page.locator('#cin').click();
     await d.page.waitForFunction(() => /Backed up as/.test(document.querySelector('#cl').textContent)); eq(cloudSec(TODAY), 720);
     d.page.on('dialog', x => x.accept()); await d.page.locator('#se').click(); await d.page.waitForSelector('.cover'); await d.page.waitForTimeout(400);
     eq(cloudSec(TODAY), 0, 'cloud copy erased too'); eq(await sec(d.page), 0);
-    const e = await mkPhone(); await logMin(e.page, 'Y', 12); fsDeny = true; await e.page.locator('#gear').click(); await e.page.locator('#cin').click();
+    const e = await mkPhone(); await logMin(e.page, 'Y', 12); fsDeny = true; await openSafe(e.page); await e.page.locator('#cin').click();
     await e.page.waitForFunction(() => /not allowed/.test(document.querySelector('#cl').textContent)); fsDeny = false;
     await e.page.locator('#cout').click(); await e.page.waitForFunction(() => /Not set up/.test(document.querySelector('#cl').textContent));
     eq(await e.page.evaluate(() => localStorage.getItem('read20.cloud')), null); eq(await sec(e.page), 720, 'her time stays on the phone');
@@ -378,29 +392,29 @@ const TODAY = '2026-11-08';
   await test('family link: one log for two homes, each phone with its own Google account; both homes\' minutes add up', async () => {
     cloudDb.clear(); fsDeny = false;
     const a = await mkPhone({ uid: 'dad1' }); await logMin(a.page, 'Dad reading', 10);
-    await a.page.locator('#gear').click(); await a.page.locator('#cin').click(); await a.page.waitForFunction(() => /Backed up as/.test(document.querySelector('#cl').textContent));
+    await openSafe(a.page); await a.page.locator('#cin').click(); await a.page.waitForFunction(() => /Backed up as/.test(document.querySelector('#cl').textContent));
     eq(await a.page.locator('#shsend').isVisible(), false); await a.page.locator('#shmake').click(); await a.page.waitForFunction(() => /Sharing is on/.test(document.querySelector('#shmsg').textContent));
     const key = await a.page.evaluate(() => window.R20Cloud.shareKey()); assert.ok(/^[a-z2-7]{20}$/.test(key), 'a 20 character code'); assert.ok(cloudDb.has('r20_shared/' + key), 'the log is in the shared document');
     eq(await a.page.locator('#shsend').isVisible(), true); eq(await a.page.locator('#shstop').isVisible(), true);
     const link = await a.page.evaluate(() => window.R20Cloud.link()); assert.ok(link.endsWith('#join=' + key), link); assert.ok(/Code: \w{5}-\w{5}-\w{5}-\w{5}/.test(await a.page.locator('#shmsg').innerText()));
-    await a.page.screenshot({ path: SHOTS + '/read20-share.png', fullPage: false }); await a.page.locator('#sd').click();
+    await a.page.screenshot({ path: SHOTS + '/read20-share.png', fullPage: false }); await closeSafe(a.page);
     // the other home opens the link on a different phone, with a different Google account
     const b = await mkPhone({ uid: 'mom1', hash: '#join=' + key }); await b.page.locator('#jyes').waitFor(); assert.ok(/own.*Google account/.test(await b.page.locator('.sheet').innerText()));
     eq(await sec(b.page), 0); await b.page.locator('#jyes').click(); await b.page.waitForFunction(() => /Joined/.test(document.querySelector('#jmsg').textContent)); eq(await sec(b.page), 600, 'her 10 minutes came over');
     eq(await b.page.evaluate(() => location.hash), '', 'the link is cleaned out of the address');
     await b.page.locator('#jno').click(); await logMin(b.page, 'Mom reading', 5);   // the same day, on the other phone
-    await b.page.locator('#gear').click(); await b.page.locator('#cnow').click(); await b.page.waitForTimeout(400); await b.page.locator('#sd').click();
+    await openSafe(b.page); await b.page.locator('#cnow').click(); await b.page.waitForTimeout(400); await closeSafe(b.page);
     eq(cloudSec(TODAY, 'r20_shared/' + key), 900, 'shared log has both homes');
-    await a.page.locator('#gear').click(); await a.page.locator('#cnow').click(); await a.page.waitForTimeout(400); await a.page.locator('#sd').click();
+    await openSafe(a.page); await a.page.locator('#cnow').click(); await a.page.waitForTimeout(400); await closeSafe(a.page);
     eq(await sec(a.page), 900, 'dad sees mom\'s 5 minutes on top of his 10, not instead of them');
     assert.ok(!cloudDb.has('r20_users/mom1') || cloudSec(TODAY, 'r20_users/mom1') <= 0, 'mom\'s phone does not use a personal document once shared');
     // a third phone typing the code instead of using the link
-    const c = await mkPhone({ uid: 'gma1' }); await c.page.locator('#gear').click(); await c.page.fill('#jcode', 'junk'); await c.page.locator('#jgo').click(); assert.ok(/does not look like/.test(await c.page.locator('#shmsg').innerText()));
+    const c = await mkPhone({ uid: 'gma1' }); await openSafe(c.page); await c.page.fill('#jcode', 'junk'); await c.page.locator('#jgo').click(); assert.ok(/does not look like/.test(await c.page.locator('#shmsg').innerText()));
     await c.page.fill('#jcode', (await a.page.evaluate(() => window.R20Cloud.pretty())).toUpperCase()); await c.page.locator('#jgo').click(); await c.page.locator('#jyes').waitFor(); await c.page.locator('#jyes').click();
     await c.page.waitForFunction(() => /Joined/.test(document.querySelector('#jmsg').textContent)); eq(await sec(c.page), 900);
   });
   await test('family link: not-yet-published rules, bad links and stopping the share are handled without losing anything', async () => {
-    cloudDb.clear(); const a = await mkPhone({ uid: 'dad2' }); await logMin(a.page, 'X', 12); await a.page.locator('#gear').click(); await a.page.locator('#cin').click();
+    cloudDb.clear(); const a = await mkPhone({ uid: 'dad2' }); await logMin(a.page, 'X', 12); await openSafe(a.page); await a.page.locator('#cin').click();
     await a.page.waitForFunction(() => /Backed up as/.test(document.querySelector('#cl').textContent)); fsDeny = true; await a.page.locator('#shmake').click();
     await a.page.waitForFunction(() => /Could not make the link/.test(document.querySelector('#shmsg').textContent)); eq(await a.page.evaluate(() => window.R20Cloud.shareKey()), ''); eq(await sec(a.page), 720); fsDeny = false;
     await a.page.locator('#shmake').click(); await a.page.waitForFunction(() => /Sharing is on/.test(document.querySelector('#shmsg').textContent)); await a.page.locator('#shstop').click();
@@ -415,9 +429,63 @@ const TODAY = '2026-11-08';
     await a.page.evaluate(([p, k]) => localStorage.setItem(p, k + '.' + Date.now()), [PEND, K]); await a.page.locator('#jno').click();
     eq(await a.page.evaluate(p => localStorage.getItem(p), PEND), null, 'Not now forgets the code');
     await a.page.evaluate(([p, k]) => localStorage.setItem(p, k + '.' + (Date.now() - 20 * 60 * 1000)), [PEND, K]);
-    await a.page.locator('#gear').click(); await a.page.locator('#cin').click(); await a.page.waitForFunction(() => /Backed up as/.test(document.querySelector('#cl').textContent));
+    await openSafe(a.page); await a.page.locator('#cin').click(); await a.page.waitForFunction(() => /Backed up as/.test(document.querySelector('#cl').textContent));
     eq(await a.page.evaluate(() => window.R20Cloud.shareKey()), '', 'an old pending code is ignored at sign-in'); eq(await a.page.evaluate(p => localStorage.getItem(p), PEND), null, 'and cleared');
     assert.ok(!cloudDb.has('r20_shared/' + K), 'nothing went to the family log'); assert.ok(cloudDb.has('r20_users/dad3'), 'the backup went to this account');
+  });
+  await test('readers: add children, swap on the home screen, each keeps their own log, goal and streak', async () => {
+    const { page, errors } = await mk(); eq(await page.locator('.rd[data-id]').count(), 1); assert.ok(await page.locator('#addrd').isVisible());
+    await page.locator('#manual').click(); await page.fill('#mm', '20'); await page.locator('#ms').click(); await page.waitForSelector('.cover'); eq(await sec(page), 1200);
+    await page.locator('#addrd').click(); await page.fill('#rn', ' '); await page.locator('#ra').click(); eq(await page.locator('.avgrid').count(), 1, 'a name is needed'); await page.fill('#rn', 'Ava'); await page.locator('.avp[data-av="🐼"]').click(); await page.locator('#ra').click();
+    await page.waitForFunction(() => /Ava/.test(document.querySelector('.today h2').textContent)); eq(await page.locator('.rd[data-id]').count(), 2); eq(await page.locator('.rd.on .nm').innerText(), 'Ava'); eq(await page.locator('.rd.on .av').innerText(), '🐼');
+    eq(await sec(page), 0, 'a new reader starts fresh'); assert.ok(/ready to read/i.test(await page.locator('.today h2').innerText()));
+    await page.locator('#manual').click(); await page.fill('#mm', '7'); await page.locator('#ms').click(); await page.waitForSelector('.cover'); eq(await sec(page), 420);
+    await page.locator('.rd[data-id]').first().click(); await page.waitForFunction(() => document.querySelector('.rd.on .nm').textContent === 'Reader'); eq(await sec(page), 1200, 'the first reader still has their 20 minutes'); assert.ok(/done/i.test(await page.locator('.today h2').innerText()));
+    await page.locator('#gear').click(); await page.selectOption('#sg', '10'); await page.fill('#sn', 'Gigi'); await page.locator('.avp[data-av="🦄"]').click(); await page.locator('#sd').click(); await page.waitForSelector('.cover');
+    eq(await page.locator('.rd.on .nm').innerText(), 'Gigi'); eq(await page.locator('.rd.on .av').innerText(), '🦄'); eq(await page.locator('.rd:not(.on):not(.add) .nm').innerText(), 'Ava', 'only the open reader changed');
+    await page.locator('.rd:not(.on):not(.add)').click(); await page.waitForFunction(() => document.querySelector('.rd.on .nm').textContent === 'Ava'); eq(await page.evaluate(() => R20App._state().goal), 20, 'Ava still has the 20 minute goal'); eq(await sec(page), 420);
+    await page.locator('#nav button[data-go="log"]').click(); await page.waitForSelector('.cal'); assert.ok(/Ava's Reading Log/.test(await page.locator('h1').innerText())); assert.ok(/7 min/.test(await page.locator('#detail').innerText()));
+    await page.screenshot({ path: SHOTS + '/read20-readers-log.png' }); await page.locator('#nav button[data-go=""]').click(); await page.waitForSelector('.cover');
+    await page.reload(); await page.waitForSelector('.cover'); eq(await page.locator('.rd.on .nm').innerText(), 'Ava', 'the open reader is remembered'); eq(await page.locator('.rd[data-id]').count(), 2);
+    await page.locator('.cover', { hasText: 'Sam the Cat' }).click(); await page.waitForSelector('.reader'); await page.clock.runFor(30000); eq(await sec(page), 450, 'reading time goes to the open reader');
+    await page.locator('#back').click(); await page.waitForSelector('.cover'); await page.locator('.rd[data-id]').first().click(); await page.waitForFunction(() => document.querySelector('.rd.on .nm').textContent === 'Gigi'); eq(await sec(page), 1200, 'and not to the other');
+    await page.screenshot({ path: SHOTS + '/read20-readers.png' }); eq(errors.length, 0, errors.join('|'));
+  });
+  await test('readers: an old single-reader save moves over untouched; removing a reader asks first, keeps the last one, and stays removed', async () => {
+    const o = await newPage(br, { today: TODAY }); await o.page.addInitScript(() => { if (!sessionStorage.x) { sessionStorage.x = 1; localStorage.setItem('read20.v1', JSON.stringify({ v: 1, name: 'Old', goal: 15, size: 2, days: { '2026-11-08': { done: 1, parts: { old: { sec: 960, books: { 'sam-the-cat': { sec: 960, fin: 1 } }, extra: [] } } } } })); } });
+    await o.page.clock.install({ time: new Date('2026-11-08T19:00:00') }); await o.page.goto(srv.url); await o.page.waitForSelector('.cover'); const page = o.page;
+    eq(await page.evaluate(() => R20App._root().order.join()), 'main'); eq(await page.locator('.rd.on .nm').innerText(), 'Old'); eq(await sec(page), 960); eq(await page.evaluate(() => R20App._state().goal), 15);
+    assert.ok(await page.locator('.cover', { hasText: 'Sam the Cat' }).locator('.check').count(), 'finished stories carried over');
+    await page.locator('#gear').click(); eq(await page.locator('#srm').count(), 0, 'cannot remove the only reader'); await page.locator('#sd').click();
+    await page.locator('#addrd').click(); await page.fill('#rn', 'Ben'); await page.locator('#ra').click(); await page.waitForFunction(() => document.querySelector('.rd.on .nm').textContent === 'Ben');
+    await page.locator('#gear').click(); let asked = ''; page.once('dialog', d => { asked = d.message(); d.dismiss(); }); await page.locator('#srm').click(); await page.waitForTimeout(100); assert.ok(/Remove Ben/.test(asked), asked); eq(await page.locator('.rd[data-id]').count(), 2, 'cancelling removes nothing');
+    page.once('dialog', d => d.accept()); await page.locator('#srm').click(); await page.waitForFunction(() => document.querySelectorAll('.rd[data-id]').length === 1);
+    eq(await page.locator('.rd.on .nm').innerText(), 'Old'); eq(await sec(page), 960); await settle(page); await page.reload(); await page.waitForSelector('.cover'); eq(await page.locator('.rd[data-id]').count(), 1, 'stays removed');
+    eq(await page.evaluate(() => JSON.parse(localStorage.getItem('read20.v1')).v), 2, 'saved in the new shape');
+  });
+  await test('readers: settings is short (the reader, then two doors) and the cloud, sharing and file choices sit one step in', async () => {
+    const { page } = await mk(); await page.locator('#gear').click(); await page.waitForSelector('.sheet');
+    eq(await page.locator('.sheet .set').count(), 3, 'three groups'); assert.ok(await page.locator('.sheet button:visible:not(.avp)').count() <= 7, 'few buttons: ' + await page.locator('.sheet button:visible:not(.avp)').count());
+    for (const id of ['#cin', '#shmake', '#jcode', '#sb', '#sr', '#se']) eq(await page.locator(id).count(), 0, id + ' is not on the first settings screen');
+    assert.ok(await page.locator('#setsafe').isVisible()); await page.screenshot({ path: SHOTS + '/read20-settings.png' });
+    await page.locator('#setsafe').click(); await page.locator('#cin').waitFor(); eq(await page.locator('.sheet').last().locator('.set').count(), 3, 'online, sharing, and file'); await page.screenshot({ path: SHOTS + '/read20-safe.png' });
+    await closeSafe(page);
+  });
+  await test('readers: the cloud and backup files carry every reader; a removed reader stays removed on the other phone', async () => {
+    cloudDb.clear(); fsDeny = false; const a = await mkPhone({ uid: 'dadr' });
+    await a.page.locator('#addrd').click(); await a.page.fill('#rn', 'Ava'); await a.page.locator('#ra').click(); await a.page.waitForFunction(() => document.querySelector('.rd.on .nm').textContent === 'Ava'); await logMin(a.page, 'Ava book', 9);
+    await a.page.locator('.rd[data-id]').first().click(); await logMin(a.page, 'Gigi book', 12);
+    await openSafe(a.page); await a.page.locator('#cin').click(); await a.page.waitForFunction(() => /Backed up as/.test(document.querySelector('#cl').textContent));
+    const dl = a.page.waitForEvent('download'); await a.page.locator('#sb').click(); const d = await dl; const j = JSON.parse(require('fs').readFileSync(await d.path(), 'utf8')); eq(Object.keys(j.data.profiles).length, 2, 'the backup file holds both readers');
+    await closeSafe(a.page);
+    const b = await mkPhone({ uid: 'dadr' }); await openSafe(b.page); await b.page.locator('#cin').click(); await b.page.waitForFunction(() => /Backed up as/.test(document.querySelector('#cl').textContent)); await closeSafe(b.page);
+    eq(await b.page.locator('.rd[data-id]').count(), 2, 'the new phone has both readers'); eq(await b.page.locator('.rd.on .nm').innerText(), 'Reader', 'and keeps its own open reader');
+    await b.page.locator('.rd[data-id]').nth(1).click(); await b.page.waitForFunction(() => document.querySelector('.rd.on .nm').textContent === 'Ava'); eq(await sec(b.page), 540);
+    await b.page.locator('#gear').click(); b.page.once('dialog', x => x.accept()); await b.page.locator('#srm').click(); await b.page.waitForFunction(() => document.querySelectorAll('.rd[data-id]').length === 1); await b.page.waitForTimeout(500);
+    await a.page.reload(); await a.page.waitForSelector('.cover'); await openSafe(a.page); await a.page.locator('#cnow').click(); await a.page.waitForTimeout(500); await closeSafe(a.page);
+    eq(await a.page.locator('.rd[data-id]').count(), 1, 'removed on one phone, gone on the other');
+    const c = await mkPhone({ uid: 'dadr' }); await c.page.locator('#gear').click(); await c.page.locator('#setsafe').click(); await c.page.locator('#sr').setInputFiles(await d.path()); await c.page.waitForFunction(() => /Restored/.test(document.querySelector('#sm').textContent));
+    await closeSafe(c.page); eq(await c.page.locator('.rd[data-id]').count(), 2, 'restoring a file brings back both readers');
   });
   await test('offline: the service worker caches the app and it reopens with no network', async () => {
     const o = await newPage(br, { sw: true, today: TODAY }); const { page, ctx } = o;
