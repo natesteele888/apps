@@ -35,7 +35,7 @@ button, input, select, textarea { font: inherit; color: inherit; }
 
 /* ---------- top bar: a title strip ---------- */
 .top { position: sticky; top: 0; z-index: 30; height: calc(var(--top) + env(safe-area-inset-top)); padding-top: env(safe-area-inset-top); display: flex; align-items: center; justify-content: space-between; gap: 10px; padding-left: 14px; padding-right: 10px; border-bottom: 1px solid var(--line); background: var(--bg); }
-.brand { display: flex; align-items: baseline; gap: 8px; text-decoration: none; min-width: 0; }
+.brand { display: flex; align-items: center; gap: 8px; text-decoration: none; min-width: 0; min-height: 44px; }
 .brand .mark { width: 10px; height: 10px; border: 1.5px solid var(--accent); border-radius: 50%; align-self: center; position: relative; flex: none; }
 .brand .mark::after { content: ""; position: absolute; left: 3px; top: 3px; width: 2px; height: 2px; background: var(--accent); border-radius: 50%; }
 .brand b { font: 600 14px/1 var(--mono); letter-spacing: .12em; white-space: nowrap; }
