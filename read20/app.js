@@ -10,6 +10,7 @@
   const today = () => window.__today || C.dayKey();
   const byId = {}; B.books.forEach(b => (byId[b.id] = b));
 
+  let stale = false;   // the log changed (from the cloud) while a pop-up covered the screen
   let R = C.emptyRoot(), S = R.profiles[R.active];   // R: every reader on this phone; S: the reader whose log is open
   const act = () => { S = R.profiles[R.active]; };
   /* Saving: the log is written to localStorage on every tick (instant, survives a closed app) and mirrored into
@@ -48,7 +49,7 @@
   function adopt(merged) {
     const m = C.mergeRoot(R, merged); if (JSON.stringify(C.serializeRoot(m)) === JSON.stringify(C.serializeRoot(R))) return;
     R = m; act(); try { localStorage.setItem(KEY, JSON.stringify(C.serializeRoot(R))); } catch (e) {}
-    store.idbAt = 0; if (ui.book) paintTimer(); else if (!document.querySelector(".overlay")) route();
+    store.idbAt = 0; if (ui.book) paintTimer(); else if (!document.querySelector(".overlay")) route(); else stale = true;   // a pop-up is open: redraw the screen under it when it closes
   }
   const bkDate = () => R.order.reduce((m, i) => (R.profiles[i].bk > m ? R.profiles[i].bk : m), "");
   const markBackup = () => R.order.forEach(i => (R.profiles[i].bk = today()));
@@ -305,7 +306,7 @@
   let histDepth = 0, traveling = false, syncTimer = 0, afterTrip = null;
   function trackOverlay(o) { overlays.push(o); syncHistory(); }
   /* "then" runs once the pop-up's history entry is given back, so a page change can't land on top of it. */
-  function closeOverlay(o, then) { const i = overlays.indexOf(o); if (i >= 0) overlays.splice(i, 1); o.remove(); if (then) afterTrip = then; syncHistory(); }
+  function closeOverlay(o, then) { const i = overlays.indexOf(o); if (i >= 0) overlays.splice(i, 1); o.remove(); if (then) afterTrip = then; else if (stale && !overlays.length && !ui.book) { stale = false; route(); } syncHistory(); }
   function syncHistory() { clearTimeout(syncTimer); syncTimer = setTimeout(reconcileHistory, 0); }
   function reconcileHistory() {
     if (traveling) return; // the popstate handler tidies up when our own trip back lands

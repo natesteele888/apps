@@ -400,9 +400,9 @@ const TODAY = '2026-11-08';
     await a.page.screenshot({ path: SHOTS + '/read20-share.png', fullPage: false }); await closeSafe(a.page);
     // the other home opens the link on a different phone, with a different Google account
     const b = await mkPhone({ uid: 'mom1', hash: '#join=' + key }); await b.page.locator('#jyes').waitFor(); assert.ok(/own.*Google account/.test(await b.page.locator('.sheet').innerText()));
-    eq(await sec(b.page), 0); await b.page.locator('#jyes').click(); await b.page.waitForFunction(() => /Joined/.test(document.querySelector('#jmsg').textContent)); eq(await sec(b.page), 600, 'her 10 minutes came over');
+    eq(await sec(b.page), 0); await b.page.locator('#jyes').click(); await b.page.waitForFunction(() => /Joined/.test(document.querySelector('#jmsg').textContent)); eq(await sec(b.page), 600, 'her 10 minutes came over'); await b.page.locator('#jno').click(); eq(await b.page.locator('.rtxt b').innerText(), '10', 'the home screen under the pop-up shows the joined log, not a stale empty one'); eq(await b.page.locator('.rd.on .nm').innerText(), 'Reader');
     eq(await b.page.evaluate(() => location.hash), '', 'the link is cleaned out of the address');
-    await b.page.locator('#jno').click(); await logMin(b.page, 'Mom reading', 5);   // the same day, on the other phone
+    await logMin(b.page, 'Mom reading', 5);   // the same day, on the other phone
     await openSafe(b.page); await b.page.locator('#cnow').click(); await b.page.waitForTimeout(400); await closeSafe(b.page);
     eq(cloudSec(TODAY, 'r20_shared/' + key), 900, 'shared log has both homes');
     await openSafe(a.page); await a.page.locator('#cnow').click(); await a.page.waitForTimeout(400); await closeSafe(a.page);
