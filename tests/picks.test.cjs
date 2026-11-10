@@ -58,16 +58,26 @@ const event = (id, date, away, home, state, done) => ({ id, date, competitions: 
     const snapOf = (col, id) => ({ id, exists: data[col][id] !== undefined, data: () => data[col][id], metadata: { hasPendingWrites: false, fromCache: false } });
     const docRef = (col, id) => ({
       onSnapshot(a, b) { const cb = typeof a === 'function' ? a : b; const f = () => cb(snapOf(col, id)); listeners.push(f); f(); return () => {}; },
-      set(v) { data[col][id] = JSON.parse(JSON.stringify(v)); window.__writes.push([col, id, v]); notify(); return Promise.resolve(); },
+      set(v) { if (col === 'gp_players' && v.code === 'OWNER') return Promise.reject(Object.assign(new Error('denied'), { code: 'permission-denied' })); // the rules: only the owner's account
+        data[col][id] = JSON.parse(JSON.stringify(v)); window.__writes.push([col, id, v]); notify(); return Promise.resolve(); },
       update(v) { data[col][id] = Object.assign({}, data[col][id], v); notify(); return Promise.resolve(); },
       delete() { delete data[col][id]; notify(); return Promise.resolve(); },
       get() { return Promise.resolve(snapOf(col, id)); }
     });
     const colRef = col => ({ onSnapshot(cb) { const f = () => cb({ docs: Object.keys(data[col]).map(id => snapOf(col, id)), empty: !Object.keys(data[col]).length, metadata: { fromCache: false } }); listeners.push(f); f(); return () => {}; }, doc: id => docRef(col, id) });
     const db = { doc: p => { const [col, id] = p.split('/'); return docRef(col, id); }, collection: colRef, enablePersistence: () => Promise.resolve() };
-    const user = { uid: 'me1', displayName: 'Player One', email: 'one@example.com' };
-    window.__writes = []; window.__data = data; window.__notify = notify;
-    window.firebase = { initializeApp() {}, firestore: () => db, auth: Object.assign(() => ({ onAuthStateChanged: cb => setTimeout(() => cb(user), 0), signOut: () => Promise.resolve(), signInWithPopup: () => Promise.resolve() }), { GoogleAuthProvider: function () { this.setCustomParameters = () => {}; } }) };
+    let user = window.__signedOut ? null : { uid: 'me1', displayName: 'Player One', email: 'one@example.com' };
+    window.__writes = []; window.__data = data; window.__notify = notify; window.__auth = [];
+    // email sign-in: 'taken@example.com' already has an account; any other email is new; the right password is 'secret1'
+    let authCb = () => {}; const become = u => { user = u; setTimeout(() => authCb(user), 0); return Promise.resolve({ user }); };
+    const fail = code => Promise.reject(Object.assign(new Error(code), { code }));
+    const auth = {
+      onAuthStateChanged: cb => { authCb = cb; setTimeout(() => cb(user), 0); }, signOut: () => become(null), signInWithPopup: () => Promise.resolve(),
+      createUserWithEmailAndPassword(em, pw) { window.__auth.push(['create', em]); if (em === 'taken@example.com') return fail('auth/email-already-in-use'); if (pw.length < 6) return fail('auth/weak-password'); return become({ uid: 'new1', displayName: null, email: em }); },
+      signInWithEmailAndPassword(em, pw) { window.__auth.push(['signin', em]); return em === 'taken@example.com' && pw === 'secret1' ? become({ uid: 'old1', displayName: null, email: em }) : fail('auth/invalid-credential'); },
+      sendPasswordResetEmail(em) { window.__auth.push(['reset', em]); return Promise.resolve(); }
+    };
+    window.firebase = { initializeApp() {}, firestore: () => db, auth: Object.assign(() => auth, { GoogleAuthProvider: function () { this.setCustomParameters = () => {}; } }) };
   })();`;
   // ESPN: a fake scoreboard for any league, keyed on the URL. NFL week 10; a daily slate on TODAY with one final, one live, one upcoming.
   function espn(url, now) {
@@ -86,7 +96,7 @@ const event = (id, date, away, home, state, done) => ({ id, date, competitions: 
     const { ctx, page, errors } = await newPage(browser, { ctx: opts && opts.ctx });
     await page.route(/www\.gstatic\.com\/firebasejs/, r => r.fulfill({ status: 200, contentType: 'application/javascript', body: r.request().url().includes('firebase-app') ? FIREBASE_STUB : '' }));
     await page.route(/site\.api\.espn\.com/, r => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(espn(r.request().url())) }));
-    await page.addInitScript(d => { window.__today = d; }, TODAY + 'T20:00:00Z');
+    await page.addInitScript(([d, out]) => { window.__today = d; if (out) window.__signedOut = true; }, [TODAY + 'T20:00:00Z', !!(opts && opts.signedOut)]);
     return { ctx, page, errors };
   }
   await test('page: four league tabs; NFL opens on the current week, the others on today; the choice sticks', async () => {
@@ -134,6 +144,38 @@ const event = (id, date, away, home, state, done) => ({ id, date, competitions: 
     eq(await page.evaluate(() => document.documentElement.scrollWidth), 320);
     const tabs = await page.$$eval('[data-sport]', b => b.map(x => x.getBoundingClientRect().height)); assert.ok(tabs.every(h => h >= 44), 'tabs are tappable: ' + tabs.join(','));
     await page.screenshot({ path: path.join(SHOTS, 'picks-small.png') });
+    eq(errors.length, 0, errors.join(' | ')); await ctx.close();
+  });
+
+  await test('page: a friend with no Google account signs up with an email on an invite link, then joins', async () => {
+    const { ctx, page, errors } = await open({ signedOut: true, ctx: { viewport: { width: 390, height: 844 } } });
+    await page.goto(server.url + '?code=good'); await page.waitForSelector('#ef');
+    await page.screenshot({ path: path.join(SHOTS, 'picks-email-signin.png'), fullPage: true });
+    eq(await page.textContent('#eGo'), 'Create account', 'an invite link opens on Create account');
+    assert.ok(await page.isVisible('#si'), 'Google is still offered');
+    await page.fill('#em', 'taken@example.com'); await page.fill('#pw', 'abc'); await page.click('#eGo');
+    assert.ok(/at least 6/.test(await page.textContent('#eErr')), 'a short password is caught before sending');
+    await page.fill('#pw', 'secret1'); await page.click('#eGo'); await page.waitForFunction(() => /already has an account/.test(document.querySelector('#eErr').textContent));
+    await page.click('#eMode'); eq(await page.textContent('#eGo'), 'Sign in');
+    await page.fill('#pw', 'wrong99'); await page.click('#eGo'); await page.waitForFunction(() => /don't match/.test(document.querySelector('#eErr').textContent));
+    await page.fill('#em', ''); await page.click('#eReset'); assert.ok(/Type your email first/.test(await page.textContent('#eErr')));
+    await page.fill('#em', 'taken@example.com'); await page.click('#eReset'); await page.waitForFunction(() => window.__auth.some(a => a[0] === 'reset'));
+    await page.click('#eMode'); await page.fill('#em', 'friend@example.com'); await page.fill('#pw', 'secret1'); await page.click('#eGo');
+    await page.waitForSelector('#join'); eq(await page.inputValue('#jcode'), 'GOOD', 'the code from the link is filled in');
+    eq(await page.inputValue('#jname'), '', 'no Google name to borrow, so the name starts empty');
+    await page.fill('#jname', 'Friend'); await page.click('#join button.gold');
+    await page.waitForSelector('.game'); const w = await page.evaluate(() => window.__writes.find(x => x[0] === 'gp_players'));
+    eq(w[1], 'new1'); eq(w[2].code, 'GOOD'); eq(w[2].name, 'Friend'); assert.ok(!('email' in w[2]), 'the email is not copied into the database');
+    eq(await page.evaluate(() => document.documentElement.scrollWidth), 390);
+    eq(errors.length, 0, errors.join(' | ')); await ctx.close();
+  });
+
+  await test('page: any player can share the code they joined with', async () => {
+    const { ctx, page, errors } = await open();
+    await page.addInitScript(() => { navigator.share = d => { window.__shared = d; return Promise.resolve(); }; });
+    await page.goto(server.url); await page.waitForSelector('#inv');
+    await page.click('#inv'); const sh = await page.evaluate(() => window.__shared);
+    assert.ok(/code=GOOD$/.test(sh.url) && /Code: GOOD/.test(sh.text) && /any email/.test(sh.text), JSON.stringify(sh));
     eq(errors.length, 0, errors.join(' | ')); await ctx.close();
   });
 
