@@ -25,6 +25,12 @@ async function xLoad(k, url, parse) {
 }
 const xStandings = sp => xLoad("st-" + sp, X.url.standings(sp), d => X.parseStandings(d, sp));
 const xSchedule = (sp, id, season) => xLoad("tm-" + sp + "-" + id + (season ? "-" + season : ""), X.url.schedule(sp, id, season), d => Object.assign(X.teamView(d, id), { year: X.seasonYear(d) }));
+// The team's season leaders, named from its roster (two fetches, cached together as one screen).
+const xPlayers = (sp, id, year) => XM["pl-" + sp + "-" + id + "-" + year] && Date.now() - XM["pl-" + sp + "-" + id + "-" + year].at < 120000 ? Promise.resolve({ v: XM["pl-" + sp + "-" + id + "-" + year].v, stale: false })
+  : Promise.all([fetch(X.url.leaders(sp, id, year), { cache: "no-store" }).then(r => { if (!r.ok) throw new Error("HTTP " + r.status); return r.json(); }),
+      fetch(X.url.roster(sp, id), { cache: "no-store" }).then(r => { if (!r.ok) throw new Error("HTTP " + r.status); return r.json(); })])
+    .then(([L, R]) => { const v = X.teamLeaders(L, X.rosterMap(R), sp, 8, 3); xKeep("pl-" + sp + "-" + id + "-" + year, v); return { v, at: Date.now(), stale: false }; })
+    .catch(e => { const s = xSaved("pl-" + sp + "-" + id + "-" + year); if (s) return { v: s.v, at: s.at, stale: true }; throw e; });
 const xNow = sp => xLoad("now-" + sp, X.url.scoreboard(sp), d => X.seasonOf(d));
 function xAgo(at) { const d = new Date(at); let h = d.getHours(), ap = h < 12 ? "AM" : "PM"; h = h % 12 || 12; return h + ":" + String(d.getMinutes()).padStart(2, "0") + " " + ap; }
 const xStale = r => (r && r.stale ? `<p class="x-warn">No signal. Showing what was saved at ${esc(xAgo(r.at))}.</p>` : "");
@@ -99,11 +105,23 @@ async function renderTeamPage(v, live) {
   v.innerHTML = back + xStale(r) + `<div class="x-thead">${xLogo(t, 60)}<div><h2>${esc(t.name)}</h2><p>${esc(t.standing || (row && row.group) || sp.name)}</p></div><div class="x-big">${esc(t.record || (row && row.rec) || "")}</div></div>
     <div class="x-facts">${fact(row && row.home, "Home")}${fact(row && row.road, "Away")}${fact(row && row.streak, "Streak")}${fact(row && row.last10, "Last 10")}${fact(sp.ot && row && row.pts != null ? String(row.pts) : "", "Points")}${fact(row && row.diff, "Point diff")}</div>
     ${nx ? xNextCard(nx, !!tv.live[0]) : `<div class="card x-card"><h3>Next game</h3><p class="x-note">Nothing on the schedule yet${tv.done.length ? " (the season is over)" : ""}.</p></div>`}
+    <div class="card x-card" id="xplayers"><h3>Player stats</h3><p class="x-note">Loading the team's leaders…</p></div>
     <div class="card x-card"><h3>Results <small>${tl.w}-${tl.l}${tl.t ? "-" + tl.t : ""}${tv.seasonLabel ? " · " + esc(tv.seasonLabel) : ""}</small></h3>${list(tv.done, xResRow, "done", 10) || `<p class="x-note">No games played yet.</p>`}</div>
     ${tv.upcoming.length > 1 ? `<div class="card x-card"><h3>Coming up</h3>${list(tv.upcoming.slice(1), xUpRow, "up", 8)}</div>` : ""}`;
   v.querySelector("#xback").onclick = closeTeamPage;
+  xFillPlayers(v.querySelector("#xplayers"), S.sport, id, tv.year, live);
   v.querySelectorAll("[data-more]").forEach(b => b.onclick = () => { S.xAll = Object.assign({}, S.xAll, { [b.dataset.more]: true }); render(); });
   xWire(v);
+}
+// Player stats card: each category's top 3 (jersey, name, position, value).
+async function xFillPlayers(box, sp, id, year, live) {
+  if (!box) return;
+  if (!year) { box.innerHTML = `<h3>Player stats</h3><p class="x-note">No season stats yet.</p>`; return; }
+  let r; try { r = await xPlayers(sp, id, year); } catch (_) { if (live() && box.isConnected) box.innerHTML = `<h3>Player stats</h3><p class="x-note">Couldn't load player stats. Check your signal and try again.</p>`; return; }
+  if (!live() || !box.isConnected) return;
+  if (!r.v.length) { box.innerHTML = `<h3>Player stats</h3><p class="x-note">No player stats yet this season.</p>`; return; }
+  box.innerHTML = `<h3>Player stats <small>season leaders</small></h3>${r.stale ? `<p class="x-warn">No signal. Saved at ${esc(xAgo(r.at))}.</p>` : ""}<div class="x-cats">${r.v.map(c => `<div class="x-cat"><div class="x-cl">${esc(c.label)}</div>
+    ${c.players.map((p, i) => `<div class="x-pr${i ? "" : " x-top"}"><span class="x-pn">${p.jersey ? `<i>#${esc(p.jersey)}</i> ` : ""}${esc(p.short || p.name)}${p.pos ? ` <em>${esc(p.pos)}</em>` : ""}</span><b>${esc(p.value)}</b></div>`).join("")}</div>`).join("")}</div>`;
 }
 function xNextCard(g, isLive) {
   return `<div class="card x-card"><h3>${isLive ? "Playing now" : "Next game"}</h3>
@@ -169,7 +187,7 @@ async function xPaintSheet(d) {
     <h4>Top players</h4>${stats.length ? `<div class="x-players">${stats.map(p => `<div class="x-pl"><b>${esc(p.value)}</b><small>${esc(p.abbr || p.stat)}</small><span>${esc(p.short || p.player)}${p.pos ? " · " + esc(p.pos) : ""}</span></div>`).join("")}</div>${rating ? `<p class="x-note">Best overall: <b>${esc(rating.player)}</b> (${esc(rating.value)})</p>` : ""}` : `<p class="x-note">${ex ? "ESPN doesn't list top players for this game." : "Top players show once the day's games load. Tap Refresh scores."}</p>`}
     <h4>Last 5 <small>${last5.length ? l5.w + "-" + l5.l + (l5.t ? "-" + l5.t : "") : ""}</small></h4>${last5.length ? last5.map(gl).join("") : `<p class="x-note">${tv ? "No games played yet this season." : "Couldn't load the schedule. Check your signal."}</p>`}
     <h4>Last 5 vs ${esc(op.name)} <small>${h2h.length ? hh.w + "-" + hh.l + (hh.t ? "-" + hh.t : "") : ""}</small></h4>${h2h.length ? h2h.map(gl).join("") : `<p class="x-note">${tv && oid ? "No games between them in the last few seasons." : "Couldn't look this up right now."}</p>`}
-    ${id ? `<button type="button" class="btn small x-full" data-team="${esc(id)}">Full schedule and results</button>` : ""}`;
+    ${id ? `<button type="button" class="btn small x-full" data-team="${esc(id)}">Player stats, schedule and results</button>` : ""}`;
   body.querySelectorAll("[data-team]").forEach(b => b.onclick = () => { S.sport = sp; openTeamPage(b.dataset.team); });
 }
 
