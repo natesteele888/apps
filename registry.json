@@ -243,12 +243,22 @@
         "ac": "#d6a94c",
         "install": true,
         "access": "Invite code",
-        "desc": "Pick a side in every game, every day, across the NFL, MLB, NBA and NHL. Switch leagues with one tap: football by the week, baseball, basketball and hockey by the day. The schedule and scores load on their own, picks lock when a game starts, and everyone's picks show once it has. A leaderboard and a team-by-team breakdown for each league keep score.",
+        "desc": "Pick a side in every game, every day, across the NFL, MLB, NBA and NHL. Switch leagues with one tap: football by the week, baseball, basketball and hockey by the day. The schedule and scores load on their own, picks lock when a game starts, and everyone's picks show once it has. Before you pick, press and hold a team to scout it: record, top players, last 5 and last 5 against tonight's opponent. A Standings tab has every league's table, the playoff picture and a page for each team with its next game, where it's played and every result.",
         "feats": [
           [
             "🏈",
             "Four leagues",
             "NFL by the week; MLB, NBA and NHL by the day. One tap to switch."
+          ],
+          [
+            "📊",
+            "Scout before you pick",
+            "Press and hold a team: record, top players, last 5 and head to head."
+          ],
+          [
+            "🏆",
+            "Standings and playoffs",
+            "Every league's table, the playoff picture and a page for each team."
           ],
           [
             "🔒",
@@ -280,7 +290,7 @@
         ],
         "news": {
           "d": "Nov 2026",
-          "t": "Now MLB, NBA and NHL too: pick a side every game day, not just Sundays.",
+          "t": "Scout a team before you pick, and a new Standings tab with the playoff picture and every team's schedule.",
           "pin": true
         },
         "parts": [
@@ -343,6 +353,9 @@
           "Once a game starts, everyone's picks show and winners are marked",
           "A leaderboard for each league keeps score",
           "See how your picks went, team by team",
+          "Press and hold a team to see its record, top players, last 5 and last 5 head to head",
+          "Standings, the playoff picture and a page for every team: next game, where, and every result",
+          "Sign in with Google or any email",
           "Switch leagues with one tap: NFL, MLB, NBA and NHL",
           "Invite your crew with a code, and turn it off any time"
         ]

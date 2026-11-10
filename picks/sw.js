@@ -1,8 +1,8 @@
 // Lets Gameday Picks open with a weak or no signal. Pages always load fresh when online.
 // Caches the app shell plus the Firebase code and fonts it needs to start; picks data stays
 // in Firestore's own private cache on the phone, behind sign-in. The NFL schedule is never cached here.
-const CACHE = "picks-v5";
-const SHELL = ["./", "core.js", "manifest.json", "../icons/picks-192.png", "../install.js", "../health.js"];
+const CACHE = "picks-v6";
+const SHELL = ["./", "core.js", "stats.js", "league.js", "manifest.json", "../icons/picks-192.png", "../install.js", "../health.js"];
 // Same version as the <script> tags in index.html: change them together.
 const FIREBASE = ["app", "auth", "firestore"].map(n => `https://www.gstatic.com/firebasejs/11.6.0/firebase-${n}-compat.js`);
 // Save the app at install: the first visit happens before this worker exists, so nothing else would be saved.
