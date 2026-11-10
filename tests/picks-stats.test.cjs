@@ -62,10 +62,23 @@ const SCHED = {
   2026: sched(2026, [played('o1', '2026-01-10T23:00:00Z', 'e2', 2, false, 90, 95), played('o2', '2026-02-10T23:00:00Z', 'e2', 2, true, 105, 100), played('o3', '2026-03-10T23:00:00Z', 'e5', 5, true, 105, 100)]),
   2025: sched(2025, [played('p1', '2025-01-10T23:00:00Z', 'e2', 2, true, 101, 99), played('p2', '2025-02-10T23:00:00Z', 'e2', 2, false, 80, 99), played('p3', '2025-03-10T23:00:00Z', 'e2', 2, true, 111, 99)])
 };
+// roster (NFL-style position groups) and the core API's leaders, whose athletes are links only
+const ROSTER = { athletes: [{ position: 'offense', items: [{ id: '101', displayName: 'Player Alpha', shortName: 'P. Alpha', jersey: '7', position: { abbreviation: 'F' } }, { id: '102', displayName: 'Player Bravo', shortName: 'P. Bravo', jersey: '21', position: { abbreviation: 'C' } }] },
+  { position: 'defense', items: [{ id: '103', displayName: 'Player Charlie', shortName: 'P. Charlie', jersey: '3', position: { abbreviation: 'G' } }] }] };
+const ref = id => ({ $ref: 'http://sports.core.api.espn.com/v2/sports/basketball/leagues/nba/seasons/2027/athletes/' + id + '?lang=en' });
+const LEADERS = { categories: [
+  { name: 'rating', displayName: 'Rating', leaders: [{ displayValue: '40', athlete: ref(101) }] },
+  { name: 'foulsPerGame', displayName: 'Fouls Per Game', leaders: [{ displayValue: '3.1', athlete: ref(102) }] },
+  { name: 'assistsPerGame', displayName: 'Assists Per Game', abbreviation: 'AST', leaders: [{ displayValue: '8.0', value: 8, athlete: ref(103) }, { displayValue: '4.1', athlete: ref(101) }] },
+  { name: 'pointsPerGame', displayName: 'Points Per Game', abbreviation: 'PTS', leaders: [{ displayValue: '30.1', athlete: ref(101) }, { displayValue: '18.2', athlete: ref(103) }, { displayValue: '12.0', athlete: ref(102) }, { displayValue: '9.0', athlete: ref(999) }] },
+  { name: 'oddStat', displayName: 'Odd Stat', leaders: [{ displayValue: '1', athlete: ref(999) }] },
+  { name: 'stealsPerGame', displayName: 'Steals Per Game', leaders: [{ displayValue: '2.2', athlete: ref(103) }] }] };
 function espn(u) {
   const url = new URL(u), p = url.pathname;
   const sp = p.includes('/basketball/') ? 'nba' : p.includes('/hockey/') ? 'nhl' : p.includes('/baseball/') ? 'mlb' : 'nfl';
   if (p.endsWith('/standings')) return STANDINGS[sp];
+  if (p.endsWith('/roster')) return ROSTER;
+  if (/\/seasons\/2027\/types\/2\/teams\/e1\/leaders$/.test(p)) return LEADERS;
   if (/\/teams\/[^/]+\/schedule$/.test(p)) return SCHED[url.searchParams.get('season') || 2027] || { events: [] };
   if (p.endsWith('/scoreboard')) {
     if (sp === 'nfl' && !url.search) return { season: { year: 2026, type: 2 }, week: { number: 10 }, events: [] };
@@ -100,6 +113,11 @@ function espn(u) {
     const h = X.headToHead([cur, o1, o2], 'e2', 5);
     eq(h.map(g => g.id).join(','), 's2,o2,o1,p3,p2', 'five most recent across seasons'); eq(X.tally(h).w + '-' + X.tally(h).l, '3-2');
     eq(X.seasonYear(SCHED[2027]), 2027);
+    const pl = X.teamLeaders(LEADERS, X.rosterMap(ROSTER), 'nba', 8, 3);
+    eq(pl.map(c => c.key).join(','), 'pointsPerGame,assistsPerGame,stealsPerGame', 'preferred order; rating, fouls and unnamed-only categories left out');
+    eq(pl[0].players.length, 3, 'top 3, and an athlete missing from the roster is skipped'); eq(pl[0].players[0].short, 'P. Alpha'); eq(pl[0].players[0].jersey, '7'); eq(pl[0].players[0].value, '30.1');
+    eq(X.url.leaders('nhl', '5', 2027), 'https://sports.core.api.espn.com/v2/sports/hockey/leagues/nhl/seasons/2027/types/2/teams/5/leaders');
+    eq(Object.keys(X.rosterMap({ athletes: [{ id: 1, displayName: 'Flat One' }] })).join(), '1', 'a flat roster works too');
     const tie = X.parseGames({ events: [ev('t', '2026-11-08T18:00:00Z', comp(T('a', 1), false, '24', false), comp(T('b', 2), true, '24', false), 'post', true)] })[0]; eq(tie.tie, true);
   });
 
@@ -136,7 +154,7 @@ function espn(u) {
   async function open(opts = {}) {
     const o = await newPage(browser, opts);
     await o.page.route(/www\.gstatic\.com\/firebasejs/, r => r.fulfill({ status: 200, contentType: 'application/javascript', body: r.request().url().includes('firebase-app') ? FIREBASE_STUB : '' }));
-    await o.page.route(/site\.api\.espn\.com/, r => { if (o.offline) return r.abort(); r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(espn(r.request().url())) }); });
+    await o.page.route(/(site|sports\.core)\.api\.espn\.com/, r => { if (o.offline) return r.abort(); r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(espn(r.request().url())) }); });
     await o.page.route(/espncdn\.com/, r => r.abort());
     await o.page.addInitScript(([d, sp]) => { window.__today = d; localStorage.setItem('gp.sport', sp); }, [TODAY + 'T15:00:00', opts.sport || 'nba']);
     return o;
@@ -157,6 +175,11 @@ function espn(u) {
     assert.ok(/Next game/.test(body) && /vs\s+(E2\s*)?East Team 2/.test(body) && /Fake Arena s7/.test(body) && /Faketown, MA/.test(body), 'next game and where');
     eq((await page.$$eval('.x-res .x-wl', b => b.map(x => x.textContent))).slice(0, 2).join(','), 'L,W', 'results newest first');
     assert.ok(/88-97/.test(body) && /Coming up/.test(body));
+    await page.waitForSelector('#xplayers .x-cat');
+    const cats = await page.$$eval('#xplayers .x-cat', c => c.map(x => x.innerText.replace(/\s+/g, ' ')));
+    eq(cats.length, 3); assert.ok(/Points Per Game/i.test(cats[0]) && /#7 P\. Alpha F 30\.1/.test(cats[0]) && /P\. Bravo C 12\.0/.test(cats[0]), cats[0]);
+    await page.locator('#xplayers').scrollIntoViewIfNeeded();
+    await page.locator('#xplayers').screenshot({ path: path.join(SHOTS, 'picks-players.png') });
     await page.screenshot({ path: path.join(SHOTS, 'picks-team.png') });
     await page.goBack(); await page.waitForSelector('table.x-st'); assert.ok(!(await page.$('.x-thead')), 'Back closes the team page');
     await page.click('[data-lsub="playoffs"]'); await page.waitForSelector('.x-match'); assert.ok(/Play-In winner \(8\)/.test(await page.textContent('#view')));

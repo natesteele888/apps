@@ -22,6 +22,9 @@
     day: (id, day) => SITE + sport(id).path + "/scoreboard?dates=" + day.replace(/-/g, ""),
     week: (year, type, week) => SITE + "football/nfl/scoreboard?year=" + year + "&seasontype=" + type + "&week=" + week,
     standings: id => "https://site.api.espn.com/apis/v2/sports/" + sport(id).path + "/standings",
+    roster: (id, team) => SITE + sport(id).path + "/teams/" + encodeURIComponent(team) + "/roster",
+    // the season's team leaders (core API; type 2 = regular season). Athletes come back as links only, so names come from the roster.
+    leaders: (id, team, year) => "https://sports.core.api.espn.com/v2/sports/" + sport(id).path.replace("/", "/leagues/") + "/seasons/" + year + "/types/2/teams/" + encodeURIComponent(team) + "/leaders",
     schedule: (id, team, season) => SITE + sport(id).path + "/teams/" + encodeURIComponent(team) + "/schedule" + (season ? "?season=" + season : "")
   };
 
@@ -175,6 +178,33 @@
   // The season a team's schedule is for, as ESPN numbers it (the NBA's 2026-27 season is 2027), so we can ask for older ones.
   const seasonYear = d => (d && d.season && +d.season.year) || null;
 
+  /* ---------- player stats: the team's season leaders, named from its roster ---------- */
+  // The categories worth showing first, per league (ESPN's names); anything else ESPN sends comes after, up to MAX.
+  const PREFER = {
+    nba: ["pointsPerGame", "reboundsPerGame", "assistsPerGame", "stealsPerGame", "blocksPerGame", "3PointMadePerGame", "fieldGoalPercentage", "minutesPerGame"],
+    nfl: ["passingYards", "passingTouchdowns", "rushingYards", "rushingTouchdowns", "receivingYards", "receptions", "receivingTouchdowns", "totalTackles", "sacks", "interceptions"],
+    nhl: ["points", "goals", "assists", "plusMinus", "shotsTotal", "penaltyMinutes", "savePct", "goalsAgainstAverage", "wins"],
+    mlb: ["avg", "homeRuns", "RBIs", "hits", "stolenBases", "onBasePct", "ERA", "wins", "strikeouts", "saves", "WHIP"]
+  };
+  const SKIP = /^(rating|foulsPerGame|defensiveReboundsPerGame|offensiveReboundsPerGame|PER|doubleDouble)$/;
+  // roster → {athleteId: {name, short, jersey, pos}}; ESPN sends a flat list for some leagues and position groups ({items}) for others
+  function rosterMap(d) {
+    const out = {};
+    const add = a => { if (a && a.id != null) out[String(a.id)] = { name: a.displayName || a.fullName || "", short: a.shortName || a.displayName || "", jersey: a.jersey || "", pos: (a.position && (a.position.abbreviation || a.position.name)) || "" }; };
+    ((d && d.athletes) || []).forEach(x => (Array.isArray(x.items) ? x.items.forEach(add) : add(x)));
+    return out;
+  }
+  const athleteId = ref => { const m = /athletes\/(\d+)/.exec(String(ref || "")); return m ? m[1] : null; };
+  function teamLeaders(d, roster, id, max, per) {
+    const names = roster || {}, pref = PREFER[id] || [];
+    const cats = ((d && d.categories) || []).filter(c => c && !SKIP.test(c.name || "") && (c.leaders || []).length).map(c => ({
+      key: c.name || "", label: c.displayName || c.shortDisplayName || c.name || "", abbr: c.abbreviation || "",
+      players: c.leaders.map(L => { const aid = athleteId(L.athlete && (L.athlete.$ref || L.athlete.id)); const p = aid && names[aid]; return p ? Object.assign({ id: aid, value: L.displayValue != null ? String(L.displayValue) : String(L.value) }, p) : null; }).filter(Boolean).slice(0, per || 3)
+    })).filter(c => c.players.length);
+    const rank = c => { const i = pref.indexOf(c.key); return i < 0 ? 100 : i; };
+    return cats.map((c, i) => [c, i]).sort((a, b) => rank(a[0]) - rank(b[0]) || a[1] - b[1]).map(x => x[0]).slice(0, max || 8);
+  }
+
   /* ---------- the playoff picture: if the season ended today ---------- */
   // Seeds per conference (or league) and the first-round matchups for that league's format.
   function picture(groups, id) {
@@ -217,5 +247,5 @@
   }
   const pctText = p => (p == null ? "" : p >= 1 ? "1.000" : "." + String(Math.round(p * 1000)).padStart(3, "0"));
 
-  return { SPORTS, ORDER, sport, url, parseStandings, parseGames, seasonOf, teamView, leaders, records, extras, headToHead, tally, seasonYear, picture, localDay, addDays, dayList, dayLabel, when, pctText, scoreOf };
+  return { SPORTS, ORDER, sport, url, parseStandings, parseGames, seasonOf, teamView, leaders, records, extras, headToHead, tally, seasonYear, rosterMap, teamLeaders, picture, localDay, addDays, dayList, dayLabel, when, pctText, scoreOf };
 });
