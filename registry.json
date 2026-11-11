@@ -2635,7 +2635,7 @@
       "live": "https://natesteele888.github.io/apps/secretary/",
       "repo": "natesteele888/apps",
       "path": "secretary/",
-      "toolboxIds": [],
+      "toolboxIds": ["meeting-secretary"],
       "private": true,
       "store": false
     }
