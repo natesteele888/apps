@@ -46,7 +46,7 @@ a{color:var(--blue-soft)}
 .brand b{font:22px var(--head);letter-spacing:.5px;text-transform:uppercase}
 .brand span{font:500 11px var(--label);letter-spacing:2px;color:var(--silver);text-transform:uppercase}
 .topbar .spacer{flex:1}
-@media (max-width:600px){.topbar{flex-wrap:wrap;gap:8px;padding:8px 12px}.topbar img{width:30px;height:30px}.topbar .brand{flex:1 1 0;min-width:0}.brand b{font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.brand span,.topbar .spacer{display:none}.topbar .pill{margin-left:auto;font-size:10px;letter-spacing:.5px;padding:3px 8px;white-space:nowrap}.topbar .btn.sm{flex:1 1 calc(50% - 4px);justify-content:center;white-space:nowrap;min-height:34px}.btn.sm{min-height:34px}}
+@media (max-width:600px){.topbar{flex-wrap:wrap;gap:8px;padding:8px 12px}.topbar img{width:30px;height:30px}.topbar .brand{flex:1 1 0;min-width:0}.brand b{font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.brand span,.topbar .spacer{display:none}.topbar .pill{margin-left:auto;font-size:10px;letter-spacing:.5px;padding:3px 8px;white-space:nowrap}.topbar .btn.sm{flex:1 1 calc(50% - 4px);justify-content:center;white-space:nowrap;min-height:34px}}
 .pill{font:500 12px var(--label);letter-spacing:1px;text-transform:uppercase;padding:4px 10px;border-radius:999px;border:1px solid var(--line);color:var(--text-2)}
 
 /* ---------- buttons ---------- */
@@ -1536,6 +1536,7 @@ function renderEditor(){
           <button class="btn primary big" id="eCreate" style="width:100%;justify-content:center">Create minutes</button>
           <details class="more" style="margin-top:14px"><summary style="cursor:pointer;color:var(--text-2);font-weight:600">More options</summary>
             <div class="exports" style="margin-top:10px">
+              ${driveShown() ? '<button class="btn" id="eDrive">Save to Drive (minutes + audio)</button>' : ''}
               <button class="btn" id="eBackup">Save a backup${M.audio.bytes ? ' (with audio)' : ''}</button>
               ${M.audio.bytes ? '<button class="btn" id="eAudio">Download audio (' + (M.audio.bytes/1048576).toFixed(1) + ' MB)</button>' : ''}
               <button class="btn" id="eHand">Download handoff for Claude</button>
@@ -1563,14 +1564,144 @@ function renderEditor(){
   if ($('#eImportPhone')) $('#eImportPhone').onclick = openTranscriptImport;
   if ($('#eSortPhone')) $('#eSortPhone').onclick = () => openTranscriptSorter();
   $('#eBackup').onclick = saveBackup;
+  if ($('#eDrive')) $('#eDrive').onclick = driveClick;
   if ($('#eAudio')) $('#eAudio').onclick = downloadAudio;
   $('#eHand').onclick = async () => { await saveNow(); download(fileBase() + '-handoff.md', buildHandoff(), 'text/markdown'); };
   $('#eReopen').onclick = () => { M.status = 'live'; scheduleSave(); go('live'); toast('Press Resume to continue recording.'); };
 }
 function fileBase(){ return `lybs-${slug(M.type)}-${M.date}`; }
+/* ---------- SAVE TO DRIVE ----------
+   Uses the Google sign-in he already has, with the drive.file permission: the app can only see and change
+   the folders and files it made itself. Nothing is public; everything lands in his own Drive. */
+const GDrive = { token: '', exp: 0 };
+const DRIVE_ROOT_NAME = 'LYBS Board Minutes';
+const DRIVE_API = 'https://www.googleapis.com/drive/v3/files';
+const DRIVE_UP = 'https://www.googleapis.com/upload/drive/v3/files';
+function driveShown(){ return location.protocol === 'https:' && !(window.claude && typeof window.claude.use === 'function'); }
+function driveToken(){   // call straight from the click: it may open Google's window
+  if (GDrive.token && Date.now() < GDrive.exp) return Promise.resolve(GDrive.token);
+  const fb = window.firebase;
+  if (!fb || !fb.auth) return Promise.reject(Object.assign(new Error('no_google'), { reason: 'no_google' }));
+  const p = new fb.auth.GoogleAuthProvider();
+  p.addScope('https://www.googleapis.com/auth/drive.file');
+  const u = fb.auth().currentUser;
+  if (u && u.email) p.setCustomParameters({ login_hint: u.email });
+  return (u ? u.reauthenticateWithPopup(p) : fb.auth().signInWithPopup(p)).then(r => {
+    const t = r && r.credential && r.credential.accessToken;
+    if (!t) throw Object.assign(new Error('no_token'), { reason: 'no_token' });
+    GDrive.token = t; GDrive.exp = Date.now() + 50 * 60 * 1000; return t;
+  });
+}
+async function gfetch(url, opts = {}){
+  const r = await fetch(url, Object.assign({}, opts, { headers: Object.assign({ Authorization: 'Bearer ' + GDrive.token }, opts.headers || {}) }));
+  if (!r.ok) {
+    let j = null; try { j = await r.json(); } catch(e){}
+    const er = (j && j.error) || {};
+    const reason = (er.errors && er.errors[0] && er.errors[0].reason) || er.status || ('http_' + r.status);
+    if (r.status === 401) { GDrive.token = ''; GDrive.exp = 0; }
+    throw Object.assign(new Error(er.message || ('HTTP ' + r.status)), { status: r.status, reason });
+  }
+  return r;
+}
+const dq = v => String(v).replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+async function driveFind(name, parent, folder){
+  const q = `name='${dq(name)}' and trashed=false and '${parent}' in parents` + (folder ? " and mimeType='application/vnd.google-apps.folder'" : " and mimeType!='application/vnd.google-apps.folder'");
+  const r = await (await gfetch(DRIVE_API + '?pageSize=5&fields=files(id)&q=' + encodeURIComponent(q))).json();
+  return (r.files && r.files[0] && r.files[0].id) || null;
+}
+async function driveAlive(id){
+  if (!id) return false;
+  try { const f = await (await gfetch(DRIVE_API + '/' + id + '?fields=id,trashed')).json(); return !f.trashed; } catch(e){ return false; }
+}
+async function driveFolder(name, parent){
+  const found = await driveFind(name, parent, true); if (found) return found;
+  const c = await (await gfetch(DRIVE_API + '?fields=id', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name, mimeType: 'application/vnd.google-apps.folder', parents: [parent] }) })).json();
+  return c.id;
+}
+// creates the file, or replaces the one of the same name in that folder (its link stays the same)
+async function driveUpload(name, blob, parent, asType){
+  const existing = await driveFind(name, parent, false);
+  const meta = existing ? {} : Object.assign({ name, parents: [parent] }, asType ? { mimeType: asType } : {});
+  const init = await gfetch(DRIVE_UP + (existing ? '/' + existing : '') + '?uploadType=resumable&fields=id', {
+    method: existing ? 'PATCH' : 'POST',
+    headers: { 'Content-Type': 'application/json; charset=UTF-8', 'X-Upload-Content-Type': blob.type || 'application/octet-stream' },
+    body: JSON.stringify(meta) });
+  const loc = init.headers.get('Location');
+  if (!loc) throw Object.assign(new Error('no upload address'), { reason: 'no_location' });
+  const r = await fetch(loc, { method: 'PUT', body: blob });
+  if (!r.ok) throw Object.assign(new Error('upload ' + r.status), { status: r.status, reason: 'upload_failed' });
+  return (await r.json()).id;
+}
+function driveMeetingName(){ return `${M.date} ${String(M.type || 'Board Meeting').replace(/^Regular /, '')}`; }
+function minutesDocHTML(){
+  let css = '';
+  try { for (const sh of document.styleSheets) { let rules; try { rules = sh.cssRules; } catch(e){ continue; }
+    for (const r of rules) if (r.selectorText && /^\.doc\b/.test(r.selectorText)) css += r.cssText + '\n'; } } catch(e){}
+  return `<!doctype html><html><head><meta charset="utf-8"><title>${esc(docTitle())}</title><style>${css}</style></head><body>${minutesHTML()}</body></html>`;
+}
+async function audioFiles(){
+  const rows = (await DB.audioFor(M.id)).sort((a, b) => a.seq - b.seq);
+  if (!rows.length) return [];
+  const mime = (M.audio.mime || rows[0].blob.type || 'audio/webm').split(';')[0];
+  const ext = mime.includes('mp4') ? 'm4a' : mime.includes('ogg') ? 'ogg' : 'webm';
+  const parts = [...new Set(rows.map(r => r.part || 1))].sort((a, b) => a - b);
+  return parts.map((p, i) => ({ name: `${fileBase()}-audio${parts.length > 1 ? '-part' + (i + 1) : ''}.${ext}`,
+    blob: new Blob(rows.filter(r => (r.part || 1) === p).map(r => r.blob), { type: mime }) }));
+}
+function driveProblem(e){
+  const r = (e && (e.reason || e.code)) || '';
+  if (/popup-closed|cancelled-popup|popup_closed/.test(r)) return 'The Google window closed before you finished. Press Save to Drive again.';
+  if (/popup-blocked/.test(r)) return 'Your browser blocked the Google window. Allow pop-ups for this site, then press Save to Drive again.';
+  if (/user-mismatch/.test(r)) return 'Pick the same Google account you are signed in with here.';
+  if (/accessNotConfigured|SERVICE_DISABLED/.test(r) || /has not been used|is disabled/.test((e && e.message) || ''))
+    return 'Google Drive isn’t switched on for this app yet. It takes one click in Google Cloud: open <a href="https://console.cloud.google.com/apis/library/drive.googleapis.com?project=nates-toolbox" target="_blank" rel="noopener">Google Drive API</a>, press Enable, then press Save to Drive again.';
+  if (/insufficient|PERMISSION_DENIED|forbidden/i.test(r)) return 'Google didn’t give this app Drive access. Press Save to Drive again and tick the Drive box in the Google window.';
+  if (!navigator.onLine) return 'You’re offline. Save to Drive again once you’re back online.';
+  return 'Saving to Drive didn’t finish (' + esc((e && e.message) || 'unknown error') + '). Try again.';
+}
+let driveBusy = false;
+function driveClick(){
+  if (driveBusy) { toast('Already saving to Drive…'); return; }
+  let tp; try { tp = driveToken(); } catch(e){ tp = Promise.reject(e); }
+  saveToDrive(tp);
+}
+async function saveToDrive(tokenPromise){
+  driveBusy = true;
+  const done = [], notes = [];
+  try {
+    await tokenPromise;
+    toast('Saving to Drive…', 4000);
+    await saveNow();
+    let root = (await driveAlive(SETTINGS.driveRootId)) ? SETTINGS.driveRootId : await driveFolder(DRIVE_ROOT_NAME, 'root');
+    if (root !== SETTINGS.driveRootId) { SETTINGS.driveRootId = root; await saveSettings(); }
+    let folder = (await driveAlive(M.driveFolderId)) ? M.driveFolderId : await driveFolder(driveMeetingName(), root);
+    if (folder !== M.driveFolderId) { M.driveFolderId = folder; scheduleSave(); }
+    toast('Saving the minutes to Drive…', 4000);
+    const base = 'LYBS Board Minutes ' + M.date;
+    const docId = await driveUpload(base, new Blob([minutesDocHTML()], { type: 'text/html' }), folder, 'application/vnd.google-apps.document');
+    done.push('Minutes (Google Doc)');
+    const pdf = await (await gfetch(DRIVE_API + '/' + docId + '/export?mimeType=application/pdf')).blob();
+    await driveUpload('LYBS-Board-Minutes-' + M.date + '.pdf', new Blob([pdf], { type: 'application/pdf' }), folder);
+    done.push('Minutes (PDF)');
+    const aud = await audioFiles();
+    for (const f of aud) {
+      toast(`Saving the audio to Drive (${(f.blob.size / 1048576).toFixed(1)} MB)…`, 8000);
+      await driveUpload(f.name, f.blob, folder); done.push('Audio' + (aud.length > 1 ? ' (' + f.name.replace(/^.*-audio-?/, '').replace(/\.\w+$/, '') + ')' : ''));
+    }
+    if (!aud.length) notes.push(M.audio && M.audio.bytes ? 'The audio wasn’t included because it’s on the device that recorded this meeting. Press Save to Drive there too.' : 'No audio was recorded for this meeting.');
+    M.driveSavedAt = new Date().toISOString(); scheduleSave();
+    openModal(`<h3>Saved to Drive</h3><p>In <b>${esc(DRIVE_ROOT_NAME)} › ${esc(driveMeetingName())}</b>:</p><ul>${done.map(d => `<li>${esc(d)}</li>`).join('')}</ul>${notes.map(n => `<p class="notehint">${esc(n)}</p>`).join('')}<p class="notehint">Saving again replaces these files, so the links stay the same.</p><div class="foot"><a class="btn" href="https://drive.google.com/drive/folders/${encodeURIComponent(folder)}" target="_blank" rel="noopener">Open the folder</a><button class="btn primary" id="drvOk">Done</button></div>`);
+    $('#drvOk').onclick = closeModal;
+  } catch(e){
+    console.warn(e); if (window.nateHealth) nateHealth.note('drive', String((e && (e.reason || e.code)) || e));
+    openModal(`<h3>Save to Drive</h3>${done.length ? `<p>Saved: ${esc(done.join(', '))}.</p>` : ''}<p>${driveProblem(e)}</p><div class="foot"><button class="btn primary" id="drvOk">OK</button></div>`);
+    $('#drvOk').onclick = closeModal;
+  } finally { driveBusy = false; }
+}
 async function downloadAudio(){
   const rows = (await DB.audioFor(M.id)).sort((a,b) => a.seq - b.seq);
-  if (!rows.length) { toast(M.audio && M.audio.bytes ? 'The audio is on the device that recorded this meeting. Download it there, or play the copy you saved to your flash drive.' : 'No audio was recorded for this meeting.', 6000); return; }
+  if (!rows.length) { toast(M.audio && M.audio.bytes ? 'The audio is on the device that recorded this meeting. Download it there, or play the copy you saved to Drive.' : 'No audio was recorded for this meeting.', 6000); return; }
   const mime = (M.audio.mime || rows[0].blob.type || 'audio/webm').split(';')[0];
   const ext = mime.includes('mp4') ? (DL ? 'mp4' : 'm4a') : mime.includes('ogg') ? 'ogg' : 'webm';
   const parts = [...new Set(rows.map(r => r.part || 1))].sort((a,b) => a-b);
@@ -2545,6 +2676,7 @@ function renderApprove(){
           <details class="more" style="margin-top:14px"><summary style="cursor:pointer;color:var(--text-2);font-weight:600">More options</summary>
             <div class="exports" style="margin-top:10px">
               <button class="btn" id="aEdit">Make more changes</button>
+              ${driveShown() ? '<button class="btn" id="aDrive">Save to Drive (minutes + audio)</button>' : ''}
               <button class="btn" id="aBackup">Save a backup${M.audio.bytes ? ' (with audio)' : ''}</button>
               ${M.audio.bytes ? '<button class="btn" id="aAudio">Download audio (' + (M.audio.bytes/1048576).toFixed(1) + ' MB)</button>' : ''}
               <button class="btn" id="aPdf">Save as PDF (local copy)</button>
@@ -2559,6 +2691,7 @@ function renderApprove(){
   $('#aApprove').onclick = approveMinutes;
   $('#aEdit').onclick = () => { M.minutesStage = 'editing'; scheduleSave(); renderReview(); window.scrollTo(0,0); };
   $('#aBackup').onclick = saveBackup;
+  if ($('#aDrive')) $('#aDrive').onclick = driveClick;
   if ($('#aAudio')) $('#aAudio').onclick = downloadAudio;
   $('#aPdf').onclick = printMinutes;
   $('#xHand').onclick = async () => { await saveNow(); download(fileBase() + '-handoff.md', buildHandoff(), 'text/markdown'); };
@@ -2578,6 +2711,7 @@ function renderApproved(){
           <details class="more" style="margin-top:14px"><summary style="cursor:pointer;color:var(--text-2);font-weight:600">More options</summary>
             <div class="exports" style="margin-top:10px">
               <button class="btn" id="dEdit">Make more changes</button>
+              ${driveShown() ? '<button class="btn" id="dDrive">Save to Drive (minutes + audio)</button>' : ''}
               <button class="btn" id="dBackup">Save a backup${M.audio.bytes ? ' (with audio)' : ''}</button>
               ${M.audio.bytes ? '<button class="btn" id="dAudio">Download audio (' + (M.audio.bytes/1048576).toFixed(1) + ' MB)</button>' : ''}
               <button class="btn" id="dPdf">Save as PDF (local copy)</button>
@@ -2589,6 +2723,7 @@ function renderApproved(){
   $('#dHome').onclick = () => go('home');
   $('#dEdit').onclick = () => { M.minutesStage = 'editing'; scheduleSave(); renderReview(); window.scrollTo(0,0); };
   $('#dBackup').onclick = saveBackup;
+  if ($('#dDrive')) $('#dDrive').onclick = driveClick;
   if ($('#dAudio')) $('#dAudio').onclick = downloadAudio;
   $('#dPdf').onclick = printMinutes;
 }
