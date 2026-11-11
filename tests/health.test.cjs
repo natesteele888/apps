@@ -12,7 +12,7 @@ async function test(name, fn) {
 }
 const eq = (a, b, m) => assert.strictEqual(a, b, (m ? m + ': ' : '') + 'expected ' + JSON.stringify(b) + ' got ' + JSON.stringify(a));
 const healthJs = fs.readFileSync(path.join(__dirname, '..', 'apps', 'health.js'), 'utf8');
-const APPS = ['situations', 'picks', 'toolbox', 'eightcount', 'playboard', 'locker', 'practiceclock', 'read20', 'getready', 'whoswhere', 'tournamentpack', 'walkup', 'scoreboard', 'filmlite', 'photoblueprint'];
+const APPS = ['situations', 'picks', 'toolbox', 'eightcount', 'playboard', 'locker', 'practiceclock', 'read20', 'getready', 'whoswhere', 'tournamentpack', 'walkup', 'scoreboard', 'filmlite', 'photoblueprint', 'secretary'];
 
 (async () => {
   await test('every app loads health.js next to install.js, and has a report button or call', () => {

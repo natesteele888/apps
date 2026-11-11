@@ -2626,6 +2626,16 @@
         ],
         "autoShots": []
       }
+    },
+    {
+      "id": "secretary",
+      "name": "Meeting Secretary",
+      "live": "https://natesteele888.github.io/apps/secretary/",
+      "repo": "natesteele888/apps",
+      "path": "secretary/",
+      "toolboxIds": [],
+      "private": true,
+      "store": false
     }
   ],
   "comingSoon": []

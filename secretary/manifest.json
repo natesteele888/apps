@@ -1,0 +1,16 @@
+{
+  "name": "Meeting Secretary",
+  "short_name": "Secretary",
+  "description": "Record a board meeting, capture motions and action items as they happen, then turn it into minutes.",
+  "id": "./",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#0B1036",
+  "theme_color": "#090D32",
+  "icons": [
+    { "src": "/apps/icons/secretary-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/apps/icons/secretary-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/apps/icons/secretary-maskable.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
