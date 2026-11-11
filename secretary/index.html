@@ -2557,7 +2557,7 @@ function buildHandoff(){
   L.push(`- Motions in this format, as their own paragraph: **Motion** to … made by [mover], 2nd by [seconder]. Approved [yay]–[nay]–[abstain]. (Use "unanimous of members present" only if nay and abstain are 0.) Then list the vote in separate groups: In favor, Opposed, Abstained (when any), Not present for the vote, each with a count and the names the capture gives.`);
   L.push(`- Keep the agenda order below. Skip a topic only if nothing was said and nothing captured — then omit it rather than writing "no update".`);
   L.push(`- The Agenda section lists the background text the board saw for each topic. Use it for context and the spelling of names and terms, but write the minutes from what was actually said and captured.`);
-  L.push(`- End with: **Action Items** grouped by owner (a heading for each person with their tasks and due dates under it; shared tasks under the names together; everyone's tasks, then unassigned ones, last), an **Important Dates** table (date · what, spelling out detailed times such as arrival, start, end and facility-until), adjournment time, and "Respectfully submitted, ${M.recorder}, Secretary".`);
+  L.push(`- End with: **Action Items** grouped by owner (a heading for each person with their tasks and due dates under it; shared tasks under the names together; everyone's tasks, then unassigned ones, last), an **Important Dates** table (date · what, spelling out detailed times such as arrival, start, end and facility-until), adjournment time, and "Respectfully submitted, ${M.recorder ? M.recorder + ', ' : ''}Secretary".`);
   L.push(`- Flagged moments are places the secretary wanted double-checked. Look closely at the transcript around that timestamp; if it's still unclear, write the minutes with a bracketed [CONFIRM: …] note instead of guessing.`);
   L.push(`- Before finishing, list anything you were unsure of (misheard names, unclear amounts, an action with no owner) so the secretary can fix it before sending.`);
   L.push(`- Deliver as a document styled like the LYBS letterhead (organization name, meeting type and date, meta row with location / called to order / adjourned / presiding).`);
@@ -2684,7 +2684,7 @@ function minutesHTML(){
     ${pendingMotions.length ? `<ul>${pendingMotions.map(m => `<li>${esc(motionBody(m.text))} <i>(${esc(m.result || 'Pending')})</i></li>`).join('')}</ul>` : ''}
     <p style="margin-top:12px"><span class="lbl">Topics for the next meeting</span>${nextTopics.length ? '' : 'None yet.'}</p>
     ${nextTopics.length ? `<ul>${nextTopics.map(t => `<li>${esc(t)}</li>`).join('')}</ul>` : ''}
-    <p class="closing" style="margin-top:22px">Respectfully submitted,<br>${esc(M.recorder)}, Secretary</p>
+    <p class="closing" style="margin-top:22px">Respectfully submitted,<br>${M.recorder ? esc(M.recorder) + ', ' : ''}Secretary</p>
     <div class="foot">Lunenburg Youth Baseball &amp; Softball</div>
   </div>`;
 }
