@@ -939,13 +939,27 @@ function renderSetup(){
   $('#btnSaveSetup').onclick = async () => { await saveNow(); download(fileBase() + '-setup.json', JSON.stringify(M, null, 1), 'application/json'); toast('Setup saved to a file — on the other computer use All meetings → Import backup', 6000); };
 }
 
+/* once the meeting has started, Present/Absent taps are timed: the minutes say who arrived late, left early or came back */
+function noteAttChange(name, to){
+  if (M.status !== 'live' || !M.startedAt) return;
+  const log = (M.attLog ||= []), now = new Date();
+  const last = [...log].reverse().find(e => e.name === name);
+  if (last && last.to !== to && now - Date.parse(last.at) < 120000) { log.splice(log.lastIndexOf(last), 1); return; }   // a tap undone within two minutes was a mistake
+  log.push({ name, to, at: now.toISOString(), hm: now.toTimeString().slice(0,5) });
+}
+function attEvents(m=M){ return (m.attLog || []).filter(e => m.roster.some(p => p.name === e.name)).slice().sort((a,b) => a.at.localeCompare(b.at)); }
+function attendedNames(m=M){ const ev = attEvents(m); return m.roster.map(p=>p.name).filter(n => m.attendance[n] === 'present' || ev.some(e => e.name === n)); }
+function attVerb(e, m=M){ return e.to === 'absent' ? 'left' : attEvents(m).some(x => x.name === e.name && x.at < e.at) ? 'returned' : 'arrived'; }
+function attMoves(m=M){ return attEvents(m).map(e => `${e.name} ${attVerb(e, m)} at ${to12(e.hm)}`); }
+function attTag(name){ return attEvents().filter(e => e.name === name).map(e => `${attVerb(e)} ${to12(e.hm)}`).join(', '); }
 function drawAttendance(el, onChange){
   el.innerHTML = M.roster.map(p => {
     const st = M.attendance[p.name] || 'present';
-    return `<div class="who"><b>${esc(p.name)}</b><span>${esc(p.role||'')}</span></div>
+    return `<div class="who"><b>${esc(p.name)}</b><span>${esc([p.role, attTag(p.name)].filter(Boolean).join(' · '))}</span></div>
       <div class="seg" data-n="${esc(p.name)}"><button class="present ${st==='present'?'on':''}" data-s="present">Present</button><button class="absent ${st==='absent'?'on':''}" data-s="absent">Absent</button></div>`;
   }).join('');
   el.querySelectorAll('.seg').forEach(seg => seg.querySelectorAll('button').forEach(b => b.onclick = () => {
+    if ((M.attendance[seg.dataset.n] || 'present') !== b.dataset.s) noteAttChange(seg.dataset.n, b.dataset.s);
     M.attendance[seg.dataset.n] = b.dataset.s; scheduleSave(); drawAttendance(el, onChange); onChange && onChange();
   }));
 }
@@ -1157,7 +1171,7 @@ function drawAttMini(){
   const p = presentNames(), ab = M.roster.length - p.length;
   el.innerHTML = `<div>${p.length} present${ab ? ` · ${ab} absent` : ''} · quorum ${p.length >= SETTINGS.quorum ? '✓' : '✗'}</div><button class="btn sm ghost" style="margin-top:6px" id="attEdit">Edit attendance</button>`;
   $('#attEdit').onclick = () => {
-    openModal(`<h3>Attendance</h3><p style="color:var(--text-2);margin:0 0 12px;font-size:14px">Someone arrived late or left early? Change it here — add a note so the minutes say when.</p><div class="att" id="attModal"></div><label class="f" style="margin-top:12px">Guests<textarea id="gModal" rows="2">${esc(M.guests)}</textarea></label><div class="foot"><button class="btn primary" id="attDone">Done</button></div>`);
+    openModal(`<h3>Attendance</h3><p style="color:var(--text-2);margin:0 0 12px;font-size:14px">Someone arrived late or left early? Change it here. The time is saved, and the minutes say when they arrived or left.</p><div class="att" id="attModal"></div><label class="f" style="margin-top:12px">Guests<textarea id="gModal" rows="2">${esc(M.guests)}</textarea></label><div class="foot"><button class="btn primary" id="attDone">Done</button></div>`);
     drawAttendance($('#attModal'));
     $('#gModal').oninput = e => { M.guests = e.target.value; scheduleSave(); };
     $('#attDone').onclick = () => { closeModal(); drawAttMini(); };
@@ -1370,7 +1384,7 @@ function renderEditor(){
             <label class="f">Called to order<input type="time" id="rStart" value="${esc(M.calledToOrder)}"></label>
             <label class="f">Adjourned<input type="time" id="rEnd" value="${esc(M.adjourned)}"></label>
           </div>
-          <div class="row" style="margin-top:12px"><span style="color:var(--text-2);font-size:14px">${presentNames().length} present · ${M.roster.length - presentNames().length} absent${M.guests.trim() ? ' · guests: ' + esc(M.guests.trim()) : ''}</span><button class="btn sm ghost" id="rAtt">Edit attendance</button></div>
+          <div class="row" style="margin-top:12px"><span style="color:var(--text-2);font-size:14px">${attendedNames().length} present · ${M.roster.length - attendedNames().length} absent${attMoves().length ? ' · ' + esc(attMoves().join('; ')) : ''}${M.guests.trim() ? ' · guests: ' + esc(M.guests.trim()) : ''}</span><button class="btn sm ghost" id="rAtt">Edit attendance</button></div>
         </div>
         ${M.agenda.map((a,i) => {
           const its = M.items.filter(x => x.agendaId === a.id && !x.auto);
@@ -2110,7 +2124,7 @@ function buildPlainTranscript(){
 }
 
 function buildHandoff(){
-  const present = presentNames(), absent = M.roster.map(p=>p.name).filter(n => !present.includes(n));
+  const present = attendedNames(), absent = M.roster.map(p=>p.name).filter(n => !present.includes(n));
   const L = [];
   L.push(`# LYBS board meeting — handoff for minutes`);
   L.push('');
@@ -2140,6 +2154,7 @@ function buildHandoff(){
   L.push(`## Attendance`);
   L.push(`- Present (${present.length}): ${present.join(', ') || '—'}`);
   L.push(`- Absent (${absent.length}): ${absent.join(', ') || '—'}`);
+  if (attMoves().length) L.push(`- Arrived late or left early (timed when the secretary changed attendance): ${attMoves().join('; ')}. Put these in the attendance line, e.g. "(arrived 7:31 PM)" or "(left at 8:15 PM)".`);
   if (guestsList().length) L.push(`- Guests: ${guestsList().join(', ')}`);
   L.push(`- Quorum: ${present.length >= SETTINGS.quorum ? 'met' : 'NOT met'} (${present.length} of ${M.roster.length}; quorum set to ${SETTINGS.quorum})`);
   L.push('');
@@ -2187,7 +2202,7 @@ function buildHandoff(){
 function motionBody(t){ const b = String(t||'').replace(/^(a\s+)?motion\s+(was\s+made\s+)?(to\s+)?/i, '').trim(); return b ? b[0].toUpperCase() + b.slice(1) : t; }
 /* draft minutes — from captures only, in the elevated letterhead format */
 function minutesHTML(){
-  const present = presentNames(), absent = M.roster.map(p=>p.name).filter(n => !present.includes(n));
+  const present = attendedNames(), absent = M.roster.map(p=>p.name).filter(n => !present.includes(n));
   const allActions = M.items.filter(i => i.kind === 'action').sort((a,b) => a.t - b.t);
   const allDates = M.items.filter(i => i.kind === 'date').sort((a,b) => String(a.when).localeCompare(String(b.when)));
   const motionHTML = it => {
@@ -2231,6 +2246,7 @@ function minutesHTML(){
     <div class="att">
       <p><span class="lbl">Present (${present.length})</span>${esc(present.join(', ') || '—')}</p>
       ${absent.length ? `<p><span class="lbl">Absent (${absent.length})</span>${esc(absent.join(', '))}</p>` : ''}
+      ${attMoves().length ? `<p><span class="lbl">Arrived late / left early</span>${esc(attMoves().join('; '))}</p>` : ''}
       ${guestsList().length ? `<p><span class="lbl">Guests</span>${esc(guestsList().join(', '))}</p>` : ''}
       <p><span class="lbl">Quorum</span>${present.length >= SETTINGS.quorum ? 'A quorum was present.' : 'A quorum was not present.'}</p>
     </div>
