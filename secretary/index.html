@@ -1437,7 +1437,7 @@ function openCapture(kind, existing){
   const agSel = `<label class="f">Agenda item<select id="cAg">${M.agenda.map(a => `<option value="${a.id}" ${a.id===it.agendaId?'selected':''}>${esc(a.title)}</option>`).join('')}</select></label>`;
   let body = '';
   if (kind === 'motion') {
-    const present = presentNames().length;
+    const present = voteVoters(it).length || presentNames().length;   // who was in the room for this vote, same as the chips
     body = `<h3>Motion</h3>${ctxHTML}<div class="fields">
       <label class="f">Motion — what is being voted on<textarea id="cText" rows="3" placeholder="Motion to approve up to $8,000 for the Powell Field dugout project">${esc(it.text)}</textarea></label>
       <div class="two"><label class="f">Moved by<select id="cMover">${personOptions(it.mover)}</select></label><label class="f">Seconded by<select id="cSecond">${personOptions(it.second)}</select></label></div>
@@ -1472,7 +1472,7 @@ function openCapture(kind, existing){
   const first = $('#cText'); if (first) { first.focus(); if (kind==='motion' && !it.text) { first.value = 'Motion to '; } first.setSelectionRange(first.value.length, first.value.length); }
   const syncVotes = () => { const c = [...document.querySelectorAll('#cVotes .vchip')]; if (!c.length) return; const nn = c.filter(b => b.dataset.v === 'nay').length, aa = c.filter(b => b.dataset.v === 'abstain').length; $('#cYay').value = c.length - nn - aa; $('#cNay').value = nn; $('#cAbs').value = aa; };
   document.querySelectorAll('#cVotes .vchip').forEach(b => b.onclick = () => { const nx = { yea:'nay', nay:'abstain', abstain:'yea' }[b.dataset.v] || 'yea'; b.dataset.v = nx; b.querySelector('b').textContent = nx === 'yea' ? 'Yea' : nx === 'nay' ? 'Nay' : 'Abstain'; syncVotes(); });
-  if ($('#cUnan')) $('#cUnan').onclick = () => { document.querySelectorAll('#cVotes .vchip').forEach(b => { b.dataset.v = 'yea'; b.querySelector('b').textContent = 'Yea'; }); $('#cYay').value = presentNames().length; $('#cNay').value = 0; $('#cAbs').value = 0; $('#cRes').value = 'Approved'; };
+  if ($('#cUnan')) $('#cUnan').onclick = () => { document.querySelectorAll('#cVotes .vchip').forEach(b => { b.dataset.v = 'yea'; b.querySelector('b').textContent = 'Yea'; }); $('#cYay').value = document.querySelectorAll('#cVotes .vchip').length || presentNames().length; $('#cNay').value = 0; $('#cAbs').value = 0; $('#cRes').value = 'Approved'; };
   $('#cCancel').onclick = closeModal;
   if ($('#cDel')) $('#cDel').onclick = () => { M.items = M.items.filter(x => x.id !== it.id); scheduleSave(); closeModal(); refreshAfterCapture(); };
   const save = () => {
