@@ -783,9 +783,9 @@ async function renderHome(){
           <span class="status ${m.status === 'ended' ? 'ended' : m.status === 'live' ? 'live' : 'setup'}">${m.status === 'ended' ? 'Ended' : liveElsewhere(m) ? 'Live on ' + esc(m.liveDeviceName || 'other device') : m.status === 'live' ? 'Interrupted' : 'Not started'}</span>
           <button class="btn sm" data-open="${m.id}">${m.status === 'ended' ? 'Review' : liveElsewhere(m) ? 'Follow' : m.status === 'live' ? 'Resume' : 'Open'}</button>
           <button class="icon-btn" data-del="${m.id}" title="Delete meeting">✕</button>
-        </div>`).join('') : `<div class="empty">No meetings yet. Start one with <b>New meeting</b> — set the agenda and attendance before people arrive.</div>`}
+        </div>`).join('') : `<div class="empty">${Cloud.on ? 'Your Google account has no meetings yet. To bring the laptop’s meetings here, open this app on the laptop, sign in and use <b>Import backup</b>. Or start' : 'No meetings yet. Start'} one with <b>New meeting</b> — set the agenda and attendance before people arrive.</div>`}
     </div>
-    <p class="sub" style="margin-top:26px;font-size:13px">${Cloud.on ? 'Meetings and settings sync privately through your Claude account. Audio stays on the device that recorded it.' : 'Everything stays in this browser on this ' + DEVICE.name + ', including the audio.'} Nothing is uploaded except the words Chrome sends to Google’s speech service while the live transcript is running (see Roster &amp; Settings to try on-device mode).</p>
+    <p class="sub" style="margin-top:26px;font-size:13px">${Cloud.on ? 'Meetings and settings sync privately through your ' + (Cloud.backend === 'firebase' ? 'Google' : 'Claude') + ' account. Audio stays on the device that recorded it.' : 'Everything stays in this browser on this ' + DEVICE.name + ', including the audio.'} Nothing is uploaded except the words Chrome sends to Google’s speech service while the live transcript is running (see Roster &amp; Settings to try on-device mode).</p>
     <div id="lockRow" class="lockrow"></div>
     <p style="margin-top:14px"><button class="btn sm ghost" id="btnHealth" type="button">Something wrong?</button></p>`;
   $('#btnNew').onclick = () => { M = newMeeting(); scheduleSave(); go('setup'); };
@@ -1948,12 +1948,24 @@ function syncText(){
     default: return { cls: '', html: '' };
   }
 }
+// Sync now: run a full sync, then say plainly what came of it (a quiet sync looked like nothing happened)
+async function syncNowPressed(){
+  Cloud.state = 'syncing'; drawSyncBar();
+  const r = await Promise.race([cloudSyncAll().then(() => 'done'), new Promise(res => setTimeout(() => res('slow'), 20000))]);
+  if (r === 'slow') { toast('Still trying to reach your Google account. Check this ' + DEVICE.name + '’s connection. It keeps trying by itself.', 7000); if (window.nateHealth) nateHealth.note('sync', 'Sync now took over 20 seconds'); return; }
+  if (Cloud.state === 'ok') {
+    const n = [...Cloud.metas.values()].filter(c => c && !c.deleted).length, here = (await DB.all('meetings')).length;
+    toast(n ? `Synced. ${n} meeting${n > 1 ? 's' : ''} in your Google account, ${here} on this ${DEVICE.name}.`
+            : `Synced, but your Google account has no meetings yet. On the laptop, open this app, sign in and use Import backup.`, 8000);
+    if (view === 'home') renderHome();
+  } else if (Cloud.state === 'error') toast(`Couldn’t sync (${Cloud.err || 'error'}). Tap Something wrong? at the bottom to send a report.`, 8000);
+}
 function drawSyncBar(){
   const el = document.getElementById('syncBar'); if (!el) return;
   const s = syncText();
   el.className = 'syncbar ' + s.cls;
   el.innerHTML = `<span>${s.html}</span><span class="row" style="gap:6px">${s.btn === 'signin' ? `<button class="btn sm primary" id="btnSignIn" type="button">Sign in with Google</button>` : ''}${Cloud.on ? `<button class="btn sm ghost" id="btnSyncNow" type="button">Sync now</button>` : ''}${s.btn === 'signout' ? `<button class="btn sm ghost" id="btnSignOut" type="button" title="${esc(Cloud.email)}">Sign out</button>` : ''}</span>`;
-  const b = document.getElementById('btnSyncNow'); if (b) b.onclick = () => { Cloud.state = 'syncing'; drawSyncBar(); cloudSyncAll(); };
+  const b = document.getElementById('btnSyncNow'); if (b) b.onclick = syncNowPressed;
   const si = document.getElementById('btnSignIn'); if (si) si.onclick = cloudSignIn;
   const so = document.getElementById('btnSignOut'); if (so) so.onclick = () => confirmModal('Sign out on this device?', `Your meetings stay on this ${DEVICE.name}, but stop syncing until you sign in again.`, 'Sign out', cloudSignOut);
 }
@@ -1962,7 +1974,7 @@ async function exportAllMeetings(){
   const all = await DB.all('meetings');
   if (!all.length) { toast('No meetings to export yet.'); return; }
   await download(`lybs-meetings-${todayISO()}-all.json`, JSON.stringify({ kind: 'lybs-meetings', exportedAt: new Date().toISOString(), meetings: all }, null, 1), 'application/json');
-  toast(`Exported ${all.length} meeting${all.length > 1 ? 's' : ''} (without audio). Open the claude.ai link and use Import backup.`, 6000);
+  toast(`Exported ${all.length} meeting${all.length > 1 ? 's' : ''} (without audio). On your other device, open this app and use Import backup.`, 6000);
 }
 async function importMeetings(data){
   const list = Array.isArray(data) ? data : (data && Array.isArray(data.meetings)) ? data.meetings : [data];
