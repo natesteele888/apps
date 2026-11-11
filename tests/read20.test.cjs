@@ -61,6 +61,14 @@ const TODAY = '2026-11-08';
     assert.ok(/captain/.test(txt('Aly')) && /six Olympic medals/.test(txt('Aly')) && /2012/.test(txt('Aly')));
     assert.ok(/Paris/.test(txt('Simone Biles: A')) && /three gold medals/.test(txt('Simone Biles: A')) && /Columbus, Ohio/.test(txt('Simone Biles: A')));
   });
+  await test('library: 10 more Level 1 stories (strictly short-vowel words) and 10 more Level 2 stories (sight words)', () => {
+    const l1 = B.books.filter(b => b.level === 1), l2 = B.books.filter(b => b.level === 2); assert.ok(l1.length >= 18 && l2.length >= 18, 'level 1 has ' + l1.length + ', level 2 has ' + l2.length);
+    const n1 = ['Jen and the Jet', 'Max the Fox', 'A Bug on a Log', 'Pug in the Mud', 'Ted in Bed', 'Gus the Bus', 'A Bat in a Hut', 'Zip the Pup', 'Nat and the Ant', 'Hop, Hop, Hop'];
+    const n2 = ['My Dad', 'In the Yard', 'Who Is It?', 'Get Up!', 'The Hot Dog', 'Pets, Pets, Pets', 'Red and Tan', 'Can You Hop?', 'The Lost Hat', 'Fun with Mom'];
+    const sight1 = new Set(['a', 'the', 'is', 'an']); const cvc = /^[bcdfghjklmnpqrstvwxyz]{0,2}[aeiou][bcdfghjklmnpqrstvwxyz]{1,2}s?$/, bad = /(sh|ch|th|ck|ng|nk|ph|wh|qu)/;
+    for (const t of n1) { const b = l1.find(x => x.title === t); assert.ok(b, t + ' on Level 1'); assert.ok(b.pages.length >= 6 && b.pages.length <= 8, t + ' pages'); for (const p of b.pages) { assert.ok(p.pic.trim(), t + ' picture'); const ws = p.text.split(/\s+/); assert.ok(ws.length <= 7, t + ': "' + p.text + '"'); for (const raw of ws) { const w = raw.toLowerCase().replace(/[^a-z]/g, ''); assert.ok(sight1.has(w) || w === 'i' || (cvc.test(w) && !bad.test(w) && w.length <= 4), t + ': "' + w + '" is not a Level 1 word'); } } }
+    for (const t of n2) { const b = l2.find(x => x.title === t); assert.ok(b, t + ' on Level 2'); assert.ok(b.pages.length >= 6 && b.pages.length <= 8, t + ' pages'); for (const p of b.pages) { assert.ok(p.pic.trim(), t + ' picture'); assert.ok(p.text.split(/\s+/).length <= 8, t + ': "' + p.text + '"'); } }
+  });
   await test('library: level 1 and 2 pages stay short (first-grade length)', () => {
     for (const b of B.books.filter(b => b.level <= 2)) for (const p of b.pages) {
       const n = p.text.split(/\s+/).length;
@@ -566,7 +574,7 @@ const TODAY = '2026-11-08';
   await test('older reader: the reading level is a setting on each reader, saved, synced and does not touch the other reader', async () => {
     const { page } = await mk(); await page.locator('#gear').click(); eq(await page.locator('#slv').inputValue(), 'early'); await page.selectOption('#slv', 'older'); await page.locator('#sd').click(); await page.waitForSelector('.cover');
     assert.ok(/The Library/.test(await page.locator('.sec').innerText())); eq(await page.locator('.lv').count(), 6);
-    await page.locator('#addrd').click(); await page.fill('#rn', 'Kid'); await page.locator('#ra').click(); await page.waitForFunction(() => document.querySelector('.rd.on .nm').textContent === 'Kid'); assert.ok(/The Book Shop/.test(await page.locator('.sec').innerText()), 'the new reader is an early reader'); eq(await page.locator('.cover').count(), 8);
+    await page.locator('#addrd').click(); await page.fill('#rn', 'Kid'); await page.locator('#ra').click(); await page.waitForFunction(() => document.querySelector('.rd.on .nm').textContent === 'Kid'); assert.ok(/The Book Shop/.test(await page.locator('.sec').innerText()), 'the new reader is an early reader'); eq(await page.locator('.cover').count(), await page.evaluate(() => R20Books.books.filter(b => b.shelf === 'early' && b.level === 1).length));
     await page.locator('.rd[data-id]').first().click(); await page.waitForFunction(() => document.querySelector('.rd.on .nm').textContent === 'Reader'); assert.ok(/The Library/.test(await page.locator('.sec').innerText()));
     await page.reload(); await page.waitForSelector('.cover'); assert.ok(/The Library/.test(await page.locator('.sec').innerText()), 'remembered after a reload');
     await page.locator('#gear').click(); eq(await page.locator('#sz option').allInnerTexts().then(a => a.join()), 'Normal,Large,Extra large'); await page.selectOption('#slv', 'early'); await page.locator('#sd').click(); assert.ok(/The Book Shop/.test(await page.locator('.sec').innerText()));

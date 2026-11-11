@@ -76,7 +76,88 @@ Dot dug in the mud.|🟤🐶
 Dot hid the log.|🐶
 Dot sat on the log.|🐶🪵
 Dot is hot.|🥵
-Dot can nap.|😴🐶`],
+Dot can nap.|😴🐶`,
+`Jen and the Jet|✈️|#c9eaff
+Jen has a jet.|✈️
+The jet is red.|🔴
+The jet can zip.|💨
+Jen is in the jet.|👧✈️
+Zip, zip, zip!|✈️
+A bug is on the jet.|🐛
+Jen got the bug. Jen can zip!|🎉`,
+`Max the Fox|🦊|#ffd6a5
+Max is a fox.|🦊
+Max can run.|🏃
+Max can dig.|⛏️
+Max got a bun.|🍞
+Max hid the bun.|🤫
+Max is in a den.|🕳️
+Max has a nap.|😴`,
+`A Bug on a Log|🐛|#d4f0c4
+A bug is on a log.|🪵🐛
+The bug can hop.|🦗
+The bug can run.|🐛
+A hen is at the log.|🐔
+The hen ran at the bug.|🐔💨
+The bug hid in a pit.|🕳️
+The hen is mad.|😠`,
+`Pug in the Mud|🐶|#e6d5c0
+Pug got in the mud.|🐶🟤
+Pug is wet.|💦
+Pug is a mud pup.|🟤
+Pam got a tub.|🛁
+Pam can dip Pug in the tub.|🛁🐶
+Pug can not run!|🚫🐶
+Pug is not a mud pup.|✨`,
+`Ted in Bed|🛏️|#d0d6ff
+Ted is in bed.|🛏️
+Ted has a red hat.|🎩
+Ted has a pet.|🐱
+The pet is a cat.|🐱
+The cat is on Ted.|😴
+Ted is up. The cat is not.|⬆️
+Ted can not get up!|😂`,
+`Gus the Bus|🚌|#ffe3a3
+Gus is a bus.|🚌
+Gus is big.|🚌
+Gus can zip.|💨
+Gus hit a rut.|💥
+Bam! Gus is in the mud.|🟤
+Dan can tug Gus.|💪
+Tug, tug, tug! Gus is up.|🚌🎉`,
+`A Bat in a Hut|🦇|#e5dbff
+A bat is in a hut.|🦇🏠
+The bat is not up.|🌙
+The bat can nap.|😴
+Pam has a cat.|🐱
+The cat can not get the bat.|🐱🦇
+The bat can hop up.|🦇
+Zip! The bat is up, up, up!|🌙`,
+`Zip the Pup|🐕|#ffe0e6
+Zip is a pup.|🐕
+Zip can run.|🏃
+Zip can dig.|⛏️
+Zip can hop.|🐕
+Zip got a log.|🪵
+Zip hid the log.|🤫
+Zip is a fun pup.|😊`,
+`Nat and the Ant|🐜|#d4f0c4
+Nat has an ant.|🐜
+The ant is red.|🔴
+The ant can dig.|⛏️
+The ant can run.|🏃
+Nat can not get the ant.|🙅‍♀️
+The ant is in the pit.|🕳️
+Nat has a nap.|😴
+The ant has a nap.|😴`,
+`Hop, Hop, Hop|🐸|#c9eaff
+A cat can hop.|🐱
+A dog can hop.|🐶
+A pig can hop.|🐷
+A hen can hop.|🐔
+A bug can hop.|🐛
+A log can not hop.|🪵
+Hop, hop, hop!|🐸`],
 
     2: [`I Can Run|🏃|#c8f7dc
 I can run.|🏃
@@ -141,7 +222,87 @@ The bus is red.|🔴🚌
 Kids get on the bus.|🧒🧒🚌
 The bus can go up the hill.|⛰️🚌
 The bus will stop.|🛑
-Bye, bus!|👋`],
+Bye, bus!|👋`,
+`My Dad|👨|#ffe8cc
+I have a dad.|👨
+My dad is big.|💪
+My dad can fix a bed.|🛏️
+My dad can get a hot dog.|🌭
+My dad can run with me.|🏃
+We sit and we nap.|😴
+I like my dad.|❤️`,
+`In the Yard|🏡|#d4f0c4
+We go in the yard.|🏡
+I see a bug.|🐛
+I see a hen.|🐔
+I see a nut.|🌰
+I see a cat on a rug.|🐱
+We sit in the sun.|☀️
+It is fun in the yard.|😊`,
+`Who Is It?|🤔|#fff0b3
+It is small.|❓
+It has six legs.|❓
+It can hop.|❓
+It can hum.|❓
+It can sit in the sun.|❓
+Who is it?|🤔
+It is a bug!|🦗`,
+`Get Up!|⏰|#ffe3a3
+It is time to get up.|⏰
+I get up. I get a hat.|🎩
+I get a cup.|☕
+Mom gets the ham.|🍖
+I get on the bus.|🚌
+Bye, Mom!|👋
+I will see you!|😊`,
+`The Hot Dog|🌭|#ffd6a5
+Mom has a hot dog.|🌭
+I get a bun.|🍞
+Mom puts the dog in the bun.|🌭
+It is hot!|🥵
+I get a cup.|🥤
+Yum, yum, yum!|😋
+I like a hot dog.|❤️`,
+`Pets, Pets, Pets|🐾|#e8d6ff
+I have a cat.|🐱
+Jen has a dog.|🐶
+Max has a hen.|🐔
+Pam has a pet pig.|🐷
+Ben has a fish.|🐟
+We all like pets!|🐾
+Do you have a pet?|🤔`,
+`Red and Tan|🔴|#ffd0d0
+I see red.|🔴
+It is a red hat.|🎩
+I see tan.|🟤
+It is a tan hen.|🐔
+I see red and tan.|🔴🟤
+A red bus. A tan cat.|🚌🐱
+Red and tan are fun!|😊`,
+`Can You Hop?|🐸|#d4f0c4
+Can you hop?|🐸
+I can hop!|🐸
+Can you run?|🏃
+I can run!|🏃
+Can you sit?|🪑
+I can sit!|🪑
+Can you nap? Yes, I can nap!|😴`,
+`The Lost Hat|🎩|#ffe0f0
+I can not get my hat!|😮
+Is it in the box?|📦
+No, it is not.|🙅
+Is it on the bed?|🛏️
+No, it is not.|🙅
+Is it on the cat?|🐱
+Yes! The cat has the hat.|🎩🐱`,
+`Fun with Mom|👩‍👧|#ffd6e8
+Mom and I go up the hill.|⛰️
+We see a pond.|🏞️
+We see a duck on the pond.|🦆
+The duck can swim.|🏊
+We sit on a log.|🪵
+It is fun with Mom!|❤️
+I like the hill.|⛰️`],
 
     3: [`Chip the Chimp|🐒|#ffd8a8
 Chip is a chimp.|🐒
