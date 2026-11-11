@@ -1,6 +1,6 @@
 {
   "about": "The one list of Nathan's apps. Live links, which apps show where, and each app's App Store listing (text, highlights, screenshots) all come from here. Edit listings and icons in the Toolbox; the sync job copies them here. Don't hand-edit text in store/index.html.",
-  "updated": "2026-11-10",
+  "updated": "2026-11-11",
   "toolbox": "https://natesteele888.github.io/apps/toolbox/",
   "store": "https://natesteele888.github.io/apps/store/",
   "apps": [
@@ -79,12 +79,16 @@
         ],
         "autoShots": [],
         "latest": {
-          "d": "Nov 10, 2026",
-          "t": "App numbers: anonymous install and weekly open counts for every app, and a numbers page in the Toolbox",
-          "url": "https://github.com/natesteele888/apps/commit/4fa8d34f3ac10b336a1247601c9cac23893e3cd7"
+          "d": "Nov 11, 2026",
+          "t": "App numbers: make the Back to Toolbox link easy to tap",
+          "url": "https://github.com/natesteele888/apps/commit/c110724d7f8407b546e5d551e86df0c003cecad8"
         },
-        "version": "1.2.6",
+        "version": "1.2.7",
         "history": [
+          {
+            "v": "1.2.7",
+            "t": "App numbers: make the Back to Toolbox link easy to tap"
+          },
           {
             "v": "1.2.6",
             "t": "App numbers: anonymous install and weekly open counts for every app, and a numbers page in the Toolbox"
@@ -100,10 +104,6 @@
           {
             "v": "1.2.3",
             "t": "Every app: a health check on open, a problem log, and a Something wrong? report"
-          },
-          {
-            "v": "1.2.1",
-            "t": "Add Photo Blueprint: a map pin and a blueprint sheet for every photo"
           }
         ]
       }
@@ -190,31 +190,31 @@
         ],
         "autoShots": [],
         "latest": {
-          "d": "Nov 9, 2026",
-          "t": "Every app: a health check on open, a problem log, and a Something wrong? report",
-          "url": "https://github.com/natesteele888/apps/commit/7ddeb6fa079516aa640b631af5c91b15a547d5ba"
+          "d": "Nov 11, 2026",
+          "t": "Where Do I Go?: run LYBS Ballclub's Situations trainer, so it's always the newest",
+          "url": "https://github.com/natesteele888/apps/commit/aeae0994cb3c5d68cf2be18383035bb2e7c6daf4"
         },
-        "version": "1.2.1",
+        "version": "1.4.9",
         "history": [
           {
-            "v": "1.2.1",
+            "v": "1.4.9",
+            "t": "Where Do I Go?: run LYBS Ballclub's Situations trainer, so it's always the newest"
+          },
+          {
+            "v": "1.4.8",
             "t": "Every app: a health check on open, a problem log, and a Something wrong? report"
           },
           {
-            "v": "1.2.0",
-            "t": "Where Do I Go?: make the Slow button and play scrubber easier to tap"
+            "v": "1.4.6",
+            "t": "Where Do I Go: give extra-base hits a realistic roll instead of always reaching the fence"
           },
           {
-            "v": "1.1.9",
-            "t": "Where Do I Go?: don't throw home with a runner already in from third"
+            "v": "1.4.5",
+            "t": "Where Do I Go: stop sending two players to the same spot on a sure triple"
           },
           {
-            "v": "1.1.8",
-            "t": "Where Do I Go: bigger runner, outs and Infield-in buttons"
-          },
-          {
-            "v": "1.1.7",
-            "t": "Where Do I Go: open offline right after the first visit"
+            "v": "1.4.4",
+            "t": "Fix extra-base-hit/relay plays: stop sending a corner infielder to cover second"
           }
         ],
         "caps": [
@@ -443,12 +443,16 @@
         ],
         "autoShots": [],
         "latest": {
-          "d": "Nov 8, 2026",
-          "t": "Banner: end with 'All of us coaches are proud of you.'",
-          "url": "https://github.com/natesteele888/ASL-Bengals/commit/042a29286c4387f2b6e3b0e126bd3fad4a0d8f63"
+          "d": "Nov 11, 2026",
+          "t": "Make the name button at the top of every screen easy to tap",
+          "url": "https://github.com/natesteele888/ASL-Bengals/commit/15faaef5bd134ee436a4b3fa0adabb3b322a2741"
         },
-        "version": "1.50.1",
+        "version": "1.50.2",
         "history": [
+          {
+            "v": "1.50.2",
+            "t": "Make the name button at the top of every screen easy to tap"
+          },
           {
             "v": "1.50.1",
             "t": "Banner: end with 'All of us coaches are proud of you.'"
@@ -464,10 +468,6 @@
           {
             "v": "1.49.8",
             "t": "Super Bowl banner: Let's go Bengals, D1 Super Bowl vs Milford Hawks"
-          },
-          {
-            "v": "1.49.7",
-            "t": "Sign-in: stop the published code hashes from working as Firebase passwords"
           }
         ],
         "caps": [
@@ -1188,12 +1188,16 @@
         ],
         "autoShots": [],
         "latest": {
-          "d": "Nov 9, 2026",
-          "t": "Say why when the map can't load, instead of a blank box",
-          "url": "https://github.com/natesteele888/sponsor-banner-inventory/commit/d63960766fe7ba567299b2d71375a100e1304e9d"
+          "d": "Nov 11, 2026",
+          "t": "Add the shared health check and a Something wrong? button",
+          "url": "https://github.com/natesteele888/sponsor-banner-inventory/commit/1b40433151222e56c4166f87b2da27ecc640590a"
         },
-        "version": "1.2.0",
+        "version": "1.2.1",
         "history": [
+          {
+            "v": "1.2.1",
+            "t": "Add the shared health check and a Something wrong? button"
+          },
           {
             "v": "1.2.0",
             "t": "Say why when the map can't load, instead of a blank box"
@@ -1209,10 +1213,6 @@
           {
             "v": "1.1.7",
             "t": "Keep the banner list showing after Sign out and back in"
-          },
-          {
-            "v": "1.1.6",
-            "t": "Take the admin email out of the public sponsor backend file"
           }
         ],
         "caps": [
@@ -2365,33 +2365,33 @@
           "store/shots/read20-4.webp",
           "store/shots/read20-5.webp"
         ],
-        "version": "1.1.8",
+        "version": "1.2.2",
         "history": [
+          {
+            "v": "1.2.2",
+            "t": "Read 20: 10 more Level 1 stories and 10 more Level 2 stories"
+          },
+          {
+            "v": "1.2.1",
+            "t": "Read 20: gymnastics biographies (Levels 4 and 5) and a sturdier update path"
+          },
+          {
+            "v": "1.2.0",
+            "t": "Read 20: 18 more stories for Levels 4 and 5 (cheerleading, gymnastics, animals, princesses, nature, building)"
+          },
+          {
+            "v": "1.1.9",
+            "t": "Read 20: 25 more Level 3 stories (animals, princesses, step-by-step building, nature)"
+          },
           {
             "v": "1.1.8",
             "t": "Read 20: a darker, sleeker look with line icons for older readers"
-          },
-          {
-            "v": "1.1.7",
-            "t": "Read 20: seven more athlete biographies and six more social studies stories for older readers"
-          },
-          {
-            "v": "1.1.6",
-            "t": "Read 20: an older-readers library (sports, photography, fitness, athletes, social studies, English) with words to know and a quiz"
-          },
-          {
-            "v": "1.1.5",
-            "t": "Read 20: redraw the home screen after joining a shared log (it stayed on the empty one)"
-          },
-          {
-            "v": "1.1.4",
-            "t": "Read 20: a profile for each child, swapped on the home screen, and a much shorter Settings"
           }
         ],
         "latest": {
-          "d": "Nov 10, 2026",
-          "t": "Read 20: a darker, sleeker look with line icons for older readers",
-          "url": "https://github.com/natesteele888/apps/commit/2a42f7fbac7aefd6b91a805825c47c9cf074fe46"
+          "d": "Nov 11, 2026",
+          "t": "Read 20: 10 more Level 1 stories and 10 more Level 2 stories",
+          "url": "https://github.com/natesteele888/apps/commit/d665e48a3a245aaa7acf124a1ad392868c88792f"
         },
         "caps": [
           "A shelf of short stories, and tonight's reading at a glance",
