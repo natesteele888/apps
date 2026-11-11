@@ -27,7 +27,7 @@ OVERRIDES = {   # word: "syl-la-bles"   (hand fixes where the dictionaries disag
     "hemispheres": "hem-i-spheres", "hieroglyphs": "hi-er-o-glyphs", "imaginary": "i-mag-i-nar-y", "military": "mil-i-tar-y", "necessary": "nec-es-sar-y", "paragraph": "par-a-graph",
     "preposition": "prep-o-si-tion", "prepositional": "prep-o-si-tion-al", "reachable": "reach-a-ble", "sumerians": "su-me-ri-ans", "unbeatable": "un-beat-a-ble", "venice": "ven-ice",
     "madison": "mad-i-son", "balances": "bal-anc-es", "bio": "bi-o", "buddhism": "bud-dhism", "cuneiform": "cu-ne-i-form", "empire": "em-pire",
-    "sparkling": "spar-kling", "uneven": "un-e-ven", "baa": "baa", "diamond": "di-a-mond", "hickory": "hick-o-ry", "maya": "may-a", "zoe": "zo-e",
+    "virginia": "vir-gin-ia", "sparkling": "spar-kling", "uneven": "un-e-ven", "baa": "baa", "diamond": "di-a-mond", "hickory": "hick-o-ry", "maya": "may-a", "zoe": "zo-e",
     "federal": "fed-er-al", "foreigners": "for-eign-ers", "hyperbole": "hy-per-bo-le", "idiom": "id-i-om", "idioms": "id-i-oms", "mediterranean": "med-i-ter-ra-ne-an",
     "meridian": "me-rid-i-an", "mesopotamia": "mes-o-po-ta-mi-a", "oasis": "o-a-sis", "philadelphia": "phil-a-del-phi-a", "society": "so-ci-e-ty", "socrates": "soc-ra-tes",
     "tele": "tel-e", "travelers": "trav-el-ers",
