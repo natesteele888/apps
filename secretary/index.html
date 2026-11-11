@@ -176,6 +176,17 @@ input:focus,select:focus,textarea:focus{outline:2px solid var(--blue);outline-of
 .citem{font-size:13px;padding:8px 10px;border-radius:9px;background:var(--navy);border:1px solid var(--line);display:flex;gap:8px;align-items:flex-start}
 .citem .k{font:600 10px var(--label);letter-spacing:1.2px;text-transform:uppercase;padding:2px 6px;border-radius:5px;flex:none;margin-top:1px}
 .k.motion{background:rgba(255,194,75,.18);color:#ffd88a}
+.vbox .vhd{font:500 12px var(--label);letter-spacing:1px;text-transform:uppercase;color:var(--text-2)}
+.vbox .vhd small{display:block;text-transform:none;letter-spacing:0;font:400 12px var(--body);color:var(--text-3);margin-top:2px}
+.vchips{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+.vchip{border:1px solid rgba(255,255,255,.18);background:rgba(76,195,138,.10);color:inherit;border-radius:16px;padding:6px 11px;font-size:13px;cursor:pointer}
+.vchip b{margin-left:7px;font-size:11px;letter-spacing:.5px;color:#4cc38a}
+.vchip[data-v=nay]{border-color:#e5484d;background:rgba(229,72,77,.18)}.vchip[data-v=nay] b{color:#ff8b8e}
+.vchip[data-v=abstain]{border-color:#ffc24b;background:rgba(255,194,75,.14)}.vchip[data-v=abstain] b{color:#ffd88a}
+details.howto{border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:10px 14px;margin:0 0 18px;background:rgba(255,255,255,.03)}
+details.howto summary{cursor:pointer;font-weight:600}
+details.howto ol{margin:10px 0 2px 18px;padding:0;line-height:1.55}
+details.howto li{margin-bottom:6px}
 .k.action{background:rgba(56,211,159,.16);color:#9ef0d2}
 .k.date{background:rgba(111,139,255,.18);color:#cdd7ff}
 .k.note,.k.decision{background:rgba(180,187,191,.16);color:var(--silver)}
@@ -786,6 +797,16 @@ async function renderHome(){
       ${Cloud.on && list.length ? '<button class="btn" id="btnLatest" type="button">Open latest meeting</button>' : ''}
       <button class="btn ghost" id="btnExportAll" type="button">Export all meetings</button>
     </div>
+    <details class="howto"><summary>How to run a meeting, start to finish</summary><ol>
+      <li><b>Before:</b> on the laptop, open Meeting Secretary, sign in with Google, tap <b>+ New meeting</b>, and set the agenda and attendance.</li>
+      <li><b>Start:</b> start the recording on your phone, then tap <b>Start</b> in the app.</li>
+      <li><b>During:</b> tap people in or out as they arrive or leave, and the times are kept. For each motion, pick who moved and seconded, then tap anyone voting Nay or Abstain (everyone else counts as Yea), or tap <b>Unanimous</b>. Add action items and key dates; for detailed times, type them in <b>Or describe it</b>.</li>
+      <li><b>End:</b> tap <b>Finish meeting</b>, then tap it again. The laptop recording goes to Drive.</li>
+      <li><b>At home:</b> open the app, sign in and tap <b>Open latest meeting</b>.</li>
+      <li><b>Phone files:</b> add the phone transcript and the phone recording.</li>
+      <li><b>Minutes:</b> tap <b>Create minutes &amp; save to Drive</b>. The Doc and PDF go into a new folder for that meeting inside LYBS Board Minutes.</li>
+      <li><b>Board email:</b> tap <b>Draft the board email</b>, look it over in Gmail and send it yourself.</li>
+    </ol></details>
     <div id="syncBar" class="syncbar"></div>
     <h2>${Cloud.on ? 'Your meetings' : 'Meetings on this ' + DEVICE.name}</h2>
     <div class="mlist">
@@ -988,9 +1009,47 @@ function voteRollLine(it, m=M){   // "In favor (11): … · Not present for the 
     const later = ev.find(e => e.name === p.name && e.to === 'present' && Date.parse(e.at) > ms);
     out.push(p.name + (left ? ` (left at ${to12(left.hm)})` : later ? ` (arrived at ${to12(later.hm)})` : ' (absent)'));
   });
-  const res = it.result || 'Pending', v = voteStr(it);
-  const allFor = res === 'Approved' && (!v || (+it.nay === 0 && +it.abstain === 0));
-  return `${allFor ? 'In favor' : 'Present for the vote'} (${inn.length}): ${inn.join(', ')}${out.length ? ' · Not present for the vote: ' + out.join(', ') : ''}`;
+  return voteGroups(it, m).map(g => g.names ? `${g.label}${g.names.length ? ' (' + g.names.length + ')' : ''}: ${g.names.join(', ') || 'None'}` : `${g.label} (${g.count}): ${g.note}`).join(' · ');
+}
+function voteVoters(it, m=M){ const ms = itemWallMs(it, m); return m.roster.map(p => p.name).filter(n => (isNaN(ms) ? m.attendance[n] : attStateAt(n, ms, m)) === 'present'); }
+function voteGroups(it, m=M){   // [{key,label,names|note,count}] — who voted how, for the minutes
+  const ms = itemWallMs(it, m); if (isNaN(ms) || !m.roster.length) return [];
+  const inn = [], out = [], ev = attEvents(m);
+  m.roster.forEach(p => {
+    if (attStateAt(p.name, ms, m) === 'present') { inn.push(p.name); return; }
+    const left = ev.filter(e => e.name === p.name && e.to === 'absent' && Date.parse(e.at) <= ms).at(-1);
+    const later = ev.find(e => e.name === p.name && e.to === 'present' && Date.parse(e.at) > ms);
+    out.push(p.name + (left ? ` (left at ${to12(left.hm)})` : later ? ` (arrived at ${to12(later.hm)})` : ' (absent)'));
+  });
+  const votes = it.votes || {}, res = it.result || 'Pending', G = [];
+  const nayN = inn.filter(n => votes[n] === 'nay'), absN = inn.filter(n => votes[n] === 'abstain');
+  const nay = +it.nay || 0, ab = +it.abstain || 0;
+  if (nayN.length || absN.length) {
+    G.push({ key:'fav', label:'In favor', names: inn.filter(n => !votes[n]) });
+    G.push({ key:'opp', label:'Opposed', names: nayN });
+    G.push({ key:'abs', label:'Abstained', names: absN });
+  } else if (voteStr(it) && (nay || ab)) {
+    G.push({ key:'pres', label:'Present for the vote', names: inn });
+    G.push({ key:'fav', label:'In favor', count: +it.yay || 0, note:'Not recorded by name' });
+    G.push({ key:'opp', label:'Opposed', count: nay, note: nay ? 'Not recorded by name' : 'None' });
+    if (ab) G.push({ key:'abs', label:'Abstained', count: ab, note:'Not recorded by name' });
+  } else if (res === 'Approved') {
+    G.push({ key:'fav', label:'In favor', names: inn });
+    G.push({ key:'opp', label:'Opposed', names: [] });
+  } else G.push({ key:'pres', label:'Present for the vote', names: inn });
+  if (out.length) G.push({ key:'out', label:'Not present for the vote', names: out });
+  return G.map(g => ({ ...g, count: g.names ? g.names.length : g.count }));
+}
+const GROUP_COLORS = { fav:'#1E8E5A', opp:'#B3261E', abs:'#9A6E00', out:'#6b7088', pres:'#2E52E8', late:'#9A6E00', guest:'#2E52E8', absent:'#6b7088' };
+function groupTableHTML(rows, o={}){   // colored label column + names; inline styles so it survives print, Gmail and Google Docs
+  return `<table class="grp" role="presentation" style="width:100%;border-collapse:collapse;margin:${o.m || '8px 0 2px'};background:#ffffff;border:1px solid #E3E6EE">` + rows.map((r, i) => {
+    const top = i ? 'border-top:1px solid #E3E6EE;' : '';
+    return `<tr><td style="width:${o.w || 120}px;vertical-align:top;padding:6px 9px;border-bottom:0;${top}border-left:4px solid ${r.color};font-family:Arial,Helvetica,sans-serif;font-size:9.5px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:${r.color}">${esc(r.label)}${r.count != null && r.count !== '' ? `<div style="font-size:16px;letter-spacing:0;line-height:1.25">${r.count}</div>` : ''}</td><td style="vertical-align:top;padding:6px 10px;border-bottom:0;${top}font-size:${o.fs || '13px'};color:#1B1F2E;line-height:1.45">${r.html}</td></tr>`;
+  }).join('') + '</table>';
+}
+function voteTableHTML(it){
+  const G = voteGroups(it); if (!G.length) return '';
+  return groupTableHTML(G.map(g => ({ label: g.key === 'out' ? 'Not present' : g.key === 'pres' ? 'Present' : g.label, count: g.count, color: GROUP_COLORS[g.key], html: g.names ? (esc(g.names.join(', ')) || 'None') : esc(g.note) })), { w: 100, fs: '12.5px' });
 }
 function attTag(name){ return attEvents().filter(e => e.name === name).map(e => `${attVerb(e)} ${to12(e.hm)}`).join(', '); }
 function drawAttendance(el, onChange){
@@ -1383,6 +1442,8 @@ function openCapture(kind, existing){
       <label class="f">Motion — what is being voted on<textarea id="cText" rows="3" placeholder="Motion to approve up to $8,000 for the Powell Field dugout project">${esc(it.text)}</textarea></label>
       <div class="two"><label class="f">Moved by<select id="cMover">${personOptions(it.mover)}</select></label><label class="f">Seconded by<select id="cSecond">${personOptions(it.second)}</select></label></div>
       <div class="three"><label class="f">Yay<input type="number" min="0" id="cYay" value="${it.yay ?? ''}"></label><label class="f">Nay<input type="number" min="0" id="cNay" value="${it.nay ?? ''}"></label><label class="f">Abstain<input type="number" min="0" id="cAbs" value="${it.abstain ?? ''}"></label></div>
+      <div class="f vbox"><span class="vhd">Who voted how <small>Tap a name for Nay, tap again for Abstain. Everyone else counts as Yea.</small></span>
+        <div class="vchips" id="cVotes">${voteVoters(it).map(n => { const s = (it.votes || {})[n] || 'yea'; return `<button type="button" class="vchip" data-n="${esc(n)}" data-v="${s}">${esc(n)}<b>${s === 'yea' ? 'Yea' : s === 'nay' ? 'Nay' : 'Abstain'}</b></button>`; }).join('') || '<span class="ph">Mark attendance first to list who can vote.</span>'}</div></div>
       <div class="row"><button class="btn sm" id="cUnan">Unanimous (${present}–0–0)</button>
         <label class="f" style="flex:1">Result<select id="cRes">${['Approved','Failed','Tabled','Withdrawn','Pending'].map(r => `<option ${r===(it.result||'Approved')?'selected':''}>${r}</option>`).join('')}</select></label></div>
       ${agSel}</div>`;
@@ -1409,7 +1470,9 @@ function openCapture(kind, existing){
   }
   openModal(body + `<div class="foot">${existing ? '<button class="btn danger" id="cDel" style="margin-right:auto">Delete</button>' : ''}<button class="btn ghost" id="cCancel">Cancel</button><button class="btn primary" id="cSave">Save <span class="kbd" style="color:#dfe5ff;border-color:rgba(255,255,255,.4)">⌘↵</span></button></div>`);
   const first = $('#cText'); if (first) { first.focus(); if (kind==='motion' && !it.text) { first.value = 'Motion to '; } first.setSelectionRange(first.value.length, first.value.length); }
-  if ($('#cUnan')) $('#cUnan').onclick = () => { $('#cYay').value = presentNames().length; $('#cNay').value = 0; $('#cAbs').value = 0; $('#cRes').value = 'Approved'; };
+  const syncVotes = () => { const c = [...document.querySelectorAll('#cVotes .vchip')]; if (!c.length) return; const nn = c.filter(b => b.dataset.v === 'nay').length, aa = c.filter(b => b.dataset.v === 'abstain').length; $('#cYay').value = c.length - nn - aa; $('#cNay').value = nn; $('#cAbs').value = aa; };
+  document.querySelectorAll('#cVotes .vchip').forEach(b => b.onclick = () => { const nx = { yea:'nay', nay:'abstain', abstain:'yea' }[b.dataset.v] || 'yea'; b.dataset.v = nx; b.querySelector('b').textContent = nx === 'yea' ? 'Yea' : nx === 'nay' ? 'Nay' : 'Abstain'; syncVotes(); });
+  if ($('#cUnan')) $('#cUnan').onclick = () => { document.querySelectorAll('#cVotes .vchip').forEach(b => { b.dataset.v = 'yea'; b.querySelector('b').textContent = 'Yea'; }); $('#cYay').value = presentNames().length; $('#cNay').value = 0; $('#cAbs').value = 0; $('#cRes').value = 'Approved'; };
   $('#cCancel').onclick = closeModal;
   if ($('#cDel')) $('#cDel').onclick = () => { M.items = M.items.filter(x => x.id !== it.id); scheduleSave(); closeModal(); refreshAfterCapture(); };
   const save = () => {
@@ -1417,7 +1480,9 @@ function openCapture(kind, existing){
     it.text = (v('#cText') || '').trim();
     if (kind === 'motion' && it.text === 'Motion to') it.text = '';
     it.agendaId = v('#cAg') || it.agendaId;
-    if (kind === 'motion') Object.assign(it, { mover: v('#cMover'), second: v('#cSecond'), yay: v('#cYay'), nay: v('#cNay'), abstain: v('#cAbs'), result: v('#cRes') });
+    if (kind === 'motion') { Object.assign(it, { mover: v('#cMover'), second: v('#cSecond'), yay: v('#cYay'), nay: v('#cNay'), abstain: v('#cAbs'), result: v('#cRes') });
+      const vv = {}; document.querySelectorAll('#cVotes .vchip').forEach(b => { if (b.dataset.v !== 'yea') vv[b.dataset.n] = b.dataset.v; });
+      if (Object.keys(vv).length) it.votes = vv; else delete it.votes; }
     if (kind === 'action') Object.assign(it, { owner: (v('#cOwnerX')||'').trim() || v('#cOwner'), due: v('#cDue') });
     if (kind === 'date') it.when = v('#cWhen') || (v('#cWhenX')||'').trim();
     if (kind === 'note' || kind === 'decision') it.kind = v('#cKind');
@@ -2489,7 +2554,7 @@ function buildHandoff(){
   L.push('');
   L.push(`## Instructions for writing the minutes`);
   L.push(`- Match the LYBS house style from past minutes: a short heading per agenda topic, then a concise narrative of what was reported and discussed — who reported, the key facts (dollar amounts, counts, names of vendors/places), what was decided, and who owns the follow-up. Plain, factual, third person, past tense. No quotes, no filler, no "the board discussed at length".`);
-  L.push(`- Motions in this format, as their own paragraph: **Motion** to … made by [mover], 2nd by [seconder]. Approved [yay]–[nay]–[abstain]. (Use "unanimously" only if nay and abstain are 0.)`);
+  L.push(`- Motions in this format, as their own paragraph: **Motion** to … made by [mover], 2nd by [seconder]. Approved [yay]–[nay]–[abstain]. (Use "unanimous of members present" only if nay and abstain are 0.) Then list the vote in separate groups: In favor, Opposed, Abstained (when any), Not present for the vote, each with a count and the names the capture gives.`);
   L.push(`- Keep the agenda order below. Skip a topic only if nothing was said and nothing captured — then omit it rather than writing "no update".`);
   L.push(`- The Agenda section lists the background text the board saw for each topic. Use it for context and the spelling of names and terms, but write the minutes from what was actually said and captured.`);
   L.push(`- End with: an **Action Items** table (task · owner · due), an **Important Dates** table (date · what), adjournment time, and "Respectfully submitted, ${M.recorder}, Secretary".`);
@@ -2567,7 +2632,7 @@ function minutesHTML(){
     const unan = res === 'Approved' && v && +it.nay === 0 && +it.abstain === 0;
     return `<div class="motion"><div class="mt"><span>Motion</span><span class="res ${res.toLowerCase()}">${esc(res)}${v ? ' ' + v : ''}</span></div>
       <div class="mx">${esc(motionBody(it.text))}</div>
-      <div class="mv">Moved by ${esc(it.mover || '—')} · Seconded by ${esc(it.second || '—')}${unan ? ' · Unanimous' : ''}</div>${(() => { const r = voteRollLine(it); return r ? `<div class="mvote">${esc(r)}</div>` : ''; })()}</div>`;
+      <div class="mv">Moved by ${esc(it.mover || '—')} · Seconded by ${esc(it.second || '—')}${unan ? ' · Unanimous of members present' : ''}</div>${voteTableHTML(it)}</div>`;
   };
   const pendingMotions = M.items.filter(i => i.kind === 'motion' && ['Pending','Tabled'].includes(i.result || 'Pending'));
   const nextTopics = (M.nextTopics || []).map(t => typeof t === 'string' ? t : (t && t.title) || '').filter(Boolean);
@@ -2601,10 +2666,12 @@ function minutesHTML(){
     </div>
     <h4><span class="no">··</span>Attendance</h4>
     <div class="att">
-      <p><span class="lbl">Present (${present.length})</span>${esc(present.join(', ') || '—')}</p>
-      ${absent.length ? `<p><span class="lbl">Absent (${absent.length})</span>${esc(absent.join(', '))}</p>` : ''}
-      ${attMoves().length ? `<p><span class="lbl">Arrived late / left early</span>${esc(attMoves().join('; '))}</p>` : ''}
-      ${guestsList().length ? `<p><span class="lbl">Guests</span>${esc(guestsList().join(', '))}</p>` : ''}
+      ${groupTableHTML([
+        { label: 'Present', count: present.length, color: GROUP_COLORS.fav, html: esc(present.join(', ') || '—') },
+        ...(attMoves().length ? [{ label: 'Arrivals & departures', count: attMoves().length, color: GROUP_COLORS.late, html: attMoves().map(esc).join('<br>') }] : []),
+        ...(absent.length ? [{ label: 'Absent', count: absent.length, color: GROUP_COLORS.absent, html: esc(absent.join(', ')) }] : []),
+        ...(guestsList().length ? [{ label: 'Guests', count: guestsList().length, color: GROUP_COLORS.guest, html: esc(guestsList().join(', ')) }] : []),
+      ], { m: '4px 0 10px', w: 130, fs: '13.5px' })}
       <p><span class="lbl">Quorum</span>${present.length >= SETTINGS.quorum ? 'A quorum was present.' : 'A quorum was not present.'}</p>
     </div>
     ${sections || '<p class="ph">Nothing captured yet.</p>'}
