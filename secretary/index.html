@@ -183,7 +183,12 @@ input:focus,select:focus,textarea:focus{outline:2px solid var(--blue);outline-of
 .citem .m{color:var(--text-3);font-size:11px}
 .citem .x{background:none;border:0;color:var(--text-3);padding:0 2px}
 .citem .x:hover{color:var(--text)}
-.notelog{display:flex;flex-direction:column;gap:5px;margin:0 0 8px}
+.notelog{display:flex;flex-direction:column;gap:5px;margin:0 0 8px;max-height:34vh;overflow-y:auto}
+.notesto{font-size:13px;color:var(--text-2);margin:0 0 8px}.notesto b{color:var(--text)}
+.notelog .nl.none{color:var(--text-3);background:none;border-style:dashed}
+.notelog .nl.just{animation:notein 1.6s ease-out}@keyframes notein{from{background:rgba(56,211,159,.28);border-color:rgba(56,211,159,.6)}}
+[data-si]{cursor:pointer}.tline.mv:hover .tx{color:var(--text)}
+@media (max-width:760px){.live .col3{order:-1}.live > .card:first-child{order:0}}
 .notelog .nl{font-size:13px;padding:6px 9px;border-radius:8px;background:var(--navy);border:1px solid var(--line);display:flex;gap:8px;align-items:flex-start}
 .notelog .nl .tm{color:var(--text-3);font-size:11px;flex:none;margin-top:2px;font-variant-numeric:tabular-nums}
 .notelog .nl .tx2{flex:1;min-width:0;white-space:pre-wrap;word-break:break-word}
@@ -277,6 +282,8 @@ details.tx div{font-size:13px;color:var(--text-2);max-height:260px;overflow:auto
   body:has(#agLive) .live > .card:first-child,body:has(#agLive) .live .transcript,body:has(#agLive) .live .col3{scrollbar-width:thin;scrollbar-color:var(--steel) transparent}
 }
 
+@media (min-width:761px){.live.notx{grid-template-columns:270px minmax(0,1fr)}.live.notx .col3{grid-column:auto}}
+@media (min-width:901px){body:has(#agLive) .live.notx{grid-template-columns:250px minmax(0,1fr)}}
 @media print{
   @page{size:letter;margin:.55in .6in}
   body{background:#fff}
@@ -376,6 +383,7 @@ const DEFAULT_SETTINGS = {
   quorum: 7,
   lang: 'en-US',
   onDevice: false,
+  liveTranscript: false,   // the browser's live speech-to-text; off unless switched on in Settings
   roster: DEFAULT_ROSTER,
   agenda: DEFAULT_AGENDA,
   minutesBridgeEndpoint: '',
@@ -678,7 +686,7 @@ const Engine = {
     await this.getMic();
     this.running = true; this.paused = false; this.restarts = 0;
     await this.startRecorder(meetingId, startSeq);
-    this.startSpeech();
+    if (SETTINGS.liveTranscript) this.startSpeech();
     this.startMeter(this.onLevel);
     this.wake();
     this.tickStart = performance.now();
@@ -694,7 +702,7 @@ const Engine = {
     if (!this.running || !this.paused) return;
     this.paused = false; this.tickStart = performance.now();
     try { this.recorder && this.recorder.state === 'paused' && this.recorder.resume(); } catch(e){}
-    this.startSpeech();
+    if (SETTINGS.liveTranscript) this.startSpeech();
   },
   async stop(){
     this.running = false; this.paused = false;
@@ -758,7 +766,7 @@ $('#btnSettings').onclick = async () => {
 async function renderHome(){
   const list = (await DB.all('meetings')).sort((a,b) => (b.date||'').localeCompare(a.date||'') || b.created.localeCompare(a.created));
   const support = [];
-  if (!SR) support.push('<b>Live transcript needs Chrome or Microsoft Edge.</b> This browser can still record audio and take notes, but words won’t appear on screen.');
+  if (!SR && SETTINGS.liveTranscript) support.push('<b>Live transcript needs Chrome or Microsoft Edge.</b> This browser can still record audio and take notes, but words won’t appear on screen.');
   if (!navigator.mediaDevices) support.push('<b>Microphone access is unavailable.</b> Open this file directly in Chrome (double-click it, or drag it into a Chrome window).');
   app.innerHTML = `
     <div class="hero">
@@ -993,7 +1001,7 @@ function setAgenda(id, silent){
   M.currentAgendaId = id;
   if (a.startT == null) a.startT = activeNow();
   M.topicSinceWall = new Date().toISOString();
-  if (M.status === 'live' && (M.topicLog ||= []).at(-1)?.agendaId !== id) M.topicLog.push({ wall: M.topicSinceWall, agendaId: id });   // lines up a phone transcript later
+  if (M.status === 'live' && (M.topicLog ||= []).at(-1)?.agendaId !== id) M.topicLog.push({ wall: M.topicSinceWall, agendaId: id, t: Math.round(activeNow()) });   // lines up a phone transcript later
   scheduleSave();
   if (!silent && view === 'live') { drawAgendaLive(); drawTranscript(true); $('#notesFor').textContent = a.title; drawNoteLog(); drawAgendaDetail(); }
 }
@@ -1018,12 +1026,14 @@ function addNoteFromDraft(){
   if (!String(box.value).trim()) { box.focus(); return; }
   M.noteDraft = { agendaId: M.currentAgendaId, text: box.value };
   commitNoteDraft(false);
-  drawNoteLog(); drawAgendaLive();
+  drawNoteLog(true); drawAgendaLive(); toast('Note added to ' + a.title, 1600);
 }
-function drawNoteLog(){
+function drawNoteLog(fresh){
   const el = $('#noteLog'); if (!el) return;
   const a = agendaById(M.currentAgendaId); const lines = noteLines(a);
+  if (!lines.length) { el.innerHTML = `<div class="nl none">No notes yet for this topic.</div>`; return; }
   el.innerHTML = lines.map((ln, i) => { const m = ln.match(NOTE_TS); return `<div class="nl"><span class="tm">${m ? esc(m[1]) : ''}</span><span class="tx2">${esc(stripNoteTs(ln))}</span><button class="x" data-rmnote="${i}" title="Remove this note" type="button">×</button></div>`; }).join('');
+  if (fresh && el.lastElementChild) el.lastElementChild.classList.add('just');
   el.querySelectorAll('[data-rmnote]').forEach(b => b.onclick = () => {
     const i = +b.dataset.rmnote, ls = noteLines(a); const gone = ls[i];
     confirmModal('Remove this note?', esc(stripNoteTs(gone)), 'Remove', () => { const now = noteLines(a); const k = now.indexOf(gone); if (k >= 0) now.splice(k, 1); a.notes = now.join('\n'); scheduleSave(); drawNoteLog(); drawAgendaLive(); });
@@ -1055,7 +1065,7 @@ function renderLive(){
       <button class="btn danger" id="btnEnd">End meeting</button>
     </div>
     <div id="srBanner"></div>
-    <div class="live">
+    <div class="live${SETTINGS.liveTranscript ? '' : ' notx'}">
       <div class="card" style="padding:12px">
         <h2 style="padding:2px 6px 0">Agenda</h2>
         <div class="agenda-live" id="agLive"></div>
@@ -1063,13 +1073,21 @@ function renderLive(){
         <h2 style="padding:14px 6px 0;margin-bottom:6px">Attendance</h2>
         <div style="padding:0 6px;font-size:13px;color:var(--text-2)" id="attMini"></div>
       </div>
-      <div class="card" style="padding:14px 16px">
-        <div class="row" style="justify-content:space-between;margin-bottom:6px"><h2 style="margin:0">Live transcript</h2><label style="font-size:12px;color:var(--text-3);display:flex;gap:6px;align-items:center"><input type="checkbox" id="autoScroll" checked> Follow</label></div>
+      ${SETTINGS.liveTranscript ? `<div class="card" style="padding:14px 16px">
+        <div class="row" style="justify-content:space-between;margin-bottom:6px"><h2 style="margin:0">Live transcript <span style="font:12px var(--body);color:var(--text-3);letter-spacing:0;text-transform:none">· tap a line to move where a topic starts</span></h2><label style="font-size:12px;color:var(--text-3);display:flex;gap:6px;align-items:center"><input type="checkbox" id="autoScroll" checked> Follow</label></div>
         <div class="transcript" id="tx"></div>
-      </div>
+      </div>` : ''}
       <div class="col3">
         <div class="card" style="padding:14px">
-          <h2>Capture</h2>
+          <div class="notebox">
+          <h2 style="margin-bottom:4px">Secretary notes</h2>
+          <div class="notesto">Adding to: <b id="notesFor">${esc(cur.title)}</b></div>
+          <div class="noteadd"><textarea id="agNoteDraft" rows="2" enterkeyhint="done" placeholder="Type a note, then press Enter or Add">${esc((M.noteDraft && M.noteDraft.text) || '')}</textarea><button class="btn primary sm" id="agNoteAdd" type="button" title="Add this note (Enter)">Add</button></div>
+          <p class="notehint">One note at a time: press Enter or Add after each one. It shows below with the time, and the box clears. Switching topics saves anything you haven't added under the topic you typed it in.</p>
+          <div class="notelog" id="noteLog"></div>
+          <div id="agDetail"></div>
+          </div>
+          <h2 style="margin-top:14px">Capture</h2>
           <div class="capture">
             <button class="capbtn motion" data-cap="motion"><b>Motion</b><span>Mover, 2nd, vote <span class="kbd">M</span></span></button>
             <button class="capbtn action" data-cap="action"><b>Action item</b><span>Who, what, when <span class="kbd">A</span></span></button>
@@ -1078,11 +1096,6 @@ function renderLive(){
             <button class="capbtn flag" data-cap="flag"><b>Flag</b><span>Check this later <span class="kbd">F</span></span></button>
             <button class="capbtn next" id="capNext"><b>Next topic →</b><span>Advance agenda <span class="kbd">]</span></span></button>
           </div>
-          <h2 style="margin-bottom:6px">Secretary notes — <span id="notesFor" style="color:var(--text);text-transform:none;letter-spacing:0;font-family:var(--body)">${esc(cur.title)}</span></h2>
-          <div id="agDetail"></div>
-          <div class="notelog" id="noteLog"></div>
-          <div class="noteadd"><textarea id="agNoteDraft" rows="2" placeholder="Type a note, then press Enter or + Add. Each one is kept as its own line.">${esc((M.noteDraft && M.noteDraft.text) || '')}</textarea><button class="btn primary sm" id="agNoteAdd" type="button" title="Add this note (Enter)">+ Add</button></div>
-          <p class="notehint">Every + adds a new note under this topic. Nothing you added is replaced. Notes stay with the topic they were added to.</p>
           <h2 style="margin:14px 0 6px">Captured <span id="capCount" style="color:var(--text-3)"></span></h2>
           <div class="caplist" id="capList"></div>
         </div>
@@ -1102,7 +1115,9 @@ function renderLive(){
   $('#btnEnd').onclick = endMeetingPrompt;
   $('#capNext').onclick = nextAgenda;
   app.querySelectorAll('[data-cap]').forEach(b => b.onclick = () => openCapture(b.dataset.cap));
-  $('#agNoteDraft').oninput = e => { M.noteDraft = { agendaId: M.currentAgendaId, text: e.target.value }; scheduleSave(); };
+  $('#agNoteDraft').oninput = e => {   // some phone keyboards send Enter as a new line, not a key press
+    if (/\n/.test(e.target.value)) { e.target.value = e.target.value.replace(/\s*\n+\s*/g, ' ').trim(); M.noteDraft = { agendaId: M.currentAgendaId, text: e.target.value }; addNoteFromDraft(); return; }
+    M.noteDraft = { agendaId: (M.noteDraft && M.noteDraft.text && M.noteDraft.agendaId) || M.currentAgendaId, text: e.target.value }; scheduleSave(); };
   $('#agNoteDraft').onkeydown = e => { if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) { e.preventDefault(); addNoteFromDraft(); } };
   $('#agNoteAdd').onclick = () => { addNoteFromDraft(); $('#agNoteDraft').focus(); };
   $('#agAddLive').onclick = () => openTopicModal();
@@ -1134,7 +1149,8 @@ function drawState(){
   pb.textContent = notStarted || Engine.paused ? '● Resume' : 'Pause';
   pb.className = 'btn ' + (notStarted || Engine.paused ? 'primary' : '');
   const b = $('#srBanner');
-  if (Engine.srState === 'unsupported') b.innerHTML = `<div class="banner">Live transcript isn’t available in this browser — audio is still recording. Use Chrome or Edge next time, or hand the audio file to Claude afterwards.</div>`;
+  if (!SETTINGS.liveTranscript) b.innerHTML = '';
+  else if (Engine.srState === 'unsupported') b.innerHTML = `<div class="banner">Live transcript isn’t available in this browser — audio is still recording. Use Chrome or Edge next time, or hand the audio file to Claude afterwards.</div>`;
   else if (Engine.srState === 'blocked') b.innerHTML = `<div class="banner">Speech-to-text stopped (${esc(Engine.srError)}). Audio is still recording. ${SETTINGS.onDevice ? 'Try turning off on-device mode in Settings.' : 'Check the internet connection, then Pause and Resume.'}</div>`;
   else b.innerHTML = '';
   drawHealth();
@@ -1143,7 +1159,7 @@ function drawHealth(){
   const h = $('#health'); if (!h) return;
   const mb = (M.audio.bytes/1048576).toFixed(1);
   const since = Engine.lastResultAt ? Math.round((Date.now()-Engine.lastResultAt)/1000) : null;
-  const sr = Engine.srState === 'listening' ? (since!=null && since>45 && Engine.running && !Engine.paused ? `<b style="color:var(--amber)">no words for ${since}s</b>` : '<b>listening</b>') : `<b>${esc(Engine.srState)}</b>`;
+  const sr = !SETTINGS.liveTranscript ? '<b>off</b> (import the phone transcript after)' : Engine.srState === 'listening' ? (since!=null && since>45 && Engine.running && !Engine.paused ? `<b style="color:var(--amber)">no words for ${since}s</b>` : '<b>listening</b>') : `<b>${esc(Engine.srState)}</b>`;
   h.innerHTML = `Audio <b>${mb} MB</b> saved · Speech ${sr} · <b>${M.segments.length}</b> lines`;
 }
 async function togglePause(){
@@ -1190,7 +1206,7 @@ function drawTranscript(){
   for (const s of M.segments) {
     while (ci < capsByT.length && capsByT[ci].t < s.t) { section(capsByT[ci].agendaId); html += capHTML(capsByT[ci++]); }
     section(s.agendaId);
-    html += `<div class="tline"><span class="ts">${fmtClock(s.t)}</span><span class="tx">${esc(s.text)}</span></div>`;
+    html += `<div class="tline${s.src === 'phone' ? '' : ' mv'}"${s.src === 'phone' ? '' : ` data-si="${M.segments.indexOf(s)}" title="Tap to move where a topic starts"`}><span class="ts">${fmtClock(s.t)}</span><span class="tx">${esc(s.text)}</span></div>`;
   }
   while (ci < capsByT.length) { section(capsByT[ci].agendaId); html += capHTML(capsByT[ci++]); }
   const curA = agendaById(M.currentAgendaId);
@@ -1200,6 +1216,82 @@ function drawTranscript(){
   el.innerHTML = html; el.dataset.lastAg = curA ? curA.id : '';
   drawInterim(); scrollTx();
 }
+/* A comment often opens the next topic before the secretary taps Next. Tapping a transcript line moves the
+   boundary between two topics to that line: transcript lines, notes and captures in between follow it. */
+const lapSegs = () => M.segments.filter(s => s.src !== 'phone');
+const phoneLane = () => M.segments.filter(s => s.src === 'phone' && s.how !== 'out' && s.wall).sort((a, b) => Date.parse(a.wall) - Date.parse(b.wall));
+function wallToT(ms){   // clock time -> meeting time, from the nearest earlier point where both are known
+  const pts = [];
+  if (M.startedAt) pts.push({ ms: Date.parse(M.startedAt), t: 0 });
+  (M.topicLog || []).forEach(e => { if (e.t != null) pts.push({ ms: Date.parse(e.wall), t: e.t }); });
+  lapSegs().forEach(s => { if (s.wall) pts.push({ ms: Date.parse(s.wall), t: s.t }); });
+  let a = null; pts.filter(p => !isNaN(p.ms)).forEach(p => { if (p.ms <= ms && (!a || p.ms > a.ms)) a = p; });
+  if (!a) return 0;
+  return Math.max(0, a.t + (ms - a.ms) / 1000);
+}
+const segT = s => s.src === 'phone' ? wallToT(Date.parse(s.wall)) : s.t;
+const noteSec = ln => { const m = String(ln).match(NOTE_TS); if (!m) return null; return m[1].split(':').map(Number).reduce((a, b) => a * 60 + b, 0); };
+function boundaryPlan(si, mode){
+  const s = M.segments[si]; if (!s) return null;
+  const phone = s.src === 'phone', L = phone ? phoneLane() : lapSegs(), i = L.indexOf(s); if (i < 0) return null;
+  const src = s.agendaId;
+  if (mode === 'next') {
+    let j = i; while (j < L.length && L[j].agendaId === src) j++;
+    let tgt = j < L.length ? L[j].agendaId : null;
+    if (!tgt) { const k = agendaIndex(src); tgt = k >= 0 && k < M.agenda.length - 1 ? M.agenda[k + 1].id : null; }
+    if (!tgt || tgt === src) return null;
+    return { mode, src, tgt, phone, segs: L.slice(i, j), lo: segT(s), hi: j < L.length ? segT(L[j]) : Infinity, wall: s.wall, liveSwitch: !phone && j >= L.length };
+  }
+  let k = i; while (k > 0 && L[k - 1].agendaId === src) k--;
+  if (k === 0) return null;
+  const tgt = L[k - 1].agendaId; if (!tgt || tgt === src) return null;
+  const next = L[i + 1];
+  return { mode, src, tgt, phone, segs: L.slice(k, i + 1), lo: segT(L[k - 1]), hi: next ? segT(next) : segT(s) + 1, wall: next && next.agendaId === src ? next.wall : (phone ? new Date(Date.parse(s.wall) + 1000).toISOString() : new Date().toISOString()) };
+}
+function boundaryCounts(p){
+  const notes = noteLines(agendaById(p.src)).filter(ln => { const t = noteSec(ln); return t != null && t >= p.lo && t < p.hi; });
+  const caps = p.src ? M.items.filter(it => it.agendaId === p.src && it.t >= p.lo && it.t < p.hi) : [];
+  return { notes, caps };
+}
+function applyBoundary(p){
+  const { notes, caps } = boundaryCounts(p);
+  p.segs.forEach(s => { s.agendaId = p.tgt; if (s.src === 'phone') s.how = 'manual'; });
+  caps.forEach(it => it.agendaId = p.tgt);
+  const sa = agendaById(p.src), ta = agendaById(p.tgt);
+  if (notes.length) {
+    sa.notes = noteLines(sa).filter(ln => !notes.includes(ln)).join('\n');
+    ta.notes = [...noteLines(ta), ...notes].map((ln, n) => [ln, n]).sort((x, y) => ((noteSec(x[0]) ?? 1e9) - (noteSec(y[0]) ?? 1e9)) || x[1] - y[1]).map(x => x[0]).join('\n');
+  }
+  if (p.mode === 'next' && p.liveSwitch && M.status === 'live' && M.currentAgendaId === p.src) setAgenda(p.tgt, true);
+  const moved = p.mode === 'next' ? p.tgt : p.src;   // the topic whose start moved
+  const log = M.topicLog || [];
+  const e = log.filter(x => x.agendaId === moved).sort((a, b) => Math.abs(Date.parse(a.wall) - Date.parse(p.wall)) - Math.abs(Date.parse(b.wall) - Date.parse(p.wall)))[0];
+  if (e && p.wall) { e.wall = p.wall; const nt = p.mode === 'next' ? p.lo : p.hi; if (isFinite(nt)) e.t = Math.round(nt); }
+  if (p.mode === 'next' && ta && (ta.startT == null || ta.startT > p.lo)) ta.startT = p.lo;
+  scheduleSave();
+  return { lines: p.segs.length, notes: notes.length, caps: caps.length };
+}
+function openLineMenu(si){
+  const s = M.segments[si]; if (!s) return;
+  const nx = boundaryPlan(si, 'next'), pv = boundaryPlan(si, 'prev');
+  const title = id => esc((agendaById(id) || {}).title || 'Topic');
+  const what = p => { const c = boundaryCounts(p); return [`${p.segs.length} transcript line${p.segs.length === 1 ? '' : 's'}`, c.notes.length && `${c.notes.length} note${c.notes.length === 1 ? '' : 's'}`, c.caps.length && `${c.caps.length} capture${c.caps.length === 1 ? '' : 's'}`].filter(Boolean).join(', '); };
+  openModal(`<h3>Move where a topic starts</h3>
+    <p style="color:var(--text-2);margin:0 0 12px;font-size:14px"><span style="color:var(--text-3)">${fmtClock(s.t)}</span> ${esc(s.text)}</p>
+    ${nx ? `<button class="btn primary" id="bNext" style="width:100%;justify-content:center;margin-bottom:6px">Start ${title(nx.tgt)} at this line</button><p class="notehint" style="margin:0 0 12px">Moves ${what(nx)} from ${title(nx.src)} to ${title(nx.tgt)}.</p>` : ''}
+    ${pv ? `<button class="btn" id="bPrev" style="width:100%;justify-content:center;margin-bottom:6px">Keep this line in ${title(pv.tgt)}</button><p class="notehint" style="margin:0 0 12px">Moves ${what(pv)} from the start of ${title(pv.src)} back to ${title(pv.tgt)}.</p>` : ''}
+    ${!nx && !pv ? `<p class="notehint">There's no topic before or after this line to move it to.</p>` : ''}
+    <div class="foot"><button class="btn ghost" id="bCancel">Cancel</button></div>`);
+  $('#bCancel').onclick = closeModal;
+  const run = p => { const r = applyBoundary(p); closeModal(); toast(`Moved ${r.lines} line${r.lines === 1 ? '' : 's'}${r.notes ? `, ${r.notes} note${r.notes === 1 ? '' : 's'}` : ''}${r.caps ? `, ${r.caps} capture${r.caps === 1 ? '' : 's'}` : ''} to ${(agendaById(p.tgt) || {}).title}.`, 3500); afterBoundary(); };
+  if (nx) $('#bNext').onclick = () => run(nx);
+  if (pv) $('#bPrev').onclick = () => run(pv);
+}
+function afterBoundary(){
+  if (view === 'live') { drawTranscript(); drawNoteLog(); drawAgendaLive(); drawCaptures(); const nf = $('#notesFor'); if (nf) nf.textContent = (agendaById(M.currentAgendaId) || {}).title || ''; }
+  else if (view === 'review') renderReview();
+}
+document.addEventListener('click', e => { const t = e.target.closest && e.target.closest('[data-si]'); if (t && M && !e.target.closest('.modal')) openLineMenu(+t.dataset.si); });
 function appendLine(s){
   const el = $('#tx'); if (!el) return;
   const emp = el.querySelector('.empty'); if (emp) emp.remove();
@@ -1207,7 +1299,7 @@ function appendLine(s){
   if (el.dataset.lastAg !== s.agendaId) {
     const d = document.createElement('div'); d.className='tdiv'; d.textContent = agendaById(s.agendaId)?.title || 'Topic'; el.insertBefore(d, interim); el.dataset.lastAg = s.agendaId;
   }
-  const d = document.createElement('div'); d.className = 'tline'; d.innerHTML = `<span class="ts">${fmtClock(s.t)}</span><span class="tx">${esc(s.text)}</span>`;
+  const d = document.createElement('div'); d.className = 'tline mv'; d.dataset.si = M.segments.indexOf(s); d.title = 'Tap to move where a topic starts'; d.innerHTML = `<span class="ts">${fmtClock(s.t)}</span><span class="tx">${esc(s.text)}</span>`;
   el.insertBefore(d, interim); scrollTx();
 }
 function drawInterim(){ const i = $('#interim'); if (i) { i.querySelector('.tx').textContent = interimText; i.querySelector('.ts').textContent = interimText ? '…' : ''; } scrollTx(); }
@@ -1397,7 +1489,7 @@ function renderEditor(){
             <label class="f">Secretary notes<textarea data-notes="${a.id}" rows="${Math.max(2, Math.min(6, (a.notes||'').split('\n').length+1))}" placeholder="Anything to make sure the minutes include.">${esc(a.notes||'')}</textarea></label>
             ${its.length ? `<div style="display:flex;flex-direction:column;gap:6px;margin-top:10px">${its.map(it => `<div class="citem"><span class="k ${it.kind}">${capLabel(it)}</span><div class="b">${esc(capSummary(it))}<div class="m">${fmtClock(it.t)}</div></div><button class="x" data-edit="${it.id}" title="Edit">✎</button></div>`).join('')}</div>` : ''}
             <div class="row" style="margin-top:10px;gap:6px">${['motion','action','date','note'].map(k => `<button class="btn sm ghost" data-add="${k}" data-ag="${a.id}">+ ${capLabel({kind:k})}</button>`).join('')}</div>
-            ${segs.length ? `<details class="tx"><summary>Transcript for this topic</summary><div>${segs.slice().sort((x, y) => (x.src === 'phone') - (y.src === 'phone') || (x.src === 'phone' ? Date.parse(x.wall) - Date.parse(y.wall) : x.t - y.t)).map(s => `<p style="margin:0 0 4px"><span style="color:var(--text-3)">${s.src === 'phone' ? 'phone ' + fmtWall(s.wall) : fmtClock(s.t)}</span> ${esc(s.text)}</p>`).join('')}</div></details>` : ''}
+            ${segs.length ? `<details class="tx"><summary>Transcript for this topic <span style="color:var(--text-3);font-size:12px">(tap a line to move where the topic starts)</span></summary><div>${segs.slice().sort((x, y) => (x.src === 'phone') - (y.src === 'phone') || (x.src === 'phone' ? Date.parse(x.wall) - Date.parse(y.wall) : x.t - y.t)).map(s => `<p style="margin:0 0 4px" class="mv" data-si="${M.segments.indexOf(s)}"><span style="color:var(--text-3)">${s.src === 'phone' ? 'phone ' + fmtWall(s.wall) : fmtClock(s.t)}</span> ${esc(s.text)}</p>`).join('')}</div></details>` : ''}
           </div>`;
         }).join('')}
       </div>
@@ -1419,7 +1511,7 @@ function renderEditor(){
           ${(() => { const ps = phoneSegs(), op = ps.filter(s => !s.agendaId && s.how !== 'out').length;
             return ps.length
               ? `<div class="row" style="justify-content:space-between;gap:8px;margin:0 0 12px;font-size:13px;color:var(--text-2)"><span>Phone transcript: ${ps.length} passages${op ? ` · <b style="color:var(--amber)">${op} need a topic</b>` : ' · all sorted'}</span><button class="btn sm" id="eSortPhone">Sort</button></div>`
-              : `<button class="btn" id="eImportPhone" style="width:100%;justify-content:center;margin-bottom:10px">Import phone transcript</button>`; })()}
+              : `<button class="btn${M.segments.some(s => s.src !== 'phone') ? '' : ' primary'}" id="eImportPhone" style="width:100%;justify-content:center;margin-bottom:6px">Import phone transcript</button><p class="notehint" style="margin:0 0 12px">In Samsung Voice Recorder, open the recording, tap Transcript, then share it as a text file or copy it. Each passage lands under the topic you had open at that moment.</p>`; })()}
           <button class="btn primary big" id="eCreate" style="width:100%;justify-content:center">Create minutes</button>
           <details class="more" style="margin-top:14px"><summary style="cursor:pointer;color:var(--text-2);font-weight:600">More options</summary>
             <div class="exports" style="margin-top:10px">
@@ -1596,15 +1688,34 @@ function openTranscriptImport(){
     <label class="f">Transcript<textarea id="ptText" rows="7" placeholder="Speaker 1  (00:01)&#10;Monday after that, Sunday…"></textarea></label>
     <div class="row" style="margin:8px 0 12px;gap:8px;align-items:center"><label class="btn sm ghost" style="margin:0">Open a .txt file<input type="file" id="ptFile" accept=".txt,.text,.md,text/plain" style="display:none"></label><span id="ptFileName" style="font-size:12px;color:var(--text-3)"></span></div>
     <label class="f">Phone started recording at<input type="time" id="ptStart" step="1" value="${esc(startDefault)}"></label>
-    <p style="font-size:12px;color:var(--text-3);margin:4px 0 12px">The clock time you pressed record on the phone. If you started it when you started the meeting here, leave it as is.</p>
+    <div class="row" style="gap:6px;margin:6px 0 4px;flex-wrap:wrap">${[[-60, '−1 min'], [-10, '−10 s'], [10, '+10 s'], [60, '+1 min']].map(([d, l]) => `<button class="btn sm ghost" type="button" data-nudge="${d}">${l}</button>`).join('')}</div>
+    <p style="font-size:12px;color:var(--text-3);margin:4px 0 12px">The clock time you pressed record on the phone.${M.startedAt ? ` The meeting started here at <b>${esc(new Date(M.startedAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', second: '2-digit' }))}</b>.` : ''} If you started both together, leave it as is. <span id="ptFound"></span></p>
     <div id="ptPreview"></div>
     <div class="foot"><button class="btn ghost" id="ptCancel">Cancel</button><button class="btn" id="ptRead">Read transcript</button><button class="btn primary hidden" id="ptAdd">Add to this meeting</button></div>`);
   $('#modalRoot .modal').classList.add('wide');
   $('#ptCancel').onclick = closeModal;
-  $('#ptFile').onchange = async e => { const f = e.target.files[0]; if (!f) return; $('#ptText').value = await f.text(); $('#ptFileName').textContent = f.name; read(); };
+  let startSet = false;
+  const setStartMs = ms => { $('#ptStart').value = hhmmss(new Date(ms).toISOString()); startSet = true; };
+  const startMs = () => { const [h, mi, se] = ($('#ptStart').value || startDefault).split(':').map(Number); const [y, mo, d] = (M.date || todayISO()).split('-').map(Number); return new Date(y, mo - 1, d, h || 0, mi || 0, se || 0).getTime(); };
+  $('#modalRoot').querySelectorAll('[data-nudge]').forEach(b => b.onclick = () => setStartMs(startMs() + (+b.dataset.nudge) * 1000));
+  $('#ptStart').oninput = () => { startSet = true; };
+  const stampIn = txt => {   // a recording named like "Voice 261110_193754" carries its own start: YYMMDD_HHMMSS
+    const m = String(txt || '').match(/(?:^|\D)(?:20)?(\d{2})(\d{2})(\d{2})[_\- ]?(\d{2})(\d{2})(\d{2})(?!\d)/); if (!m) return null;
+    const [y, mo, d, h, mi, se] = m.slice(1).map(Number);
+    if (mo < 1 || mo > 12 || d < 1 || d > 31 || h > 23 || mi > 59 || se > 59) return null;
+    return { iso: `20${pad(y)}-${pad(mo)}-${pad(d)}`, ms: new Date(2000 + y, mo - 1, d, h, mi, se).getTime() };
+  };
+  const tryStamp = txt => {
+    if (startSet) return; const st = stampIn(txt); if (!st) return;
+    if (M.date && st.iso !== M.date) { $('#ptFound').textContent = 'The recording looks like it’s from ' + st.iso + ', not this meeting’s date.'; return; }
+    setStartMs(st.ms); $('#ptFound').textContent = 'Start time taken from the recording’s name.';
+  };
+  $('#ptFile').onchange = async e => { const f = e.target.files[0]; if (!f) return; $('#ptText').value = await f.text(); $('#ptFileName').textContent = f.name; tryStamp(f.name); read(); };
   $('#ptText').oninput = () => { parsed = null; $('#ptAdd').classList.add('hidden'); $('#ptPreview').innerHTML = ''; };
   const read = () => {
     parsed = parseTranscript($('#ptText').value);
+    tryStamp($('#ptText').value.split('\n').slice(0, 3).join(' '));
+    if (parsed.passages.length > 1 && parsed.passages[0].off == null && parsed.passages[0].text.length <= 60 && stampIn(parsed.passages[0].text)) parsed.passages.shift();   // the recording's name, not something said
     if (!parsed.passages.length) { $('#ptPreview').innerHTML = '<p class="banner">That doesn’t look like a transcript yet. Paste the text from the phone.</p>'; return; }
     const people = M.roster.map(p => p.name);
     $('#ptPreview').innerHTML = `<div class="card" style="background:var(--navy);padding:12px 14px;margin-bottom:6px">
@@ -1613,7 +1724,9 @@ function openTranscriptImport(){
       <div class="ptspk">${parsed.speakers.map((sp, i) => {
         const first = parsed.passages.find(p => p.speaker === sp);
         return `<label class="f">${esc(sp)}<select data-spk="${i}"><option value="">Keep “${esc(sp)}”</option>${people.map(n => `<option>${esc(n)}</option>`).join('')}</select><span class="ptq">“${esc(first.text.slice(0, 70))}${first.text.length > 70 ? '…' : ''}”</span></label>`; }).join('')}</div>` : ''}
-    </div>`;
+    </div>
+    ${parsed.timed && M.startedAt ? `<label class="f" style="margin:8px 0 4px">Line up by a passage (optional)<select id="ptAnchor"><option value="">Pick what was said as you started the meeting here</option>${parsed.passages.filter(p => p.off != null).slice(0, 40).map(p => `<option value="${p.off}">${fmtClock(p.off)} · ${esc(p.text.slice(0, 60))}${p.text.length > 60 ? '…' : ''}</option>`).join('')}</select></label>` : ''}`;
+    const an = $('#ptAnchor'); if (an) an.onchange = () => { if (an.value !== '') { setStartMs(Date.parse(M.startedAt) - (+an.value) * 1000); $('#ptFound').textContent = 'Lined up with the passage you picked.'; } };
     $('#ptAdd').classList.remove('hidden');
   };
   $('#ptRead').onclick = read;
@@ -2478,6 +2591,7 @@ function renderSettings(){
           <label class="f">Usual location<input type="text" id="sLoc" value="${esc(s.location)}" placeholder="e.g. Lunenburg Public Library"></label>
           <label class="f">Quorum (number of directors — check the bylaws)<input type="number" min="1" id="sQ" value="${esc(s.quorum)}"></label>
           <label class="f">Speech language<select id="sLang">${[['en-US','English (US)'],['en-GB','English (UK)'],['es-US','Spanish (US)']].map(([v,l]) => `<option value="${v}" ${v===s.lang?'selected':''}>${l}</option>`).join('')}</select></label>
+          <label style="display:flex;gap:10px;align-items:flex-start;font-size:14px"><input type="checkbox" id="sLive" ${s.liveTranscript?'checked':''} style="margin-top:4px"><span><b>Show the live transcript during meetings</b><br><span style="color:var(--text-3)">Off by default. The phone recording's transcript is better: import it on the review screen after the meeting. Topic start times, arrival and departure times, notes and the audio are kept either way.</span></span></label>
           <label style="display:flex;gap:10px;align-items:flex-start;font-size:14px"><input type="checkbox" id="sDev" ${s.onDevice?'checked':''} style="margin-top:4px"><span><b>Try on-device speech recognition</b><br><span style="color:var(--text-3)">Newer Chrome versions can transcribe without sending audio to Google. <span id="devStatus">Checking…</span></span></span></label>
         </div>
         <h2 style="margin-top:22px">Standard agenda</h2>
@@ -2506,7 +2620,7 @@ function renderSettings(){
   $('#sSave').onclick = async () => {
     SETTINGS.roster = roster.filter(p => p.name.trim()).map(p => ({ name: p.name.trim(), role: p.role.trim() }));
     SETTINGS.secretary = $('#sSec').value.trim(); SETTINGS.presiding = $('#sPres').value.trim(); SETTINGS.location = $('#sLoc').value.trim();
-    SETTINGS.quorum = Math.max(1, +$('#sQ').value || 1); SETTINGS.lang = $('#sLang').value; SETTINGS.onDevice = $('#sDev').checked;
+    SETTINGS.quorum = Math.max(1, +$('#sQ').value || 1); SETTINGS.lang = $('#sLang').value; SETTINGS.onDevice = $('#sDev').checked; SETTINGS.liveTranscript = $('#sLive').checked;
     SETTINGS.agenda = $('#sAg').value.split('\n').map(x => x.trim()).filter(Boolean);
     SETTINGS.minutesBridgeEndpoint = $('#sMEndpoint').value.trim();
     SETTINGS.minutesBridgeKey = $('#sMKey').value.trim();
