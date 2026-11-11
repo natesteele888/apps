@@ -191,11 +191,15 @@
         "autoShots": [],
         "latest": {
           "d": "Nov 11, 2026",
-          "t": "Where Do I Go?: run LYBS Ballclub's Situations trainer, so it's always the newest",
-          "url": "https://github.com/natesteele888/apps/commit/aeae0994cb3c5d68cf2be18383035bb2e7c6daf4"
+          "t": "Situations: note that the App Store's Where Do I Go? runs this trainer too",
+          "url": "https://github.com/natesteele888/lybs-ballclub/commit/df9e0672ef1265604be91ba266d7862c08e9f553"
         },
-        "version": "1.4.9",
+        "version": "1.5.0",
         "history": [
+          {
+            "v": "1.5.0",
+            "t": "Situations: note that the App Store's Where Do I Go? runs this trainer too"
+          },
           {
             "v": "1.4.9",
             "t": "Where Do I Go?: run LYBS Ballclub's Situations trainer, so it's always the newest"
@@ -211,10 +215,6 @@
           {
             "v": "1.4.5",
             "t": "Where Do I Go: stop sending two players to the same spot on a sure triple"
-          },
-          {
-            "v": "1.4.4",
-            "t": "Fix extra-base-hit/relay plays: stop sending a corner infielder to cover second"
           }
         ],
         "caps": [
@@ -765,12 +765,20 @@
         ],
         "autoShots": [],
         "latest": {
-          "d": "Nov 10, 2026",
-          "t": "Public info: keep Back to login on screen on a phone",
-          "url": "https://github.com/natesteele888/lybs-ballclub/commit/5c52499985ee9e614cdb091b4d95c04c03859ba6"
+          "d": "Nov 11, 2026",
+          "t": "Situations: note that the App Store's Where Do I Go? runs this trainer too",
+          "url": "https://github.com/natesteele888/lybs-ballclub/commit/df9e0672ef1265604be91ba266d7862c08e9f553"
         },
-        "version": "1.25.0",
+        "version": "1.25.3",
         "history": [
+          {
+            "v": "1.25.3",
+            "t": "Situations: note that the App Store's Where Do I Go? runs this trainer too"
+          },
+          {
+            "v": "1.25.1",
+            "t": "Add the shared health check and a Something wrong? button"
+          },
           {
             "v": "1.25.0",
             "t": "Public info: keep Back to login on screen on a phone"
@@ -782,14 +790,6 @@
           {
             "v": "1.24.7",
             "t": "Where Do I Go: give extra-base hits a realistic roll instead of always reaching the fence"
-          },
-          {
-            "v": "1.24.6",
-            "t": "Where Do I Go: stop sending two players to the same spot on a sure triple"
-          },
-          {
-            "v": "1.24.5",
-            "t": "Let a Google-signed-in coach open Ballclub with no signal"
           }
         ],
         "caps": [
@@ -950,12 +950,20 @@
         ],
         "autoShots": [],
         "latest": {
-          "d": "Nov 9, 2026",
-          "t": "Power Program: the reminder builder runs from any copy of the repo",
-          "url": "https://github.com/natesteele888/fitness-hub/commit/6f0b9723f5f41826871106eda02d0380cbf5a766"
+          "d": "Nov 11, 2026",
+          "t": "Power Program: make Reset all progress a full-size tap",
+          "url": "https://github.com/natesteele888/fitness-hub/commit/abd518a6e687b69cb107507024fecb1e86ff40e0"
         },
-        "version": "1.3.5",
+        "version": "1.3.7",
         "history": [
+          {
+            "v": "1.3.7",
+            "t": "Power Program: make Reset all progress a full-size tap"
+          },
+          {
+            "v": "1.3.6",
+            "t": "Power Program: save progress under a name-free key, copying old progress forward"
+          },
           {
             "v": "1.3.5",
             "t": "Power Program: the reminder builder runs from any copy of the repo"
@@ -967,14 +975,6 @@
           {
             "v": "1.3.3",
             "t": "Power Program: reload with no signal instead of a browser error"
-          },
-          {
-            "v": "1.3.2",
-            "t": "Power Program: the Back gesture closes an exercise card instead of leaving the app"
-          },
-          {
-            "v": "1.3.1",
-            "t": "Power Program: make the exercise info buttons and Prev/Next easier to tap"
           }
         ],
         "caps": [
