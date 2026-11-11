@@ -200,6 +200,207 @@ Drum, drum, drum!|🥁
 Mom said, "Stop the drum."|🛑
 Stan can clap.|👏
 Clap, clap, clap!|👏`,
+`Clip Clop the Pony|🐴|#ffe0c2
+Clip is a pony.|🐴
+Clop is a pony, too.|🐴
+Clip can trot fast.|💨🐴
+Clop can trot fast, too.|💨🐴
+Clip, clop! Clip, clop!|🐴🐴
+Clip and Clop trot up the hill.|⛰️🐴
+Plop! Clip and Clop nap.|😴🐴`,
+`Princess Gwen|👸|#ffd1ec
+Gwen is a princess.|👸
+Gwen has a pink dress.|👗
+The dress has six gems.|💎
+Gwen can run in the dress.|🏃‍♀️
+Gwen can jump, and the gems go clink, clink!|✨
+Gwen is a fun princess.|😊
+Gwen sits on the swing.|🛝`,
+`Fluff the Rabbit|🐰|#ffd6e8
+Fluff is a rabbit.|🐰
+Fluff can hop, hop, hop.|🐰
+Fluff can dig in the mud.|🟤🐰
+Fluff has a snack.|🥕
+Crunch, crunch, crunch!|🥕
+A fox is in the grass!|🦊
+Fluff ran fast and hid in a log.|💨🪵
+The fox ran off.|🦊💨`,
+`The Pink Castle|🏰|#ffc8dd
+The princess has a pink castle.|🏰
+The castle has a big flag.|🚩
+The castle has bricks.|🧱
+The castle has a drum.|🥁
+Splash! The castle has a pond.|💦
+The princess likes the castle.|❤️🏰
+Step in, step in!|🚪`,
+`The Slow Sloth|🦥|#e6e0c8
+Sloth is slow.|🦥
+Sloth can grip a branch.|🌿🦥
+Slip, slip, slip.|🦥
+A frog hops past.|🐸
+"Hop, hop!" said the frog.|🐸
+"Slow, slow," said Sloth.|🦥
+Sloth is not sad. Sloth likes to be slow.|😊🦥`,
+`The Lost Slipper|👠|#ffe0f0
+Gwen has a pink slipper.|🩰
+Gwen went to a big ball.|💃
+Gwen ran fast. Oh no! A slipper fell off!|😮
+The slipper is on the step.|👠
+Prince Chet got the slipper.|🤴
+It fits Gwen! It fits!|✨
+Gwen and Chet dance and clap.|💃🤴`,
+`Splash the Fish|🐟|#c9eaff
+Splash is a fish.|🐟
+Splash can swim.|🏊
+Splash can flip and flop.|🐟
+A big crab is on the rock.|🦀🪨
+"Snap!" said the crab.|🦀
+Splash swam off fast.|💨🐟
+Splash hid in the sand.|🏖️`,
+`Princess Trish Can Fix It|🛠️|#ffe3a3
+Trish is a princess.|👸
+Trish can fix a cart.|🛒
+The cart is stuck in the mud.|🟤
+Trish got a stick and a plank.|🪵
+Tug, tug, tug!|💪
+Clink, clank! Clink, clank!|🔧
+The cart is not stuck! Trish can fix it!|🎉`,
+`Chuck the Chick|🐥|#fff3b0
+Chuck is a chick.|🐥
+Chuck can peck, peck, peck.|🌾
+Chuck can chat. "Chip, chip!"|💬
+Chuck has a snack.|🌽
+A truck! Chuck ran fast.|🚚💨
+Chuck hid in a box.|📦
+The truck went past. Chuck is back with Mom.|🐔`,
+`The Pink Wand|🪄|#e5dbff
+Princess Bell has a wand.|🪄
+Swish, swish!|✨
+Zap! A frog is in the grass.|🐸
+The frog is pink!|🐸💗
+"Not pink!" said the frog.|🐸
+Swish! The frog is green.|💚
+"Thank you, Bell!" said the frog.|🐸👸`,
+`The Big Crab|🦀|#ffd0c0
+A crab is on the sand.|🏖️
+Snap, snap, snap!|🦀
+The crab can pinch.|🦀
+A shell is on the sand.|🐚
+The crab went in the shell.|🐚🦀
+Splash! Splash!|🌊
+The crab can run on the sand.|💨🦀`,
+`Princess Clem and the Dragon|🐉|#d4f0c4
+A dragon is on the hill.|🐉⛰️
+The dragon is sad.|😢
+Princess Clem runs up the hill.|🏃‍♀️
+"Are you sad?" said Clem.|👸
+"I have a cold," said the dragon.|🤧
+Clem got a rug and a hot cup.|🧣☕
+The dragon is not sad!|🐉😊`,
+`Pug and the Stick|🐶|#e8d6ff
+Pug is a dog.|🐶
+Pug has a stick.|🪵
+Pug can run with the stick.|🏃🪵
+"Drop it, Pug!" said Dad.|🧔
+Pug did not drop it.|🐶
+Dad has a snack.|🍖
+Pug let go of the stick. Good Pug!|🐶❤️`,
+`The Duck Race|🦆|#d4f0c4
+Six ducks sit on a log.|🪵🦆
+"Quack, quack!" said Duck.|🦆
+"Let us swim fast!"|🏊
+Splash, splash, splash!|💦
+Stan swam fast.|💨🦆
+"I win!" said Stan.|🏆
+The six ducks had fun.|😊`,
+`A Hut for Pug|🐶|#ffe0b2
+Pug has no hut.|🐶
+Let us build a hut for Pug.|🔨
+First, get six planks.|🪵
+Next, tap, tap, tap with a hammer.|🔨
+Then, put the planks on top.|🏠
+Last, add a flag.|🚩
+Pug can sit in the hut! Pug is glad.|🐶🏠`,
+`Build a Sand Castle|🏖️|#fff0c2
+Kim and Dad sit on the sand.|🏖️
+First, dig in the sand.|⛏️
+Next, pack the sand in a pan.|🪣
+Then, flip the pan.|🔄
+Tap, tap, tap!|🏖️
+Last, add a flag on top.|🚩
+Kim and Dad clap.|👏`,
+`Build a Fort|⛺|#d4f0c4
+Kim and Dad will build a fort.|⛺
+First, get six sticks.|🌿
+Next, stand the sticks up.|⬆️
+Then, put a cloth on top.|🛖
+Last, put a rug in the fort.|🟫
+Kim and Dad sit in the fort.|👧🧔
+It is snug!|😊`,
+`The Block Tower|🧱|#ffd6a5
+Ben has six blocks.|🧱
+First, set a block.|🧱
+Next, set a block on top.|🧱🧱
+Then, stack and stack.|🧱🧱🧱
+The stack is tall!|🗼
+Crash! The blocks fall.|💥
+Ben can stack them up, up, up!|🧱`,
+`The Brick Hut|🧱|#ffc8c0
+Ben the pig will build a hut.|🐷
+First, get bricks.|🧱
+Next, stack the bricks.|🧱🧱
+Then, put mud on the bricks.|🟤
+Last, add a flat top.|🏠
+The hut is up!|🎉
+Ben sits in the hut. It is snug.|🐷🏠`,
+`Jam on a Bun|🍔|#ffd6e0
+Let us fix a snack.|🥪
+First, get a bun.|🍔
+Next, add jam.|🍓
+Then, add a plum.|🍑
+Last, put the top on.|🍔
+Yum, yum, yum!|😋
+It is a big snack!|🍔`,
+`The Sun|☀️|#fff3b0
+The sun is up.|🌅
+The sun is hot.|🥵
+The sun is big.|☀️
+The sun is a star.|⭐
+The sun is far, far off.|🌌
+It is a big, hot star.|☀️
+Hi, sun!|👋☀️`,
+`The Moon|🌙|#dcd6ff
+The moon is up.|🌙
+The moon is not hot.|🥶
+The moon is a big rock.|🪨
+The moon has dents.|🌑
+The moon gets thin.|🌘
+Then the moon gets big.|🌕
+Hi, moon!|👋🌙`,
+`Sun and Moon|🌞|#ffe8a8
+Sun is up. Moon is down.|☀️
+Sun is hot. Moon is not.|🌙
+Sun and Moon swap.|🔄
+Sun is down. Moon is up.|🌙
+Sun naps. Moon is up in the dark.|🌌
+The sun is back! The moon naps.|🌅
+Up, down, up, down!|🔁`,
+`At the Ocean|🌊|#c9eaff
+The ocean is big.|🌊
+Splash, splash on the sand.|💦
+A crab is on a rock.|🦀
+A fish can swim fast.|🐟
+A shell is in the sand.|🐚
+A ship is on the ocean.|🚢
+The ocean is big, big, big!|🌊`,
+`A Walk in the Forest|🌲|#cdeccf
+We go for a walk in the forest.|🥾
+We see a stump with moss.|🪵
+A frog hops on a log.|🐸
+Six ants went up a twig.|🐜
+Shh! An elk!|🦌
+The elk ran off.|💨
+We had a fun walk.|😊`,
 `Jack and Jill|⛰️|#c9e4ff
 Jack and Jill went up the hill|⛰️
 To fetch a pail of water.|🪣

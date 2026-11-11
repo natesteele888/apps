@@ -26,6 +26,21 @@ const TODAY = '2026-11-08';
       for (const p of b.pages) { assert.ok(p.text.trim().length > 0 && p.pic.trim().length > 0, b.id + ' page'); assert.ok(!/\|/.test(p.text), b.id + ' stray bar'); }
     }
   });
+  await test('library: the new Level 3 animal and princess stories are short, have pictures, and break apart cleanly', () => {
+    const l3 = B.books.filter(b => b.level === 3); assert.ok(l3.length >= 25, 'level 3 has ' + l3.length);
+    const want = ['Clip Clop the Pony', 'Fluff the Rabbit', 'The Slow Sloth', 'Splash the Fish', 'Chuck the Chick', 'The Big Crab', 'Pug and the Stick', 'The Duck Race', 'Princess Gwen', 'The Lost Slipper', 'The Pink Castle', 'Princess Trish Can Fix It', 'The Pink Wand', 'Princess Clem and the Dragon'];
+    for (const t of want) { const b = l3.find(x => x.title === t); assert.ok(b, t + ' is on the Level 3 shelf'); assert.ok(b.pages.length >= 6 && b.pages.length <= 8, t + ' has ' + b.pages.length + ' pages'); for (const p of b.pages) { assert.ok(p.pic.trim(), t + ' page has a picture'); assert.ok(p.text.split(/\s+/).length <= 10, t + ': "' + p.text + '" is long for Level 3'); assert.ok(!/[0-9]/.test(p.text)); } }
+    eq(want.filter(t => /Princess|Slipper|Castle|Wand/.test(t)).length, 6, 'six princess stories'); eq(want.filter(t => !/Princess|Slipper|Castle|Wand/.test(t)).length, 8, 'eight animal stories');
+    const syl = w => WD.analyze(w).text; eq(syl('princess'), 'prin·cess'); eq(syl('dragon'), 'drag·on'); eq(syl('castle'), 'cas·tle'); eq(syl('slipper'), 'slip·per'); eq(syl('rabbit'), 'rab·bit'); assert.ok(WD.analyze('castle').tricky && WD.analyze('prince').tricky && !WD.analyze('crab').tricky);
+  });
+  await test('library: Level 3 step-by-step "how to build or make it" stories and nature stories', () => {
+    const l3 = B.books.filter(b => b.level === 3); assert.ok(l3.length >= 36, 'level 3 has ' + l3.length);
+    const steps = ['A Hut for Pug', 'Build a Sand Castle', 'Build a Fort', 'The Block Tower', 'The Brick Hut', 'Jam on a Bun'], nature = ['The Sun', 'The Moon', 'Sun and Moon', 'At the Ocean', 'A Walk in the Forest'];
+    for (const t of steps) { const b = l3.find(x => x.title === t); assert.ok(b, t); const all = b.pages.map(p => p.text).join(' '); assert.ok(/First,/.test(all) && /Next,/.test(all) && /Last,|Then,/.test(all), t + ' goes step by step (First, Next, Then, Last)'); const order = ['First,', 'Next,', 'Then,', 'Last,'].map(w => all.indexOf(w)).filter(i => i >= 0); eq(JSON.stringify(order), JSON.stringify(order.slice().sort((a, c) => a - c)), t + ' steps are in order'); }
+    for (const t of nature) { const b = l3.find(x => x.title === t); assert.ok(b, t); assert.ok(b.pages.length >= 6 && b.pages.length <= 8, t + ' pages'); }
+    for (const t of steps.concat(nature)) for (const p of l3.find(x => x.title === t).pages) { assert.ok(p.pic.trim(), t + ' picture'); assert.ok(p.text.split(/\s+/).length <= 10, t + ': "' + p.text + '"'); }
+    assert.ok(WD.analyze('first').tricky && WD.analyze('ocean').tricky && WD.analyze('forest').tricky && !WD.analyze('hammer').tricky); eq(WD.analyze('hammer').text, 'ham·mer');
+  });
   await test('library: level 1 and 2 pages stay short (first-grade length)', () => {
     for (const b of B.books.filter(b => b.level <= 2)) for (const p of b.pages) {
       const n = p.text.split(/\s+/).length;
