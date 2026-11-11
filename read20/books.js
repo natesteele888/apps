@@ -313,6 +313,94 @@ Splash, splash, splash!|💦
 Stan swam fast.|💨🦆
 "I win!" said Stan.|🏆
 The six ducks had fun.|😊`,
+`A Hut for Pug|🐶|#ffe0b2
+Pug has no hut.|🐶
+Let us build a hut for Pug.|🔨
+First, get six planks.|🪵
+Next, tap, tap, tap with a hammer.|🔨
+Then, put the planks on top.|🏠
+Last, add a flag.|🚩
+Pug can sit in the hut! Pug is glad.|🐶🏠`,
+`Build a Sand Castle|🏖️|#fff0c2
+Kim and Dad sit on the sand.|🏖️
+First, dig in the sand.|⛏️
+Next, pack the sand in a pan.|🪣
+Then, flip the pan.|🔄
+Tap, tap, tap!|🏖️
+Last, add a flag on top.|🚩
+Kim and Dad clap.|👏`,
+`Build a Fort|⛺|#d4f0c4
+Kim and Dad will build a fort.|⛺
+First, get six sticks.|🌿
+Next, stand the sticks up.|⬆️
+Then, put a cloth on top.|🛖
+Last, put a rug in the fort.|🟫
+Kim and Dad sit in the fort.|👧🧔
+It is snug!|😊`,
+`The Block Tower|🧱|#ffd6a5
+Ben has six blocks.|🧱
+First, set a block.|🧱
+Next, set a block on top.|🧱🧱
+Then, stack and stack.|🧱🧱🧱
+The stack is tall!|🗼
+Crash! The blocks fall.|💥
+Ben can stack them up, up, up!|🧱`,
+`The Brick Hut|🧱|#ffc8c0
+Ben the pig will build a hut.|🐷
+First, get bricks.|🧱
+Next, stack the bricks.|🧱🧱
+Then, put mud on the bricks.|🟤
+Last, add a flat top.|🏠
+The hut is up!|🎉
+Ben sits in the hut. It is snug.|🐷🏠`,
+`Jam on a Bun|🍔|#ffd6e0
+Let us fix a snack.|🥪
+First, get a bun.|🍔
+Next, add jam.|🍓
+Then, add a plum.|🍑
+Last, put the top on.|🍔
+Yum, yum, yum!|😋
+It is a big snack!|🍔`,
+`The Sun|☀️|#fff3b0
+The sun is up.|🌅
+The sun is hot.|🥵
+The sun is big.|☀️
+The sun is a star.|⭐
+The sun is far, far off.|🌌
+It is a big, hot star.|☀️
+Hi, sun!|👋☀️`,
+`The Moon|🌙|#dcd6ff
+The moon is up.|🌙
+The moon is not hot.|🥶
+The moon is a big rock.|🪨
+The moon has dents.|🌑
+The moon gets thin.|🌘
+Then the moon gets big.|🌕
+Hi, moon!|👋🌙`,
+`Sun and Moon|🌞|#ffe8a8
+Sun is up. Moon is down.|☀️
+Sun is hot. Moon is not.|🌙
+Sun and Moon swap.|🔄
+Sun is down. Moon is up.|🌙
+Sun naps. Moon is up in the dark.|🌌
+The sun is back! The moon naps.|🌅
+Up, down, up, down!|🔁`,
+`At the Ocean|🌊|#c9eaff
+The ocean is big.|🌊
+Splash, splash on the sand.|💦
+A crab is on a rock.|🦀
+A fish can swim fast.|🐟
+A shell is in the sand.|🐚
+A ship is on the ocean.|🚢
+The ocean is big, big, big!|🌊`,
+`A Walk in the Forest|🌲|#cdeccf
+We go for a walk in the forest.|🥾
+We see a stump with moss.|🪵
+A frog hops on a log.|🐸
+Six ants went up a twig.|🐜
+Shh! An elk!|🦌
+The elk ran off.|💨
+We had a fun walk.|😊`,
 `Jack and Jill|⛰️|#c9e4ff
 Jack and Jill went up the hill|⛰️
 To fetch a pail of water.|🪣

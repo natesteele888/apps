@@ -21,7 +21,7 @@
   /* Words that don't follow the sounds, so she learns them by sight. */
   const TRICKY = new Set(("a the of to do was said you your are have they what who one put full come some done gone there give lives says couldn't thought caught laughed heard wolf " +
     "world people again any every everyone everywhere great sure door friend friends believe whey was were where here love ahead animal diamond cocoa tortoise people's once could would should walk walking " +
-    "i he she me we be my by so no go too two who why how now castle prince princess dance pony oh")
+    "i he she me we be my by so no go too two who why how now castle prince princess dance pony oh first ocean forest")
     .split(/\s+/).filter(Boolean));
   ["he", "she", "me", "we", "be", "my", "by", "so", "no", "go", "too", "now", "how", "why", "i"].forEach(w => TRICKY.delete(w)); // these sound out fine
 
