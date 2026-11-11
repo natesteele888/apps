@@ -16,12 +16,12 @@
     garden: "gar-den", summer: "sum-mer", winter: "win-ter", story: "sto-ry", ready: "read-y", blanket: "blan-ket", collar: "col-lar", chimp: "chimp", someone: "some-one", lion: "li-on",
     oven: "ov-en", master: "mas-ter", proud: "proud", steady: "stead-y", ropes: "ropes", lives: "lives", hives: "hives", please: "please", thought: "thought",
     sure: "sure", walking: "walk-ing", watched: "watched", worked: "worked", worry: "wor-ry", laughed: "laughed", caught: "caught", heard: "heard", great: "great", door: "door", food: "food",
-    friend: "friend", friends: "friends", find: "find", fleece: "fleece", whey: "whey", knew: "knew", knocked: "knocked", pail: "pail", true: "true", truth: "truth", queen: "queen"
+    friend: "friend", friends: "friends", find: "find", fleece: "fleece", whey: "whey", knew: "knew", knocked: "knocked", pail: "pail", true: "true", truth: "truth", queen: "queen", dragon: "drag-on", princess: "prin-cess", pony: "po-ny"
   };
   /* Words that don't follow the sounds, so she learns them by sight. */
   const TRICKY = new Set(("a the of to do was said you your are have they what who one put full come some done gone there give lives says couldn't thought caught laughed heard wolf " +
     "world people again any every everyone everywhere great sure door friend friends believe whey was were where here love ahead animal diamond cocoa tortoise people's once could would should walk walking " +
-    "i he she me we be my by so no go too two who why how now")
+    "i he she me we be my by so no go too two who why how now castle prince princess dance pony oh")
     .split(/\s+/).filter(Boolean));
   ["he", "she", "me", "we", "be", "my", "by", "so", "no", "go", "too", "now", "how", "why", "i"].forEach(w => TRICKY.delete(w)); // these sound out fine
 

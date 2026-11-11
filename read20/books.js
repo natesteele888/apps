@@ -200,6 +200,119 @@ Drum, drum, drum!|🥁
 Mom said, "Stop the drum."|🛑
 Stan can clap.|👏
 Clap, clap, clap!|👏`,
+`Clip Clop the Pony|🐴|#ffe0c2
+Clip is a pony.|🐴
+Clop is a pony, too.|🐴
+Clip can trot fast.|💨🐴
+Clop can trot fast, too.|💨🐴
+Clip, clop! Clip, clop!|🐴🐴
+Clip and Clop trot up the hill.|⛰️🐴
+Plop! Clip and Clop nap.|😴🐴`,
+`Princess Gwen|👸|#ffd1ec
+Gwen is a princess.|👸
+Gwen has a pink dress.|👗
+The dress has six gems.|💎
+Gwen can run in the dress.|🏃‍♀️
+Gwen can jump, and the gems go clink, clink!|✨
+Gwen is a fun princess.|😊
+Gwen sits on the swing.|🛝`,
+`Fluff the Rabbit|🐰|#ffd6e8
+Fluff is a rabbit.|🐰
+Fluff can hop, hop, hop.|🐰
+Fluff can dig in the mud.|🟤🐰
+Fluff has a snack.|🥕
+Crunch, crunch, crunch!|🥕
+A fox is in the grass!|🦊
+Fluff ran fast and hid in a log.|💨🪵
+The fox ran off.|🦊💨`,
+`The Pink Castle|🏰|#ffc8dd
+The princess has a pink castle.|🏰
+The castle has a big flag.|🚩
+The castle has bricks.|🧱
+The castle has a drum.|🥁
+Splash! The castle has a pond.|💦
+The princess likes the castle.|❤️🏰
+Step in, step in!|🚪`,
+`The Slow Sloth|🦥|#e6e0c8
+Sloth is slow.|🦥
+Sloth can grip a branch.|🌿🦥
+Slip, slip, slip.|🦥
+A frog hops past.|🐸
+"Hop, hop!" said the frog.|🐸
+"Slow, slow," said Sloth.|🦥
+Sloth is not sad. Sloth likes to be slow.|😊🦥`,
+`The Lost Slipper|👠|#ffe0f0
+Gwen has a pink slipper.|🩰
+Gwen went to a big ball.|💃
+Gwen ran fast. Oh no! A slipper fell off!|😮
+The slipper is on the step.|👠
+Prince Chet got the slipper.|🤴
+It fits Gwen! It fits!|✨
+Gwen and Chet dance and clap.|💃🤴`,
+`Splash the Fish|🐟|#c9eaff
+Splash is a fish.|🐟
+Splash can swim.|🏊
+Splash can flip and flop.|🐟
+A big crab is on the rock.|🦀🪨
+"Snap!" said the crab.|🦀
+Splash swam off fast.|💨🐟
+Splash hid in the sand.|🏖️`,
+`Princess Trish Can Fix It|🛠️|#ffe3a3
+Trish is a princess.|👸
+Trish can fix a cart.|🛒
+The cart is stuck in the mud.|🟤
+Trish got a stick and a plank.|🪵
+Tug, tug, tug!|💪
+Clink, clank! Clink, clank!|🔧
+The cart is not stuck! Trish can fix it!|🎉`,
+`Chuck the Chick|🐥|#fff3b0
+Chuck is a chick.|🐥
+Chuck can peck, peck, peck.|🌾
+Chuck can chat. "Chip, chip!"|💬
+Chuck has a snack.|🌽
+A truck! Chuck ran fast.|🚚💨
+Chuck hid in a box.|📦
+The truck went past. Chuck is back with Mom.|🐔`,
+`The Pink Wand|🪄|#e5dbff
+Princess Bell has a wand.|🪄
+Swish, swish!|✨
+Zap! A frog is in the grass.|🐸
+The frog is pink!|🐸💗
+"Not pink!" said the frog.|🐸
+Swish! The frog is green.|💚
+"Thank you, Bell!" said the frog.|🐸👸`,
+`The Big Crab|🦀|#ffd0c0
+A crab is on the sand.|🏖️
+Snap, snap, snap!|🦀
+The crab can pinch.|🦀
+A shell is on the sand.|🐚
+The crab went in the shell.|🐚🦀
+Splash! Splash!|🌊
+The crab can run on the sand.|💨🦀`,
+`Princess Clem and the Dragon|🐉|#d4f0c4
+A dragon is on the hill.|🐉⛰️
+The dragon is sad.|😢
+Princess Clem runs up the hill.|🏃‍♀️
+"Are you sad?" said Clem.|👸
+"I have a cold," said the dragon.|🤧
+Clem got a rug and a hot cup.|🧣☕
+The dragon is not sad!|🐉😊`,
+`Pug and the Stick|🐶|#e8d6ff
+Pug is a dog.|🐶
+Pug has a stick.|🪵
+Pug can run with the stick.|🏃🪵
+"Drop it, Pug!" said Dad.|🧔
+Pug did not drop it.|🐶
+Dad has a snack.|🍖
+Pug let go of the stick. Good Pug!|🐶❤️`,
+`The Duck Race|🦆|#d4f0c4
+Six ducks sit on a log.|🪵🦆
+"Quack, quack!" said Duck.|🦆
+"Let us swim fast!"|🏊
+Splash, splash, splash!|💦
+Stan swam fast.|💨🦆
+"I win!" said Stan.|🏆
+The six ducks had fun.|😊`,
 `Jack and Jill|⛰️|#c9e4ff
 Jack and Jill went up the hill|⛰️
 To fetch a pail of water.|🪣
