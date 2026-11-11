@@ -475,6 +475,86 @@ Pete sees a big, red rose.|🌹
 Zoom! Pete lands on the rose.|🌹🐝
 Sweet! Pete likes the treat.|🍯
 Pete takes it home to the hive.|🏠🐝`,
+`Kate Learns to Cheer|🎀|#ffd6e8
+Kate wants to cheer.|📣
+Coach Jean shows a cheer.|👩‍🏫
+"Clap, clap, jump!"|🙌
+Kate claps. Kate jumps high.|🤸
+Kate shakes her poms.|🎀
+"Go, team, go!" Kate yells.|📣
+Kate is on the team!|🎉`,
+`Pyramid Day|🔺|#ffe0b2
+Today the team makes a pyramid.|🔺
+Jade and Fay are the bases.|🧍‍♀️
+They stand in a line.|➖
+Rose is the flyer.|🧍‍♀️
+Rose climbs up. She holds on tight.|⬆️
+The spotter stays close.|👀
+The pyramid stays up! Cheers!|🎉`,
+`Game Day Cheer|📣|#c9eaff
+It is game day!|🏟️
+The team rides the bus.|🚌
+The fans wave and cheer.|👏
+Kate leads the cheer.|📣
+"We can win! We can win!"|🎉
+The team scores!|🏆
+The fans cheer and cheer.|📣`,
+`Mae on the Beam|🤸|#e5dbff
+Mae stands on the beam.|🤸‍♀️
+The beam is high and thin.|📏
+Mae holds her arms out wide.|🙆‍♀️
+Step, step, step.|👣
+Mae turns on one toe.|🩰
+She jumps! She lands!|✨
+Mae stays on the beam!|🏅`,
+`Cartwheel Day|🤸‍♀️|#ffd6a5
+Jane wants to do a cartwheel.|🤸‍♀️
+Hands down. Feet up.|🙌
+Oops! Jane falls on the mat.|😵
+Jane tries again.|🔁
+Hands down. Feet up. Over!|🌀
+Jane lands on her feet.|🦶
+"I did it!" Jane cheers.|🎉`,
+`The Big Flip|🤸|#dbf0d0
+Rae is scared to flip.|😨
+"Take your time," says Coach Dee.|👩‍🏫
+Rae takes a deep breath.|🌬️
+Coach Dee stays close.|👀
+Rae tucks her knees and flips.|🤸
+She lands on the mat.|🧘‍♀️
+Rae is brave! "I did it!"|🏅`,
+`Dave the Whale|🐋|#c9eaff
+Dave is a whale.|🐋
+Dave can swim in the deep sea.|🌊
+Dave sings a song.|🎵
+"Oooo, oooo," sings Dave.|🐋
+A little fish hears the song.|🐟
+The fish swims by Dave.|🐟🐋
+Dave and the fish are friends.|💙`,
+`Princess Rose and the Goat|🐐|#ffd1dc
+Princess Rose has a goat.|👸🐐
+The goat is named Moe.|🐐
+Moe likes to chew.|😋
+Moe chews the robe!|👘
+"Moe, no!" says Rose.|🙅‍♀️
+Rose gives Moe a snack.|🥕
+Moe is kind. Rose gives a hug.|🤗`,
+`The Rain|🌧️|#d0e0f5
+It is a gray day.|☁️
+Drip, drop. It starts to rain.|💧
+Rain, rain, rain!|🌧️
+The rain stops.|☀️
+Look! A rainbow!|🌈
+Red, blue, green, and gold.|🌈
+The rainbow stays.|😊`,
+`How to Make a Kite|🪁|#bde0fe
+Let us make a kite.|🪁
+First, get two sticks.|🌿
+Next, tape the sticks.|📏
+Then, tape on the paper.|📄
+Last, tie on a string.|🧵
+Take the kite to the lake.|🏞️
+Up, up, up it goes!|🪁`,
 `Row, Row, Row Your Boat|🚣|#c8ecff
 Row, row, row your boat,|🚣
 Gently down the stream.|🌊
@@ -564,7 +644,79 @@ Then the lights went out!|🌑
 We sat together on the rug with a blanket.|🛋️
 Mom told a story, and the storm went on outside.|📖
 After a while, the rain got soft and slow.|🌦️
-In the morning, the sun came up. The storm was gone.|🌅`]
+In the morning, the sun came up. The storm was gone.|🌅`,
+`Cheer Tryouts|📣|#ffd6e8
+Maya wanted to be on the cheer team more than anything.|🎀
+But tryouts were on Friday, and she was nervous.|😬
+Every day after school, Maya practiced the routine in her room.|🏠
+Her big sister Lila watched and clapped.|👭
+"Smile bigger," said Lila. "Cheer is about showing joy!"|😁
+On Friday, Maya walked into the gym with her heart pounding.|💓
+She forgot one jump, but she smiled and kept going.|🤸‍♀️
+The coach said, "Welcome to the team, Maya!"|🎉`,
+`The Squad's First Competition|🏆|#ffe3a3
+The squad had worked hard for weeks, and today was the big competition.|🏆
+Their uniforms were bright red and white, and their bows were perfect.|🎀
+The first part of the routine went great.|👏
+Then Zoe, the flyer, wobbled at the top of the stack.|😮
+The bases held her steady, and she smiled as if nothing had happened.|🤝
+At the end, the squad did not win first place.|🥈
+But the judges said they showed great teamwork.|📋
+On the bus home, the squad sang and said, "Next time!"|🚌`,
+`Nadia and the Perfect Ten|🏅|#fff0b3
+Nadia was born in Romania in 1961. She started gymnastics when she was six years old.|🤸
+A coach saw her and her friend doing cartwheels on a school playground.|🤸‍♀️
+Nadia trained hard and got better and better.|💪
+In 1976, at the Olympic Games in Montreal, she was only fourteen.|🏟️
+On the uneven bars, she did her routine without one mistake.|🤸
+The judges gave her a perfect score: a ten! No gymnast had ever gotten one at the Olympics.|🔟
+The scoreboard was not made to show a ten, so it showed 1.00!|📟
+Nadia won three gold medals at those Games and earned seven perfect tens.|🥇`,
+`How Gymnasts Stay Safe|🧤|#d4f0c4
+Gymnastics looks like magic, but gymnasts also follow safety rules.|🤸
+Before they start, they warm up so their muscles are ready.|🔥
+They rub chalk on their hands to keep them dry and help them grip.|🤲
+Thick mats on the floor soften landings.|🟦
+A spotter is a coach who stands close and helps if a gymnast starts to fall.|👀
+Gymnasts learn small skills first and build up to big ones.|📈
+If something hurts, they tell their coach right away.|🗣️
+Safe gymnasts can have fun for a long time.|😊`,
+`A Sea Turtle's Journey|🐢|#c9eaff
+On a warm night, a mother sea turtle crawls out of the ocean onto the sand.|🌙
+She digs a deep hole with her back flippers.|🏖️
+She lays about a hundred eggs in the hole and covers them with sand.|🥚
+Then she goes back to the sea, and the eggs stay warm under the sand.|🌊
+After about two months, the baby turtles hatch and dig their way out.|🐣
+They crawl toward the sparkling ocean as fast as their little flippers can go.|🐢
+Many animals try to eat them, so only a few grow up.|🦀
+Years later, a grown female may swim back to the same beach to lay her own eggs.|🏖️`,
+`Princess Mia and the Missing Key|🗝️|#e5dbff
+Princess Mia woke up and found that the castle gate key was gone.|🏰
+Without the key, no one could open the big gate for the morning market.|🚪
+"I will find it," said Mia, and she looked around the great hall.|🔍
+In the kitchen, the cook said she had seen something shiny in the garden.|👩‍🍳
+In the garden, a little gray cat sat by the fountain, licking its paw.|🐈
+The key was hanging on the cat's collar, tied with a ribbon.|🗝️
+Mia gave the cat a treat, and the cat let her take the key.|🍖
+The gate opened, the market began, and Mia was the hero of the morning.|🎉`,
+`How Rain Happens|☔|#d0e0f5
+Rain does not just fall from nowhere. It is part of a big circle called the water cycle.|☔
+First, the sun warms water in oceans, lakes and puddles.|☀️
+The warm water turns into a gas called vapor and rises into the air.|⬆️
+High up, the air is cold, and the vapor turns back into tiny drops of water.|❄️
+Millions of tiny drops gather together to make clouds.|☁️
+When the drops get big and heavy, they fall as rain.|🌧️
+The rain flows into streams and rivers and back to the ocean.|🏞️
+Then the sun warms it again, and the circle starts over.|🔄`,
+`Building a Treehouse|🌳|#cdeccf
+Dad and Sam wanted to build a treehouse in the big oak tree.|🌳
+First, they made a plan and drew it on paper.|📝
+Next, Dad picked a strong branch, and they measured twice before cutting.|📏
+Then they built the floor, and Sam held the boards while Dad used the drill.|🔨
+They added walls and a roof, and Sam painted the door blue.|🎨
+Last, they put up a rope ladder and a little flag.|🚩
+That night, Sam and Dad climbed up to look at the stars.|⭐
+"Best house ever," said Sam.|🏠`]
   };
 
   const slug = t => t.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");

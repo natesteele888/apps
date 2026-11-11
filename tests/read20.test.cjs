@@ -41,6 +41,15 @@ const TODAY = '2026-11-08';
     for (const t of steps.concat(nature)) for (const p of l3.find(x => x.title === t).pages) { assert.ok(p.pic.trim(), t + ' picture'); assert.ok(p.text.split(/\s+/).length <= 10, t + ': "' + p.text + '"'); }
     assert.ok(WD.analyze('first').tricky && WD.analyze('ocean').tricky && WD.analyze('forest').tricky && !WD.analyze('hammer').tricky); eq(WD.analyze('hammer').text, 'ham·mer');
   });
+  await test('library: new Level 4 and Level 5 stories (cheerleading, gymnastics, animals, princesses, nature, building)', () => {
+    const l4 = B.books.filter(b => b.level === 4), l5 = B.books.filter(b => b.level === 5); assert.ok(l4.length >= 21 && l5.length >= 15, 'level 4 has ' + l4.length + ', level 5 has ' + l5.length);
+    const w4 = ['Kate Learns to Cheer', 'Pyramid Day', 'Game Day Cheer', 'Mae on the Beam', 'Cartwheel Day', 'The Big Flip', 'Dave the Whale', 'Princess Rose and the Goat', 'The Rain', 'How to Make a Kite'];
+    const w5 = ['Cheer Tryouts', "The Squad's First Competition", 'Nadia and the Perfect Ten', 'How Gymnasts Stay Safe', "A Sea Turtle's Journey", 'Princess Mia and the Missing Key', 'How Rain Happens', 'Building a Treehouse'];
+    for (const [list, titles, max] of [[l4, w4, 9], [l5, w5, 20]]) for (const t of titles) { const b = list.find(x => x.title === t); assert.ok(b, t + ' is on the shelf'); assert.ok(b.pages.length >= 7 && b.pages.length <= 8, t + ' has ' + b.pages.length + ' pages'); for (const p of b.pages) { assert.ok(p.pic.trim(), t + ' picture'); const n = p.text.split(/\s+/).length; assert.ok(n <= max, t + ': "' + p.text + '" has ' + n + ' words'); } }
+    eq(w4.filter(t => /Cheer|Pyramid/.test(t)).length, 3, 'three cheer stories at Level 4'); eq(w4.filter(t => /Beam|Cartwheel|Flip/.test(t)).length, 3, 'three gymnastics stories at Level 4'); eq(w5.filter(t => /Cheer|Squad/.test(t)).length, 2); eq(w5.filter(t => /Nadia|Gymnasts/.test(t)).length, 2);
+    const nadia = l5.find(b => b.title.startsWith('Nadia')).pages.map(p => p.text).join(' '); assert.ok(/1976/.test(nadia) && /Montreal/.test(nadia) && /fourteen/.test(nadia) && /three gold medals/.test(nadia) && /seven perfect tens/.test(nadia), 'the Nadia facts are in');
+    const syl = w => WD.analyze(w).text; eq(syl('gymnastics'), 'gym·nas·tics'); eq(syl('competition'), 'com·pe·ti·tion'); eq(syl('uneven'), 'un·e·ven'); eq(syl('sparkling'), 'spar·kling'); eq(syl('pyramid'), 'py·ra·mid'); eq(syl('cartwheel'), 'cart·wheel'); eq(syl('castle'), 'cas·tle');
+  });
   await test('library: level 1 and 2 pages stay short (first-grade length)', () => {
     for (const b of B.books.filter(b => b.level <= 2)) for (const p of b.pages) {
       const n = p.text.split(/\s+/).length;
