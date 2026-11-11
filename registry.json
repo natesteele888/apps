@@ -136,7 +136,7 @@
         "feats": [
           [
             "🧠",
-            "707-rule engine",
+            "812-rule engine",
             "Jobs change with runners on base and the number of outs."
           ],
           [
@@ -153,12 +153,12 @@
         "facts": [
           [
             "Situations",
-            "1,320",
+            "1,368",
             "covered"
           ],
           [
             "Rules",
-            "707",
+            "812",
             "in the engine"
           ],
           [
@@ -172,7 +172,7 @@
           "pwa",
           "offline"
         ],
-        "tie": "The situations brain is being packaged so any league app can use it. LYBS Ballclub's situations tab is next in line.",
+        "tie": "Runs LYBS Ballclub's own Situations trainer, so every fix made there shows up here the same day.",
         "rel": [
           "ballclub",
           "bengals"
@@ -186,8 +186,7 @@
           "store/shots/situations-2.webp",
           "store/shots/situations-3.webp",
           "store/shots/situations-4.webp",
-          "store/shots/situations-5.webp",
-          "store/shots/situations-6.webp"
+          "store/shots/situations-5.webp"
         ],
         "autoShots": [],
         "latest": {
@@ -222,9 +221,17 @@
           "Runners, outs and the hit, then watch all nine fielders move",
           "Your job on the play, in plain words, for your position",
           "Fly balls, base hits and bunts too, with cutoffs and relays",
-          "Quiz yourself on where you go, then see the right answer",
-          "The few rules that cover almost every ball, in plain words",
-          "Keep the roster and game schedule with the plays"
+          "Quiz yourself on numbers, notation and where you go",
+          "The few rules that cover almost every ball, in plain words"
+        ]
+      },
+      "source": {
+        "repo": "natesteele888/lybs-ballclub",
+        "paths": [
+          "js/situations.js",
+          "css/situations.css",
+          "data/situations.csv",
+          "data/responsibilities.csv"
         ]
       }
     },
@@ -353,9 +360,6 @@
           "Once a game starts, everyone's picks show and winners are marked",
           "A leaderboard for each league keeps score",
           "See how your picks went, team by team",
-          "Press and hold a team to see its record, top players, last 5 and last 5 head to head",
-          "Standings, the playoff picture and a page for every team: next game, where, and every result",
-          "Sign in with Google or any email",
           "Switch leagues with one tap: NFL, MLB, NBA and NHL",
           "Invite your crew with a code, and turn it off any time"
         ]
