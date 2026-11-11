@@ -255,6 +255,7 @@ details.tx div{font-size:13px;color:var(--text-2);max-height:260px;overflow:auto
 .doc .motion .res.tabled,.doc .motion .res.withdrawn,.doc .motion .res.pending{background:#7E8284}
 .doc .motion .mx{margin:4px 0 2px;color:#1B1F2E}
 .doc .motion .mv{font-family:var(--body);font-size:12.5px;color:#4a5068}
+.doc .motion .mvote{font-family:var(--body);font-size:10.5px;color:#6b7088;margin-top:4px;line-height:1.35}
 .doc .ph{color:#8a91a8;font-style:italic;background:#F4F6FA;border:1px dashed #C9CFDB;padding:8px 12px;border-radius:4px;font-size:14px}
 .doc table{width:100%;border-collapse:collapse;font:13.5px/1.45 var(--body);margin-top:6px;page-break-inside:auto}
 .doc th{text-align:left;font:600 10.5px var(--label);letter-spacing:1.4px;text-transform:uppercase;color:#fff;background:#090D32;padding:7px 10px}
@@ -959,6 +960,26 @@ function attEvents(m=M){ return (m.attLog || []).filter(e => m.roster.some(p => 
 function attendedNames(m=M){ const ev = attEvents(m); return m.roster.map(p=>p.name).filter(n => m.attendance[n] === 'present' || ev.some(e => e.name === n)); }
 function attVerb(e, m=M){ return e.to === 'absent' ? 'left' : attEvents(m).some(x => x.name === e.name && x.at < e.at) ? 'returned' : 'arrived'; }
 function attMoves(m=M){ return attEvents(m).map(e => `${e.name} ${attVerb(e, m)} at ${to12(e.hm)}`); }
+function attStateAt(name, ms, m=M){
+  const ev = attEvents(m).filter(e => e.name === name), before = ev.filter(e => Date.parse(e.at) <= ms);
+  if (before.length) return before.at(-1).to;
+  if (ev.length) return ev[0].to === 'present' ? 'absent' : 'present';   // the first tap says what they were before it
+  return m.attendance[name] || 'present';
+}
+function itemWallMs(it, m=M){ if (it.wall) return Date.parse(it.wall); return m.startedAt ? Date.parse(m.startedAt) + (it.t || 0) * 1000 : NaN; }
+function voteRollLine(it, m=M){   // "In favor (11): … · Not present for the vote: …"
+  const ms = itemWallMs(it, m); if (isNaN(ms) || !m.roster.length) return '';
+  const inn = [], out = [], ev = attEvents(m);
+  m.roster.forEach(p => {
+    if (attStateAt(p.name, ms, m) === 'present') { inn.push(p.name); return; }
+    const left = ev.filter(e => e.name === p.name && e.to === 'absent' && Date.parse(e.at) <= ms).at(-1);
+    const later = ev.find(e => e.name === p.name && e.to === 'present' && Date.parse(e.at) > ms);
+    out.push(p.name + (left ? ` (left at ${to12(left.hm)})` : later ? ` (arrived at ${to12(later.hm)})` : ' (absent)'));
+  });
+  const res = it.result || 'Pending', v = voteStr(it);
+  const allFor = res === 'Approved' && (!v || (+it.nay === 0 && +it.abstain === 0));
+  return `${allFor ? 'In favor' : 'Present for the vote'} (${inn.length}): ${inn.join(', ')}${out.length ? ' · Not present for the vote: ' + out.join(', ') : ''}`;
+}
 function attTag(name){ return attEvents().filter(e => e.name === name).map(e => `${attVerb(e)} ${to12(e.hm)}`).join(', '); }
 function drawAttendance(el, onChange){
   el.innerHTML = M.roster.map(p => {
@@ -1334,7 +1355,7 @@ function personOptions(sel, allowBlank=true, extra=''){
 }
 
 function openCapture(kind, existing){
-  const it = existing ? structuredClone(existing) : { id: uid(), kind, t: Math.round(activeNow()), agendaId: M.currentAgendaId, text: '' };
+  const it = existing ? structuredClone(existing) : { id: uid(), kind, t: Math.round(activeNow()), wall: new Date().toISOString(), agendaId: M.currentAgendaId, text: '' };
   kind = it.kind;
   const ctx = recentContext();
   const ctxHTML = !existing && ctx ? `<div class="ctx"><em>Just said</em>${esc(ctx)}</div>` : '';
@@ -2288,7 +2309,7 @@ function buildHandoff(){
     if ((a.notes||'').trim()) { L.push(`Secretary notes:`); noteLines(a).forEach(ln => { const m = ln.match(NOTE_TS); L.push(`- NOTE ${m ? '[' + m[1] + '] ' : ''}${stripNoteTs(ln)}`); }); }
     its.forEach(it => {
       const ts = `[${fmtTs(it.t)}]`;
-      if (it.kind === 'motion') L.push(`- MOTION ${ts} ${it.text} · Moved: ${it.mover || '?'} · 2nd: ${it.second || '?'} · Vote (yay–nay–abstain): ${voteStr(it) || 'not recorded'} · Result: ${it.result || 'Pending'}`);
+      if (it.kind === 'motion') L.push(`- MOTION ${ts} ${it.text} · Moved: ${it.mover || '?'} · 2nd: ${it.second || '?'} · Vote (yay–nay–abstain): ${voteStr(it) || 'not recorded'} · Result: ${it.result || 'Pending'}${voteRollLine(it) ? ' · ' + voteRollLine(it) : ''}`);
       else if (it.kind === 'action') L.push(`- ACTION ${ts} ${it.text} · Owner: ${it.owner || 'unassigned'} · Due: ${it.due ? fmtDateShort(it.due) : 'none given'}`);
       else if (it.kind === 'date') L.push(`- KEY DATE ${ts} ${it.when ? fmtDateShort(it.when) : '(date not entered)'} — ${it.text}`);
       else if (it.kind === 'decision') L.push(`- DECISION ${ts} ${it.text}`);
@@ -2323,7 +2344,7 @@ function minutesHTML(){
     const unan = res === 'Approved' && v && +it.nay === 0 && +it.abstain === 0;
     return `<div class="motion"><div class="mt"><span>Motion</span><span class="res ${res.toLowerCase()}">${esc(res)}${v ? ' ' + v : ''}</span></div>
       <div class="mx">${esc(motionBody(it.text))}</div>
-      <div class="mv">Moved by ${esc(it.mover || '—')} · Seconded by ${esc(it.second || '—')}${unan ? ' · Unanimous' : ''}</div></div>`;
+      <div class="mv">Moved by ${esc(it.mover || '—')} · Seconded by ${esc(it.second || '—')}${unan ? ' · Unanimous' : ''}</div>${(() => { const r = voteRollLine(it); return r ? `<div class="mvote">${esc(r)}</div>` : ''; })()}</div>`;
   };
   const pendingMotions = M.items.filter(i => i.kind === 'motion' && ['Pending','Tabled'].includes(i.result || 'Pending'));
   const nextTopics = (M.nextTopics || []).map(t => typeof t === 'string' ? t : (t && t.title) || '').filter(Boolean);
@@ -2437,6 +2458,7 @@ body{margin:0;background:#fff}
 .doc .motion .res.tabled,.doc .motion .res.withdrawn,.doc .motion .res.pending{background:#7E8284}
 .doc .motion .mx{margin:4px 0 2px;color:#1B1F2E}
 .doc .motion .mv{font-family:Inter,Arial,sans-serif;font-size:12px;color:#4a5068}
+.doc .motion .mvote{font-family:Inter,Arial,sans-serif;font-size:10px;color:#6b7088;margin-top:4px;line-height:1.35}
 .doc .ph{color:#8a91a8;font-style:italic;background:#F4F6FA;border:1px dashed #C9CFDB;padding:8px 12px;border-radius:4px;font-size:13.5px}
 .doc table{width:100%;border-collapse:collapse;font:13px/1.45 Inter,Arial,sans-serif;margin-top:6px}
 .doc th{text-align:left;font:600 10px Oswald,'Arial Narrow',sans-serif;letter-spacing:1.2px;text-transform:uppercase;color:#fff;background:#090D32;padding:6px 9px}
