@@ -198,6 +198,27 @@ const GPS = [[0x0001, 2, 'N'], [0x0002, 5, [[41, 1], [6, 1], [36, 1]]], [0x0003,
     assert.ok((await barText(asked.page)).includes('Open in browser'), 'the install page keeps the jump');
     eq(asked.errors.length, 0, asked.errors.join(' | ')); await asked.ctx.close();
   });
+  await test('install pop-up: Samsung Internet and other Android browsers get their own menu steps and Open in Chrome; Facebook counts as inside another app', async () => {
+    const hasBar = page => page.waitForFunction(() => Array.from(document.body.children).some(e => e.shadowRoot && e.shadowRoot.querySelector('.bar')), null, { timeout: 6000 });
+    const SAMSUNG = 'Mozilla/5.0 (Linux; Android 14; SM-S921U) AppleWebKit/537.36 (KHTML, like Gecko) SamsungBrowser/26.0 Chrome/122.0.0.0 Mobile Safari/537.36';
+    const FIREFOX = 'Mozilla/5.0 (Android 14; Mobile; rv:131.0) Gecko/131.0 Firefox/131.0';
+    const FACEBOOK = 'Mozilla/5.0 (Linux; Android 14; SM-S921U Build/UP1A) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/130.0.0.0 Mobile Safari/537.36 [FB_IAB/FB4A;FBAV/480.0.0.0;]';
+    const sam = await installPage(SAMSUNG);
+    await sam.page.goto(server.url); await hasBar(sam.page);
+    let t = await barText(sam.page);
+    assert.ok(t.includes('Add page to') && t.includes('Home screen') && t.includes('Open in Chrome') && !t.includes('in Chrome, then'), t);
+    const btns = await sam.page.evaluate(() => Array.from(Array.from(document.body.children).find(e => e.shadowRoot && e.shadowRoot.querySelector('.bar')).shadowRoot.querySelectorAll('button')).map(b => b.textContent));
+    eq(btns.join(','), 'Open in Chrome,OK', 'Samsung: Open in Chrome then OK');
+    eq(sam.errors.length, 0, sam.errors.join(' | ')); await sam.ctx.close();
+    const fx = await installPage(FIREFOX);
+    await fx.page.goto(server.url); await hasBar(fx.page);
+    t = await barText(fx.page); assert.ok(t.includes('Add app to Home screen') && t.includes('Open in Chrome'), t);
+    eq(fx.errors.length, 0, fx.errors.join(' | ')); await fx.ctx.close();
+    const fb = await installPage(FACEBOOK);
+    await fb.page.goto(server.url); await hasBar(fb.page);
+    t = await barText(fb.page); assert.ok(t.includes('inside another app') && t.includes('Open in browser'), t);
+    eq(fb.errors.length, 0, fb.errors.join(' | ')); await fb.ctx.close();
+  });
   await test('install pop-up: iPhone gets the Share-button steps; an installed app and a home-screen launch get nothing', async () => {
     const { ctx, page, errors } = await installPage(IPHONE);
     await page.goto(server.url); await page.waitForFunction(() => Array.from(document.body.children).some(e => e.shadowRoot && e.shadowRoot.querySelector('.bar')), null, { timeout: 6000 });

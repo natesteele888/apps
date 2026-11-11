@@ -101,7 +101,7 @@
 
   window.addEventListener("beforeinstallprompt", function (e) {
     e.preventDefault(); deferred = e;
-    if (asked || !later()) {
+    if (!framed && (asked || !later())) {
       var go = function () { show(["Add " + appName() + " to your home screen", "Opens full screen, like a real app."], true); };
       document.body ? go() : document.addEventListener("DOMContentLoaded", go);
     }
@@ -116,36 +116,56 @@
      moment Chrome does offer. "Not now" hides it for a week; an app already on this phone's home screen is left alone. */
   var ios = /iP(hone|ad|od)/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
   var android = /Android/i.test(navigator.userAgent);
-  var miniBrowser = android && /; wv\)/.test(navigator.userAgent); /* inside another app (Android marks those "wv") */
+  var UA = navigator.userAgent;
+  /* Inside another app: Android marks its mini-browsers "wv"; Facebook, Instagram, the Google app and a few others
+     don't, so name them too. None of them can install. */
+  var miniBrowser = android && (/; wv\)/.test(UA) || /FBAN|FBAV|FB_IAB|Instagram|GSA\/|Line\/|Snapchat|musical_ly|Twitter/.test(UA));
+  /* Android browsers other than Chrome. Samsung Internet is the Galaxy's default browser, so a link tapped in another
+     app often lands there, and its menu is not Chrome's. Each gets its own steps plus a one-tap Open in Chrome. */
+  var samsung = android && !miniBrowser && /SamsungBrowser/.test(UA);
+  var otherAndroid = android && !miniBrowser && !samsung && /Firefox|EdgA|OPR|Opera|YaBrowser|UCBrowser|DuckDuckGo|Brave|Vivaldi|MiuiBrowser|HeyTapBrowser/.test(UA);
   function installedHere() { try { return !!localStorage.getItem("nate.installed:" + DIR); } catch (e) { return false; } }
+  function jumpTo(pkg) {
+    /* Carry ?install along so the bar shows straight away in the browser it lands in. */
+    var q = asked ? location.search : (location.search ? location.search + "&install" : "?install");
+    location.href = "intent://" + location.host + location.pathname + q + "#Intent;scheme=https;package=" + pkg + ";S.browser_fallback_url=" + encodeURIComponent(location.href) + ";end";
+  }
+  function addButton(label, pkg) {
+    if (!host) return;
+    var root = host.shadowRoot || host, x = root.querySelector(".x"), b = document.createElement("button");
+    root.querySelector(".bar").classList.add("two");
+    b.className = "go"; b.type = "button"; b.textContent = label;
+    b.onclick = function () { jumpTo(pkg); };
+    x.parentNode.insertBefore(b, x);
+  }
+  function androidSteps() {
+    if (miniBrowser) return "You're inside another app. Open this page in your browser to add it.";
+    if (samsung) return "Tap \u2261 at the bottom, then Add page to, then Home screen. Or open it in Chrome.";
+    if (otherAndroid) return /Firefox/.test(UA) ? "Tap \u22ee, then Add app to Home screen. Or open it in Chrome." : "In this browser's menu, choose Add to Home screen. Or open it in Chrome.";
+    return asked ? "Already installed? It's in your app drawer. If not, open this page in your browser and tap Install."
+      : "Tap \u22ee in Chrome, then Add to Home screen (or Install app).";
+  }
   function howTo(force) {
     if (!document.body || (!force && (host || installedHere()))) return;
     if (host) hide();
     if (deferred) { show(["Add " + appName() + " to your home screen", "Opens full screen, like a real app."], true); return; }
     if (ios) {
-      var chromeIOS = /CriOS/.test(navigator.userAgent);
+      var chromeIOS = /CriOS/.test(UA);
       show(["Add " + appName() + " to your home screen", chromeIOS ? "Tap the Share button (top right), then Add to Home Screen." : "Tap the Share button (square with an arrow), then Add to Home Screen."], false);
       return;
     }
-    show(["Add " + appName() + " to your home screen", android
-      ? (miniBrowser ? "You're inside another app. Open this page in your browser to add it."
-        : asked ? "Already installed? It's in your app drawer. If not, open this page in your browser and tap Install."
-        : "Tap ⋮ in Chrome, then Add to Home screen (or Install app).")
+    show(["Add " + appName() + " to your home screen", android ? androidSteps()
       : "In your browser's menu, choose Install app or Add to Home screen."], false);
     /* Android hides Install inside an app's mini-browser, so offer a one-tap jump into the real browser there and
-       from the install page. In Chrome itself the page is already in the browser: no jump, no squeezed text. */
-    if ((miniBrowser || (android && asked)) && host) {
-      var root = host.shadowRoot || host, x = root.querySelector(".x"), b = document.createElement("button");
-      root.querySelector(".bar").classList.add("two");
-      b.className = "go"; b.type = "button"; b.textContent = "Open in browser";
-      b.onclick = function () {
-        var pkg = /SamsungBrowser/.test(navigator.userAgent) ? "com.sec.android.app.sbrowser" : "com.android.chrome";
-        location.href = "intent://" + location.host + location.pathname + location.search + "#Intent;scheme=https;package=" + pkg + ";S.browser_fallback_url=" + encodeURIComponent(location.href) + ";end";
-      };
-      x.parentNode.insertBefore(b, x);
-    }
+       from the install page. Samsung Internet and other browsers get a jump to Chrome. In Chrome itself the page is
+       already in the browser: no jump, no squeezed text. */
+    if (miniBrowser || (android && asked && !samsung && !otherAndroid)) addButton("Open in browser", "com.android.chrome");
+    else if (samsung || otherAndroid) addButton("Open in Chrome", "com.android.chrome");
   }
-  if (asked || !later()) setTimeout(function () { howTo(false); }, asked ? 1500 : 3000);
+  /* Shown inside another page (an iframe, like an app embedded in the Dashboard or opened in the Toolbox's viewer),
+     a page can't be installed, so the bar stays away there unless the app asks for it. */
+  var framed; try { framed = window.top !== window.self; } catch (e) { framed = true; }
+  if (!framed && (asked || !later())) setTimeout(function () { howTo(false); }, asked ? 1500 : 3000);
   /* An app can offer it again from its own settings: window.nateInstall.show() */
   window.nateInstall = { show: function () { howTo(true); } };
 })();
