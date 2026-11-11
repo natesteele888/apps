@@ -47,6 +47,7 @@ a{color:var(--blue-soft)}
 .brand span{font:500 11px var(--label);letter-spacing:2px;color:var(--silver);text-transform:uppercase}
 .topbar .spacer{flex:1}
 @media (max-width:600px){.topbar{flex-wrap:wrap;gap:8px;padding:8px 12px}.topbar img{width:30px;height:30px}.topbar .brand{flex:1 1 0;min-width:0}.brand b{font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.brand span,.topbar .spacer{display:none}.topbar .pill{margin-left:auto;font-size:10px;letter-spacing:.5px;padding:3px 8px;white-space:nowrap}.topbar .btn.sm{flex:1 1 calc(50% - 4px);justify-content:center;white-space:nowrap;min-height:34px}.btn.sm{min-height:34px}}
+.stepl{font:600 12px var(--label);letter-spacing:.8px;text-transform:uppercase;color:var(--text-3);margin:14px 0 6px}
 .pill{font:500 12px var(--label);letter-spacing:1px;text-transform:uppercase;padding:4px 10px;border-radius:999px;border:1px solid var(--line);color:var(--text-2)}
 
 /* ---------- buttons ---------- */
@@ -389,6 +390,7 @@ const DEFAULT_SETTINGS = {
   agenda: DEFAULT_AGENDA,
   minutesBridgeEndpoint: '',
   minutesBridgeKey: '',
+  boardEmails: '',   // kept in your Google account with the roster, never in the code
 };
 
 /* ---------- tiny helpers ---------- */
@@ -781,6 +783,7 @@ async function renderHome(){
     <div class="row" style="margin-bottom:18px">
       <button class="btn primary big" id="btnNew">+ New meeting</button>
       <label class="btn ghost" style="cursor:pointer">Import backup<input type="file" id="impFile" accept=".json,application/json" hidden></label>
+      ${Cloud.on && list.length ? '<button class="btn" id="btnLatest" type="button">Open latest meeting</button>' : ''}
       <button class="btn ghost" id="btnExportAll" type="button">Export all meetings</button>
     </div>
     <div id="syncBar" class="syncbar"></div>
@@ -821,6 +824,15 @@ async function renderHome(){
     e.target.value = '';
   };
   $('#btnExportAll').onclick = exportAllMeetings;
+  const bl = document.getElementById('btnLatest');
+  if (bl) bl.onclick = async () => {
+    bl.disabled = true; bl.textContent = 'Checking for the latest…';
+    await Promise.race([cloudSyncAll().catch(e => console.warn(e)), new Promise(r => setTimeout(r, 15000))]);
+    const all = (await DB.all('meetings')).filter(m => m.status !== 'setup' || m.startedAt).sort((a, b) => (b.date || '').localeCompare(a.date || '') || (b.created || '').localeCompare(a.created || ''));
+    const m = all[0]; if (!m) { toast('No meetings yet.'); renderHome(); return; }
+    M = await DB.get('meetings', m.id);
+    if (liveElsewhere(M)) go('follow'); else go(M.status === 'ended' ? 'review' : M.status === 'live' ? 'live' : 'setup');
+  };
   drawSyncBar(); drawLockRow();
   const hb = document.getElementById('btnHealth'); if (hb) hb.onclick = () => { if (window.nateHealth) nateHealth.report(); };
 }
@@ -1083,7 +1095,7 @@ function renderLive(){
       </div>
       <div class="spacer" style="flex:1"></div>
       <button class="btn" id="btnPause">Pause</button>
-      <button class="btn danger" id="btnEnd">End meeting</button>
+      <button class="btn danger" id="btnEnd">Finish meeting</button>
     </div>
     <div id="srBanner"></div>
     <div class="live${SETTINGS.liveTranscript ? '' : ' notx'}">
@@ -1133,7 +1145,11 @@ function renderLive(){
   if (Engine.running) Engine.startMeter(Engine.onLevel);
 
   $('#btnPause').onclick = togglePause;
-  $('#btnEnd').onclick = endMeetingPrompt;
+  $('#btnEnd').onclick = e => {
+    const b = e.currentTarget;
+    if (b.dataset.armed !== '1') { b.dataset.armed = '1'; b.textContent = 'Tap again to finish'; clearTimeout(b._t); b._t = setTimeout(() => { b.dataset.armed = ''; b.textContent = 'Finish meeting'; }, 4000); return; }
+    clearTimeout(b._t); finishMeeting(b);
+  };
   $('#capNext').onclick = nextAgenda;
   app.querySelectorAll('[data-cap]').forEach(b => b.onclick = () => openCapture(b.dataset.cap));
   $('#agNoteDraft').oninput = e => {   // some phone keyboards send Enter as a new line, not a key press
@@ -1449,6 +1465,24 @@ function endMeetingPrompt(){
   };
 }
 
+async function finishMeeting(b){
+  // Straight from the click, so Google's window may open: it lets the recording go to Drive and signs this device in to sync.
+  let tp = null;
+  if (driveShown() && navigator.onLine) { try { tp = driveToken(); } catch(e){ tp = null; } if (tp) tp.catch(() => {}); }
+  if (b) { b.disabled = true; b.textContent = 'Finishing…'; }
+  if (!M.calledToOrder && M.startedAt) M.calledToOrder = new Date(M.startedAt).toTimeString().slice(0, 5);
+  M.adjourned = new Date().toTimeString().slice(0, 5);
+  commitNoteDraft(false); bankClock();
+  try { await Engine.stop(); } catch(e){ console.warn(e); }
+  M.status = 'ended'; M.endedAt = new Date().toISOString();
+  await saveNow(); go('review');
+  if (!tp) { toast('Meeting finished and saved on this ' + DEVICE.name + '. The recording stays here until you press Save to Drive.', 6000); return; }
+  saveToDrive(tp, { audioOnly: true, after: r => {
+    toast(r.done.length ? 'Meeting finished. The recording is in Drive, and the meeting syncs to your other devices.' : 'Meeting finished and saved.', 7000);
+    if (view === 'review') renderReview();
+  } });
+}
+
 /* keyboard shortcuts during the meeting */
 document.addEventListener('keydown', e => {
   if (view !== 'live') return;
@@ -1528,14 +1562,23 @@ function renderEditor(){
         </div>
         <div class="card">
           <h2>When you are done</h2>
-          <p style="font-size:13px;color:var(--text-2);margin:0 0 12px">Builds the minutes from everything above, emails a PDF — with the transcript attached — to ${esc(reviewEmail())} for you to check, then brings you back here to approve.</p>
+          <p style="font-size:13px;color:var(--text-2);margin:0 0 12px">${driveShown() ? 'Add what your phone caught, then one button saves the minutes and drafts the board email.' : 'Builds the minutes from everything above, emails a PDF — with the transcript attached — to ' + esc(reviewEmail()) + ' for you to check, then brings you back here to approve.'}</p>
+          <div class="stepl">1. Phone transcript</div>
           ${(() => { const ps = phoneSegs(), op = ps.filter(s => !s.agendaId && s.how !== 'out').length;
             return ps.length
               ? `<div class="row" style="justify-content:space-between;gap:8px;margin:0 0 12px;font-size:13px;color:var(--text-2)"><span>Phone transcript: ${ps.length} passages${op ? ` · <b style="color:var(--amber)">${op} need a topic</b>` : ' · all sorted'}</span><button class="btn sm" id="eSortPhone">Sort</button></div>`
               : `<button class="btn${M.segments.some(s => s.src !== 'phone') ? '' : ' primary'}" id="eImportPhone" style="width:100%;justify-content:center;margin-bottom:6px">Import phone transcript</button><p class="notehint" style="margin:0 0 12px">In Samsung Voice Recorder, open the recording, tap Transcript, then share it as a text file or copy it. Each passage lands under the topic you had open at that moment.</p>`; })()}
-          <button class="btn primary big" id="eCreate" style="width:100%;justify-content:center">Create minutes</button>
+          <div class="stepl">2. Phone recording</div>
+          ${M.phoneAudio ? `<div class="row" style="justify-content:space-between;gap:8px;margin:0 0 12px;font-size:13px;color:var(--text-2)"><span>${esc(M.phoneAudio.name)} · ${(M.phoneAudio.bytes / 1048576).toFixed(1)} MB${M.phoneAudio.device && M.phoneAudio.device !== DEVICE.name ? ' · added on the ' + esc(M.phoneAudio.device) : ''}</span><label class="btn sm" style="margin:0;cursor:pointer">Replace<input type="file" id="ePhoneAudio" accept="audio/*,.m4a,.mp3,.wav,.aac,.amr,.3gp" hidden></label></div>`
+            : `<label class="btn" style="width:100%;justify-content:center;margin-bottom:6px;cursor:pointer">Add phone recording<input type="file" id="ePhoneAudio" accept="audio/*,.m4a,.mp3,.wav,.aac,.amr,.3gp" hidden></label><p class="notehint" style="margin:0 0 12px">The audio file from Samsung Voice Recorder. It goes into the meeting's Drive folder with the minutes.</p>`}
+          ${driveShown() ? `<div class="stepl">3. Minutes and board email</div>
+          <button class="btn primary big" id="eFinish" style="width:100%;justify-content:center">${M.driveSavedAt ? 'Save the minutes to Drive again' : 'Create minutes &amp; save to Drive'}</button>
+          <p class="notehint" style="margin:8px 0 0">Saves the minutes as a Google Doc and a PDF, with the audio, in ${esc(DRIVE_ROOT_NAME)} › ${esc(driveMeetingName())}. Then it drafts the email to the board in Gmail for you to send.</p>
+          ${M.drivePdfId ? `<button class="btn" id="eMail" style="width:100%;justify-content:center;margin-top:10px">${M.boardEmailDraftedAt ? 'Draft the board email again' : 'Draft the board email'}</button>` : ''}`
+          : '<button class="btn primary big" id="eCreate" style="width:100%;justify-content:center">Create minutes</button>'}
           <details class="more" style="margin-top:14px"><summary style="cursor:pointer;color:var(--text-2);font-weight:600">More options</summary>
             <div class="exports" style="margin-top:10px">
+              ${driveShown() ? '<button class="btn" id="eCreate">Email me a review copy first</button>' : ''}
               ${driveShown() ? '<button class="btn" id="eDrive">Save to Drive (minutes + audio)</button>' : ''}
               <button class="btn" id="eBackup">Save a backup${M.audio.bytes ? ' (with audio)' : ''}</button>
               ${M.audio.bytes ? '<button class="btn" id="eAudio">Download audio (' + (M.audio.bytes/1048576).toFixed(1) + ' MB)</button>' : ''}
@@ -1561,6 +1604,14 @@ function renderEditor(){
     $('#cCancel').onclick = () => { M.items = M.items.filter(x => x.id !== it.id || x.text); closeModal(); };
   });
   $('#eCreate').onclick = createMinutes;
+  if ($('#eFinish')) $('#eFinish').onclick = finishToDrive;
+  if ($('#eMail')) $('#eMail').onclick = () => openBoardEmail();
+  if ($('#ePhoneAudio')) $('#ePhoneAudio').onchange = async e => {
+    const f = e.target.files[0]; if (!f) return;
+    toast('Adding the phone recording…', 4000);
+    try { await addPhoneRecording(f); toast('Phone recording added. It goes to Drive with the minutes.', 5000); } catch(err){ console.warn(err); toast('Couldn’t add that recording (' + (err && err.message || 'error') + ').', 6000); }
+    renderReview();
+  };
   if ($('#eImportPhone')) $('#eImportPhone').onclick = openTranscriptImport;
   if ($('#eSortPhone')) $('#eSortPhone').onclick = () => openTranscriptSorter();
   $('#eBackup').onclick = saveBackup;
@@ -1641,13 +1692,22 @@ function minutesDocHTML(){
   return `<!doctype html><html><head><meta charset="utf-8"><title>${esc(docTitle())}</title><style>${css}</style></head><body>${minutesHTML()}</body></html>`;
 }
 async function audioFiles(){
-  const rows = (await DB.audioFor(M.id)).sort((a, b) => a.seq - b.seq);
-  if (!rows.length) return [];
+  const all = (await DB.audioFor(M.id)).sort((a, b) => a.seq - b.seq);
+  const phone = all.filter(r => r.src === 'phone'), rows = all.filter(r => r.src !== 'phone');
+  const phoneOut = phone.map((r, i) => ({ name: `${fileBase()}-phone-recording${phone.length > 1 ? '-' + (i + 1) : ''}.${r.ext || 'm4a'}`, blob: r.blob, phone: true }));
+  if (!rows.length) return phoneOut;
   const mime = (M.audio.mime || rows[0].blob.type || 'audio/webm').split(';')[0];
   const ext = mime.includes('mp4') ? 'm4a' : mime.includes('ogg') ? 'ogg' : 'webm';
   const parts = [...new Set(rows.map(r => r.part || 1))].sort((a, b) => a - b);
   return parts.map((p, i) => ({ name: `${fileBase()}-audio${parts.length > 1 ? '-part' + (i + 1) : ''}.${ext}`,
-    blob: new Blob(rows.filter(r => (r.part || 1) === p).map(r => r.blob), { type: mime }) }));
+    blob: new Blob(rows.filter(r => (r.part || 1) === p).map(r => r.blob), { type: mime }) })).concat(phoneOut);
+}
+async function addPhoneRecording(f){
+  const ext = ((f.name || '').match(/\.(\w{2,5})$/) || [, 'm4a'])[1].toLowerCase();
+  for (const r of (await DB.audioFor(M.id)).filter(r => r.src === 'phone')) await DB.del('audio', [M.id, r.seq]);
+  await DB.put('audio', { meetingId: M.id, seq: 1e12 + Date.now(), src: 'phone', ext, name: f.name || '', blob: new Blob([f], { type: f.type || 'audio/mp4' }) });
+  M.phoneAudio = { name: f.name || 'phone recording', bytes: f.size, addedAt: new Date().toISOString(), device: DEVICE.name };
+  await saveNow();
 }
 function driveProblem(e){
   const r = (e && (e.reason || e.code)) || '';
@@ -1661,12 +1721,38 @@ function driveProblem(e){
   return 'Saving to Drive didn’t finish (' + esc((e && e.message) || 'unknown error') + '). Try again.';
 }
 let driveBusy = false;
+function boardList(){ return String(SETTINGS.boardEmails || '').split(/[\s,;]+/).map(x => x.trim()).filter(x => /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(x)); }
+function boardEmailBody(pdfId){
+  const me = String(SETTINGS.secretary || '').trim().split(/\s+/)[0] || '';
+  return `Hi all,\n\nHere are the draft minutes from our ${fmtDateLong(M.date)} board meeting. Please send me any corrections before our next meeting, where we'll vote to approve them.\n\nMinutes (PDF): https://drive.google.com/file/d/${pdfId}/view\n\n${me}`.trim() + '\n';
+}
+function boardComposeUrl(pdfId){
+  const q = new URLSearchParams({ view: 'cm', fs: '1', to: boardList().join(','), su: 'Draft minutes: ' + docTitle(), body: boardEmailBody(pdfId) });
+  if (typeof Cloud !== 'undefined' && Cloud.email) q.set('authuser', Cloud.email);
+  return 'https://mail.google.com/mail/?' + q.toString();
+}
+function openBoardEmail(pdfId){
+  const w = window.open(boardComposeUrl(pdfId || M.drivePdfId), '_blank', 'noopener');
+  M.boardEmailDraftedAt = new Date().toISOString(); scheduleSave();
+  toast(boardList().length ? 'The board email is open in Gmail. Check it, then press Send there.' : 'The email is open in Gmail with no one on it yet. Add the board’s addresses in Roster & Settings to fill them in next time.', 7000);
+  return w;
+}
+function finishToDrive(){
+  if (driveBusy) { toast('Already saving to Drive…'); return; }
+  let tp; try { tp = driveToken(); } catch(e){ tp = Promise.reject(e); }
+  saveToDrive(tp, { after: r => {
+    openModal(`<h3>Minutes saved to Drive</h3><p>In <b>${esc(DRIVE_ROOT_NAME)} › ${esc(driveMeetingName())}</b>:</p><ul>${r.done.map(d => `<li>${esc(d)}</li>`).join('')}</ul>${r.notes.map(n => `<p class="notehint">${esc(n)}</p>`).join('')}
+      <p style="margin-top:12px">Last step: the email to the board${boardList().length ? ' (' + boardList().length + ' addresses)' : ''}, with a link to the PDF. It opens in Gmail for you to check and send.</p>
+      <div class="foot"><a class="btn ghost" href="https://drive.google.com/drive/folders/${esc(r.folder)}" target="_blank" rel="noopener">Open the folder</a><button class="btn primary" id="drvMail">Draft the board email</button></div>`);
+    $('#drvMail').onclick = () => { openBoardEmail(r.pdfId); closeModal(); renderReview(); };
+  } });
+}
 function driveClick(){
   if (driveBusy) { toast('Already saving to Drive…'); return; }
   let tp; try { tp = driveToken(); } catch(e){ tp = Promise.reject(e); }
   saveToDrive(tp);
 }
-async function saveToDrive(tokenPromise){
+async function saveToDrive(tokenPromise, opts = {}){
   driveBusy = true;
   const done = [], notes = [];
   try {
@@ -1677,20 +1763,26 @@ async function saveToDrive(tokenPromise){
     if (root !== SETTINGS.driveRootId) { SETTINGS.driveRootId = root; await saveSettings(); }
     let folder = (await driveAlive(M.driveFolderId)) ? M.driveFolderId : await driveFolder(driveMeetingName(), root);
     if (folder !== M.driveFolderId) { M.driveFolderId = folder; scheduleSave(); }
-    toast('Saving the minutes to Drive…', 4000);
-    const base = 'LYBS Board Minutes ' + M.date;
-    const docId = await driveUpload(base, new Blob([minutesDocHTML()], { type: 'text/html' }), folder, 'application/vnd.google-apps.document');
-    done.push('Minutes (Google Doc)');
-    const pdf = await (await gfetch(DRIVE_API + '/' + docId + '/export?mimeType=application/pdf')).blob();
-    await driveUpload('LYBS-Board-Minutes-' + M.date + '.pdf', new Blob([pdf], { type: 'application/pdf' }), folder);
-    done.push('Minutes (PDF)');
+    let docId = null, pdfId = null;
+    if (!opts.audioOnly) {
+      toast('Saving the minutes to Drive…', 4000);
+      const base = 'LYBS Board Minutes ' + M.date;
+      docId = await driveUpload(base, new Blob([minutesDocHTML()], { type: 'text/html' }), folder, 'application/vnd.google-apps.document');
+      done.push('Minutes (Google Doc)');
+      const pdf = await (await gfetch(DRIVE_API + '/' + docId + '/export?mimeType=application/pdf')).blob();
+      pdfId = await driveUpload('LYBS-Board-Minutes-' + M.date + '.pdf', new Blob([pdf], { type: 'application/pdf' }), folder);
+      done.push('Minutes (PDF)');
+      M.drivePdfId = pdfId; M.driveDocId = docId;
+    }
     const aud = await audioFiles();
     for (const f of aud) {
       toast(`Saving the audio to Drive (${(f.blob.size / 1048576).toFixed(1)} MB)…`, 8000);
-      await driveUpload(f.name, f.blob, folder); done.push('Audio' + (aud.length > 1 ? ' (' + f.name.replace(/^.*-audio-?/, '').replace(/\.\w+$/, '') + ')' : ''));
+      await driveUpload(f.name, f.blob, folder); if (f.phone) { done.push('Phone recording'); continue; } M.driveAudioSavedAt = new Date().toISOString(); M.driveAudioBy = DEVICE.name; done.push('Audio' + (aud.length > 1 ? ' (' + f.name.replace(/^.*-audio-?/, '').replace(/\.\w+$/, '') + ')' : ''));
     }
-    if (!aud.length) notes.push(M.audio && M.audio.bytes ? 'The audio wasn’t included because it’s on the device that recorded this meeting. Press Save to Drive there too.' : 'No audio was recorded for this meeting.');
-    M.driveSavedAt = new Date().toISOString(); scheduleSave();
+    if (!aud.some(f => !f.phone)) notes.push(M.driveAudioSavedAt ? 'The meeting recording is already in this folder (saved from the ' + (M.driveAudioBy || 'laptop') + ' when you finished the meeting).' : M.audio && M.audio.bytes ? 'The meeting recording wasn’t included because it’s on the device that recorded it. Press Save to Drive there too.' : 'No meeting recording was made on a laptop for this meeting.');
+    if (!opts.audioOnly) M.driveSavedAt = new Date().toISOString();
+    await saveNow();
+    if (opts.after) { await opts.after({ done, notes, folder, docId, pdfId }); return; }
     openModal(`<h3>Saved to Drive</h3><p>In <b>${esc(DRIVE_ROOT_NAME)} › ${esc(driveMeetingName())}</b>:</p><ul>${done.map(d => `<li>${esc(d)}</li>`).join('')}</ul>${notes.map(n => `<p class="notehint">${esc(n)}</p>`).join('')}<p class="notehint">Saving again replaces these files, so the links stay the same.</p><div class="foot"><a class="btn" href="https://drive.google.com/drive/folders/${encodeURIComponent(folder)}" target="_blank" rel="noopener">Open the folder</a><button class="btn primary" id="drvOk">Done</button></div>`);
     $('#drvOk').onclick = closeModal;
   } catch(e){
@@ -2756,6 +2848,9 @@ function renderSettings(){
         <p style="font-size:12px;color:var(--text-3);margin:6px 0 0">One item per line.</p>
       </div>
       <div class="card">
+        <h2>Board email</h2>
+        <label class="f">Board email addresses<textarea id="sBoard" rows="4" placeholder="One per line">${esc(s.boardEmails || '')}</textarea></label>
+        <p style="font-size:12px;color:var(--text-3);margin:6px 0 18px">Fills in the To line of the minutes email. Kept in your Google account with the roster, not in the app's code.</p>
         <h2>Minutes email</h2>
         <p style="font-size:13px;color:var(--text-2);margin:0 0 12px">"Create minutes" uses these to email a review PDF to ${esc(reviewEmail())} and later draft the minutes email. Same bridge the dashboard uses — copy its endpoint and REVIEW_KEY from Governance → Post Review settings there.</p>
         <div style="display:flex;flex-direction:column;gap:12px">
@@ -2781,6 +2876,7 @@ function renderSettings(){
     SETTINGS.agenda = $('#sAg').value.split('\n').map(x => x.trim()).filter(Boolean);
     SETTINGS.minutesBridgeEndpoint = $('#sMEndpoint').value.trim();
     SETTINGS.minutesBridgeKey = $('#sMKey').value.trim();
+    SETTINGS.boardEmails = $('#sBoard').value.split(/[\s,;]+/).map(x => x.trim()).filter(Boolean).join('\n');
     await saveSettings(); toast('Settings saved'); go('home');
   };
   (async () => {
