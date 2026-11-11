@@ -804,7 +804,7 @@ async function renderHome(){
       <li><b>End:</b> tap <b>Finish meeting</b>, then tap it again. The laptop recording goes to Drive.</li>
       <li><b>At home:</b> open the app, sign in and tap <b>Open latest meeting</b>.</li>
       <li><b>Phone files:</b> add the phone transcript and the phone recording.</li>
-      <li><b>Minutes:</b> tap <b>Create minutes &amp; save to Drive</b>. The Doc and PDF go into a new folder for that meeting inside LYBS Board Minutes.</li>
+      <li><b>Minutes:</b> tap <b>Create minutes &amp; save to Drive</b>. The Doc and PDF go into a new folder for that meeting inside LYBS Board Minutes, with attendance, each vote and the action items (grouped by owner) laid out in color.</li>
       <li><b>Board email:</b> tap <b>Draft the board email</b>, look it over in Gmail and send it yourself.</li>
     </ol></details>
     <div id="syncBar" class="syncbar"></div>
@@ -2557,7 +2557,7 @@ function buildHandoff(){
   L.push(`- Motions in this format, as their own paragraph: **Motion** to … made by [mover], 2nd by [seconder]. Approved [yay]–[nay]–[abstain]. (Use "unanimous of members present" only if nay and abstain are 0.) Then list the vote in separate groups: In favor, Opposed, Abstained (when any), Not present for the vote, each with a count and the names the capture gives.`);
   L.push(`- Keep the agenda order below. Skip a topic only if nothing was said and nothing captured — then omit it rather than writing "no update".`);
   L.push(`- The Agenda section lists the background text the board saw for each topic. Use it for context and the spelling of names and terms, but write the minutes from what was actually said and captured.`);
-  L.push(`- End with: an **Action Items** table (task · owner · due), an **Important Dates** table (date · what), adjournment time, and "Respectfully submitted, ${M.recorder}, Secretary".`);
+  L.push(`- End with: **Action Items** grouped by owner (a heading for each person with their tasks and due dates under it; shared tasks under the names together; everyone's tasks, then unassigned ones, last), an **Important Dates** table (date · what, spelling out detailed times such as arrival, start, end and facility-until), adjournment time, and "Respectfully submitted, ${M.recorder}, Secretary".`);
   L.push(`- Flagged moments are places the secretary wanted double-checked. Look closely at the transcript around that timestamp; if it's still unclear, write the minutes with a bracketed [CONFIRM: …] note instead of guessing.`);
   L.push(`- Before finishing, list anything you were unsure of (misheard names, unclear amounts, an action with no owner) so the secretary can fix it before sending.`);
   L.push(`- Deliver as a document styled like the LYBS letterhead (organization name, meeting type and date, meta row with location / called to order / adjourned / presiding).`);
@@ -2679,7 +2679,7 @@ function minutesHTML(){
     ${allDates.length ? `<h4><span class="no">◷</span>Important Dates</h4><table><thead><tr><th style="width:30%">Date</th><th>What</th></tr></thead><tbody>${allDates.map(d => `<tr><td>${esc(d.when ? fmtDateShort(d.when) : '—')}</td><td>${esc(d.text)}</td></tr>`).join('')}</tbody></table>` : ''}
     <h4><span class="no">▸</span>Open Items</h4>
     <p><span class="lbl">Action items</span>${allActions.length ? '' : 'None.'}</p>
-    ${allActions.length ? `<table><thead><tr><th style="width:44%">Task</th><th>Topic</th><th>Owner</th><th>Due</th></tr></thead><tbody>${allActions.map(a => `<tr><td>${esc(a.text)}</td><td>${esc(agendaById(a.agendaId)?.title || '—')}</td><td>${esc(a.owner || '—')}</td><td>${esc(a.due ? fmtDateShort(a.due) : '—')}</td></tr>`).join('')}</tbody></table>` : ''}
+    ${allActions.length ? actionGroupsHTML(allActions) : ''}
     <p style="margin-top:12px"><span class="lbl">Left pending</span>${pendingMotions.length ? '' : 'Nothing.'}</p>
     ${pendingMotions.length ? `<ul>${pendingMotions.map(m => `<li>${esc(motionBody(m.text))} <i>(${esc(m.result || 'Pending')})</i></li>`).join('')}</ul>` : ''}
     <p style="margin-top:12px"><span class="lbl">Topics for the next meeting</span>${nextTopics.length ? '' : 'None yet.'}</p>
@@ -2687,6 +2687,19 @@ function minutesHTML(){
     <div class="sig"><div>${esc(M.recorder)}<span>Secretary · Respectfully submitted</span></div><div>&nbsp;<span>Date approved by the Board</span></div></div>
     <div class="foot">Lunenburg Youth Baseball &amp; Softball</div>
   </div>`;
+}
+function actionOwnerGroups(list){   // [[owner, items]] people first (most items first), then shared, then everyone, then unassigned
+  const g = new Map(); list.forEach(a => { const o = (a.owner || '').trim() || 'Unassigned'; if (!g.has(o)) g.set(o, []); g.get(o).push(a); });
+  const rank = o => o === 'Unassigned' ? 3 : /^all\b/i.test(o) ? 2 : /,|&| and /i.test(o) ? 1 : 0;
+  return [...g.entries()].sort((x, y) => rank(x[0]) - rank(y[0]) || y[1].length - x[1].length || x[0].localeCompare(y[0]));
+}
+function actionGroupsHTML(list){
+  const th = 'background:#090D32;color:#ffffff;padding:6px 9px;font-family:Arial,Helvetica,sans-serif;font-size:10.5px;font-weight:700;letter-spacing:1px;text-transform:uppercase;border-bottom:0';
+  const td = 'padding:6px 9px;border-bottom:1px solid #E3E6EE;vertical-align:top;font-size:13px';
+  return actionOwnerGroups(list).map(([o, items]) => `<table class="owngrp" role="presentation" style="width:100%;border-collapse:collapse;margin:6px 0 12px;page-break-inside:avoid">
+    <tr><td style="${th}">${esc(o === 'Unassigned' ? 'Owner to be decided' : o)} <span style="font-weight:400;letter-spacing:0;text-transform:none;color:#B4BBBF">&nbsp;${items.length} item${items.length === 1 ? '' : 's'}</span></td><td style="${th};width:150px;color:#B4BBBF">Due</td></tr>
+    ${items.map(a => `<tr><td style="${td};border-left:3px solid #2E52E8">${esc(a.text)}${agendaById(a.agendaId) ? `<div style="font-size:10.5px;color:#7E8284;margin-top:1px">${esc(agendaById(a.agendaId).title)}</div>` : ''}</td><td style="${td}">${esc(a.due ? fmtDateShort(a.due) : '—')}</td></tr>`).join('')}
+  </table>`).join('');
 }
 function docTitle(){
   const [y,m,d] = (M.date || todayISO()).split('-').map(Number);
