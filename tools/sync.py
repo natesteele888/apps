@@ -122,6 +122,29 @@ def version_for(repo, path):
         n = int(m.group(1)) if m else len(json.load(r))
     return n
 
+def all_commits(repo, path):
+    """Every commit touching one path, newest first (paged)."""
+    out, page = [], 1
+    while True:
+        batch = get_json(f"https://api.github.com/repos/{repo}/commits?per_page=100&page={page}&path={urllib.parse.quote(path)}", hdr)
+        out += batch
+        if len(batch) < 100 or page >= 10:
+            return out
+        page += 1
+
+
+def source_commits(a):
+    """Commits to the app's own folder plus to the code it runs from a.source, de-duplicated, newest first.
+    Returns (newest 30, total count) - the count is the app's version, the same way version_for counts."""
+    seen = {}
+    for repo, paths in ((a["repo"], [a.get("path", "")]), (a["source"]["repo"], a["source"]["paths"])):
+        for p in paths:
+            for c in all_commits(repo, p):
+                seen[c["sha"]] = c
+    ordered = sorted(seen.values(), key=lambda c: c["commit"]["author"]["date"], reverse=True)
+    return ordered[:30], len(ordered)
+
+
 for a in reg["apps"]:
     if not a.get("repo") or a.get("retired") or "listing" not in a:
         continue
@@ -131,18 +154,26 @@ for a in reg["apps"]:
             a["listing"].pop(k, None)
         continue
     path = a.get("path", "")
-    url = f"https://api.github.com/repos/{a['repo']}/commits?per_page=30" + (f"&path={path}" if path else "")
-    try:
-        commits = get_json(url, hdr)
-    except urllib.error.HTTPError as e:
-        print(f"latest: {a['id']} {e.code}")  # private repos without access are skipped
-        continue
-    except Exception as e:
-        print(f"latest: {a['id']} {e}"); continue
-    try:
-        n = version_for(a["repo"], path)
-    except Exception as e:
-        print(f"version: {a['id']} {e}"); n = 0
+    if a.get("source"):
+        # The app runs code from another repo (e.g. Where Do I Go? runs LYBS Ballclub's trainer):
+        # its changes, version and history count commits to that code as well as to its own folder.
+        try:
+            commits, n = source_commits(a)
+        except Exception as e:
+            print(f"latest: {a['id']} {e}"); continue
+    else:
+        url = f"https://api.github.com/repos/{a['repo']}/commits?per_page=30" + (f"&path={path}" if path else "")
+        try:
+            commits = get_json(url, hdr)
+        except urllib.error.HTTPError as e:
+            print(f"latest: {a['id']} {e.code}")  # private repos without access are skipped
+            continue
+        except Exception as e:
+            print(f"latest: {a['id']} {e}"); continue
+        try:
+            n = version_for(a["repo"], path)
+        except Exception as e:
+            print(f"version: {a['id']} {e}"); n = 0
     found = False
     hist = []
     for i, c in enumerate(commits):

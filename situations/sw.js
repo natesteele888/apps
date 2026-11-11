@@ -1,9 +1,10 @@
 // Network first, so updates show up right away; falls back to the last saved copy when offline.
-const CACHE = "situations-v18";
-// Save the page itself at install. Without this, the first visit caches nothing
-// (the page loaded before the worker existed), so opening it offline right after
-// installing fails. Each file is added on its own so one miss can't block install.
-const SHELL = ["./", "manifest.json", "/apps/icons/situations-192.png", "/apps/icons/situations-512.png"];
+// The trainer itself lives in LYBS Ballclub (/lybs-ballclub/ on this same site), so its
+// engine, look and rule files are saved here too, under this app's own cache.
+const CACHE = "situations-v19";
+const SHELL = ["./", "manifest.json", "/apps/icons/situations-192.png", "/apps/icons/situations-512.png",
+  "/lybs-ballclub/js/situations.js", "/lybs-ballclub/css/situations.css",
+  "/lybs-ballclub/data/situations.csv", "/lybs-ballclub/data/responsibilities.csv"];
 self.addEventListener("install", e => {
   self.skipWaiting();
   e.waitUntil(caches.open(CACHE).then(c => Promise.all(SHELL.map(u => c.add(new Request(u, {cache: "reload"})).catch(() => {})))));
