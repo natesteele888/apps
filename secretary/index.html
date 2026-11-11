@@ -1570,7 +1570,7 @@ function renderEditor(){
 function fileBase(){ return `lybs-${slug(M.type)}-${M.date}`; }
 async function downloadAudio(){
   const rows = (await DB.audioFor(M.id)).sort((a,b) => a.seq - b.seq);
-  if (!rows.length) { toast('No audio was recorded for this meeting.'); return; }
+  if (!rows.length) { toast(M.audio && M.audio.bytes ? 'The audio is on the device that recorded this meeting. Download it there, or play the copy you saved to Drive.' : 'No audio was recorded for this meeting.', 6000); return; }
   const mime = (M.audio.mime || rows[0].blob.type || 'audio/webm').split(';')[0];
   const ext = mime.includes('mp4') ? (DL ? 'mp4' : 'm4a') : mime.includes('ogg') ? 'ogg' : 'webm';
   const parts = [...new Set(rows.map(r => r.part || 1))].sort((a,b) => a-b);
