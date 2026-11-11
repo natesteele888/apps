@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Builds read20/syllables-older.js: how to split the longer words in the older-reader stories into syllables, for the press-and-hold pop-up.
+"""Builds read20/syllables-older.js: how to split the longer words in the stories (older readers and Levels 4 and 5) into syllables, for the press-and-hold pop-up.
 The simple rules in read20/words.js are fine for short early-reader words but wrong on words like "photograph". This uses a hyphenation
 dictionary (pyphen) and checks the number of parts against a pronunciation dictionary (cmudict); words the two cannot agree on are listed in
 OVERRIDES below by hand.   Needs: pip install pyphen cmudict   Run from the repo root:  python3 tools/read20-syllables.py"""
@@ -27,6 +27,7 @@ OVERRIDES = {   # word: "syl-la-bles"   (hand fixes where the dictionaries disag
     "hemispheres": "hem-i-spheres", "hieroglyphs": "hi-er-o-glyphs", "imaginary": "i-mag-i-nar-y", "military": "mil-i-tar-y", "necessary": "nec-es-sar-y", "paragraph": "par-a-graph",
     "preposition": "prep-o-si-tion", "prepositional": "prep-o-si-tion-al", "reachable": "reach-a-ble", "sumerians": "su-me-ri-ans", "unbeatable": "un-beat-a-ble", "venice": "ven-ice",
     "madison": "mad-i-son", "balances": "bal-anc-es", "bio": "bi-o", "buddhism": "bud-dhism", "cuneiform": "cu-ne-i-form", "empire": "em-pire",
+    "sparkling": "spar-kling", "uneven": "un-e-ven", "baa": "baa", "diamond": "di-a-mond", "hickory": "hick-o-ry", "maya": "may-a", "zoe": "zo-e",
     "federal": "fed-er-al", "foreigners": "for-eign-ers", "hyperbole": "hy-per-bo-le", "idiom": "id-i-om", "idioms": "id-i-oms", "mediterranean": "med-i-ter-ra-ne-an",
     "meridian": "me-rid-i-an", "mesopotamia": "mes-o-po-ta-mi-a", "oasis": "o-a-sis", "philadelphia": "phil-a-del-phi-a", "society": "so-ci-e-ty", "socrates": "soc-ra-tes",
     "tele": "tel-e", "travelers": "trav-el-ers",
@@ -39,7 +40,7 @@ OVERRIDES = {   # word: "syl-la-bles"   (hand fixes where the dictionaries disag
 }
 
 def words():
-    js = "const B=require('./read20/books.js');require('./read20/books-older.js');const s={};B.books.filter(b=>b.shelf==='older').forEach(b=>b.pages.forEach(p=>p.text.split(/\\s+/).forEach(x=>{x=x.toLowerCase().replace(/^[^a-z]+|[^a-z'\\-]+$/g,'').replace(/'s$/,'');if(x)s[x]=1})));console.log(JSON.stringify(Object.keys(s).sort()))"
+    js = "const B=require('./read20/books.js');require('./read20/books-older.js');const s={};B.books.forEach(b=>b.pages.forEach(p=>p.text.split(/\\s+/).forEach(x=>{x=x.toLowerCase().replace(/^[^a-z]+|[^a-z'\\-]+$/g,'').replace(/'s$/,'');if(x)s[x]=1})));console.log(JSON.stringify(Object.keys(s).sort()))"
     return json.loads(subprocess.run(["node", "-e", js], capture_output=True, text=True, check=True).stdout)
 
 VOWEL = re.compile(r"[aeiouy]")
@@ -51,7 +52,7 @@ def main():
     cmu = cmudict.dict(); a = pyphen.Pyphen(lang="en_US"); b = pyphen.Pyphen(lang="en_US", left=1, right=1)
     def count(w):
         return min(len([p for p in pr if p[-1].isdigit()]) for pr in cmu[w]) if w in cmu else None
-    ws = [w for w in words() if re.fullmatch(r"[a-z]+", w) and w not in ("bc", "jr", "sr", "th", "nba", "nfl")]
+    ws = [w for w in words() if re.fullmatch(r"[a-z]+", w) and w not in ("bc", "jr", "sr", "th", "nba", "nfl", "shh")]
     out, rules_needed = {}, []
     for w in ws:                                    # tier 1: hyphenation dictionary, checked against the pronunciation dictionary
         n = count(w)
