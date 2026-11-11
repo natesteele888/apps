@@ -364,17 +364,17 @@ const TODAY = '2026-11-08';
   const FAKE_FB = `(function(){ if (window.firebase) return; var L = [], user = null; try { user = JSON.parse(localStorage.getItem('fakeUser')); } catch (e) {}
     function Tx() { this.w = []; } Tx.prototype.get = async function (r) { var d = await window.__fsGet(r.path); if (d && d.__deny) { var e = new Error('denied'); e.code = 'permission-denied'; throw e; } return { exists: d != null, data: function () { return d; } }; }; Tx.prototype.set = function (r, d) { this.w.push([r.path, d]); };
     var auth = { get currentUser() { return user; }, onAuthStateChanged: function (cb) { L.push(cb); setTimeout(function () { cb(user); }, 0); }, signInWithPopup: async function () { user = { uid: window.__uid || 'parent1', email: 'parent@example.com' }; localStorage.setItem('fakeUser', JSON.stringify(user)); L.forEach(function (f) { f(user); }); }, signOut: async function () { user = null; localStorage.removeItem('fakeUser'); L.forEach(function (f) { f(null); }); } };
-    var fs = { collection: function (c) { return { doc: function (id) { return { path: c + '/' + id }; } }; }, runTransaction: async function (fn) { var t = new Tx(); await fn(t); for (var i = 0; i < t.w.length; i++) await window.__fsSet(t.w[i][0], t.w[i][1]); } };
+    var fs = { collection: function (c) { return { doc: function (id) { var path = c + '/' + id; return { path: path, get: async function () { var d = await window.__fsGet(path); if (d && d.__deny) { var e = new Error('denied'); e.code = 'permission-denied'; throw e; } return { exists: d != null, data: function () { return d; } }; } }; } }; }, runTransaction: async function (fn) { var t = new Tx(); await fn(t); for (var i = 0; i < t.w.length; i++) await window.__fsSet(t.w[i][0], t.w[i][1]); } };
     window.firebase = { apps: [], initializeApp: function () { this.apps.push(1); }, auth: Object.assign(function () { return auth; }, { GoogleAuthProvider: function () { this.setCustomParameters = function () {}; } }), firestore: Object.assign(function () { return fs; }, { FieldValue: { serverTimestamp: function () { return 'TS'; } } }) }; })();`;
   const cloudDb = new Map(); let fsDeny = false;
   const mkPhone = async (opts = {}) => {
     const ctx = await br.newContext({ viewport: { width: 390, height: 844 }, serviceWorkers: 'block' });
-    let hits = 0;
-    await ctx.exposeFunction('__fsGet', async p => { if (fsDeny) return { __deny: true }; return cloudDb.has(p) ? cloudDb.get(p) : null; });
-    await ctx.exposeFunction('__fsSet', async (p, d) => { cloudDb.set(p, d); });
+    let hits = 0; const paths = [];
+    await ctx.exposeFunction('__fsGet', async p => { paths.push('get ' + p); if (fsDeny) return { __deny: true }; return cloudDb.has(p) ? cloudDb.get(p) : null; });
+    await ctx.exposeFunction('__fsSet', async (p, d) => { paths.push('set ' + p); cloudDb.set(p, d); });
     await ctx.route(/gstatic\.com\/firebasejs/, r => { hits++; opts.offline ? r.abort() : r.fulfill({ contentType: 'text/javascript', body: FAKE_FB }); });
     const o = await newPage(br, { context: ctx, today: TODAY }); await o.page.clock.install({ time: new Date('2026-11-08T19:00:00') }); if (opts.uid) await o.page.addInitScript(u => { window.__uid = u; }, opts.uid);
-    await o.page.goto(srv.url + (opts.hash || '')); await o.page.waitForSelector('.cover'); o.hits = () => hits; return o;
+    await o.page.goto(srv.url + (opts.hash || '')); await o.page.waitForSelector('.cover'); o.hits = () => hits; o.paths = paths; return o;
   };
   const logMin = async (page, title, min) => { await page.locator('#manual').click(); await page.fill('#mt', title); await page.fill('#mm', String(min)); await page.locator('#ms').click(); await page.waitForSelector('.cover'); };
   const cloudSec = (day, path = 'r20_users/parent1') => { const d = cloudDb.get(path); return d ? (C.sanitizeRoot(JSON.parse(d.log)).profiles.main.days[day] || { sec: 0 }).sec : -1; };
@@ -529,7 +529,7 @@ const TODAY = '2026-11-08';
     eq(await page.locator('.sheet .set').count(), 3, 'three groups'); assert.ok(await page.locator('.sheet button:visible:not(.avp)').count() <= 7, 'few buttons: ' + await page.locator('.sheet button:visible:not(.avp)').count());
     for (const id of ['#cin', '#shmake', '#jcode', '#sb', '#sr', '#se']) eq(await page.locator(id).count(), 0, id + ' is not on the first settings screen');
     assert.ok(await page.locator('#setsafe').isVisible()); await page.screenshot({ path: SHOTS + '/read20-settings.png' });
-    await page.locator('#setsafe').click(); await page.locator('#cin').waitFor(); eq(await page.locator('.sheet').last().locator('.set').count(), 3, 'online, sharing, and file'); await page.screenshot({ path: SHOTS + '/read20-safe.png' });
+    await page.locator('#setsafe').click(); await page.locator('#cin').waitFor(); eq(await page.locator('.sheet').last().locator('.set').count(), 4, 'online, sharing, one reader\'s own phone, and file'); await page.screenshot({ path: SHOTS + '/read20-safe.png' });
     await closeSafe(page);
   });
   await test('readers: the cloud and backup files carry every reader; a removed reader stays removed on the other phone', async () => {
@@ -610,6 +610,52 @@ const TODAY = '2026-11-08';
     await page.evaluate(() => { window.__marker = 1; }); await Promise.all([page.waitForNavigation({ timeout: 15000 }), page.locator('#srefresh').click()]); await page.waitForSelector('.cover');
     eq(await page.evaluate(() => window.__marker === undefined), true, 'the page reloaded'); eq(await sec(page), 720, 'her 12 minutes are still there');
     eq(await page.evaluate(() => JSON.parse(localStorage.getItem('read20.v1')).profiles.main.days[window.__today || Object.keys(JSON.parse(localStorage.getItem('read20.v1')).profiles.main.days)[0]] !== undefined), true);
+  });
+  await test('one reader per phone: a parent links a child\'s phone to a single reader; the child\'s phone sees only that reader and its reading is merged, not lost', async () => {
+    cloudDb.clear(); fsDeny = false;
+    const par = await mkPhone({ uid: 'parentR' }); await logMin(par.page, 'Parent-phone book', 10);   // the starter reader: 10 minutes
+    await par.page.locator('#addrd').click(); await par.page.fill('#rn', 'Kidtwo'); await par.page.locator('#ra').click(); await par.page.waitForFunction(() => document.querySelector('.rd.on .nm').textContent === 'Kidtwo');
+    await logMin(par.page, 'Kid book', 15); const kidId = await par.page.evaluate(() => R20App._root().active), otherId = await par.page.evaluate(() => R20App._root().order[0]); assert.ok(kidId !== otherId);
+    await openSafe(par.page); await par.page.locator('#cin').click(); await par.page.waitForFunction(() => /Backed up as/.test(document.querySelector('#cl').textContent));
+    eq(await par.page.locator('#rdname').innerText(), 'Kidtwo'); await par.page.locator('#rlmake').click(); await par.page.waitForFunction(() => /This reader is linked/.test(document.querySelector('#rlmsg').textContent));
+    const key = await par.page.evaluate(() => Object.values(R20Cloud.readerKeys())[0]); assert.ok(/^[a-z2-7]{20}$/.test(key)); eq(await par.page.evaluate(() => Object.keys(R20Cloud.readerKeys()).join()), kidId);
+    // what is stored for the link: ONE reader, nothing about the others
+    const doc = JSON.parse(cloudDb.get('r20_shared/' + key).log); eq(doc.kind, 'reader'); eq(doc.id, kidId); assert.ok(!('profiles' in doc) && !JSON.stringify(doc).includes(otherId), 'the other reader is not in the link\'s record'); eq(doc.profile.name, 'Kidtwo');
+    await par.page.screenshot({ path: SHOTS + '/read20-readerlink.png' }); const link = await par.page.evaluate(k => R20Cloud.readerLink(k), key); assert.ok(link.endsWith('#reader=' + key));
+    await closeSafe(par.page);
+    // the child's own phone: it already has 7 minutes of its own reading and an unrelated starter reader
+    const kid = await mkPhone({ uid: 'kidAcct' }); await logMin(kid.page, 'Own book', 7); const before = await kid.page.evaluate(() => R20Core.totalAll(R20App._root()));
+    await kid.page.waitForTimeout(500); await kid.page.evaluate(h => { location.hash = h; }, '#reader=' + key); await kid.page.locator('#jryes').waitFor(); assert.ok(/only that one reader/.test(await kid.page.locator('.sheet').innerText()) && /Any Google account works/.test(await kid.page.locator('.sheet').innerText()));
+    await kid.page.locator('#jryes').click(); await kid.page.waitForFunction(() => R20Cloud.kid() && document.querySelector('.rd.on .nm').textContent === 'Kidtwo', null, { timeout: 8000 });
+    const root = await kid.page.evaluate(() => R20App._root()); eq(root.order.join(), kidId, 'exactly one reader on the child\'s phone'); eq(await kid.page.locator('.rd[data-id]').count(), 1); eq(await kid.page.locator('#addrd').count(), 0, 'no way to add readers');
+    eq(await sec(kid.page), 15 * 60 + 7 * 60, 'the reader\'s 15 minutes plus the 7 already read on this phone'); assert.ok(before === 420);
+    assert.ok(await kid.page.evaluate(() => (localStorage.getItem('read20.v1.beforelink') || '').length > 20), 'a safety copy of the old save is kept');
+    await kid.page.locator('#nav button[data-go="log"]').click(); await kid.page.waitForSelector('.cal'); eq(await kid.page.locator('.keep').count(), 0, 'no backup card on the log screen'); await kid.page.locator('#nav button[data-go=""]').click(); await kid.page.waitForSelector('.cover');
+    await kid.page.locator('#gear').click(); await kid.page.waitForSelector('.sheet'); eq(await kid.page.locator('#setsafe').count(), 0, 'no parent screens in Settings'); eq(await kid.page.locator('#srm').count(), 0); eq(await kid.page.locator('#kunlink').count(), 1); await kid.page.screenshot({ path: SHOTS + '/read20-kidsettings.png' }); await kid.page.locator('#sd').click();
+    // reading on the child's phone shows up for the parent; the child's phone only ever touches that one record
+    await logMin(kid.page, 'More reading', 5); await kid.page.evaluate(() => R20Cloud.syncNow()); await kid.page.waitForTimeout(500);
+    for (const p of kid.paths) assert.ok(p === 'get r20_shared/' + key || p === 'set r20_shared/' + key, 'the child\'s phone touched ' + p); assert.ok(!kid.paths.some(p => /r20_users/.test(p)), 'never the family backup');
+    await par.page.evaluate(() => R20Cloud.syncNow()); await par.page.waitForTimeout(500); eq(await par.page.evaluate(id => R20Core.daySec(R20App._root().profiles[id], window.__today), kidId), (15 + 7 + 5) * 60, 'the parent\'s copy of this reader now includes the child\'s phone');
+    eq(await par.page.evaluate(id => R20Core.daySec(R20App._root().profiles[id], window.__today), otherId), 600, 'the other reader is untouched');
+    eq(JSON.parse(cloudDb.get('r20_shared/' + key).log).kind, 'reader');
+    // stopping: the child's phone keeps its reading but stops syncing
+    await kid.page.locator('#gear').click(); kid.page.once('dialog', d => d.accept()); await kid.page.locator('#kunlink').click(); await kid.page.waitForTimeout(300); eq(await kid.page.evaluate(() => R20Cloud.kid()), null);
+    const docBefore = cloudDb.get('r20_shared/' + key).log; await logMin(kid.page, 'After unlink', 3); await kid.page.evaluate(() => R20Cloud.syncNow()); await kid.page.waitForTimeout(300); eq(cloudDb.get('r20_shared/' + key).log, docBefore, 'nothing is sent after unlinking');
+    await openSafe(par.page); assert.ok(await par.page.locator('#rlstop').isVisible()); await par.page.locator('#rlstop').click(); eq(await par.page.evaluate(() => Object.keys(R20Cloud.readerKeys()).length), 0); await closeSafe(par.page);
+  });
+  await test('one reader per phone: a bad or old reader link changes nothing, and a phone that is already a family-link phone is not hijacked', async () => {
+    cloudDb.clear(); fsDeny = false; const a = await mkPhone({ uid: 'someone' }); await logMin(a.page, 'Mine', 9); await a.page.waitForTimeout(500); await a.page.evaluate(() => { location.hash = '#reader=aaaaaaaaaaaaaaaaaaaa'; }); await a.page.locator('#jryes').waitFor();
+    await a.page.locator('#jryes').click(); await a.page.waitForFunction(() => /not found/.test(document.querySelector('#jrmsg').textContent), null, { timeout: 8000 }); eq(await a.page.evaluate(() => R20Cloud.kid()), null); eq(await sec(a.page), 540, 'its reading is untouched');
+    eq(await a.page.evaluate(() => R20App._root().order.length), 1);
+    const q = await a.page.evaluate(() => [R20Cloud.parseReaderKey('https://x.github.io/apps/read20/#reader=abcdefghijklmnopqrst'), R20Cloud.parseReaderKey('ABCDE-FGHIJ-KLMNO-PQRST'), R20Cloud.parseReaderKey('nope')]); eq(q.join('|'), 'abcdefghijklmnopqrst|abcdefghijklmnopqrst|');
+  });
+  await test('one reader per phone: the code can be pasted inside the app (for a home-screen app that cannot see the browser)', async () => {
+    cloudDb.clear(); fsDeny = false; const par = await mkPhone({ uid: 'p1' }); await par.page.locator('#addrd').click(); await par.page.fill('#rn', 'Pasted'); await par.page.locator('#ra').click(); await par.page.waitForFunction(() => document.querySelector('.rd.on .nm').textContent === 'Pasted');
+    await logMin(par.page, 'x', 11); await openSafe(par.page); await par.page.locator('#cin').click(); await par.page.waitForFunction(() => /Backed up as/.test(document.querySelector('#cl').textContent)); await par.page.locator('#rlmake').click(); await par.page.waitForFunction(() => /This reader is linked/.test(document.querySelector('#rlmsg').textContent));
+    const pretty = await par.page.evaluate(() => R20Cloud.pretty(Object.values(R20Cloud.readerKeys())[0])); await closeSafe(par.page);
+    const kid = await mkPhone({ uid: 'k1' }); await openSafe(kid.page); await kid.page.fill('#rcode', 'nonsense'); await kid.page.locator('#rgo').click(); assert.ok(/does not look like/.test(await kid.page.locator('#rlmsg').innerText()));
+    await kid.page.fill('#rcode', pretty.toUpperCase()); await kid.page.locator('#rgo').click(); await kid.page.locator('#jryes').waitFor(); await kid.page.locator('#jryes').click();
+    await kid.page.waitForFunction(() => R20Cloud.kid() && document.querySelector('.rd.on .nm').textContent === 'Pasted', null, { timeout: 8000 }); eq(await sec(kid.page), 660); eq(await kid.page.locator('#setsafe').count(), 0);
   });
   await test('offline: the service worker caches the app and it reopens with no network', async () => {
     const o = await newPage(br, { sw: true, today: TODAY }); const { page, ctx } = o;

@@ -54,10 +54,29 @@
     R = m; act(); try { localStorage.setItem(KEY, JSON.stringify(C.serializeRoot(R))); } catch (e) {}
     store.idbAt = 0; if (ui.book) paintTimer(); else if (!document.querySelector(".overlay")) route(); else stale = true;   // a pop-up is open: redraw the screen under it when it closes
   }
+  /* A child's own phone, linked to one reader: it shows only that reader and none of the parent screens. */
+  const kid = () => { const k = CL.kid(); return !!(k && R.profiles[k.id]); };
   const bkDate = () => R.order.reduce((m, i) => (R.profiles[i].bk > m ? R.profiles[i].bk : m), "");
   const markBackup = () => R.order.forEach(i => (R.profiles[i].bk = today()));
   const who = p => p.name || "Reader";
   const avOf = id => R.profiles[id].av || C.AVATARS[R.order.indexOf(id) % C.AVATARS.length];
+  /* One reader's shared record has been merged in (a linked phone read, or a parent's phone got new reading from a child's phone). */
+  function adoptReader(id, profile) {
+    if (!R.profiles[id]) return;
+    const m = C.merge(R.profiles[id], profile); if (JSON.stringify(C.serialize(m)) === JSON.stringify(C.serialize(R.profiles[id]))) return;
+    R.profiles[id] = m; act(); try { localStorage.setItem(KEY, JSON.stringify(C.serializeRoot(R))); } catch (e) {}
+    store.idbAt = 0; if (ui.book) paintTimer(); else if (!document.querySelector(".overlay")) route(); else stale = true;
+  }
+  /* This phone becomes a single-reader phone. Everything already read on it is added to that reader first, and a safety copy of the
+     old save is kept, so nothing is lost. */
+  function kidJoin(id, remote) {
+    try { localStorage.setItem(KEY + ".beforelink", localStorage.getItem(KEY) || ""); } catch (e) {}
+    let target = C.sanitize(remote);
+    R.order.forEach(pid => { const p = R.profiles[pid]; if (p && !C.blank(p)) target = C.merge(target, p); });
+    R = { v: 2, active: id, order: [id], gone: {}, profiles: { [id]: target } }; act();
+    ui.levelSet = false; ui.month = null; ui.sel = null; save(true);
+    if (!document.querySelector(".overlay")) route(); else stale = true;
+  }
   function cloudLine() {
     const st = CL.status;
     if (st === "ok") return "☁️ Backed up as " + esc(CL.email) + (CL.at ? " · " + new Date(CL.at).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }) : "");
@@ -89,6 +108,7 @@
       if (!ui.book || ui.book.id !== h.slice(2)) { ui.book = byId[h.slice(2)]; ui.page = 0; ui.finishedNow = false; }
       ui.paused = false; ui.hl = -1; renderReader(); startTimer();
     } else if (h === "log") { ui.book = null; renderLog(); }
+    else if (h.startsWith("reader=")) { const key = CL.parseReaderKey(h); try { history.replaceState(null, "", location.pathname + location.search); } catch (e) {} ui.book = null; renderShelf(); if (key && !kid()) openJoinReader(key); }
     else if (h.startsWith("join=")) { const key = CL.parseKey(h); try { history.replaceState(null, "", location.pathname + location.search); } catch (e) {} ui.book = null; renderShelf(); if (key) openJoin(key); }
     else { ui.book = null; renderShelf(); }
   }
@@ -160,7 +180,7 @@
     $("#view").innerHTML = `
     <header class="top"><h1>${icon("logo", "📖 ")}Read ${S.goal}</h1><span class="cloudbadge" id="cloudbadge" title="Backed up online" ${CL.status === "ok" ? "" : "hidden"}>☁️✓</span><button class="icon" id="gear" aria-label="Settings">${icon("sliders", "⚙️")}</button></header>
     ${warnHtml()}
-    <div class="readers" role="tablist" aria-label="Readers">${R.order.map(id => `<button role="tab" aria-selected="${id === R.active}" class="rd ${id === R.active ? "on" : ""}" data-id="${esc(id)}"><span class="av" aria-hidden="true">${avOf(id)}</span><span class="nm">${esc(who(R.profiles[id]))}</span></button>`).join("")}<button class="rd add" id="addrd" aria-label="Add a reader"><span class="av" aria-hidden="true">＋</span><span class="nm">Add</span></button></div>
+    <div class="readers" role="tablist" aria-label="Readers">${R.order.map(id => `<button role="tab" aria-selected="${id === R.active}" class="rd ${id === R.active ? "on" : ""}" data-id="${esc(id)}"><span class="av" aria-hidden="true">${avOf(id)}</span><span class="nm">${esc(who(R.profiles[id]))}</span></button>`).join("")}${kid() ? "" : '<button class="rd add" id="addrd" aria-label="Add a reader"><span class="av" aria-hidden="true">＋</span><span class="nm">Add</span></button>'}</div>
     <section class="today ${done ? "ok" : ""}">
       <div class="ringbox">${ring(sec, goal)}<div class="rtxt"><b>${Math.floor(sec / 60)}</b><span>min</span></div></div>
       <div class="ttxt">
@@ -176,13 +196,13 @@
     <div class="levels" role="tablist" aria-label="Levels">${B.LEVELS.map(l => `<button role="tab" aria-selected="${l.n === ui.level}" class="lv ${l.n === ui.level ? "on" : ""}" data-lv="${l.n}"><span>${l.icon}</span>Level ${l.n}</button>`).join("")}</div>
     <p class="lvinfo"><b>${esc(lv.name)}</b> · ${esc(lv.sub)}<br><small>${readIn} of ${list.length} read</small></p>`}
     <div class="shelf">${list.map(b => `<button class="cover${older ? " tp-" + b.topic : ""}" data-id="${esc(b.id)}" style="--c:${esc(b.color)}" aria-label="${esc(b.title)}${fin[b.id] ? ", read" : ""}"><span class="ce">${older ? I(b.topic, 46) : esc(b.cover)}</span><span class="ct">${esc(b.title)}</span>${older ? `<span class="pips" aria-label="difficulty ${b.diff} of 3">${"●".repeat(b.diff)}${"○".repeat(3 - b.diff)}</span>` : ""}${fin[b.id] ? `<span class="check" aria-hidden="true">${older ? I("check", 18) : "✓"}</span>` : ""}</button>`).join("")}</div>
-    ${C.totalAll(R) >= 600 && !CL.enabled() && (!bkDate() || C.daysSince(bkDate(), k) >= 7) ? '<section class="nudge"><b>Keep the reading log safe ☁️</b><p>The log lives on this phone. A parent can sign in with Google once to back it up online. Readers never have to sign in.</p><button class="btn alt" id="bknow">Set up the backup</button></section>' : ""}
+    ${!kid() && C.totalAll(R) >= 600 && !CL.enabled() && (!bkDate() || C.daysSince(bkDate(), k) >= 7) ? '<section class="nudge"><b>Keep the reading log safe ☁️</b><p>The log lives on this phone. A parent can sign in with Google once to back it up online. Readers never have to sign in.</p><button class="btn alt" id="bknow">Set up the backup</button></section>' : ""}
     <button class="btn alt" id="manual">＋ Log a book from home</button>
     <p class="fine">Stories are free to share: written for this app, or old public-domain rhymes and fables. Everything stays on this phone.</p>`;
     nav("books");
     $("#gear").onclick = openSettings;
     document.querySelectorAll(".rd[data-id]").forEach(b => (b.onclick = () => { if (b.dataset.id !== R.active) switchTo(b.dataset.id); }));
-    $("#addrd").onclick = openAddReader;
+    if ($("#addrd")) $("#addrd").onclick = openAddReader;
     $("#next").onclick = () => go("b/" + nx.id);
     $("#manual").onclick = openManual;
     if ($("#bknow")) $("#bknow").onclick = openSafe;
@@ -281,17 +301,17 @@
     ${cells.map(c => { if (!c) return '<div class="day empty"></div>'; const s = C.daySec(S, c), dn = +c.slice(8); const cls = (C.isDone(S, c) ? "done " : s ? "some " : "") + (c === k ? "now " : "") + (c === ui.sel ? "sel" : "");
       return `<button class="day ${cls}" data-d="${c}" aria-label="${c}${s ? ", " + C.fmtMin(s) : ""}${C.isDone(S, c) ? ", goal reached" : ""}"><b>${dn}</b><i>${C.isDone(S, c) ? icon("star", "⭐", 14) : s ? Math.round(s / 60) + "m" : ""}</i></button>`; }).join("")}</div>
     <div id="detail"></div>
-    <section class="keep"><h3>Keep the log safe</h3>
+    ${kid() ? "" : `<section class="keep"><h3>Keep the log safe</h3>
       <p class="ok">${store.fail ? "⚠️ This phone is not letting the app save." : "✓ Saved on this phone"}</p>
       <p class="cl2" id="cl2">${esc(cloudLine()) || "☁️ Not backed up online yet."}</p>
       <button class="btn" id="kcloud">${CL.status === "ok" ? "☁️ Back up now" : "☁️ Back up online (a parent signs in once)"}</button>
       <button class="btn alt" id="kfile">💾 Save a backup file</button>
       <p class="fine left" id="kmsg" role="status"></p>
-    </section>`;
+    </section>`}`;
     nav("log");
     $("#gear").onclick = openSettings;
-    $("#kcloud").onclick = () => { if (CL.status === "ok") { CL.syncNow(); $("#kmsg").textContent = "Backing up…"; setTimeout(() => { if ($("#cl2")) renderLog(); }, 1500); } else openSafe(); };
-    $("#kfile").onclick = () => { backup(); $("#kmsg").textContent = "Backup file saved to this phone's Downloads."; };
+    if ($("#kcloud")) $("#kcloud").onclick = () => { if (CL.status === "ok") { CL.syncNow(); $("#kmsg").textContent = "Backing up…"; setTimeout(() => { if ($("#cl2")) renderLog(); }, 1500); } else openSafe(); };
+    if ($("#kfile")) $("#kfile").onclick = () => { backup(); $("#kmsg").textContent = "Backup file saved to this phone's Downloads."; };
     $("#pm").onclick = () => { ui.month = m === 0 ? { y: y - 1, m: 11 } : { y, m: m - 1 }; renderLog(); };
     $("#nm").onclick = () => { ui.month = m === 11 ? { y: y + 1, m: 0 } : { y, m: m + 1 }; renderLog(); };
     document.querySelectorAll(".day[data-d]").forEach(b => (b.onclick = () => { ui.sel = b.dataset.d; renderLog(); }));
@@ -397,18 +417,20 @@
         <label>Reading level<select id="slv"><option value="early">Learning to read</option><option value="older">Older reader (grades 5 and up)</option></select></label>
         <label>Word size<select id="sz">${(S.lv === "older" ? ["Normal", "Large", "Extra large"] : ["Big", "Bigger", "Biggest"]).map((t, i) => `<option value="${i}">${t}</option>`).join("")}</select></label>
         <label class="chk"><input type="checkbox" id="ss" ${S.say ? "checked" : ""}> Say a word out loud when it is tapped</label>
-        ${R.order.length > 1 ? `<button class="linkbtn danger" id="srm">Remove ${esc(who(S))}…</button>` : ""}
+        ${R.order.length > 1 && !kid() ? `<button class="linkbtn danger" id="srm">Remove ${esc(who(S))}…</button>` : ""}
       </section>
-      <section class="set"><h3>Keep the log safe</h3><p class="fine left">${esc(safe)}</p><button class="btn alt" id="setsafe">Back up and share…</button></section>
+      ${kid() ? "" : `<section class="set"><h3>Keep the log safe</h3><p class="fine left">${esc(safe)}</p><button class="btn alt" id="setsafe">Back up and share…</button></section>`}
       <section class="set"><h3>Help</h3>
         <button class="btn alt" id="stest">🔊 Test the sound</button><p class="fine left" id="stm" role="status"></p>
         <button class="btn alt" type="button" onclick="window.nateHealth&&nateHealth.report()">✉️ Send a problem report</button>
         <button class="btn alt" id="srefresh">🔄 Get the newest version</button>
-        <p class="fine left" id="sver">Library: ${B.books.length} stories · version ${BUILD}</p></section>
+        <p class="fine left" id="sver">Library: ${B.books.length} stories · version ${BUILD}</p>
+        ${kid() ? '<button class="linkbtn" id="kunlink">Stop linking this phone…</button>' : ""}</section>
       <div class="row"><button class="btn" id="sd">Done</button></div>`);
     $("#sz").value = String(S.size); $("#slv").value = S.lv;
     wireAvatars(o, a => (av = a));
-    $("#setsafe").onclick = openSafe;
+    if ($("#setsafe")) $("#setsafe").onclick = openSafe;
+    if ($("#kunlink")) $("#kunlink").onclick = () => { if (confirm("Stop linking this phone? It keeps the reading it has, but it stops syncing with the parent's phone.")) { CL.unlinkKid(); closeOverlay(o); route(); } };
     $("#srefresh").onclick = refreshApp;
     if ($("#srm")) $("#srm").onclick = () => removeReader(o);
     $("#stest").onclick = () => {
@@ -444,6 +466,15 @@
         <button class="btn alt" id="shstop" hidden>Stop sharing on this phone</button>
         <label class="fine left">Got a link or code from the other home?<input id="jcode" placeholder="Paste it here" autocomplete="off"></label>
         <button class="btn alt" id="jgo">Join their log</button></section>
+      <section class="set"><h3>3 · Give one reader their own phone</h3>
+        <p class="fine left">Makes a link for <b id="rdname"></b> only. The phone that opens it can see and use just this reader, with no other readers and no parent screens. Anything they already read on that phone is added in.</p>
+        <p class="fine left" id="rlmsg" role="status"></p>
+        <button class="btn" id="rlmake" hidden>Make a link for this reader</button>
+        <button class="btn" id="rlsend" hidden>📤 Send the reader link</button>
+        <button class="btn alt" id="rlcopy" hidden>Copy the link</button>
+        <button class="btn alt" id="rlstop" hidden>Stop linking this reader's phone</button>
+        <label class="fine left">Linking <b>this</b> phone to a reader? Paste the link or code you were sent<input id="rcode" placeholder="Paste it here" autocomplete="off"></label>
+        <button class="btn alt" id="rgo">Link this phone</button></section>
       <section class="set"><h3>Or use a file</h3>
         <p class="fine left">${bkDate() ? "Last backup file: " + esc(bkDate()) + "." : "No backup file yet."} Keep it somewhere safe.</p>
         <button class="btn alt" id="sb">💾 Save a backup file</button>
@@ -459,8 +490,18 @@
       const key = CL.shareKey(); $("#shmake").hidden = !(on && !key); $("#shsend").hidden = $("#shcopy").hidden = $("#shstop").hidden = !key;
       $("#shmsg").textContent = key ? "Sharing is on. Reading minutes from both homes add up. Code: " + CL.pretty(key) : on ? "Make one link and text it to the other home. They open it, sign in with their own Google account, and both phones share one log, so nobody needs your Google account." : "Sign in above first, then you can make a family link.";
     };
-    CL.onchange = () => { paintCloud(); cloudChanged(); if (!$("#cl")) CL.onchange = cloudChanged; };
-    paintCloud();
+    const paintReader = () => {
+      if (!$("#rlmsg")) return; const signed = CL.status === "ok" || CL.status === "signedin" || (CL.status === "offline" && CL.email), key = CL.readerKeys()[R.active];
+      $("#rdname").textContent = who(S); $("#rlmake").hidden = !(signed && !key); $("#rlsend").hidden = $("#rlcopy").hidden = $("#rlstop").hidden = !key;
+      $("#rlmsg").textContent = key ? "This reader is linked. Code: " + CL.pretty(key) : signed ? "" : "Sign in above first.";
+    };
+    CL.onchange = () => { paintCloud(); paintReader(); cloudChanged(); if (!$("#cl")) CL.onchange = cloudChanged; };
+    paintCloud(); paintReader();
+    $("#rlmake").onclick = async () => { $("#rlmsg").textContent = "Making the link…"; const k = await CL.makeReaderLink(R.active); paintReader(); if (!k) $("#rlmsg").textContent = "Could not make the link. Check the signal, and that the cloud backup is allowed."; };
+    $("#rlsend").onclick = async () => { const url = CL.readerLink(CL.readerKeys()[R.active]), text = "Open this link on the phone that should read " + who(S) + "'s stories:"; try { if (navigator.share) { await navigator.share({ title: "Read 20 reader link", text, url }); return; } } catch (e) { if (e && e.name === "AbortError") return; } try { await navigator.clipboard.writeText(url); $("#rlmsg").textContent = "Link copied. Paste it into a text message."; } catch (e) { $("#rlmsg").textContent = url; } };
+    $("#rlcopy").onclick = async () => { const url = CL.readerLink(CL.readerKeys()[R.active]); try { await navigator.clipboard.writeText(url); $("#rlmsg").textContent = "Link copied. Paste it into a text message."; } catch (e) { $("#rlmsg").textContent = url; } };
+    $("#rlstop").onclick = () => { CL.unlinkReader(R.active); paintReader(); };
+    $("#rgo").onclick = () => { const k = CL.parseReaderKey($("#rcode").value); if (!k) { $("#rlmsg").textContent = "That does not look like a Read 20 reader link or code."; return; } openJoinReader(k); };
     $("#cin").onclick = () => CL.signIn();
     $("#shmake").onclick = async () => { $("#shmsg").textContent = "Making the link…"; const k = await CL.makeShare(); paintCloud(); if (!k) $("#shmsg").textContent = "Could not make the link. Check the signal, and that the cloud backup is allowed."; };
     $("#shsend").onclick = () => shareLink($("#shmsg"));
@@ -520,6 +561,25 @@
     o.querySelectorAll(".syl").forEach(b => (b.onclick = () => { o.querySelectorAll(".syl").forEach(x => x.classList.remove("on")); b.classList.add("on"); speak(a.syllables[+b.dataset.i].text); }));
     if ($("#wphear")) $("#wphear").onclick = () => speak(a.word.replace(/-/g, " "));
     $("#wpdone").onclick = () => closeOverlay(o); $("#wpdone").focus();
+  }
+
+  /* ---------- a child's own phone: one reader only ---------- */
+  function openJoinReader(key) {
+    const o = sheet(`<h2>Link this phone to a reader?</h2>
+      <p>This phone will show <b>only that one reader</b> and nothing else: no other readers, and none of the parent screens. Any reading already done on this phone is kept and added to that reader.</p>
+      <p class="fine left">You will sign in with Google to finish. Any Google account works; it does not have to be a parent's.</p>
+      <p class="fine left" id="jrmsg" role="status"></p>
+      <div class="row"><button class="btn alt" id="jrno">Not now</button><button class="btn" id="jryes">Link this phone</button></div>`);
+    const prev = CL.onchange;
+    const update = () => {
+      if (!$("#jrmsg")) { CL.onchange = prev; return; }
+      if (kid()) { CL.onchange = prev; while (overlays.length) closeOverlay(overlays[overlays.length - 1]); stale = false; route(); return; }   // linked: close every pop-up (the parent screens are gone on this phone) and redraw as the child's single reader
+      const st = CL.status;
+      $("#jrmsg").textContent = st === "badlink" ? "That link was not found. Ask for a new one." : st === "denied" ? "Sharing is not turned on yet. Ask a parent to publish the Read 20 rules in Firebase." : st === "offline" ? "No signal right now. Try again when you have signal." : st === "loading" || st === "signedin" ? "Linking…" : "";
+    };
+    CL.onchange = () => { prev(); update(); };
+    $("#jrno").onclick = () => { CL.forgetJoin(); closeOverlay(o); };
+    $("#jryes").onclick = async () => { $("#jrmsg").textContent = "Linking…"; $("#jryes").disabled = true; const ok = await CL.joinReader(key); $("#jryes").disabled = false; if (ok) { const el = document.querySelector(".overlay"); if (el === o) closeOverlay(o); } update(); };
   }
 
   /* ---------- family link: one log for two homes ---------- */
@@ -587,7 +647,7 @@
     document.addEventListener("visibilitychange", () => { if (document.hidden) { save(true); CL.flush(); } });
     try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist(); } catch (e) {} // ask Chrome never to clear her log to free space
     if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {});
-    CL.init({ get: () => R, apply: adopt, onchange: cloudChanged });
+    CL.init({ get: () => R, apply: adopt, applyReader: adoptReader, kidJoin, onchange: cloudChanged });
     route(); recover().then(() => { store.ready = true; save(true); });
   }
   window.R20App = { init, _state: () => S, _root: () => R };

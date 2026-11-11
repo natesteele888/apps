@@ -2295,44 +2295,44 @@
       "path": "read20/",
       "toolboxIds": [],
       "listing": {
-        "sub": "Nightly reading for new readers",
+        "sub": "Nightly reading for every young reader",
         "cat": "family",
         "ac": "#6c4ff0",
         "install": true,
         "access": "Open",
-        "desc": "A book shop of short, free stories for first-grade readers, from easy to harder. Words are big, and tapping a word highlights it so a reader can keep her place. A timer starts when a story opens and carries across stories up to 20 minutes, and a calendar log keeps every night and every story. Everything stays on the phone.",
+        "desc": "A free reading app for kids who are learning to read, and for older readers too. Short stories in five easy-to-hard levels, plus a library for older readers with sports, photography, fitness, social studies and English, each with words to know and a quick quiz. Words are big and tappable, a press-and-hold shows a word's syllables and sounds, and a 20-minute timer carries from story to story. Every child gets their own profile and calendar log. A parent can sign in once to back it up and share it with another home, or give a child's phone just their own reader. Reading stays on the phone unless you choose to back it up.",
         "feats": [
           [
             "📚",
-            "Book shop in 5 levels",
-            "45 short stories and old rhymes, from three-letter words up to fables."
-          ],
-          [
-            "👆",
-            "Tap to highlight",
-            "Big words; tap one to mark where you are. Tap again to clear."
-          ],
-          [
-            "⏱️",
-            "20-minute timer",
-            "Starts on the first story and carries into the next, with a cheer at 20."
+            "Stories for every level",
+            "115 short stories in five levels, from first words to chapter-style tales, plus a library for older readers."
           ],
           [
             "🧒",
             "A profile for each child",
-            "Swap readers on the home screen; each keeps their own log, streak and goal."
+            "Swap readers on the home screen; each has their own streak, goal and shelf."
           ],
           [
-            "📚",
-            "Older readers' library",
-            "48 true stories on sports, photography, fitness, athletes, social studies and English, each with words to know and a quiz."
+            "⏱️",
+            "20-minute nightly timer",
+            "Starts on the first story and carries into the next, with a cheer at 20."
+          ],
+          [
+            "👆",
+            "Press and hold a word",
+            "See its syllables and letter sounds, tap a part to hear it."
+          ],
+          [
+            "🔒",
+            "Private by design",
+            "Backups and sharing are optional and behind Google sign-in; a child's phone can be linked to just one reader."
           ]
         ],
         "facts": [
           [
             "Stories",
-            "45",
-            "free to share, 5 levels"
+            "163",
+            "free to share, five levels plus an older-readers library"
           ],
           [
             "Nightly goal",
@@ -2340,14 +2340,14 @@
             "minutes, or pick 10 to 30"
           ],
           [
-            "Log",
-            "Calendar",
-            "nights, stories and streaks"
+            "Readers",
+            "Many",
+            "each child has their own profile and log"
           ]
         ],
         "news": {
           "d": "Nov 2026",
-          "t": "New: Read 20, a nightly reading log with a story shelf"
+          "t": "New: Read 20 now has profiles for each child and a library for older readers"
         },
         "parts": [
           "pwa",
@@ -2363,7 +2363,8 @@
           "store/shots/read20-2.webp",
           "store/shots/read20-3.webp",
           "store/shots/read20-4.webp",
-          "store/shots/read20-5.webp"
+          "store/shots/read20-5.webp",
+          "store/shots/read20-6.webp"
         ],
         "version": "1.2.2",
         "history": [
@@ -2394,11 +2395,12 @@
           "url": "https://github.com/natesteele888/apps/commit/d665e48a3a245aaa7acf124a1ad392868c88792f"
         },
         "caps": [
-          "A shelf of short stories, and tonight's reading at a glance",
-          "Five levels of free stories, from easy to harder",
+          "Every child gets their own profile, streak and shelf",
           "Big words; tap one to keep your place while the timer runs",
-          "A calendar of every night, with the stories and the streak",
-          "Look back at any month and see what was read"
+          "Press and hold any word to see its syllables and sounds",
+          "A library for older readers: sports, science, social studies and English",
+          "Words to know and a quick quiz at the end of every story",
+          "A calendar of every night, with the stories and the streak"
         ],
         "autoShots": []
       }
