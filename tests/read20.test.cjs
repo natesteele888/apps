@@ -50,6 +50,17 @@ const TODAY = '2026-11-08';
     const nadia = l5.find(b => b.title.startsWith('Nadia')).pages.map(p => p.text).join(' '); assert.ok(/1976/.test(nadia) && /Montreal/.test(nadia) && /fourteen/.test(nadia) && /three gold medals/.test(nadia) && /seven perfect tens/.test(nadia), 'the Nadia facts are in');
     const syl = w => WD.analyze(w).text; eq(syl('gymnastics'), 'gym·nas·tics'); eq(syl('competition'), 'com·pe·ti·tion'); eq(syl('uneven'), 'un·e·ven'); eq(syl('sparkling'), 'spar·kling'); eq(syl('pyramid'), 'py·ra·mid'); eq(syl('cartwheel'), 'cart·wheel'); eq(syl('castle'), 'cas·tle');
   });
+  await test('library: gymnastics biographies at Levels 4 and 5 carry the true facts', () => {
+    const l4 = B.books.filter(b => b.level === 4), l5 = B.books.filter(b => b.level === 5), txt = t => (l4.concat(l5).find(b => b.title.startsWith(t)) || { pages: [] }).pages.map(p => p.text).join(' ');
+    for (const t of ['Simone Biles', 'Mary Lou Retton']) assert.ok(l4.find(b => b.title === t), t + ' at Level 4');
+    for (const t of ['Simone Biles: A Champion', 'Gabby Douglas', 'Suni Lee', "Kerri Strug", 'Aly Raisman']) assert.ok(l5.find(b => b.title.startsWith(t)), t + ' at Level 5');
+    assert.ok(/1984/.test(txt('Mary Lou')) && /ten/.test(txt('Mary Lou')) && /West Virginia/.test(txt('Mary Lou')));
+    assert.ok(/London/.test(txt('Gabby')) && /2012/.test(txt('Gabby')) && /first African American woman/.test(txt('Gabby')) && /Iowa/.test(txt('Gabby')));
+    assert.ok(/Tokyo/.test(txt('Suni')) && /all-around gold/.test(txt('Suni')) && /Hmong/.test(txt('Suni')));
+    assert.ok(/1996/.test(txt('Kerri')) && /Atlanta/.test(txt('Kerri')) && /first gold medal ever/.test(txt('Kerri')));
+    assert.ok(/captain/.test(txt('Aly')) && /six Olympic medals/.test(txt('Aly')) && /2012/.test(txt('Aly')));
+    assert.ok(/Paris/.test(txt('Simone Biles: A')) && /three gold medals/.test(txt('Simone Biles: A')) && /Columbus, Ohio/.test(txt('Simone Biles: A')));
+  });
   await test('library: level 1 and 2 pages stay short (first-grade length)', () => {
     for (const b of B.books.filter(b => b.level <= 2)) for (const p of b.pages) {
       const n = p.text.split(/\s+/).length;
@@ -581,6 +592,16 @@ const TODAY = '2026-11-08';
     eq(await page.evaluate(() => document.documentElement.classList.contains('teen')), false, 'back to the bright look for the early reader'); eq(await page.evaluate(() => document.querySelector('meta[name="theme-color"]').content), '#fff6e3'); eq(await page.locator('.cover .ce svg').count(), 0);
     await page.reload(); await page.waitForSelector('.cover'); eq(await page.evaluate(() => document.documentElement.classList.contains('teen')), false);
     await page.locator('.rd[data-id]').nth(1).click(); await page.waitForFunction(() => document.querySelector('.rd.on .nm').textContent === 'Alex'); await page.reload(); await page.waitForSelector('.cover'); eq(await page.evaluate(() => document.documentElement.classList.contains('teen')), true, 'remembered after a reload');
+  });
+  await test('updates: the service worker asks the site for a newer file every time; Settings shows the version and a safe refresh that keeps the log', async () => {
+    assert.ok(/cache: "no-cache"/.test(require('fs').readFileSync(path_.join(__dirname, '../apps/read20/sw.js'), 'utf8')), 'no 10-minute stale copies');
+    const o = await newPage(br, { sw: true, today: TODAY }); const { page } = o; await page.goto(srv.url); await page.waitForSelector('.cover'); await page.evaluate(() => navigator.serviceWorker.ready);
+    await page.locator('#manual').click(); await page.fill('#mm', '12'); await page.locator('#ms').click(); await page.waitForSelector('.cover'); eq(await sec(page), 720);
+    await page.locator('#gear').click(); assert.ok(/Library: \d+ stories · version 20\d\d-\d\d-\d\d/.test(await page.locator('#sver').innerText()), await page.locator('#sver').innerText());
+    const total = await page.evaluate(() => R20Books.books.length); assert.ok(new RegExp('Library: ' + total + ' stories').test(await page.locator('#sver').innerText()), 'the count is the real library size, so a phone with an old library shows a smaller number');
+    await page.evaluate(() => { window.__marker = 1; }); await Promise.all([page.waitForNavigation({ timeout: 15000 }), page.locator('#srefresh').click()]); await page.waitForSelector('.cover');
+    eq(await page.evaluate(() => window.__marker === undefined), true, 'the page reloaded'); eq(await sec(page), 720, 'her 12 minutes are still there');
+    eq(await page.evaluate(() => JSON.parse(localStorage.getItem('read20.v1')).profiles.main.days[window.__today || Object.keys(JSON.parse(localStorage.getItem('read20.v1')).profiles.main.days)[0]] !== undefined), true);
   });
   await test('offline: the service worker caches the app and it reopens with no network', async () => {
     const o = await newPage(br, { sw: true, today: TODAY }); const { page, ctx } = o;

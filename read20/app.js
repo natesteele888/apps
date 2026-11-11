@@ -4,6 +4,7 @@
   "use strict";
   const C = window.R20Core, B = window.R20Books;
   const CL = window.R20Cloud, WD = window.R20Words, AU = window.R20Audio, I = window.R20Icons;
+  const BUILD = "2026-11-11";   // change on each release; shown in Settings so a phone that is behind is easy to spot
   const teen = () => S.lv === "older";   // older readers get the darker look with line icons
   const icon = (name, fallback, size) => (teen() ? I(name, size) : fallback);
   const KEY = "read20.v1";
@@ -401,17 +402,28 @@
       <section class="set"><h3>Keep the log safe</h3><p class="fine left">${esc(safe)}</p><button class="btn alt" id="setsafe">Back up and share…</button></section>
       <section class="set"><h3>Help</h3>
         <button class="btn alt" id="stest">🔊 Test the sound</button><p class="fine left" id="stm" role="status"></p>
-        <button class="btn alt" type="button" onclick="window.nateHealth&&nateHealth.report()">✉️ Send a problem report</button></section>
+        <button class="btn alt" type="button" onclick="window.nateHealth&&nateHealth.report()">✉️ Send a problem report</button>
+        <button class="btn alt" id="srefresh">🔄 Get the newest version</button>
+        <p class="fine left" id="sver">Library: ${B.books.length} stories · version ${BUILD}</p></section>
       <div class="row"><button class="btn" id="sd">Done</button></div>`);
     $("#sz").value = String(S.size); $("#slv").value = S.lv;
     wireAvatars(o, a => (av = a));
     $("#setsafe").onclick = openSafe;
+    $("#srefresh").onclick = refreshApp;
     if ($("#srm")) $("#srm").onclick = () => removeReader(o);
     $("#stest").onclick = () => {
       AU.unlock(); const ok = AU.beep(), i = AU.info(); if (i.speech) setTimeout(() => AU.speak("Hello! Can you hear me?", 0.85), 700);
       $("#stm").textContent = !ok ? "This browser cannot make sound." : "You should hear a beep" + (i.speech ? " and then a voice" : "") + ". " + (i.speech ? (i.voices ? "" : "This phone has not loaded a speaking voice yet; try again in a few seconds. ") : "This phone has no speaking voice, so word-reading is off. ") + "If you hear nothing: turn the media volume up and make sure the phone is not on silent.";
     };
     $("#sd").onclick = () => { S.name = $("#sn").value.replace(/[\u0000-\u001f]/g, "").trim().slice(0, 20); S.av = av; if ($("#slv").value !== S.lv) { S.lv = $("#slv").value; ui.levelSet = false; } S.goal = +$("#sg").value; S.size = +$("#sz").value; S.say = $("#ss").checked; save(); closeOverlay(o); route(); };
+  }
+
+  /* Clears the saved copies of the app's files (never the reading log) and loads the newest version. */
+  async function refreshApp() {
+    $("#sver").textContent = "Getting the newest version…";
+    try { const ks = await caches.keys(); await Promise.all(ks.filter(k => k.startsWith("read20-")).map(k => caches.delete(k))); } catch (e) {}
+    try { const rs = await navigator.serviceWorker.getRegistrations(); await Promise.all(rs.map(r => r.unregister())); } catch (e) {}
+    save(true); location.reload();
   }
 
   /* ---------- keep the log safe: online backup, sharing with another home, files ---------- */

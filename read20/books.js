@@ -555,6 +555,22 @@ Then, tape on the paper.|📄
 Last, tie on a string.|🧵
 Take the kite to the lake.|🏞️
 Up, up, up it goes!|🪁`,
+`Simone Biles|🤸‍♀️|#e8d6ff
+Simone Biles is a gymnast.|🤸‍♀️
+She was born in 1997.|🎂
+She grew up in Texas.|🌵
+She began gymnastics at age six.|🤸
+She is not tall, but she is strong.|💪
+She can flip and spin in the air.|🌀
+She won gold at the Olympics. Simone is brave!|🥇`,
+`Mary Lou Retton|🥇|#ffe3a3
+Mary Lou Retton is a gymnast.|🤸‍♀️
+She is from West Virginia.|⛰️
+She is short and strong.|💪
+In 1984, she went to the Olympics.|🏟️
+She did a vault. She stuck the landing!|🤸
+The judges gave her a ten!|🔟
+Mary Lou won the gold medal!|🥇`,
 `Row, Row, Row Your Boat|🚣|#c8ecff
 Row, row, row your boat,|🚣
 Gently down the stream.|🌊
@@ -716,7 +732,52 @@ Then they built the floor, and Sam held the boards while Dad used the drill.|�
 They added walls and a roof, and Sam painted the door blue.|🎨
 Last, they put up a rope ladder and a little flag.|🚩
 That night, Sam and Dad climbed up to look at the stars.|⭐
-"Best house ever," said Sam.|🏠`]
+"Best house ever," said Sam.|🏠`,
+`Simone Biles: A Champion Who Kept Going|🏅|#e8d6ff
+Simone Biles was born in Columbus, Ohio, in 1997.|🤸‍♀️
+When she was six, she went on a field trip to a gym and copied what the gymnasts did.|🏫
+She is only four feet eight inches tall, but she is very strong.|💪
+She has won more world championship medals than any other gymnast in history.|🥇
+Some skills in gymnastics are named after her because she was the first to do them.|🌀
+At the Tokyo Olympics, she stopped competing in some events to stay safe, and she talked about taking care of her mind.|🧠
+At the Paris Olympics in 2024, she won three gold medals and a silver medal.|🏅
+Simone says it is okay to ask for help.|🤝`,
+`Gabby Douglas: The Flying Squirrel|🐿️|#d6eaff
+Gabby Douglas was born in Virginia Beach, Virginia, in 1995.|🌊
+She began gymnastics when she was six years old.|🤸‍♀️
+People call her the Flying Squirrel because she flies so high on the uneven bars.|🐿️
+When she was fourteen, she moved to Iowa to train with a new coach.|🚗
+She lived with a host family and missed her own family very much.|🏠
+At the 2012 Olympics in London, she helped the team win the gold medal.|🥇
+She also won the all-around gold. She was the first African American woman to do it.|🏅
+She was only sixteen. Her story shows that you can be brave even when you miss home.|💛`,
+`Suni Lee Wins the Gold|🥇|#ffe0b2
+Suni Lee was born in 2003 in St. Paul, Minnesota. Her family is Hmong American.|🏡
+When she was a little girl, her dad built a balance beam for her in the backyard.|🛠️
+She trained hard at her gym, and she got better and better.|💪
+Then her family had a very hard time when her dad was badly hurt in an accident.|💙
+Suni kept training, and she did not give up.|🤸‍♀️
+At the Tokyo Olympics, she won the all-around gold medal.|🥇
+She also won a silver medal with her team and a bronze medal on the uneven bars.|🥈
+In 2024, Suni went to the Olympics again, and her team won gold.|🏅`,
+`Kerri Strug's Brave Vault|🇺🇸|#ffd6d6
+Kerri Strug was a gymnast on the United States team at the 1996 Olympics in Atlanta.|🏟️
+She was only eighteen years old.|🎂
+The team needed good scores on the vault to win the gold medal.|🤸
+On her first vault, Kerri fell and hurt her ankle.|😣
+Her coach shouted, "You can do it!"|📣
+Kerri ran down the runway on her hurt ankle and landed on both feet.|🤸‍♀️
+Then she lifted her foot and saluted the judges.|🙌
+The team won its first gold medal ever. Kerri showed everyone how brave a gymnast can be.|🥇`,
+`Aly Raisman and Her Team|🥇|#e5dbff
+Aly Raisman was born in Massachusetts in 1994.|🏡
+She started gymnastics when she was only two years old, in a class with her mom.|👩‍👧
+She was very strong and very focused.|🎯
+At the 2012 Olympics, she was the captain of the team, which means she was the leader.|👑
+Her floor routine was full of joy, and she won the gold medal.|💃
+In 2016, she helped the team win gold again.|🥇
+She also won silver medals in the all-around and on the floor.|🥈
+Aly has six Olympic medals. She says a good leader helps everyone on the team.|🤝`]
   };
 
   const slug = t => t.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
