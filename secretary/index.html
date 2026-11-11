@@ -2684,7 +2684,7 @@ function minutesHTML(){
     ${pendingMotions.length ? `<ul>${pendingMotions.map(m => `<li>${esc(motionBody(m.text))} <i>(${esc(m.result || 'Pending')})</i></li>`).join('')}</ul>` : ''}
     <p style="margin-top:12px"><span class="lbl">Topics for the next meeting</span>${nextTopics.length ? '' : 'None yet.'}</p>
     ${nextTopics.length ? `<ul>${nextTopics.map(t => `<li>${esc(t)}</li>`).join('')}</ul>` : ''}
-    <div class="sig"><div>${esc(M.recorder)}<span>Secretary · Respectfully submitted</span></div><div>&nbsp;<span>Date approved by the Board</span></div></div>
+    <p class="closing" style="margin-top:22px">Respectfully submitted,<br>${esc(M.recorder)}, Secretary</p>
     <div class="foot">Lunenburg Youth Baseball &amp; Softball</div>
   </div>`;
 }
