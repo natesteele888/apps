@@ -24,6 +24,7 @@ NODE_PATH=/path/to/node_modules tests/run.sh locker    # one app
 - `scoreboard`: the game engine (baseball count and innings, basketball fouls and bonus, football downs, clock math, undo all the way back) and the board screens.
 - `filmlite`: frame stepping, loops, tags, drawing and angle math, a video recorded in the page, notes that come back for the same file.
 - `situations`: Where Do I Go? runs LYBS Ballclub's own trainer, so this serves `lybs-ballclub` beside this repo (next to it, or `BALLCLUB=/path`) and checks the field draws, a ball plays, Fundamentals opens in the store page's info sheet, and it opens offline after one visit.
+- `secretary`: Meeting Secretary with six demo members, one absent. Checks the Unanimous button counts only who is present (5–0–0, not 6–0–0), a Nay gives 4–1–0 and is never called unanimous, an Abstain gives 4–0–1, the minutes' attendance and quorum lines, and the closing line has no stray comma when no secretary is picked.
 - `live-smoke.cjs <app> <text>`: opens the published page and checks the service worker, manifest icons, offline reload and console errors.
 
 Not covered by any test (needs real phones): real microphones and Bluetooth speakers, the iPhone silent switch, real wake locks and vibration, two real phones' clocks lining up, real music and Bluetooth speaker delay, iPhone Safari recording, real touch hardware.
