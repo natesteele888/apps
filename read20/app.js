@@ -454,6 +454,7 @@
       <p class="fine left">${store.fail ? "⚠️ This phone is not letting the app save." : "✓ Always saved on this phone."} This covers every reader on this phone.</p>
       <section class="set"><h3>1 · Back up online</h3>
         <p class="fine left">A parent signs in with Google once. After that a lost, reset or new phone gets the log back. Readers never need to sign in.</p>
+        <p class="fine left">🔒 Optional. Without it, nothing leaves this phone. If a parent turns it on, the readers\u2019 names, minutes and the Google email are stored in the app\u2019s private database, locked to that family\u2019s Google sign-in. No ads, no tracking, never shared.</p>
         <p class="fine left" id="cl" role="status"></p>
         <button class="btn" id="cin" hidden>Sign in with Google</button>
         <button class="btn alt" id="cnow" hidden>Back up now</button>
