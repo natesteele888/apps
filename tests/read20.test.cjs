@@ -616,7 +616,7 @@ const TODAY = '2026-11-08';
     await page.locator('#manual').click(); await page.fill('#mm', '12'); await page.locator('#ms').click(); await page.waitForSelector('.cover'); eq(await sec(page), 720);
     await page.locator('#gear').click(); assert.ok(/Library: \d+ stories · version 20\d\d-\d\d-\d\d/.test(await page.locator('#sver').innerText()), await page.locator('#sver').innerText());
     const total = await page.evaluate(() => R20Books.books.length); assert.ok(new RegExp('Library: ' + total + ' stories').test(await page.locator('#sver').innerText()), 'the count is the real library size, so a phone with an old library shows a smaller number');
-    await page.evaluate(() => { window.__marker = 1; }); await Promise.all([page.waitForNavigation({ timeout: 15000 }), page.locator('#srefresh').click()]); await page.waitForSelector('.cover');
+    await page.evaluate(() => { window.__marker = 1; }); await page.locator('#srefresh').click(); await page.waitForFunction(() => window.__marker === undefined, null, { timeout: 15000 }); await page.waitForSelector('.cover');
     eq(await page.evaluate(() => window.__marker === undefined), true, 'the page reloaded'); eq(await sec(page), 720, 'her 12 minutes are still there');
     eq(await page.evaluate(() => JSON.parse(localStorage.getItem('read20.v1')).profiles.main.days[window.__today || Object.keys(JSON.parse(localStorage.getItem('read20.v1')).profiles.main.days)[0]] !== undefined), true);
   });
@@ -721,6 +721,34 @@ const TODAY = '2026-11-08';
     const l = await newPage(br, { today: TODAY }); await l.page.emulateMedia({ colorScheme: 'light' }); await l.page.goto(srv.url); await l.page.waitForSelector('.cover'); eq(await l.page.evaluate(() => document.documentElement.classList.contains('night')), false, 'phone is light');
     await l.page.locator('#moon').click(); await l.page.waitForSelector('.cover'); eq(await l.page.evaluate(() => document.documentElement.classList.contains('night')), true); await l.page.screenshot({ path: SHOTS + '/read20-night.png' });
     await l.page.evaluate(() => { const r = R20App._state(); r.lv = 'older'; }); await l.page.reload(); await l.page.waitForSelector('.cover');
+  });
+  const VOICE_SPEECH = `(function(){ window.__said = []; window.__cancels = 0; window.__voice = '';
+    window.SpeechSynthesisUtterance = function (t) { this.text = t; };
+    const vs = [{ name: 'Fred', voiceURI: 'Fred', lang: 'en-US', localService: true }, { name: 'Samantha', voiceURI: 'Samantha', lang: 'en-US', localService: true }, { name: 'Samantha (Enhanced)', voiceURI: 'SamE', lang: 'en-US', localService: true }, { name: 'Albert', voiceURI: 'Albert', lang: 'en-US', localService: true }, { name: 'Amelie', voiceURI: 'Amelie', lang: 'fr-FR', localService: true }];
+    let cur = null;
+    Object.defineProperty(window, 'speechSynthesis', { configurable: true, value: { get speaking() { return !!cur; }, pending: false, cancel: function () { window.__cancels++; const u = cur; cur = null; if (u && u.onend) u.onend({}); }, resume: function () {}, getVoices: function () { return vs; },
+      speak: function (u) { cur = u; window.__said.push(u.text); window.__voice = u.voice ? u.voice.name : ''; setTimeout(function () { if (cur !== u) return; if (u.onboundary) { let p = 0; u.text.split(' ').forEach(function (w) { u.onboundary({ name: 'word', charIndex: p }); p += w.length + 1; }); } cur = null; if (u.onend) u.onend({}); }, 120); } } });
+  })();`;
+  await test('voice: the most natural voice is picked on its own, novelty voices are never offered, and a choice is kept on the phone', async () => {
+    const o = await newPage(br, { today: TODAY }); await o.page.addInitScript(VOICE_SPEECH); await o.page.goto(srv.url); await o.page.waitForSelector('.cover');
+    eq(await o.page.evaluate(() => R20Audio.voices().map(v => v.name).join('|')), 'Samantha (Enhanced)|Samantha', 'best first, no Fred, Albert or French');
+    await o.page.evaluate(() => R20Audio.speak('hi', 0.9)); await o.page.waitForTimeout(150); eq(await o.page.evaluate(() => window.__voice), 'Samantha (Enhanced)');
+    await o.page.locator('#gear').click(); eq(await o.page.locator('#svc option').count(), 3); await o.page.selectOption('#svc', 'Samantha'); await o.page.waitForTimeout(200);
+    eq(await o.page.evaluate(() => window.__voice), 'Samantha', 'previewed in the chosen voice'); eq(await o.page.evaluate(() => localStorage.getItem('read20.voice')), 'Samantha');
+    await o.page.selectOption('#srt', '0.75'); eq(await o.page.evaluate(() => R20Audio.rate()), 0.75);
+  });
+  await test('storytime: a toggle next to the speaker reads each page aloud (again on every page turn), one sentence at a time with the words lit up; the repeat button reads it again; tapping a word or turning it off stops it', async () => {
+    const o = await newPage(br, { today: TODAY }); await o.page.addInitScript(VOICE_SPEECH); await o.page.goto(srv.url); await o.page.waitForSelector('.cover'); const page = o.page;
+    await page.locator('.cover', { hasText: 'Sam the Cat' }).click(); await page.waitForSelector('.reader');
+    eq(await page.locator('#story').getAttribute('aria-pressed'), 'false'); eq(await page.locator('#hear').count(), 0); eq((await page.evaluate(() => window.__said)).length, 0, 'off by default: nothing is read on its own');
+    const text = p => page.evaluate(() => document.querySelector('#text').textContent.replace(/\s+/g, ' ').trim());
+    const t1 = await text(); await page.locator('#story').click(); await page.waitForFunction(() => window.__said.length > 0); eq(await page.locator('#story').getAttribute('aria-pressed'), 'true'); eq(await page.locator('#hear').count(), 1);
+    await page.waitForTimeout(700); assert.ok((await page.evaluate(() => window.__said)).join(' ').replace(/\s+/g, ' ').includes(t1), 'read the page');
+    const n1 = (await page.evaluate(() => window.__said)).length; await page.locator('#hear').click(); await page.waitForTimeout(700); assert.ok((await page.evaluate(() => window.__said)).length > n1, 'repeat reads it again');
+    eq(await page.locator('#spd').innerText(), 'Normal'); await page.locator('#spd').click(); eq(await page.locator('#spd').innerText(), 'Fast'); eq(await page.evaluate(() => R20Audio.rate()), 1.05); for (let i = 0; i < 4; i++) await page.locator('#spd').click(); eq(await page.locator('#spd').innerText(), 'Normal', 'cycles round through five speeds'); await page.waitForTimeout(400);
+    await page.locator('#nextp').click(); const t2 = await text(); await page.waitForTimeout(700); assert.ok((await page.evaluate(() => window.__said)).slice(-3).join(' ').replace(/\s+/g, ' ').includes(t2), 'the next page is read on its own');
+    await page.locator('#hear').click(); await page.locator('.w').first().click(); const n2 = (await page.evaluate(() => window.__said)).length; await page.waitForTimeout(500); eq(await page.evaluate(() => window.__said.length), n2, 'tapping a word stops the sentences');
+    eq(await page.evaluate(() => localStorage.getItem('read20.story')), '1', 'it stays on'); await page.locator('#story').click(); eq(await page.locator('#hear').count(), 0, 'off hides the repeat button'); eq(await page.evaluate(() => localStorage.getItem('read20.story')), null);
   });
   await test('offline: the service worker caches the app and it reopens with no network', async () => {
     const o = await newPage(br, { sw: true, today: TODAY }); const { page, ctx } = o;
