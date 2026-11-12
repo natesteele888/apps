@@ -430,6 +430,7 @@
         <button class="btn alt" type="button" onclick="window.nateHealth&&nateHealth.report()">✉️ Send a problem report</button>
         <button class="btn alt" id="srefresh">🔄 Get the newest version</button>
         <p class="fine left" id="sver">Library: ${B.books.length} stories · version ${BUILD}</p>
+        <p class="fine left">© 2026 Nate Steele. All rights reserved. Please do not copy or resell this app.</p>
         ${kid() ? '<button class="linkbtn" id="kunlink">Stop linking this phone…</button>' : ""}</section>
       <div class="row"><button class="btn" id="sd">Done</button></div>`);
     $("#sz").value = String(S.size); $("#slv").value = S.lv;
