@@ -93,6 +93,30 @@
   /* More hand-checked syllable splits (the older-reader words, made by tools/read20-syllables.py). Hand splits above win. */
   W.add = map => { for (const k of Object.keys(map)) if (!SYL[k]) SYL[k] = map[k]; };
   W.clean = word => String(word || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[’]/g, "'").replace(/^[^a-z]+|[^a-z']+$/g, "").replace(/\.(?=[a-z])/g, "").replace(/'s$/, "");
+  /* What the phone's voice should be given for ONE syllable. A voice says a lone "ty" as "tie" and a lone "ble" as "bell",
+     so the part is respelled the way it sounds inside the word (plen-ty: "plen" then "tee"). Words the rules get wrong
+     are listed in SAYFIX (one entry per syllable). */
+  const SAYFIX = { able: ["ay", "buhl"], area: ["air", "ee", "uh"], bio: ["bye", "oh"], idea: ["eye", "dee", "uh"], diego: ["dee", "ay", "go"], already: ["all", "red", "ee"], measure: ["meh", "zhur"], pleasure: ["pleh", "zhur"], treasure: ["treh", "zhur"], beautiful: ["byoo", "tih", "fuhl"], people: ["pee", "puhl"], famous: ["fay", "mus"] };
+  const LONGY = new Set(["fy", "ply"]);
+  function spoken(p, i, n, w, nextp) {
+    if (SAYFIX[w] && SAYFIX[w].length === n) return SAYFIX[w][i];
+    const last = i === n - 1;
+    if (n === 1) return p;
+    if (!last && /^[^aeiouy]+i$/.test(p)) return p.slice(0, -1) + "ih";   // a-bil-i-ty, tra-di-tion: a lone "ti" would be said "tee"
+    if (p === "le" && last) return "uhl";
+    if (nextp && /^(tion|sion|tial|cial|cian)/.test(nextp) && /^[^aeiou]+[ao]$/.test(p)) { const v = p.slice(-1), c = p.slice(0, -1).replace(/^c$/, "k"); return c + { a: "ay", o: "oh" }[v]; }   // na-tion, vi-sion
+    const lone = { a: "uh", e: "eh", i: "ih", o: "oh", u: "yoo", y: "ee" }; if (lone[p]) return lone[p];
+    if (last) {
+      if (LONGY.has(p)) return p === "fy" ? "fye" : "plye";
+      if (/^[^aeiouy]+y$/.test(p)) return p.slice(0, -1).replace(/^ph$/, "f") + "ee";   // plen-ty -> "plen" "tee", hap-py, fam-i-ly
+      if (/^[^aeiouy]+le$/.test(p)) return p.slice(0, -2) + "uhl";                        // ta-ble, peo-ple
+      if (/^[^aeiouy]+les$/.test(p)) return p.slice(0, -3) + "uhlz";
+      const tail = [[/tions?$/, "shun"], [/tions$/, "shunz"], [/sion$/, "zhun"], [/sions$/, "zhunz"], [/cian$/, "shun"], [/[tc]ial$/, "shul"], [/[tc]ious$/, "shus"], [/ture$/, "chur"], [/tures$/, "churz"], [/sure$/, "zhur"], [/ous$/, "us"], [/age$/, "ij"], [/ed$/, "id"], [/es$/, "iz"]];
+      if (/^(ed|es)$/.test(p) || /^[^aeiouy]*(ed|es)$/.test(p) && p.length <= 3) return p.replace(/ed$/, "id").replace(/es$/, "iz");
+      for (const [re, to] of tail) if (re.test(p) && p.length <= 6) return p.replace(re, to);
+    }
+    return p;
+  }
   W.analyze = raw => {
     const w = W.clean(raw); if (!w || !/^[a-z'-]+$/.test(w)) return null;
     const parts = (SYL[w] || (/-/.test(w) ? w : null) || ruleSyllables(w.replace(/'/g, "")).join("-")).split("-").filter(Boolean);
@@ -108,6 +132,7 @@
       else ch = chunks(base);
       return { text: p.replace(/'/g, "'"), sounds: ch };
     });
+    syl.forEach((s, i) => { s.say = spoken(s.text.toLowerCase(), i, syl.length, w, syl[i + 1] && syl[i + 1].text.toLowerCase()); });
     return { word: w, syllables: syl, tricky, text: syl.map(s => s.text).join("·") };
   };
   root.R20Words = W;
