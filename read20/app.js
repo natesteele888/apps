@@ -6,7 +6,7 @@
   const CL = window.R20Cloud, WD = window.R20Words, AU = window.R20Audio, I = window.R20Icons;
   // Anonymous "someone really used it" counts for the owner's numbers page: a phone code and the week, nothing else (see install.js).
   function count(kind) { try { if (window.nateCount) window.nateCount(kind); } catch (e) {} }
-  const BUILD = "2026-11-12";   // change on each release; shown in Settings so a phone that is behind is easy to spot
+  const BUILD = "2026-11-13";   // change on each release; shown in Settings so a phone that is behind is easy to spot
   const teen = () => S.lv === "older";   // older readers get the darker look with line icons
   const icon = (name, fallback, size) => (teen() ? I(name, size) : fallback);
   const KEY = "read20.v1";
@@ -95,6 +95,9 @@
 
   /* ---------- sound, speech ---------- */
   function chime() { AU.chime(); }
+  // The press-and-hold syllable pop-up is switched off for now while the pronunciations are being checked. Tapping a word says it.
+  // Turn it back on for one phone with: localStorage.setItem("read20.syllables", "1")
+  const sylOn = () => { try { return localStorage.getItem("read20.syllables") === "1"; } catch (e) { return false; } };
   function say(w) { if (S.say) AU.speak(w, 0.8); }
 
   /* ---------- routing: #  (shelf), #log, #b/<id> (reading) ---------- */
@@ -233,7 +236,7 @@
       <div class="pic ${older ? "sm tp-" + bk.topic : cnt > 2 ? "m3" : cnt > 1 ? "m2" : ""}" aria-hidden="true">${older ? I(bk.topic, 40) : esc(emo)}</div>
       ${end ? `<div class="the-end"><h2>The End</h2><p>${esc(bk.title)}</p>${older && bk.gloss && bk.gloss.length ? glossHtml(bk) : ""}${older && bk.quiz && bk.quiz.length ? quizHtml(bk) : ""}<button class="btn big" id="more">Pick another story</button><button class="btn alt" id="again">Read it again</button></div>`
         : `<p class="text" id="text">${pg.text.split(/\s+/).map((w, i) => `<span class="w" role="button" tabindex="0" data-i="${i}">${esc(w)}</span>`).join(" ")}</p>`}
-      ${end ? "" : `<p class="hint">${older ? "" : "👆 "}Press and hold a word to ${older ? "see its syllables" : "break it into sounds"}</p>`}
+      ${end ? "" : `<p class="hint">${older ? "" : "👆 "}${sylOn() ? "Press and hold a word to " + (older ? "see its syllables" : "break it into sounds") : "Tap a word to hear it"}</p>`}
       <footer class="rnav">
         <button class="pgbtn" id="prev" ${ui.page === 0 ? "disabled" : ""} aria-label="Previous page">${icon("back", "◀", 26)}</button>
         <div class="pgnum" aria-live="polite">${end ? "The End" : "Page " + (ui.page + 1) + " of " + n}</div>
@@ -257,12 +260,12 @@
         const hit = () => { const i = +w.dataset.i; ui.hl = ui.hl === i ? -1 : i; paintHl(); if (ui.hl >= 0) say(w.textContent.replace(/[^\w']/g, "")); };
         let t = 0, x0 = 0, y0 = 0;
         const stop = () => { clearTimeout(t); t = 0; };
-        w.onpointerdown = e => { if (e.button) return; x0 = e.clientX; y0 = e.clientY; stop(); t = setTimeout(() => { t = 0; ui.lp = true; setTimeout(() => (ui.lp = false), 700); ui.hl = +w.dataset.i; paintHl(); openWord(w.textContent); }, 450); };
+        w.onpointerdown = e => { if (e.button || !sylOn()) return; x0 = e.clientX; y0 = e.clientY; stop(); t = setTimeout(() => { t = 0; ui.lp = true; setTimeout(() => (ui.lp = false), 700); ui.hl = +w.dataset.i; paintHl(); openWord(w.textContent); }, 450); };
         w.onpointermove = e => { if (t && Math.hypot(e.clientX - x0, e.clientY - y0) > 12) stop(); };
         w.onpointerup = w.onpointercancel = w.onpointerleave = stop;
         w.oncontextmenu = e => e.preventDefault();
         w.onclick = () => { if (ui.lp) { ui.lp = false; return; } hit(); };
-        w.onkeydown = e => { if (e.key === "Enter" && e.shiftKey || e.key === "?") { e.preventDefault(); ui.hl = +w.dataset.i; paintHl(); openWord(w.textContent); } else if (e.key === "Enter" || e.key === " ") { e.preventDefault(); hit(); } };
+        w.onkeydown = e => { if (sylOn() && (e.key === "Enter" && e.shiftKey || e.key === "?")) { e.preventDefault(); ui.hl = +w.dataset.i; paintHl(); openWord(w.textContent); } else if (e.key === "Enter" || e.key === " ") { e.preventDefault(); hit(); } };
       });
       paintHl();
     }
