@@ -25,16 +25,35 @@
     const books = p.books && typeof p.books === "object" ? p.books : {};
     for (const id of Object.keys(books).slice(0, 200)) { const b = books[id] || {}; out.books[clean(id, 60)] = { sec: int(b.sec, 0, 86400, 0), fin: b.fin ? 1 : 0 }; }
     (Array.isArray(p.extra) ? p.extra : []).slice(0, 50).forEach(e => { if (e && typeof e === "object") out.extra.push({ title: clean(e.title, 60) || "A book from home", sec: int(e.sec, 0, 86400, 0) }); });
+    /* Removed entries are kept as marks (never by editing the time), so a removal survives merging with another phone or a backup:
+       cut[story] = seconds of that story to ignore, xc[n] = the n-th book-from-home entry is removed. Merging only ever adds marks. */
+    if (p.cut && typeof p.cut === "object") { out.cut = {}; Object.keys(p.cut).slice(0, 200).forEach(id => { const v = int(p.cut[id], 0, 86400, 0); if (v) out.cut[clean(id, 60)] = v; }); if (!Object.keys(out.cut).length) delete out.cut; }
+    if (p.xc && typeof p.xc === "object") { out.xc = {}; Object.keys(p.xc).slice(0, 50).forEach(i => { if (p.xc[i] && /^\d{1,2}$/.test(i)) out.xc[i] = 1; }); if (!Object.keys(out.xc).length) delete out.xc; }
     return out.sec || Object.keys(out.books).length || out.extra.length ? out : null;
   };
   C.derive = d => {
     d.sec = 0; d.books = {}; d.extra = [];
     for (const dev of Object.keys(d.parts).sort()) {
-      const p = d.parts[dev]; d.sec += p.sec;
-      for (const id of Object.keys(p.books)) { const b = d.books[id] || (d.books[id] = { sec: 0, fin: 0 }); b.sec += p.books[id].sec; b.fin = b.fin || p.books[id].fin; }
-      p.extra.forEach(e => d.extra.push(e));
+      const p = d.parts[dev], cut = p.cut || {}, xc = p.xc || {}; let eff = p.sec;
+      for (const id of Object.keys(p.books)) {
+        const raw = p.books[id], gone = Math.min(cut[id] || 0, raw.sec), left = raw.sec - gone; eff -= gone;
+        if (left > 0 || (raw.fin && !cut[id])) { const b = d.books[id] || (d.books[id] = { sec: 0, fin: 0 }); b.sec += left; b.fin = b.fin || (cut[id] ? 0 : raw.fin); }
+      }
+      p.extra.forEach((e, i) => { if (xc[i]) eff -= e.sec; else d.extra.push({ title: e.title, sec: e.sec, dev, i }); });
+      d.sec += Math.max(0, eff);
     }
     d.sec = Math.min(d.sec, 86400); return d;
+  };
+  /* Remove all of one story's time from one day (on every phone that read it). Returns false if there was nothing to remove. */
+  C.removeBook = (s, k, id) => {
+    const d = s.days[k]; if (!d) return false; let any = false;
+    for (const dev of Object.keys(d.parts)) { const b = d.parts[dev].books[id]; if (b && b.sec + (b.fin ? 1 : 0) > 0) { const p = d.parts[dev]; (p.cut || (p.cut = {}))[id] = Math.max(b.sec, p.cut[id] || 0, 1); any = true; } }
+    if (any) C.derive(d); return any;
+  };
+  /* Remove one "book from home" entry (dev and i come from the day's extra list). */
+  C.removeExtra = (s, k, dev, i) => {
+    const d = s.days[k], p = d && d.parts[dev]; if (!p || !p.extra[i]) return false;
+    (p.xc || (p.xc = {}))[String(i)] = 1; C.derive(d); return true;
   };
   const myPart = d => (d.parts || (d.parts = {}))[C.dev] || (d.parts[C.dev] = { sec: 0, books: {}, extra: [] });
   /* What gets saved and sent: only the parts (the totals are rebuilt on load). */
@@ -138,6 +157,8 @@
       for (const dev of Object.keys(y.parts)) {
         const px = x.parts[dev], py = y.parts[dev]; if (!px) { x.parts[dev] = py; continue; }
         px.sec = Math.max(px.sec, py.sec);
+        if (py.cut) { px.cut = px.cut || {}; Object.keys(py.cut).forEach(id => { px.cut[id] = Math.max(px.cut[id] || 0, py.cut[id]); }); }
+        if (py.xc) { px.xc = Object.assign({}, px.xc, py.xc); }
         for (const id of Object.keys(py.books)) { const t = px.books[id]; if (!t) px.books[id] = py.books[id]; else { t.sec = Math.max(t.sec, py.books[id].sec); t.fin = t.fin || py.books[id].fin; } }
         const sum = e => e.reduce((n, v) => n + v.sec, 0); if (sum(py.extra) > sum(px.extra)) px.extra = py.extra;
       }
