@@ -290,7 +290,7 @@
         <div class="pgnum" aria-live="polite">${end ? "The End" : "Page " + (ui.page + 1) + " of " + n}</div>
         <button class="pgbtn go" id="nextp" ${end ? "disabled" : ""} aria-label="${ui.page === n - 1 ? "Finish the story" : "Next page"}">${icon("next", "▶", 26)}</button>
       </footer>
-      <div class="tools"><button class="mini" id="sm" aria-label="Smaller words">A−</button><button class="mini" id="lg" aria-label="Bigger words">A+</button><button class="mini ${S.say ? "on" : ""}" id="spk" aria-pressed="${S.say}" aria-label="Say words out loud when tapped">${icon("volume", "🔊", 20)}</button>${AU.canSpeak() && !end ? `<button class="mini wide ${storyOn() ? "on" : ""}" id="story" aria-pressed="${storyOn()}" aria-label="Storytime: read each page aloud">${teen() ? I("volume", 18) + " " : "🎧 "}Storytime</button>${storyOn() ? `<button class="mini" id="hear" aria-label="Hear this page again">↻</button><button class="mini" id="spd" aria-label="Reading speed: ${speedName()}. Tap to change.">${speedName()}</button>` : ""}` : ""}</div>
+      <div class="tools"><button class="mini" id="sm" aria-label="Smaller words">A−</button><button class="mini" id="lg" aria-label="Bigger words">A+</button><button class="mini ${S.say ? "on" : ""}" id="spk" aria-pressed="${S.say}" aria-label="Say words out loud when tapped">${icon("volume", "🔊", 20)}</button>${AU.canSpeak() && !end ? `<button class="mini wide ${storyOn() ? "on" : ""}" id="story" aria-pressed="${storyOn()}" aria-label="Storytime: read each page aloud">${teen() ? I("volume", 18) + " " : "🎧 "}Storytime</button>${storyOn() ? `<button class="mini" id="hear" aria-label="Hear this page again">↻</button><button class="mini" id="spd" aria-label="Reading speed: ${speedName()}. Tap to change.">Speed: ${speedName()}</button>` : ""}` : ""}</div>
       ${end && !older ? '<div class="confetti" aria-hidden="true">🎉</div>' : ""}
     </div>`;
     $("#back").onclick = () => go("");
@@ -300,7 +300,7 @@
     $("#spk").onclick = () => { S.say = !S.say; save(); renderReader(); startTimerKeep(); };
     if ($("#story")) $("#story").onclick = () => { setStory(!storyOn()); if (!storyOn()) { stopReading(); renderReader(); } else { renderReader(); readAloud(); } };
     if ($("#hear")) $("#hear").onclick = () => { readAloud(); };
-    if ($("#spd")) $("#spd").onclick = () => { const i = SPEEDS.findIndex(s => s[1] === speedName()); AU.setRate(SPEEDS[(i + 1) % SPEEDS.length][0]); $("#spd").textContent = speedName(); readAloud(); };
+    if ($("#spd")) $("#spd").onclick = () => { const i = SPEEDS.findIndex(s => s[1] === speedName()); setRate(SPEEDS[(i + 1) % SPEEDS.length][0]); $("#spd").textContent = "Speed: " + speedName(); readAloud(); };
     if (end) {
       if (!ui.finishedNow) { ui.finishedNow = true; C.finish(S, today(), bk.id); save(); }
       $("#more").onclick = () => { const nx = nextUp(); go(nx && nx.id !== bk.id ? "b/" + nx.id : ""); };
@@ -324,7 +324,10 @@
   }
   /* Read the page aloud one sentence at a time, lighting up each word as it is said (where the phone reports it). */
   const SPEEDS = [[0.45, "Very slow"], [0.6, "Slow"], [0.75, "Normal"], [0.9, "Fast"], [1.05, "Very fast"]];
-  const speedName = () => (SPEEDS.reduce((b, s) => (Math.abs(s[0] - AU.rate()) < Math.abs(b[0] - AU.rate()) ? s : b), SPEEDS[1]))[1];
+  /* The reading speed lives here (one setting for the Settings page and the story buttons), kept on this phone. */
+  const getRate = () => { try { const r = parseFloat(localStorage.getItem("read20.rate")); return r >= 0.3 && r <= 1.3 ? r : 0.6; } catch (e) { return 0.6; } };
+  const setRate = r => { try { localStorage.setItem("read20.rate", String(r)); } catch (e) {} };
+  const speedName = () => (SPEEDS.reduce((b, s) => (Math.abs(s[0] - getRate()) < Math.abs(b[0] - getRate()) ? s : b), SPEEDS[1]))[1];
   const storyOn = () => { try { return localStorage.getItem("read20.story") === "1"; } catch (e) { return false; } };
   const setStory = on => { try { if (on) localStorage.setItem("read20.story", "1"); else localStorage.removeItem("read20.story"); } catch (e) {} };
   function stopReading() { ui.reading = false; ui.gen = (ui.gen || 0) + 1; AU.stop(); ui.hl = -1; paintHl(); }
@@ -346,7 +349,7 @@
          the highlight is also timed from how long this voice took on the sentences before (and a first guess), and re-timed
          the moment a real boundary arrives. */
       const light = k => { if (!ui.reading || ui.gen !== gen) return; ui.hl = idx[k]; paintHl(); const el = document.querySelector('.w[data-i="' + idx[k] + '"]'); if (el && el.scrollIntoView) { try { el.scrollIntoView({ block: "nearest", behavior: "smooth" }); } catch (e) { el.scrollIntoView(); } } };
-      const rate = AU.rate(), cps = ui.cps && ui.cpsRate === rate ? ui.cps : 13 * rate, timers = []; let real = false, t0 = 0;
+      const rate = getRate(), cps = ui.cps && ui.cpsRate === rate ? ui.cps : 13 * rate, timers = []; let real = false, t0 = 0;
       const wts = idx.map(i => toks[i].length + 1 + (/[,;:]["'\u201d)]*$/.test(toks[i]) ? 4 : 0) + (/[.!?]["'\u201d)]*$/.test(toks[i]) ? 7 : 0)), tot = wts.reduce((x, y) => x + y, 0);
       const kill = () => { timers.forEach(clearTimeout); timers.length = 0; };
       const schedule = () => { let cum = 0; wts.forEach((w, k) => { const at = (cum / cps) * 1000; cum += w; timers.push(setTimeout(() => { if (!real) light(k); }, Math.max(0, at))); }); };
@@ -513,7 +516,7 @@
         <label>Word size<select id="sz">${(S.lv === "older" ? ["Normal", "Large", "Extra large"] : ["Big", "Bigger", "Biggest"]).map((t, i) => `<option value="${i}">${t}</option>`).join("")}</select></label>
         ${teen() ? "" : `<label>Screen look (this phone)<select id="slk">${[["auto", "Match my phone"], ["light", "Light"], ["dark", "Dark (easy on the eyes in bed)"]].map(([v, t]) => `<option value="${v}" ${getLook() === v ? "selected" : ""}>${t}</option>`).join("")}</select></label>`}
         <label class="chk"><input type="checkbox" id="ss" ${S.say ? "checked" : ""}> Say a word out loud when it is tapped</label>
-        ${AU.canSpeak() ? `<label>Reading voice (this phone)<select id="svc"></select></label><label>Voice speed<select id="srt">${SPEEDS.map(([v, t]) => `<option value="${v}" ${Math.abs(AU.rate() - v) < 0.02 ? "selected" : ""}>${t}</option>`).join("")}</select></label><p class="fine left" id="svh">Pick the most natural-sounding one. Voices that say "Enhanced", "Natural" or "Premium" sound the most like a person.</p>` : ""}
+        ${AU.canSpeak() ? `<label>Reading voice (this phone)<select id="svc"></select></label><label>Voice speed<select id="srt">${SPEEDS.map(([v, t]) => `<option value="${v}" ${Math.abs(getRate() - v) < 0.02 ? "selected" : ""}>${t}</option>`).join("")}</select></label><p class="fine left" id="svh">Pick the most natural-sounding one. Voices that say "Enhanced", "Natural" or "Premium" sound the most like a person.</p>` : ""}
         ${R.order.length > 1 && !kid() ? `<button class="linkbtn danger" id="srm">Remove ${esc(who(S))}…</button>` : ""}
       </section>
       ${kid() ? "" : `<section class="set"><h3>Keep the log safe</h3><p class="fine left">${esc(safe)}</p><button class="btn alt" id="setsafe">Back up and share…</button></section>`}
@@ -538,8 +541,8 @@
     const fillVoices = () => { const sel = $("#svc"); if (!sel) return; const cur = (() => { try { return localStorage.getItem("read20.voice") || ""; } catch (e) { return ""; } })(), vs = AU.voices();
       sel.innerHTML = `<option value="">Best available${AU.voiceName() ? " (" + esc(AU.voiceName()) + ")" : ""}</option>` + vs.map(v => `<option value="${esc(v.uri)}" ${v.uri === cur ? "selected" : ""}>${esc(v.name)}</option>`).join(""); };
     fillVoices(); if ($("#svc")) { try { speechSynthesis.addEventListener("voiceschanged", fillVoices); } catch (e) {}
-      $("#svc").onchange = () => { AU.setVoice($("#svc").value); AU.speak("Hello! Let's read a story together tonight.", AU.rate()); };
-      $("#srt").onchange = () => { AU.setRate(+$("#srt").value); AU.speak("This is how fast I will read.", AU.rate()); }; }
+      $("#svc").onchange = () => { AU.setVoice($("#svc").value); AU.speak("Hello! Let's read a story together tonight.", getRate()); };
+      $("#srt").onchange = () => { setRate(+$("#srt").value); AU.speak("This is how fast I will read.", getRate()); }; }
     if ($("#slk")) $("#slk").onchange = () => { setLook($("#slk").value); applyTheme(); };
     $("#sd").onclick = () => { S.name = $("#sn").value.replace(/[\u0000-\u001f]/g, "").trim().slice(0, 20); S.av = av; if ($("#slv").value !== S.lv) { S.lv = $("#slv").value; ui.levelSet = false; } S.goal = +$("#sg").value; S.size = +$("#sz").value; S.say = $("#ss").checked; save(); closeOverlay(o); route(); };
   }
