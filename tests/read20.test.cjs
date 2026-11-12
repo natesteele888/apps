@@ -657,6 +657,21 @@ const TODAY = '2026-11-08';
     await kid.page.fill('#rcode', pretty.toUpperCase()); await kid.page.locator('#rgo').click(); await kid.page.locator('#jryes').waitFor(); await kid.page.locator('#jryes').click();
     await kid.page.waitForFunction(() => R20Cloud.kid() && document.querySelector('.rd.on .nm').textContent === 'Pasted', null, { timeout: 8000 }); eq(await sec(kid.page), 660); eq(await kid.page.locator('#setsafe').count(), 0);
   });
+  await test('numbers: counts "reads" when real reading time is logged and "goals" when the goal is met, and nothing else leaves the phone', async () => {
+    const o = await newPage(br, { today: TODAY }); const { page } = o; await page.addInitScript(() => { window.__counts = []; window.nateCount = k => window.__counts.push(k); });
+    await page.clock.install({ time: new Date('2026-11-08T19:00:00') }); await page.goto(srv.url); await page.waitForSelector('.cover');
+    eq(await page.evaluate(() => window.__counts.length), 0, 'opening the app counts no reading');
+    await page.locator('.cover', { hasText: 'Sam the Cat' }).click(); await page.waitForSelector('.reader'); await page.locator('.w').first().click();
+    await page.clock.runFor(5000); assert.ok((await page.evaluate(() => window.__counts)).includes('reads'));
+    eq(await page.evaluate(() => window.__counts.includes('goals')), false);
+    for (let i = 0; i < 19; i++) { await page.clock.runFor(60000); await page.locator('.w').first().click(); } await page.clock.runFor(60000); await page.locator('#party').waitFor(); eq(await page.evaluate(() => window.__counts.filter(k => k === 'goals').length), 1);
+  });
+  await test('syllables: a part is respelled for the voice so it sounds like it does inside the word (plen-ty says "plen" "tee")', async () => {
+    const o = await newPage(br, { today: TODAY }); const say = w => o.page.evaluate(x => R20Words.analyze(x).syllables.map(s => s.say).join(' '), w);
+    await o.page.goto(srv.url); await o.page.waitForSelector('.cover');
+    eq(await say('plenty'), 'plen tee'); eq(await say('happy'), 'hap pee'); eq(await say('people'), 'pee puhl'); eq(await say('nation'), 'nay shun'); eq(await say('reply'), await say('reply'));
+    eq(await say('table'), 'tab uhl'); eq(await say('measure'), 'meh zhur'); eq(await say('cat'), 'cat', 'one-syllable words are said as written');
+  });
   await test('offline: the service worker caches the app and it reopens with no network', async () => {
     const o = await newPage(br, { sw: true, today: TODAY }); const { page, ctx } = o;
     await page.goto(srv.url); await page.waitForSelector('.cover'); await page.evaluate(() => navigator.serviceWorker.ready); await page.reload(); await page.waitForSelector('.cover');

@@ -267,3 +267,14 @@ test('app numbers: the owner can read every count', async () => {
   await assertSucceeds(getDocs(collection(owner(), 'app_installs')));
   await assertSucceeds(getDocs(collection(owner(), 'app_opens')));
 });
+
+test('app numbers: reads and goals are anonymous once-a-week counts like opens', async () => {
+  await assertSucceeds(setDoc(doc(anon(), 'app_reads/read20~2026-W46~' + PHONE), { app: 'read20', week: '2026-W46' }));
+  await assertSucceeds(setDoc(doc(anon(), 'app_goals/read20~2026-W46~' + PHONE), { app: 'read20', week: '2026-W46' }));
+  await assertFails(setDoc(doc(anon(), 'app_reads/read20~2026-W46~' + PHONE), { app: 'read20', week: '2026-W46' }));
+  await assertFails(setDoc(doc(anon(), 'app_goals/read20~2026-W45~' + PHONE), { app: 'read20', week: '2026-W46' }));
+  await assertFails(setDoc(doc(anon(), 'app_reads/read20~2026-W46~' + PHONE + 'x'), { app: 'read20', week: '2026-W46' }));
+  await assertFails(setDoc(doc(anon(), 'app_goals/read20~2026-W47~' + PHONE), { app: 'read20', week: '2026-W47', name: 'x' }));
+  await assertFails(getDocs(collection(anon(), 'app_reads')));
+  await assertSucceeds(getDocs(collection(owner(), 'app_goals')));
+});

@@ -44,6 +44,9 @@
       }
       send("app_opens", app + "~" + week + "~" + pid, "nate.count.open:" + app, week);
       if (standalone) send("app_installs", app + "~" + pid, "nate.count.install:" + app, "1");
+      /* An app calls window.nateCount("reads") when someone really uses it (once per phone per week), and "goals" when a
+         goal is met. Same anonymous record as an open: the app folder, the week and the random phone code. */
+      window.nateCount = function (kind) { if (kind === "reads" || kind === "goals") send("app_" + kind, app + "~" + week + "~" + pid, "nate.count." + kind + ":" + app, week); };
     })();
   } catch (e) {}
   if (standalone) { markInstalled(); return; }

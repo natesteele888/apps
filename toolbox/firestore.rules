@@ -147,5 +147,12 @@ service cloud.firestore {
     match /app_opens/{id} {
       allow create: if countOk(id, 3) && id.split('~')[1] == request.resource.data.week;
     }
+    // Same again for "someone actually read" (app_reads) and "someone met the goal" (app_goals), once per phone per app per week.
+    match /app_reads/{id} {
+      allow create: if countOk(id, 3) && id.split('~')[1] == request.resource.data.week;
+    }
+    match /app_goals/{id} {
+      allow create: if countOk(id, 3) && id.split('~')[1] == request.resource.data.week;
+    }
   }
 }

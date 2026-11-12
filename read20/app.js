@@ -4,7 +4,9 @@
   "use strict";
   const C = window.R20Core, B = window.R20Books;
   const CL = window.R20Cloud, WD = window.R20Words, AU = window.R20Audio, I = window.R20Icons;
-  const BUILD = "2026-11-11";   // change on each release; shown in Settings so a phone that is behind is easy to spot
+  // Anonymous "someone really used it" counts for the owner's numbers page: a phone code and the week, nothing else (see install.js).
+  function count(kind) { try { if (window.nateCount) window.nateCount(kind); } catch (e) {} }
+  const BUILD = "2026-11-12";   // change on each release; shown in Settings so a phone that is behind is easy to spot
   const teen = () => S.lv === "older";   // older readers get the darker look with line icons
   const icon = (name, fallback, size) => (teen() ? I(name, size) : fallback);
   const KEY = "read20.v1";
@@ -129,10 +131,10 @@
     const k = today(), before = C.daySec(S, k);
     ui.acc += Math.min(dt, 3);
     const whole = Math.floor(ui.acc); ui.acc -= whole;
-    if (whole > 0) { C.addSeconds(S, k, ui.book.id, whole); save(); }
+    if (whole > 0) { C.addSeconds(S, k, ui.book.id, whole); save(); count("reads"); }
     paintTimer();
     const d = C.day(S, k);
-    if (before < C.goalSec(S) && C.daySec(S, k) >= C.goalSec(S) && d && !d.done) { d.done = 1; save(); celebrate(); }
+    if (before < C.goalSec(S) && C.daySec(S, k) >= C.goalSec(S) && d && !d.done) { d.done = 1; save(); count("goals"); celebrate(); }
   }
   function paintTimer() {
     const el = $("#tm"); if (!el) return;
@@ -454,7 +456,7 @@
       <p class="fine left">${store.fail ? "⚠️ This phone is not letting the app save." : "✓ Always saved on this phone."} This covers every reader on this phone.</p>
       <section class="set"><h3>1 · Back up online</h3>
         <p class="fine left">A parent signs in with Google once. After that a lost, reset or new phone gets the log back. Readers never need to sign in.</p>
-        <p class="fine left">🔒 Optional. Without it, nothing leaves this phone. If a parent turns it on, the readers\u2019 names, minutes and the Google email are stored in the app\u2019s private database, locked to that family\u2019s Google sign-in. No ads, no tracking, never shared.</p>
+        <p class="fine left">🔒 Optional. Without it, your reading stays on this phone (the app only sends anonymous counts of how many phones use it: a random code, no names). If a parent turns it on, the readers\u2019 names, minutes and the Google email are stored in the app\u2019s private database, locked to that family\u2019s Google sign-in. No ads, no tracking, never shared.</p>
         <p class="fine left" id="cl" role="status"></p>
         <button class="btn" id="cin" hidden>Sign in with Google</button>
         <button class="btn alt" id="cnow" hidden>Back up now</button>
@@ -559,7 +561,7 @@
       <div class="wp-syl">${chips}</div>
       ${can ? '<button class="btn alt" id="wphear">🔊 Say the whole word</button>' : ""}
       <button class="btn" id="wpdone">Got it</button></div>`);
-    o.querySelectorAll(".syl").forEach(b => (b.onclick = () => { o.querySelectorAll(".syl").forEach(x => x.classList.remove("on")); b.classList.add("on"); speak(a.syllables[+b.dataset.i].text); }));
+    o.querySelectorAll(".syl").forEach(b => (b.onclick = () => { o.querySelectorAll(".syl").forEach(x => x.classList.remove("on")); b.classList.add("on"); speak(a.syllables[+b.dataset.i].say); }));
     if ($("#wphear")) $("#wphear").onclick = () => speak(a.word.replace(/-/g, " "));
     $("#wpdone").onclick = () => closeOverlay(o); $("#wpdone").focus();
   }
