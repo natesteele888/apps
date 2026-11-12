@@ -2403,7 +2403,8 @@
           "A calendar of every night, with the stories and the streak"
         ],
         "autoShots": []
-      }
+      },
+      "store": true
     },
     {
       "id": "getready",

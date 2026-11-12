@@ -551,7 +551,7 @@ let NARROW=innerWidth<620;addEventListener("resize",()=>{const n=innerWidth<620;
 /* live links come from the shared app list, so the store never shows an old address */
 /* ===== the app catalog: one file decides every app, its listing, icon and screenshots ===== */
 function fromCatalog(j){
-  const out=[];(j.apps||[]).forEach(x=>{if(x.store===false||x.retired||!x.listing)return;const L=x.listing;
+  const out=[];(j.apps||[]).forEach(x=>{if(x.store!==true||x.retired||!x.listing)return;   /* an app shows only when the owner turned it on in the Toolbox (default: hidden) */const L=x.listing;
     out.push({id:x.id,name:x.name,sub:L.sub||x.sub||"",cat:CATS[L.cat]?L.cat:"family",ac:L.ac||"#2f6df6",icon:`../icons/${x.id}-192.png`,
       url:x.private?"":x.live,install:L.install!==false,access:x.private?"Private":(L.access||"Open"),
       shots:(L.shots||[]).map(s=>s==="mock"?s:"../"+s),caps:L.caps||[],desc:L.desc||"",feats:L.feats||[],facts:L.facts||[],

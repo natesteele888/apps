@@ -1750,7 +1750,7 @@ function openListingEditor(pid){
   $("#sheet").innerHTML=`<div class="sheet-scrim" id="shScrim"></div><section class="sheet" role="dialog" aria-label="App Store listing">
     <div class="sh-top"><div class="eyebrow2">App Store listing · ${esc(r.name)}</div><button class="btn small" id="shClose">Cancel</button></div>
     <p class="sh-note" style="margin-top:0">What people see on this app's page in the App Store. Screenshots refresh on their own from the live app.</p>
-    <label class="chk2"><input type="checkbox" id="lsShow" ${r.store===false?"":"checked"}> Show this app in the App Store</label>
+    <label class="chk2"><input type="checkbox" id="lsShow" ${r.store===true?"checked":""}> Show this app in the App Store (off = nobody can find it there)</label>
     <label class="ie-f">One-line subtitle<input id="lsSub" maxlength="70" value="${esc(L.sub||"")}"></label>
     <label class="ie-f">Description<textarea id="lsDesc" rows="5" maxlength="700">${esc(L.desc||"")}</textarea></label>
     <div class="ie-f">Highlights (three)</div>
@@ -1758,7 +1758,7 @@ function openListingEditor(pid){
     <div class="sh-acts"><button class="btn primary" id="lsSave">Save listing</button></div></section>`;
   $("#shScrim").onclick=closeSheet;$("#shClose").onclick=closeSheet;
   $("#lsSave").onclick=async()=>{const v=id=>($("#"+id).value||"").trim();
-    const doc={store:$("#lsShow").checked,sub:v("lsSub"),desc:v("lsDesc"),feats:[0,1,2].map(i=>[v("lsE"+i),v("lsT"+i),v("lsD"+i)]).filter(f=>f[1]),pid,updatedAt:new Date().toISOString()};
+    const doc={show:$("#lsShow").checked,sub:v("lsSub"),desc:v("lsDesc"),feats:[0,1,2].map(i=>[v("lsE"+i),v("lsT"+i),v("lsD"+i)]).filter(f=>f[1]),pid,updatedAt:new Date().toISOString()};
     try{await queue(()=>S.db.doc("public_listings/"+r.id).set(doc));r.listing={...L,sub:doc.sub||L.sub,desc:doc.desc||L.desc,feats:doc.feats.length?doc.feats:L.feats};showPublish(r,"listing")}
     catch(e){toast(e&&e.code==="permission-denied"?"Saved nowhere yet: the listing rule isn't turned on in Firebase.":"Couldn't save the listing. Try again.")}};
 }
