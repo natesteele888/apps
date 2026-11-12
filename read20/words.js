@@ -91,6 +91,8 @@
   }
 
   /* More hand-checked syllable splits (the older-reader words, made by tools/read20-syllables.py). Hand splits above win. */
+  const SAYD = {};
+  W.addSay = map => { for (const k of Object.keys(map)) SAYD[k] = map[k].split("|"); };   // from say-data.js (tools/read20-say.py)
   W.add = map => { for (const k of Object.keys(map)) if (!SYL[k]) SYL[k] = map[k]; };
   W.clean = word => String(word || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[’]/g, "'").replace(/^[^a-z]+|[^a-z']+$/g, "").replace(/\.(?=[a-z])/g, "").replace(/'s$/, "");
   /* What the phone's voice should be given for ONE syllable. A voice says a lone "ty" as "tie" and a lone "ble" as "bell",
@@ -111,8 +113,8 @@
       if (/^[^aeiouy]+y$/.test(p)) return p.slice(0, -1).replace(/^ph$/, "f") + "ee";   // plen-ty -> "plen" "tee", hap-py, fam-i-ly
       if (/^[^aeiouy]+le$/.test(p)) return p.slice(0, -2) + "uhl";                        // ta-ble, peo-ple
       if (/^[^aeiouy]+les$/.test(p)) return p.slice(0, -3) + "uhlz";
-      const tail = [[/tions?$/, "shun"], [/tions$/, "shunz"], [/sion$/, "zhun"], [/sions$/, "zhunz"], [/cian$/, "shun"], [/[tc]ial$/, "shul"], [/[tc]ious$/, "shus"], [/ture$/, "chur"], [/tures$/, "churz"], [/sure$/, "zhur"], [/ous$/, "us"], [/age$/, "ij"], [/ed$/, "id"], [/es$/, "iz"]];
-      if (/^(ed|es)$/.test(p) || /^[^aeiouy]*(ed|es)$/.test(p) && p.length <= 3) return p.replace(/ed$/, "id").replace(/es$/, "iz");
+      const tail = [[/tions?$/, "shun"], [/tions$/, "shunz"], [/sion$/, "zhun"], [/sions$/, "zhunz"], [/cian$/, "shun"], [/[tc]ial$/, "shul"], [/[tc]ious$/, "shus"], [/ture$/, "chur"], [/tures$/, "churz"], [/sure$/, "zhur"], [/ous$/, "us"], [/age$/, "ij"], [/([td])ed$/, "$1id"], [/(s|c|g|x|z|ch|sh)es$/, "$1iz"]];
+      if (p === "ed") return "id"; if (p === "es") return "iz";
       for (const [re, to] of tail) if (re.test(p) && p.length <= 6) return p.replace(re, to);
     }
     return p;
@@ -132,7 +134,7 @@
       else ch = chunks(base);
       return { text: p.replace(/'/g, "'"), sounds: ch };
     });
-    syl.forEach((s, i) => { s.say = spoken(s.text.toLowerCase(), i, syl.length, w, syl[i + 1] && syl[i + 1].text.toLowerCase()); });
+    syl.forEach((s, i) => { s.say = SAYD[w] && SAYD[w].length === syl.length ? SAYD[w][i] : spoken(s.text.toLowerCase(), i, syl.length, w, syl[i + 1] && syl[i + 1].text.toLowerCase()); });
     return { word: w, syllables: syl, tricky, text: syl.map(s => s.text).join("·") };
   };
   root.R20Words = W;
