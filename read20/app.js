@@ -298,7 +298,7 @@
     $("#prev").onclick = () => turn(-1); $("#nextp").onclick = () => turn(1);
     $("#sm").onclick = () => size(-1); $("#lg").onclick = () => size(1);
     $("#spk").onclick = () => { S.say = !S.say; save(); renderReader(); startTimerKeep(); };
-    if ($("#story")) $("#story").onclick = () => { setStory(!storyOn()); if (!storyOn()) { stopReading(); renderReader(); } else { renderReader(); readAloud(); } };
+    if ($("#story")) $("#story").onclick = () => { setStory(!storyOn()); if (!storyOn()) { stopReading(); renderReader(); } else { AU.prime(); renderReader(); setTimeout(readAloud, 300); } };
     if ($("#hear")) $("#hear").onclick = () => { readAloud(); };
     if ($("#spd")) $("#spd").onclick = () => { const i = SPEEDS.findIndex(s => s[1] === speedName()); setRate(SPEEDS[(i + 1) % SPEEDS.length][0]); $("#spd").textContent = "Speed: " + speedName(); readAloud(); };
     if (end) {
@@ -354,10 +354,12 @@
       const kill = () => { timers.forEach(clearTimeout); timers.length = 0; };
       const schedule = () => { let cum = 0; wts.forEach((w, k) => { const at = (cum / cps) * 1000; cum += w; timers.push(setTimeout(() => { if (!real) light(k); }, Math.max(0, at))); }); };
       light(0); touch();
+      let ended = false;
+      const dog = setTimeout(() => { if (ended || !ui.reading || ui.gen !== gen) return; ended = true; kill(); AU.stop(); setTimeout(next, 300); }, (tot / cps) * 1000 * 1.8 + 3500);   // a voice that never says it is done
       AU.speak(text, rate, {
         onstart: () => { t0 = Date.now(); if (!real && !timers.length) schedule(); },
         onboundary: e => { if (typeof e.charIndex !== "number") return; real = true; kill(); let k = 0; while (k + 1 < starts.length && starts[k + 1] <= e.charIndex) k++; light(k); },
-        onend: () => { kill(); if (t0 && !real) { const secs = (Date.now() - t0) / 1000; if (secs > 0.3) { ui.cps = tot / secs; ui.cpsRate = rate; } } if (ui.reading && ui.gen === gen) setTimeout(next, 300); }
+        onend: () => { if (ended) return; ended = true; clearTimeout(dog); kill(); if (t0 && !real) { const secs = (Date.now() - t0) / 1000; if (secs > 0.3) { ui.cps = tot / secs; ui.cpsRate = rate; } } if (ui.reading && ui.gen === gen) setTimeout(next, 300); }
       });
       setTimeout(() => { if (ui.reading && !t0 && !timers.length && !real) { t0 = Date.now(); schedule(); } }, 700);   // a voice that never says it has started
     };

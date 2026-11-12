@@ -17,7 +17,10 @@
   };
   ["pointerdown", "touchstart", "keydown"].forEach(ev => root.addEventListener && root.addEventListener(ev, A.unlock, { capture: true, passive: true }));
 
-  A.stop = () => { try { if (root.speechSynthesis) root.speechSynthesis.cancel(); } catch (e) {} };
+  let cancelAt = 0, primed = false, waited = false;
+  A.stop = () => { try { if (root.speechSynthesis) { cancelAt = Date.now(); root.speechSynthesis.cancel(); } } catch (e) {} };
+  /* The first line a phone speaks is slow to start and often cut off. Called from the tap that turns Storytime on: says a silent space so the voice engine is awake before the real sentence. */
+  A.prime = () => { if (primed || !A.canSpeak()) return false; primed = true; try { const u = new root.SpeechSynthesisUtterance(" "); u.volume = 0; u.lang = "en-US"; utt = u; root.speechSynthesis.speak(u); return true; } catch (e) { return false; } };
 
   /* A bright four-note chime (the 20 minutes are done) and a single beep (the sound test). */
   A.chime = () => A.tones([523, 659, 784, 1047], 0.18);
@@ -70,14 +73,18 @@
     if (!A.canSpeak()) return false;
     try {
       const ss = root.speechSynthesis, busy = ss.speaking || ss.pending;
-      if (busy) ss.cancel();
+      if (busy) { cancelAt = Date.now(); ss.cancel(); }
       const u = new root.SpeechSynthesisUtterance(text); u.lang = "en-US"; u.rate = rate || 0.8; u.volume = 1;
       voice = voice || pickVoice(); if (voice) { u.voice = voice; if (voice.lang) u.lang = voice.lang; }
       if (opts && opts.onend) { let done = false; const fin = () => { if (done) return; done = true; opts.onend(); }; u.onend = fin; u.onerror = fin; }
       if (opts && opts.onboundary) u.onboundary = opts.onboundary;
       if (opts && opts.onstart) u.onstart = opts.onstart;
       utt = u; A.log.push("say:" + text);
-      setTimeout(() => { try { ss.resume(); ss.speak(u); } catch (e) {} }, busy ? 80 : 0);
+      /* Chrome drops a line spoken right after a cancel, and a voice that has not loaded yet speaks late and cut short, so wait for both. */
+      let wait = Math.max(busy ? 80 : 0, 160 - (Date.now() - cancelAt)); let none = false;
+      try { none = !(ss.getVoices() || []).length; } catch (e) {}
+      if (none && !waited) { waited = true; wait = Math.max(wait, 400); }
+      setTimeout(() => { try { ss.resume(); ss.speak(u); } catch (e) {} }, Math.max(0, wait));
       return true;
     } catch (e) { return false; }
   };
