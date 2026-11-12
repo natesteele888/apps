@@ -53,7 +53,7 @@
   A.voices = () => englishVoices().map(v => ({ uri: v.voiceURI || v.name, name: v.name, lang: v.lang, score: A.score(v) })).filter(v => v.score > -100).sort((x, y) => y.score - x.score);
   A.setVoice = uri => { prefSet("read20.voice", uri || ""); voice = null; };
   A.voiceName = () => { const v = pickVoice(); return v ? v.name : ""; };
-  A.rate = () => { const r = +prefGet("read20.rate"); return r >= 0.6 && r <= 1.2 ? r : 0.9; };
+  A.rate = () => { const r = +prefGet("read20.rate"); return r >= 0.3 && r <= 1.3 ? r : 0.6; };
   A.setRate = r => prefSet("read20.rate", r ? String(r) : "");
   function pickVoice() {
     try {
@@ -75,6 +75,7 @@
       voice = voice || pickVoice(); if (voice) { u.voice = voice; if (voice.lang) u.lang = voice.lang; }
       if (opts && opts.onend) { let done = false; const fin = () => { if (done) return; done = true; opts.onend(); }; u.onend = fin; u.onerror = fin; }
       if (opts && opts.onboundary) u.onboundary = opts.onboundary;
+      if (opts && opts.onstart) u.onstart = opts.onstart;
       utt = u; A.log.push("say:" + text);
       setTimeout(() => { try { ss.resume(); ss.speak(u); } catch (e) {} }, busy ? 80 : 0);
       return true;

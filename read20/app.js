@@ -323,14 +323,14 @@
     paintTimer();
   }
   /* Read the page aloud one sentence at a time, lighting up each word as it is said (where the phone reports it). */
-  const SPEEDS = [[0.6, "Very slow"], [0.75, "Slow"], [0.9, "Normal"], [1.05, "Fast"], [1.2, "Very fast"]];
-  const speedName = () => (SPEEDS.reduce((b, s) => (Math.abs(s[0] - AU.rate()) < Math.abs(b[0] - AU.rate()) ? s : b), SPEEDS[2]))[1];
+  const SPEEDS = [[0.45, "Very slow"], [0.6, "Slow"], [0.75, "Normal"], [0.9, "Fast"], [1.05, "Very fast"]];
+  const speedName = () => (SPEEDS.reduce((b, s) => (Math.abs(s[0] - AU.rate()) < Math.abs(b[0] - AU.rate()) ? s : b), SPEEDS[1]))[1];
   const storyOn = () => { try { return localStorage.getItem("read20.story") === "1"; } catch (e) { return false; } };
   const setStory = on => { try { if (on) localStorage.setItem("read20.story", "1"); else localStorage.removeItem("read20.story"); } catch (e) {} };
-  function stopReading() { ui.reading = false; AU.stop(); ui.hl = -1; paintHl(); }
+  function stopReading() { ui.reading = false; ui.gen = (ui.gen || 0) + 1; AU.stop(); ui.hl = -1; paintHl(); }
   /* Storytime: reads the page aloud (and again each time the page is turned). "↻" reads this page again. */
   function readAloud() {
-    ui.reading = false; AU.stop();
+    ui.reading = false; AU.stop(); const gen = (ui.gen = (ui.gen || 0) + 1);
     const pg = ui.book && ui.book.pages[ui.page]; if (!pg || !AU.canSpeak()) return;
     const toks = pg.text.split(/\s+/), sents = []; let cur = [];
     toks.forEach((w, i) => { cur.push(i); if (/[.!?]["'\u201d\u2019)]*$/.test(w)) { sents.push(cur); cur = []; } });
@@ -338,15 +338,25 @@
     ui.reading = true;
     let si = 0;
     const next = () => {
-      if (!ui.reading) return;
+      if (!ui.reading || ui.gen !== gen) return;
       if (si >= sents.length) return stopReading();
       const idx = sents[si++], text = idx.map(i => toks[i]).join(" "), starts = []; let pos = 0;
       idx.forEach(i => { starts.push(pos); pos += toks[i].length + 1; });
-      ui.hl = idx[0]; paintHl(); touch();
-      AU.speak(text, AU.rate(), {
-        onboundary: e => { if (!ui.reading || typeof e.charIndex !== "number") return; let k = 0; while (k + 1 < starts.length && starts[k + 1] <= e.charIndex) k++; ui.hl = idx[k]; paintHl(); },
-        onend: () => { if (ui.reading) setTimeout(next, 250); }
+      /* Where the voice reports each word (boundary events) the highlight follows it exactly. Many phone voices do not report, so
+         the highlight is also timed from how long this voice took on the sentences before (and a first guess), and re-timed
+         the moment a real boundary arrives. */
+      const light = k => { if (!ui.reading || ui.gen !== gen) return; ui.hl = idx[k]; paintHl(); const el = document.querySelector('.w[data-i="' + idx[k] + '"]'); if (el && el.scrollIntoView) { try { el.scrollIntoView({ block: "nearest", behavior: "smooth" }); } catch (e) { el.scrollIntoView(); } } };
+      const rate = AU.rate(), cps = ui.cps && ui.cpsRate === rate ? ui.cps : 13 * rate, timers = []; let real = false, t0 = 0;
+      const wts = idx.map(i => toks[i].length + 1 + (/[,;:]["'\u201d)]*$/.test(toks[i]) ? 4 : 0) + (/[.!?]["'\u201d)]*$/.test(toks[i]) ? 7 : 0)), tot = wts.reduce((x, y) => x + y, 0);
+      const kill = () => { timers.forEach(clearTimeout); timers.length = 0; };
+      const schedule = () => { let cum = 0; wts.forEach((w, k) => { const at = (cum / cps) * 1000; cum += w; timers.push(setTimeout(() => { if (!real) light(k); }, Math.max(0, at))); }); };
+      light(0); touch();
+      AU.speak(text, rate, {
+        onstart: () => { t0 = Date.now(); if (!real && !timers.length) schedule(); },
+        onboundary: e => { if (typeof e.charIndex !== "number") return; real = true; kill(); let k = 0; while (k + 1 < starts.length && starts[k + 1] <= e.charIndex) k++; light(k); },
+        onend: () => { kill(); if (t0 && !real) { const secs = (Date.now() - t0) / 1000; if (secs > 0.3) { ui.cps = tot / secs; ui.cpsRate = rate; } } if (ui.reading && ui.gen === gen) setTimeout(next, 300); }
       });
+      setTimeout(() => { if (ui.reading && !t0 && !timers.length && !real) { t0 = Date.now(); schedule(); } }, 700);   // a voice that never says it has started
     };
     next();
   }
