@@ -1759,7 +1759,7 @@ function openListingEditor(pid){
   $("#shScrim").onclick=closeSheet;$("#shClose").onclick=closeSheet;
   $("#lsSave").onclick=async()=>{const v=id=>($("#"+id).value||"").trim();
     const doc={show:$("#lsShow").checked,sub:v("lsSub"),desc:v("lsDesc"),feats:[0,1,2].map(i=>[v("lsE"+i),v("lsT"+i),v("lsD"+i)]).filter(f=>f[1]),pid,updatedAt:new Date().toISOString()};
-    try{await queue(()=>S.db.doc("public_listings/"+r.id).set(doc));r.listing={...L,sub:doc.sub||L.sub,desc:doc.desc||L.desc,feats:doc.feats.length?doc.feats:L.feats};showPublish(r,"listing")}
+    try{await queue(()=>S.db.doc("public_listings/"+r.id).set(doc));if(doc.show)r.store=true;else delete r.store;   /* the box reopens as saved, not as the last sync left it */r.listing={...L,sub:doc.sub||L.sub,desc:doc.desc||L.desc,feats:doc.feats.length?doc.feats:L.feats};showPublish(r,"listing")}
     catch(e){toast(e&&e.code==="permission-denied"?"Saved nowhere yet: the listing rule isn't turned on in Firebase.":"Couldn't save the listing. Try again.")}};
 }
 
