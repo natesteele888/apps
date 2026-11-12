@@ -16,12 +16,17 @@ h1{font-size:24px;margin:0 0 4px}p{color:var(--muted);margin:0 0 16px}
 .tip{font-size:13.5px}.app.ok{opacity:.6}.app.ok .go{border-color:var(--line);color:var(--muted)!important}
 .st{font-size:12px;font-weight:700;margin-left:4px}.st.y{color:var(--ac)}.st.q{color:#E2B32C}
 </style></head><body>
-<h1>Nate's Apps</h1>
+<div id="pub"><h1>Read 20</h1>
+<p>A free reading app for kids. Stories, a nightly timer and a reading log. Everything stays on your phone.</p>
+<div class="app"><img src="icons/read20-192.png" alt=""><span><a href="read20/"><b>Read 20</b><small>Open the app</small></a></span><a class="go" href="read20/">Open</a></div>
+<p class="tip" style="margin-top:28px"><button id="own" style="all:unset;cursor:pointer;text-decoration:underline;color:var(--muted);font-size:13px">Owner sign-in</button> <span id="ownmsg" style="font-size:13px"></span></p></div>
+<div id="hub" hidden><h1>Nate's Apps</h1>
 <p>Phones only let each app install itself, one tap each. Tap <b>Install next app</b>, tap <b>Install</b> on the pop-up, wait for <b>"installed"</b>, then come back here with Back. A green ✓ means it's really on this phone.</p>
 <div class="prog"><div class="bar"><i id="fill"></i></div><span id="count"></span></div>
 <a class="next" id="next" href="#">Install next app</a>
 <p class="tip">Already installed but no ✓? Open it once from your home screen and it checks itself off. Then long-press an icon and drop it on another to make a folder.</p>
 <div id="list">Loading…</div>
+</div>
 <script>
 const K="nate.install.done";let done=[];try{done=JSON.parse(localStorage.getItem(K)||"[]")}catch(e){}
 const SAME=location.origin;
@@ -46,7 +51,23 @@ function draw(){
 }
 document.addEventListener("click",ev=>{const a=ev.target.closest("[data-id]");if(a&&!done.includes(a.dataset.id)){done.push(a.dataset.id);save()}});
 addEventListener("pageshow",()=>{if(apps.length)draw()});
-fetch("registry.json",{cache:"no-store"}).then(r=>r.json()).then(j=>{apps=j.apps.filter(a=>!a.retired&&a.live);draw()})
- .catch(()=>{document.getElementById("list").textContent="Couldn't load the app list. Check your connection."});
+window.__hub=function(){fetch("registry.json",{cache:"no-store"}).then(r=>r.json()).then(j=>{apps=j.apps.filter(a=>!a.retired&&a.live);draw()})
+ .catch(()=>{document.getElementById("list").textContent="Couldn't load the app list. Check your connection."});};
+</script>
+<script>
+/* The app list is for the owner only. Everyone else sees just Read 20. Signing in with Google and reading one owner-only record proves it is the owner
+   (the Firestore rules allow that read for the owner's account alone), so no email address is kept in this file. */
+(function(){
+  var CFG={apiKey:"AIzaSyDT_wGN93U4oM70orIU8flSAnvXHApqW2A",authDomain:"nates-toolbox.firebaseapp.com",projectId:"nates-toolbox",storageBucket:"nates-toolbox.firebasestorage.app",messagingSenderId:"567737923830",appId:"1:567737923830:web:b597b5d71e7c7a73c4d4d7"};
+  var msg=document.getElementById("ownmsg"),loaded=0;
+  function load(f){return new Promise(function(ok,no){var x=document.createElement("script");x.src="https://www.gstatic.com/firebasejs/11.6.0/"+f;x.onload=ok;x.onerror=no;document.head.appendChild(x)})}
+  function start(){if(loaded)return Promise.resolve();loaded=1;return load("firebase-app-compat.js").then(function(){return load("firebase-auth-compat.js")}).then(function(){return load("firebase-firestore-compat.js")}).then(function(){firebase.initializeApp(CFG)})}
+  function check(u){return firebase.firestore().collection("owner_check").doc("x").get().then(function(){return true},function(){return false})}
+  function show(){if(window.__hub){window.__hub();window.__hub=null}document.getElementById("pub").hidden=true;document.getElementById("hub").hidden=false;try{localStorage.setItem("nate.owner.seen","1")}catch(e){}}
+  function watch(){return start().then(function(){firebase.auth().onAuthStateChanged(function(u){if(!u){return}check(u).then(function(ok){if(ok)show();else msg.textContent="That account is not the owner."})})})}
+  document.getElementById("own").onclick=function(){msg.textContent="Signing in…";watch().then(function(){var p=new firebase.auth.GoogleAuthProvider();p.setCustomParameters({prompt:"select_account"});return firebase.auth().signInWithPopup(p).catch(function(e){if(e&&/popup/.test(e.code||""))return firebase.auth().signInWithRedirect(p)})}).catch(function(){msg.textContent="Could not sign in. Check your signal."})};
+  var seen=0;try{seen=localStorage.getItem("nate.owner.seen")==="1"}catch(e){}
+  if(seen)watch().catch(function(){});
+})();
 </script>
 </body></html>
