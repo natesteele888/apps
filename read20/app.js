@@ -6,7 +6,7 @@
   const CL = window.R20Cloud, WD = window.R20Words, AU = window.R20Audio, I = window.R20Icons;
   // Anonymous "someone really used it" counts for the owner's numbers page: a phone code and the week, nothing else (see install.js).
   function count(kind) { try { if (window.nateCount) window.nateCount(kind); } catch (e) {} }
-  const BUILD = "2026-11-13";   // change on each release; shown in Settings so a phone that is behind is easy to spot
+  const BUILD = "2026-11-14";   // change on each release; shown in Settings so a phone that is behind is easy to spot
   const teen = () => S.lv === "older";   // older readers get the darker look with line icons
   const icon = (name, fallback, size) => (teen() ? I(name, size) : fallback);
   const KEY = "read20.v1";
@@ -101,11 +101,17 @@
   function say(w) { if (S.say) AU.speak(w, 0.8); }
 
   /* ---------- routing: #  (shelf), #log, #b/<id> (reading) ---------- */
+  /* Screen look (this phone, not each reader): "auto" follows the phone, or force "light" / "dark". Older readers always get their own dark look. */
+  const getLook = () => { try { const v = localStorage.getItem("read20.look"); return v === "light" || v === "dark" ? v : "auto"; } catch (e) { return "auto"; } };
+  const setLook = v => { try { localStorage.setItem("read20.look", v); } catch (e) {} };
+  const phoneDark = () => { try { return !!(window.matchMedia && matchMedia("(prefers-color-scheme: dark)").matches); } catch (e) { return false; } };
+  const night = () => !teen() && (getLook() === "dark" || (getLook() === "auto" && phoneDark()));
   function applyTheme() {
-    const t = teen(); document.documentElement.classList.toggle("teen", t);
-    const set = (n, v) => { const m = document.querySelector('meta[name="' + n + '"]'); if (m) m.setAttribute("content", v); };
-    set("theme-color", t ? "#0b1020" : "#fff6e3"); set("color-scheme", t ? "dark" : "light");
+    const t = teen(), n = night(), root = document.documentElement; root.classList.toggle("teen", t); root.classList.toggle("night", n);
+    const set = (nm, v) => { const m = document.querySelector('meta[name="' + nm + '"]'); if (m) m.setAttribute("content", v); };
+    set("theme-color", t ? "#0b1020" : n ? "#1a1626" : "#fff6e3"); set("color-scheme", t || n ? "dark" : "light");
   }
+  try { if (window.matchMedia) matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => { if (getLook() === "auto") applyTheme(); }); } catch (e) {}
   function route() {
     const h = location.hash.replace(/^#/, "");
     stopTimer(); applyTheme();
@@ -138,6 +144,7 @@
     paintTimer();
     const d = C.day(S, k);
     if (before < C.goalSec(S) && C.daySec(S, k) >= C.goalSec(S) && d && !d.done) { d.done = 1; save(); count("goals"); celebrate(); }
+    else if (d && d.done) { const m = R.active + "|" + k + "|" + Math.floor(C.daySec(S, k) / 60); if (ui.pbm !== m) { ui.pbm = m; checkBestDay(k); } }
   }
   function paintTimer() {
     const el = $("#tm"); if (!el) return;
@@ -154,13 +161,53 @@
   function touch() { ui.lastAct = Date.now(); if (ui.idle) { ui.idle = false; ui.last = Date.now(); paintTimer(); } }
   document.addEventListener("visibilitychange", () => { ui.last = Date.now(); if (!document.hidden) ui.lastAct = Date.now(); });
 
+  /* Confetti: a canvas of paper bits that falls for a few seconds. "big" is for milestones and records. Skipped when the phone asks for less motion. */
+  function confetti(big) {
+    try { if (window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches) return; } catch (e) {}
+    const old = document.getElementById("confetti"); if (old) old.remove();
+    const cv = document.createElement("canvas"); cv.id = "confetti"; cv.setAttribute("aria-hidden", "true");
+    const w = (cv.width = innerWidth), h = (cv.height = innerHeight), cx = cv.getContext("2d"); if (!cx) return;
+    document.body.appendChild(cv);
+    const cols = ["#6c4ff0", "#ffbe3b", "#2fbf71", "#d6455d", "#ffe14d", "#3de0ff", "#ff8a3d"], n = big ? 190 : 90, ps = [];
+    for (let i = 0; i < n; i++) ps.push({ x: Math.random() * w, y: -20 - Math.random() * h * 0.5, vx: (Math.random() - 0.5) * 4, vy: 2 + Math.random() * 4, s: 6 + Math.random() * 8, r: Math.random() * 6, vr: (Math.random() - 0.5) * 0.3, c: cols[i % cols.length] });
+    const t0 = Date.now(), life = big ? 4200 : 3000;
+    (function frame() {
+      const age = Date.now() - t0; cx.clearRect(0, 0, w, h);
+      if (age > life || !cv.isConnected) { cv.remove(); return; }
+      const fade = age > life - 800 ? Math.max(0, (life - age) / 800) : 1;
+      ps.forEach(p => { p.x += p.vx; p.y += p.vy; p.vy += 0.06; p.r += p.vr; cx.save(); cx.globalAlpha = fade; cx.translate(p.x, p.y); cx.rotate(p.r); cx.fillStyle = p.c; cx.fillRect(-p.s / 2, -p.s / 3, p.s, p.s * 0.6); cx.restore(); });
+      requestAnimationFrame(frame);
+    })();
+  }
+  /* A short note across the top that fades by itself (used while reading, so it never blocks the page). */
+  function banner(text) {
+    const b = document.createElement("div"); b.className = "pbtoast"; b.setAttribute("role", "status"); b.innerHTML = text; document.body.appendChild(b);
+    setTimeout(() => b.remove(), 5000);
+  }
+  const mm = sec => Math.max(1, Math.round(sec / 60));
+  /* Reached tonight's goal: always the party card; plus a bigger cheer for a milestone streak or a new longest streak. */
   function celebrate() {
     chime();
+    const ch = C.cheers(S, today()), who = S.name ? esc(S.name) + ", you" : "You", lines = [];
+    const fl = teen() ? I("flame", 20) : "🔥", tr = teen() ? I("star", 20) : "🏆";
+    if (ch.milestone) lines.push(`${fl} <b>${ch.milestone} nights in a row!</b>`);
+    if (ch.record && !ch.milestone) lines.push(`${tr} <b>New longest streak: ${ch.streak} nights!</b>`);
+    else if (ch.record && ch.milestone) lines.push(`${tr} New longest streak!`);
     const o = document.createElement("div"); o.className = "overlay"; o.id = "party";
-    o.innerHTML = `<div class="card party" role="dialog" aria-label="Twenty minutes done"><div class="big">${teen() ? I("star", 56) : "🎉⭐🎉"}</div><h2>${S.goal} minutes!</h2><p>${S.name ? esc(S.name) + ", you" : "You"} did your reading tonight. Great job!</p><button class="btn" id="keep">Keep reading</button><button class="btn alt" id="stop">I'm done tonight</button></div>`;
-    document.body.appendChild(o); trackOverlay(o);
+    o.innerHTML = `<div class="card party" role="dialog" aria-label="Twenty minutes done"><div class="big">${teen() ? I("star", 56) : ch.milestone ? "🎊🏆🎊" : "🎉⭐🎉"}</div><h2>${S.goal} minutes!</h2>${lines.map(l => `<p class="cheer">${l}</p>`).join("")}<p>${who} did your reading tonight. Great job!</p><button class="btn" id="keep">Keep reading</button><button class="btn alt" id="stop">I'm done tonight</button></div>`;
+    document.body.appendChild(o); trackOverlay(o); confetti(!!(ch.milestone || ch.record));
     $("#keep").onclick = () => { closeOverlay(o); touch(); };
     $("#stop").onclick = () => closeOverlay(o, () => go(""));
+  }
+  /* A new personal best for minutes in one night (once per reader per night, after the goal, and only if there is a past night to beat). */
+  function checkBestDay(k) {
+    let seen = {}; try { seen = JSON.parse(localStorage.getItem("read20.pb") || "{}"); } catch (e) {}
+    const key = R.active + "|" + k; if (seen[key]) return;
+    const sec = C.daySec(S, k), prev = C.bestDay(S, k);
+    if (sec < C.goalSec(S) || prev < C.goalSec(S) || sec <= prev) return;
+    seen[key] = 1; const ks = Object.keys(seen).slice(-40), o = {}; ks.forEach(x => (o[x] = 1)); try { localStorage.setItem("read20.pb", JSON.stringify(o)); } catch (e) {}
+    banner((teen() ? I("star", 20) : "🏆") + " <b>New personal best!</b> " + mm(sec) + " minutes in one night");
+    confetti(true);
   }
 
   /* ---------- shelf ---------- */
@@ -183,7 +230,7 @@
     const list = older ? B.books.filter(b => b.shelf === "older" && b.topic === tp.id) : B.books.filter(b => b.level === ui.level);
     const readIn = list.filter(b => fin[b.id]).length;
     $("#view").innerHTML = `
-    <header class="top"><h1>${icon("logo", "📖 ")}Read ${S.goal}</h1><span class="cloudbadge" id="cloudbadge" title="Backed up online" ${CL.status === "ok" ? "" : "hidden"}>☁️✓</span><button class="icon" id="gear" aria-label="Settings">${icon("sliders", "⚙️")}</button></header>
+    <header class="top"><h1>${icon("logo", "📖 ")}Read ${S.goal}</h1><span class="cloudbadge" id="cloudbadge" title="Backed up online" ${CL.status === "ok" ? "" : "hidden"}>☁️✓</span>${teen() ? "" : `<button class="icon moon" id="moon" aria-label="${night() ? "Switch to light screen" : "Switch to dark screen (easier on the eyes in bed)"}">${night() ? "☀️" : "🌙"}</button>`}<button class="icon" id="gear" aria-label="Settings">${icon("sliders", "⚙️")}</button></header>
     ${warnHtml()}
     <div class="readers" role="tablist" aria-label="Readers">${R.order.map(id => `<button role="tab" aria-selected="${id === R.active}" class="rd ${id === R.active ? "on" : ""}" data-id="${esc(id)}"><span class="av" aria-hidden="true">${avOf(id)}</span><span class="nm">${esc(who(R.profiles[id]))}</span></button>`).join("")}${kid() ? "" : '<button class="rd add" id="addrd" aria-label="Add a reader"><span class="av" aria-hidden="true">＋</span><span class="nm">Add</span></button>'}</div>
     <section class="today ${done ? "ok" : ""}">
@@ -206,6 +253,7 @@
     <p class="fine">Stories are free to share: written for this app, or old public-domain rhymes and fables. Everything stays on this phone.</p>`;
     nav("books");
     $("#gear").onclick = openSettings;
+    if ($("#moon")) $("#moon").onclick = () => { setLook(night() ? "light" : "dark"); route(); };
     document.querySelectorAll(".rd[data-id]").forEach(b => (b.onclick = () => { if (b.dataset.id !== R.active) switchTo(b.dataset.id); }));
     if ($("#addrd")) $("#addrd").onclick = openAddReader;
     $("#next").onclick = () => go("b/" + nx.id);
@@ -421,6 +469,7 @@
         <label>Reading goal each night<select id="sg">${C.GOALS.map(g => `<option ${g === S.goal ? "selected" : ""} value="${g}">${g} minutes</option>`).join("")}</select></label>
         <label>Reading level<select id="slv"><option value="early">Learning to read</option><option value="older">Older reader (grades 5 and up)</option></select></label>
         <label>Word size<select id="sz">${(S.lv === "older" ? ["Normal", "Large", "Extra large"] : ["Big", "Bigger", "Biggest"]).map((t, i) => `<option value="${i}">${t}</option>`).join("")}</select></label>
+        ${teen() ? "" : `<label>Screen look (this phone)<select id="slk">${[["auto", "Match my phone"], ["light", "Light"], ["dark", "Dark (easy on the eyes in bed)"]].map(([v, t]) => `<option value="${v}" ${getLook() === v ? "selected" : ""}>${t}</option>`).join("")}</select></label>`}
         <label class="chk"><input type="checkbox" id="ss" ${S.say ? "checked" : ""}> Say a word out loud when it is tapped</label>
         ${R.order.length > 1 && !kid() ? `<button class="linkbtn danger" id="srm">Remove ${esc(who(S))}…</button>` : ""}
       </section>
@@ -443,6 +492,7 @@
       AU.unlock(); const ok = AU.beep(), i = AU.info(); if (i.speech) setTimeout(() => AU.speak("Hello! Can you hear me?", 0.85), 700);
       $("#stm").textContent = !ok ? "This browser cannot make sound." : "You should hear a beep" + (i.speech ? " and then a voice" : "") + ". " + (i.speech ? (i.voices ? "" : "This phone has not loaded a speaking voice yet; try again in a few seconds. ") : "This phone has no speaking voice, so word-reading is off. ") + "If you hear nothing: turn the media volume up and make sure the phone is not on silent.";
     };
+    if ($("#slk")) $("#slk").onchange = () => { setLook($("#slk").value); applyTheme(); };
     $("#sd").onclick = () => { S.name = $("#sn").value.replace(/[\u0000-\u001f]/g, "").trim().slice(0, 20); S.av = av; if ($("#slv").value !== S.lv) { S.lv = $("#slv").value; ui.levelSet = false; } S.goal = +$("#sg").value; S.size = +$("#sz").value; S.say = $("#ss").checked; save(); closeOverlay(o); route(); };
   }
 

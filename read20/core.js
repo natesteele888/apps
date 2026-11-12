@@ -92,6 +92,21 @@
     return n;
   };
 
+  /* Longest run of nights that reached the goal, optionally ignoring one day (used to ask "is today a new record?"). */
+  C.bestStreak = (s, skip) => {
+    const ks = Object.keys(s.days).filter(k => k !== skip && C.isDone(s, k)).sort(); let best = 0, run = 0, prev = null;
+    for (const k of ks) { run = prev && C.addDays(prev, 1) === k ? run + 1 : 1; if (run > best) best = run; prev = k; }
+    return best;
+  };
+  /* The most seconds read in one day, optionally ignoring one day. */
+  C.bestDay = (s, skip) => Object.keys(s.days).reduce((m, k) => (k === skip ? m : Math.max(m, s.days[k].sec)), 0);
+  C.MILESTONES = [3, 5, 7, 10, 14, 21, 30, 50, 75, 100, 150, 200, 365];
+  /* What to cheer for when today's goal has just been reached: the streak, a milestone on it, a new longest streak. */
+  C.cheers = (s, today) => {
+    const streak = C.streak(s, today), prev = C.bestStreak(s, today);
+    return { streak, milestone: C.MILESTONES.indexOf(streak) >= 0 ? streak : 0, record: streak >= 2 && streak > prev };
+  };
+
   /* Month grid for the log: Sunday first, null for blanks. month is 0 to 11. */
   C.monthGrid = (y, m) => {
     const first = new Date(y, m, 1, 12).getDay(), n = new Date(y, m + 1, 0).getDate(), cells = [];
