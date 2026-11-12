@@ -985,7 +985,8 @@
           "Jump, sprint and plank numbers with a trend line for each",
           "See the gap between left and right leg at a glance"
         ]
-      }
+      },
+      "store": true
     },
     {
       "id": "cube",
@@ -2181,7 +2182,8 @@
           "Lock the screen so a bumped phone cannot change the score",
           "Start a game in one tap, and look back at recent finals"
         ]
-      }
+      },
+      "store": true
     },
     {
       "id": "filmlite",
@@ -2515,7 +2517,8 @@
           "Finish the list and a full-screen dance celebrates"
         ],
         "autoShots": []
-      }
+      },
+      "store": true
     },
     {
       "id": "photoblueprint",
@@ -2628,7 +2631,8 @@
           "Tap the map to drop the pin, then aim where the lens pointed"
         ],
         "autoShots": []
-      }
+      },
+      "store": true
     },
     {
       "id": "secretary",
