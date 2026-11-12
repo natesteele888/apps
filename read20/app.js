@@ -236,7 +236,7 @@
       <div class="pic ${older ? "sm tp-" + bk.topic : cnt > 2 ? "m3" : cnt > 1 ? "m2" : ""}" aria-hidden="true">${older ? I(bk.topic, 40) : esc(emo)}</div>
       ${end ? `<div class="the-end"><h2>The End</h2><p>${esc(bk.title)}</p>${older && bk.gloss && bk.gloss.length ? glossHtml(bk) : ""}${older && bk.quiz && bk.quiz.length ? quizHtml(bk) : ""}<button class="btn big" id="more">Pick another story</button><button class="btn alt" id="again">Read it again</button></div>`
         : `<p class="text" id="text">${pg.text.split(/\s+/).map((w, i) => `<span class="w" role="button" tabindex="0" data-i="${i}">${esc(w)}</span>`).join(" ")}</p>`}
-      ${end ? "" : `<p class="hint">${older ? "" : "👆 "}${sylOn() ? "Press and hold a word to " + (older ? "see its syllables" : "break it into sounds") : "Tap a word to hear it"}</p>`}
+      ${end ? "" : `<p class="hint">${older ? "" : "👆 "}${sylOn() ? "Press and hold a word to " + (older ? "see its syllables" : "break it into sounds") : S.say ? "Tap a word to hear it" : "Turn on the speaker, then tap a word to hear it"}</p>`}
       <footer class="rnav">
         <button class="pgbtn" id="prev" ${ui.page === 0 ? "disabled" : ""} aria-label="Previous page">${icon("back", "◀", 26)}</button>
         <div class="pgnum" aria-live="polite">${end ? "The End" : "Page " + (ui.page + 1) + " of " + n}</div>
