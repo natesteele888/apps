@@ -6,6 +6,7 @@
   const W = {};
   /* Syllables by hand where the rules would be wrong. */
   const SYL = {
+    nowhere: "no-where",
     animal: "an-i-mal", away: "a-way", ahead: "a-head", believe: "be-lieve", behind: "be-hind", beside: "be-side", boy: "boy", cocoa: "co-coa",
     couldn: "could-n't", "couldn't": "could-n't", crying: "cry-ing", diamond: "di-a-mond", dickory: "dick-o-ry", diddle: "did-dle", dumpty: "dump-ty", humpty: "hump-ty",
     even: "e-ven", every: "ev-ery", everyone: "eve-ry-one", everywhere: "eve-ry-where", flashlight: "flash-light", gardener: "gar-den-er", gentle: "gen-tle", gently: "gent-ly",
@@ -98,7 +99,7 @@
   /* What the phone's voice should be given for ONE syllable. A voice says a lone "ty" as "tie" and a lone "ble" as "bell",
      so the part is respelled the way it sounds inside the word (plen-ty: "plen" then "tee"). Words the rules get wrong
      are listed in SAYFIX (one entry per syllable). */
-  const SAYFIX = { able: ["ay", "buhl"], area: ["air", "ee", "uh"], bio: ["bye", "oh"], idea: ["eye", "dee", "uh"], diego: ["dee", "ay", "go"], already: ["all", "red", "ee"], measure: ["meh", "zhur"], pleasure: ["pleh", "zhur"], treasure: ["treh", "zhur"], beautiful: ["byoo", "tih", "fuhl"], people: ["pee", "puhl"], famous: ["fay", "mus"] };
+  const SAYFIX = { able: ["ay", "buhl"], area: ["air", "ee", "uh"], bio: ["bye", "oh"], idea: ["eye", "dee", "uh"], diego: ["dee", "ay", "go"], already: ["all", "red", "ee"], measure: ["meh", "zhur"], pleasure: ["pleh", "zhur"], treasure: ["treh", "zhur"], beautiful: ["byoo", "tih", "fuhl"], people: ["pee", "puhl"], famous: ["fay", "mus"], nowhere: ["no", "where"], somewhere: ["sum", "where"], everywhere: ["ev", "ree", "where"], every: ["ev", "ree"], everyone: ["ev", "ree", "wun"], everything: ["ev", "ree", "thing"], someone: ["sum", "wun"], something: ["sum", "thing"], anyone: ["en", "ee", "wun"], anything: ["en", "ee", "thing"], any: ["en", "ee"], focus: ["foe", "kus"], focused: ["foe", "kist"] };
   const LONGY = new Set(["fy", "ply"]);
   function spoken(p, i, n, w, nextp) {
     if (SAYFIX[w] && SAYFIX[w].length === n) return SAYFIX[w][i];
@@ -134,7 +135,7 @@
       else ch = chunks(base);
       return { text: p.replace(/'/g, "'"), sounds: ch };
     });
-    syl.forEach((s, i) => { s.say = SAYD[w] && SAYD[w].length === syl.length ? SAYD[w][i] : spoken(s.text.toLowerCase(), i, syl.length, w, syl[i + 1] && syl[i + 1].text.toLowerCase()); });
+    syl.forEach((s, i) => { s.say = !SAYFIX[w] && SAYD[w] && SAYD[w].length === syl.length ? SAYD[w][i] : spoken(s.text.toLowerCase(), i, syl.length, w, syl[i + 1] && syl[i + 1].text.toLowerCase()); });
     return { word: w, syllables: syl, tricky, text: syl.map(s => s.text).join("·") };
   };
   root.R20Words = W;

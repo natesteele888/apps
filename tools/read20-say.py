@@ -14,7 +14,7 @@ B.books.forEach(b=>b.pages.forEach(p=>p.text.split(/\s+/).forEach(x=>{x=W.clean(
 const o={};Object.keys(s).forEach(w=>{const a=W.analyze(w);if(a&&a.syllables.length>1)o[w]=a.syllables.map(x=>[x.text,x.say])});
 console.log(JSON.stringify(o));"""
 
-FIX = {"gymnast": ["gym", "nist"], "gymnasts": ["gym", "nists"], "gymnastics": ["gym", "nas", "tics"], "basket": ["bas", "kit"], "baskets": ["bas", "kits"], "budget": ["bud", "jit"]}   # hand fixes
+FIX = {"compass": ["com", "pus"], "focus": ["foe", "kus"], "focused": ["foe", "kist"], "focuses": ["foe", "kus", "iz"], "focusing": ["foe", "kus", "ing"], "gymnast": ["gym", "nist"], "gymnasts": ["gym", "nists"], "gymnastics": ["gym", "nas", "tics"], "basket": ["bas", "kit"], "baskets": ["bas", "kits"], "budget": ["bud", "jit"]}   # hand fixes
 SPLIT = re.compile(r"^([^aeiouy]*)([aeiouy]+)(.*)$")
 LONG = {"EY": "ay", "IY": "ee", "OW": "oh", "UW": "oo", "AY": "y"}
 
