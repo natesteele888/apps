@@ -1,3 +1,5 @@
+@font-face{font-family:Andika;font-weight:400;font-display:swap;src:url(andika-400.woff2) format("woff2")}
+@font-face{font-family:Andika;font-weight:700;font-display:swap;src:url(andika-700.woff2) format("woff2")}
 :root{--bg:#fff6e3;--ink:#2b2350;--soft:#6b6590;--card:#fff;--line:#eadfc6;--pur:#6c4ff0;--pur2:#5238d6;--sun:#ffbe3b;--grn:#2fbf71;--red:#d6455d;--hl:#ffe14d}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{margin:0;background:var(--bg);color:var(--ink);font:17px/1.4 Andika,"Trebuchet MS",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
