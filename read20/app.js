@@ -6,7 +6,7 @@
   const CL = window.R20Cloud, WD = window.R20Words, AU = window.R20Audio, I = window.R20Icons;
   // Anonymous "someone really used it" counts for the owner's numbers page: a phone code and the week, nothing else (see install.js).
   function count(kind) { try { if (window.nateCount) window.nateCount(kind); } catch (e) {} }
-  const BUILD = "2026-11-14";   // change on each release; shown in Settings so a phone that is behind is easy to spot
+  const BUILD = "2026-11-15";   // change on each release; shown in Settings so a phone that is behind is easy to spot
   const teen = () => S.lv === "older";   // older readers get the darker look with line icons
   const icon = (name, fallback, size) => (teen() ? I(name, size) : fallback);
   const KEY = "read20.v1";
@@ -114,10 +114,10 @@
   try { if (window.matchMedia) matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => { if (getLook() === "auto") applyTheme(); }); } catch (e) {}
   function route() {
     const h = location.hash.replace(/^#/, "");
-    stopTimer(); applyTheme();
+    stopTimer(); applyTheme(); if (ui.reading) { ui.reading = false; AU.stop(); }
     if (h.startsWith("b/") && byId[h.slice(2)]) {
-      if (!ui.book || ui.book.id !== h.slice(2)) { ui.book = byId[h.slice(2)]; ui.page = 0; ui.finishedNow = false; }
-      ui.paused = false; ui.hl = -1; renderReader(); startTimer();
+      let fresh = false; if (!ui.book || ui.book.id !== h.slice(2)) { ui.book = byId[h.slice(2)]; ui.page = 0; ui.finishedNow = false; fresh = true; }
+      ui.paused = false; ui.hl = -1; renderReader(); startTimer(); if (storyOn() && fresh) readAloud();
     } else if (h === "log") { ui.book = null; renderLog(); }
     else if (h.startsWith("reader=")) { const key = CL.parseReaderKey(h); try { history.replaceState(null, "", location.pathname + location.search); } catch (e) {} ui.book = null; renderShelf(); if (key && !kid()) openJoinReader(key); }
     else if (h.startsWith("join=")) { const key = CL.parseKey(h); try { history.replaceState(null, "", location.pathname + location.search); } catch (e) {} ui.book = null; renderShelf(); if (key) openJoin(key); }
@@ -290,7 +290,7 @@
         <div class="pgnum" aria-live="polite">${end ? "The End" : "Page " + (ui.page + 1) + " of " + n}</div>
         <button class="pgbtn go" id="nextp" ${end ? "disabled" : ""} aria-label="${ui.page === n - 1 ? "Finish the story" : "Next page"}">${icon("next", "▶", 26)}</button>
       </footer>
-      <div class="tools"><button class="mini" id="sm" aria-label="Smaller words">A−</button><button class="mini" id="lg" aria-label="Bigger words">A+</button><button class="mini ${S.say ? "on" : ""}" id="spk" aria-pressed="${S.say}" aria-label="Say words out loud when tapped">${icon("volume", "🔊", 20)}</button></div>
+      <div class="tools"><button class="mini" id="sm" aria-label="Smaller words">A−</button><button class="mini" id="lg" aria-label="Bigger words">A+</button><button class="mini ${S.say ? "on" : ""}" id="spk" aria-pressed="${S.say}" aria-label="Say words out loud when tapped">${icon("volume", "🔊", 20)}</button>${AU.canSpeak() && !end ? `<button class="mini wide ${storyOn() ? "on" : ""}" id="story" aria-pressed="${storyOn()}" aria-label="Storytime: read each page aloud">${teen() ? I("volume", 18) + " " : "🎧 "}Storytime</button>${storyOn() ? `<button class="mini" id="hear" aria-label="Hear this page again">↻</button><button class="mini" id="spd" aria-label="Reading speed: ${speedName()}. Tap to change.">${speedName()}</button>` : ""}` : ""}</div>
       ${end && !older ? '<div class="confetti" aria-hidden="true">🎉</div>' : ""}
     </div>`;
     $("#back").onclick = () => go("");
@@ -298,6 +298,9 @@
     $("#prev").onclick = () => turn(-1); $("#nextp").onclick = () => turn(1);
     $("#sm").onclick = () => size(-1); $("#lg").onclick = () => size(1);
     $("#spk").onclick = () => { S.say = !S.say; save(); renderReader(); startTimerKeep(); };
+    if ($("#story")) $("#story").onclick = () => { setStory(!storyOn()); if (!storyOn()) { stopReading(); renderReader(); } else { renderReader(); readAloud(); } };
+    if ($("#hear")) $("#hear").onclick = () => { readAloud(); };
+    if ($("#spd")) $("#spd").onclick = () => { const i = SPEEDS.findIndex(s => s[1] === speedName()); AU.setRate(SPEEDS[(i + 1) % SPEEDS.length][0]); $("#spd").textContent = speedName(); readAloud(); };
     if (end) {
       if (!ui.finishedNow) { ui.finishedNow = true; C.finish(S, today(), bk.id); save(); }
       $("#more").onclick = () => { const nx = nextUp(); go(nx && nx.id !== bk.id ? "b/" + nx.id : ""); };
@@ -305,7 +308,7 @@
       if (older && bk.quiz && bk.quiz.length) wireQuiz(bk);
     } else {
       document.querySelectorAll(".w").forEach(w => {
-        const hit = () => { const i = +w.dataset.i; ui.hl = ui.hl === i ? -1 : i; paintHl(); if (ui.hl >= 0) say(w.textContent.replace(/[^\w']/g, "")); };
+        const hit = () => { if (ui.reading) stopReading(); const i = +w.dataset.i; ui.hl = ui.hl === i ? -1 : i; paintHl(); if (ui.hl >= 0) say(w.textContent.replace(/[^\w']/g, "")); };
         let t = 0, x0 = 0, y0 = 0;
         const stop = () => { clearTimeout(t); t = 0; };
         w.onpointerdown = e => { if (e.button || !sylOn()) return; x0 = e.clientX; y0 = e.clientY; stop(); t = setTimeout(() => { t = 0; ui.lp = true; setTimeout(() => (ui.lp = false), 700); ui.hl = +w.dataset.i; paintHl(); openWord(w.textContent); }, 450); };
@@ -319,12 +322,41 @@
     }
     paintTimer();
   }
+  /* Read the page aloud one sentence at a time, lighting up each word as it is said (where the phone reports it). */
+  const SPEEDS = [[0.6, "Very slow"], [0.75, "Slow"], [0.9, "Normal"], [1.05, "Fast"], [1.2, "Very fast"]];
+  const speedName = () => (SPEEDS.reduce((b, s) => (Math.abs(s[0] - AU.rate()) < Math.abs(b[0] - AU.rate()) ? s : b), SPEEDS[2]))[1];
+  const storyOn = () => { try { return localStorage.getItem("read20.story") === "1"; } catch (e) { return false; } };
+  const setStory = on => { try { if (on) localStorage.setItem("read20.story", "1"); else localStorage.removeItem("read20.story"); } catch (e) {} };
+  function stopReading() { ui.reading = false; AU.stop(); ui.hl = -1; paintHl(); }
+  /* Storytime: reads the page aloud (and again each time the page is turned). "↻" reads this page again. */
+  function readAloud() {
+    ui.reading = false; AU.stop();
+    const pg = ui.book && ui.book.pages[ui.page]; if (!pg || !AU.canSpeak()) return;
+    const toks = pg.text.split(/\s+/), sents = []; let cur = [];
+    toks.forEach((w, i) => { cur.push(i); if (/[.!?]["'\u201d\u2019)]*$/.test(w)) { sents.push(cur); cur = []; } });
+    if (cur.length) sents.push(cur);
+    ui.reading = true;
+    let si = 0;
+    const next = () => {
+      if (!ui.reading) return;
+      if (si >= sents.length) return stopReading();
+      const idx = sents[si++], text = idx.map(i => toks[i]).join(" "), starts = []; let pos = 0;
+      idx.forEach(i => { starts.push(pos); pos += toks[i].length + 1; });
+      ui.hl = idx[0]; paintHl(); touch();
+      AU.speak(text, AU.rate(), {
+        onboundary: e => { if (!ui.reading || typeof e.charIndex !== "number") return; let k = 0; while (k + 1 < starts.length && starts[k + 1] <= e.charIndex) k++; ui.hl = idx[k]; paintHl(); },
+        onend: () => { if (ui.reading) setTimeout(next, 250); }
+      });
+    };
+    next();
+  }
   function startTimerKeep() { paintTimer(); } // the interval keeps running across re-draws
   function paintHl() { document.querySelectorAll(".w").forEach(w => w.classList.toggle("hl", +w.dataset.i === ui.hl)); }
   function turn(d) {
     const n = ui.book.pages.length, p = ui.page + d;
     if (p < 0 || p > n) return;
-    ui.page = p; ui.hl = -1; renderReader(); touch();
+    if (ui.reading) { ui.reading = false; AU.stop(); }
+    ui.page = p; ui.hl = -1; renderReader(); touch(); if (storyOn()) readAloud();
   }
   function size(d) { S.size = Math.min(2, Math.max(0, S.size + d)); save(); renderReader(); }
 
@@ -471,6 +503,7 @@
         <label>Word size<select id="sz">${(S.lv === "older" ? ["Normal", "Large", "Extra large"] : ["Big", "Bigger", "Biggest"]).map((t, i) => `<option value="${i}">${t}</option>`).join("")}</select></label>
         ${teen() ? "" : `<label>Screen look (this phone)<select id="slk">${[["auto", "Match my phone"], ["light", "Light"], ["dark", "Dark (easy on the eyes in bed)"]].map(([v, t]) => `<option value="${v}" ${getLook() === v ? "selected" : ""}>${t}</option>`).join("")}</select></label>`}
         <label class="chk"><input type="checkbox" id="ss" ${S.say ? "checked" : ""}> Say a word out loud when it is tapped</label>
+        ${AU.canSpeak() ? `<label>Reading voice (this phone)<select id="svc"></select></label><label>Voice speed<select id="srt">${SPEEDS.map(([v, t]) => `<option value="${v}" ${Math.abs(AU.rate() - v) < 0.02 ? "selected" : ""}>${t}</option>`).join("")}</select></label><p class="fine left" id="svh">Pick the most natural-sounding one. Voices that say "Enhanced", "Natural" or "Premium" sound the most like a person.</p>` : ""}
         ${R.order.length > 1 && !kid() ? `<button class="linkbtn danger" id="srm">Remove ${esc(who(S))}…</button>` : ""}
       </section>
       ${kid() ? "" : `<section class="set"><h3>Keep the log safe</h3><p class="fine left">${esc(safe)}</p><button class="btn alt" id="setsafe">Back up and share…</button></section>`}
@@ -492,6 +525,11 @@
       AU.unlock(); const ok = AU.beep(), i = AU.info(); if (i.speech) setTimeout(() => AU.speak("Hello! Can you hear me?", 0.85), 700);
       $("#stm").textContent = !ok ? "This browser cannot make sound." : "You should hear a beep" + (i.speech ? " and then a voice" : "") + ". " + (i.speech ? (i.voices ? "" : "This phone has not loaded a speaking voice yet; try again in a few seconds. ") : "This phone has no speaking voice, so word-reading is off. ") + "If you hear nothing: turn the media volume up and make sure the phone is not on silent.";
     };
+    const fillVoices = () => { const sel = $("#svc"); if (!sel) return; const cur = (() => { try { return localStorage.getItem("read20.voice") || ""; } catch (e) { return ""; } })(), vs = AU.voices();
+      sel.innerHTML = `<option value="">Best available${AU.voiceName() ? " (" + esc(AU.voiceName()) + ")" : ""}</option>` + vs.map(v => `<option value="${esc(v.uri)}" ${v.uri === cur ? "selected" : ""}>${esc(v.name)}</option>`).join(""); };
+    fillVoices(); if ($("#svc")) { try { speechSynthesis.addEventListener("voiceschanged", fillVoices); } catch (e) {}
+      $("#svc").onchange = () => { AU.setVoice($("#svc").value); AU.speak("Hello! Let's read a story together tonight.", AU.rate()); };
+      $("#srt").onchange = () => { AU.setRate(+$("#srt").value); AU.speak("This is how fast I will read.", AU.rate()); }; }
     if ($("#slk")) $("#slk").onchange = () => { setLook($("#slk").value); applyTheme(); };
     $("#sd").onclick = () => { S.name = $("#sn").value.replace(/[\u0000-\u001f]/g, "").trim().slice(0, 20); S.av = av; if ($("#slv").value !== S.lv) { S.lv = $("#slv").value; ui.levelSet = false; } S.goal = +$("#sg").value; S.size = +$("#sz").value; S.say = $("#ss").checked; save(); closeOverlay(o); route(); };
   }

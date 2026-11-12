@@ -282,3 +282,6 @@ html.night{color-scheme:dark;--bg:#1a1626;--ink:#efe6d4;--soft:#a79fbd;--card:#2
 .pbtoast{position:fixed;left:50%;top:calc(14px + env(safe-area-inset-top));transform:translateX(-50%);z-index:61;max-width:min(92vw,460px);background:var(--ink);color:var(--bg);padding:12px 18px;border-radius:999px;font-weight:700;text-align:center;box-shadow:0 8px 24px rgba(0,0,0,.35);animation:toastin .35s ease-out}
 @keyframes toastin{from{transform:translate(-50%,-30px);opacity:0}to{transform:translate(-50%,0);opacity:1}}
 .party .cheer{font-size:1.2rem;margin:8px 0 2px}
+
+.mini.wide{min-width:0;padding:0 16px}
+.tools{flex-wrap:wrap}
