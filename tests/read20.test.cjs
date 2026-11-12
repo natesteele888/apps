@@ -671,7 +671,7 @@ const TODAY = '2026-11-08';
     await o.page.goto(srv.url); await o.page.waitForSelector('.cover');
     eq(await say('plenty'), 'plen tee'); eq(await say('happy'), 'hap pee'); eq(await say('people'), 'pee puhl'); eq(await say('nation'), 'nay shun'); eq(await say('reply'), await say('reply'));
     eq(await say('table'), 'tab uhl'); eq(await say('measure'), 'meh zhur'); eq(await say('cat'), 'cat', 'one-syllable words are said as written');
-    eq(await say('gymnast'), 'gym nist', 'an unstressed part is said as it sounds in the word, not as its own word'); eq(await say('apply'), 'uh plye'); eq(await say('focused'), 'foe kist'); eq(await say('nowhere'), 'no where'); eq(await say('everyone'), 'ev ree wun'); eq(await say('pianist'), 'pih an ist');
+    eq(await say('gymnast'), 'gym nist', 'an unstressed part is said as it sounds in the word, not as its own word'); eq(await say('apply'), 'uh plye'); eq(await say('focused'), 'foe kist'); eq(await say('nowhere'), 'no where'); eq(await say('action'), 'ax shun'); eq(await say('almost'), 'all most'); eq(await say('achilles'), 'uh kill eez'); eq(await say('everyone'), 'ev ree wun'); eq(await say('pianist'), 'pih an ist');
   });
   await test('offline: the service worker caches the app and it reopens with no network', async () => {
     const o = await newPage(br, { sw: true, today: TODAY }); const { page, ctx } = o;
