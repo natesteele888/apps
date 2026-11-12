@@ -1,5 +1,5 @@
 // Network first, so updates show up right away; falls back to the last saved copy when offline.
-const CACHE = "read20-v19";
+const CACHE = "read20-v20";
 // Save the page itself at install. Without this, the first visit caches nothing
 // (the page loaded before the worker existed), so opening it offline right after
 // installing fails. Each file is added on its own so one miss can't block install.
