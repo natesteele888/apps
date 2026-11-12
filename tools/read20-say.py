@@ -24,6 +24,8 @@ def respell(text, say, ph, stress, first=False, nxt=""):
     if not m: return say
     on, v, co = m.groups()
     if ph == "ER": return say
+    if stress in "12" and ph == "AE" and text == "ac" and nxt[:1] in ("c", "t"): return "ax"   # ac-tion, ac-tor, ac-ci-dent
+    if stress in "12" and ph == "AO" and v == "a" and co == "l": return on + "all"          # al-most, al-so, al-ready
     if stress == "0" and ph in ("AH", "IH"):
         if first and not on and len(co) == 1 and nxt[:1] == co: return "uh"   # ap-ply, al-low: the "p" belongs to the next part
         if co == "st" and stress == "0": ph = "IH"   # gym-nast, pian-ist, art-ist say "nist" "ist"
