@@ -555,7 +555,7 @@ const TODAY = '2026-11-08';
     eq(await page.locator('.cover').count(), 5, 'sports first'); await page.locator('.lv[data-tp="athletes"]').click(); eq(await page.locator('.cover').count(), 16); await page.locator('.lv[data-tp="photo"]').click(); eq(await page.locator('.cover').count(), 6); await page.locator('.lv[data-tp="social"]').click(); eq(await page.locator('.cover').count(), 11); await page.locator('.lv[data-tp="english"]').click(); eq(await page.locator('.cover').count(), 5);
     assert.ok(await page.locator('#next').isVisible()); assert.ok(/Curveball/.test(await page.locator('#next').innerText())); await page.screenshot({ path: SHOTS + '/read20-older-shelf.png' });
     await page.locator('.lv[data-tp="sports"]').click(); await page.locator('.cover', { hasText: 'Curveball' }).click(); await page.waitForSelector('.reader.older');
-    assert.ok(/Tap a word to hear it/.test(await page.locator('.hint').innerText()), 'syllables are off for now'); await page.evaluate(() => localStorage.setItem('read20.syllables', '1')); await page.locator('#back').click(); await page.waitForSelector('.cover'); await page.locator('.cover', { hasText: 'Curveball' }).click(); await page.waitForSelector('.reader.older');
+    assert.ok(/tap a word to hear it/i.test(await page.locator('.hint').innerText()), 'syllables are off for now'); await page.evaluate(() => localStorage.setItem('read20.syllables', '1')); await page.locator('#back').click(); await page.waitForSelector('.cover'); await page.locator('.cover', { hasText: 'Curveball' }).click(); await page.waitForSelector('.reader.older');
     assert.ok(/Press and hold a word to see its syllables/.test(await page.locator('.hint').innerText())); assert.ok((await page.locator('.w').count()) > 30, 'a full paragraph'); await page.screenshot({ path: SHOTS + '/read20-older-reader.png' });
     // press and hold a long word: syllables only, no sound chips, no "tricky" note
     const w = page.locator('.w', { hasText: 'seconds' }).first(); await page.locator('#nextp').click(); await page.locator('#nextp').click();
@@ -669,7 +669,9 @@ const TODAY = '2026-11-08';
   });
   await test('syllables are off by default: a long press on a word does not open the pop-up, and a tap says the word', async () => {
     const { page } = await mk(); await page.locator('.cover', { hasText: 'Sam the Cat' }).click(); await page.waitForSelector('.reader'); const b = await page.locator('.w').first().boundingBox();
-    await page.mouse.move(b.x + 5, b.y + 5); await page.mouse.down(); await page.clock.runFor(900); await page.mouse.up(); eq(await page.locator('.wordpop').count(), 0); assert.ok(/Tap a word to hear it/.test(await page.locator('.hint').innerText()));
+    await page.mouse.move(b.x + 5, b.y + 5); await page.mouse.down(); await page.clock.runFor(900); await page.mouse.up(); eq(await page.locator('.wordpop').count(), 0);
+    eq(await page.locator('.hint').innerText(), '👆 Turn on the speaker, then tap a word to hear it', 'sound starts off, so the hint points to the speaker');
+    await page.locator('#spk').click(); eq(await page.locator('.hint').innerText(), '👆 Tap a word to hear it', 'speaker on: a tap says the word');
   });
   await test('syllables: a part is respelled for the voice so it sounds like it does inside the word (plen-ty says "plen" "tee")', async () => {
     const o = await newPage(br, { today: TODAY }); const say = w => o.page.evaluate(x => R20Words.analyze(x).syllables.map(s => s.say).join(' '), w);
