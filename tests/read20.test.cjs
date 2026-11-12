@@ -96,6 +96,15 @@ const TODAY = '2026-11-08';
     eq(C.dayKey(new Date(2026, 10, 8)), '2026-11-08'); eq(C.addDays('2026-11-30', 1), '2026-12-01'); eq(C.addDays('2026-01-01', -1), '2025-12-31'); eq(C.addDays('2028-02-28', 1), '2028-02-29');
     eq(C.parseDay('2026-02-30'), null); eq(C.parseDay('nope'), null);
   });
+  await test('core: removing a story or a book from home takes the time out, keeps reading that comes later, and survives merging with an older copy', () => {
+    const s = C.empty(); C.dev = 'a'; C.addSeconds(s, TODAY, 'x', 120); C.addManual(s, TODAY, 'Home', 3); C.addSeconds(s, TODAY, 'y', 300); const before = JSON.parse(JSON.stringify(C.serialize(s)));
+    eq(C.daySec(s, TODAY), 600); eq(C.removeBook(s, TODAY, 'x'), true); eq(C.daySec(s, TODAY), 480); eq(s.days[TODAY].books.x, undefined); eq(C.removeExtra(s, TODAY, 'a', 0), true); eq(C.daySec(s, TODAY), 300);
+    eq(C.removeBook(s, TODAY, 'nope'), false); eq(C.removeExtra(s, TODAY, 'a', 5), false);
+    const back = C.sanitize(JSON.parse(JSON.stringify(C.serialize(s)))); eq(C.daySec(back, TODAY), 300, 'saved and loaded');
+    eq(C.daySec(C.merge(back, C.sanitize(before)), TODAY), 300, 'an older copy cannot bring it back'); eq(C.daySec(C.merge(C.sanitize(before), back), TODAY), 300, 'in either order');
+    C.addSeconds(back, TODAY, 'x', 60); eq(C.daySec(back, TODAY), 360, 'new reading of the same story after removal still counts'); eq(back.days[TODAY].books.x.sec, 60);
+    C.dev = 'local';
+  });
   await test('core: longest streak, best day and the cheers for tonight', () => {
     const s = C.empty(); ['2026-11-03', '2026-11-04', '2026-11-05', '2026-11-06'].forEach(k => C.addSeconds(s, k, 'a', 1200)); C.addSeconds(s, '2026-11-01', 'a', 1500);
     eq(C.bestStreak(s), 4); eq(C.bestDay(s), 1500); eq(C.bestDay(s, '2026-11-01'), 1200);
@@ -780,6 +789,15 @@ const TODAY = '2026-11-08';
     await page.locator('#nextp').click(); const t2 = await text(); await page.waitForTimeout(700); assert.ok((await page.evaluate(() => window.__said)).slice(-3).join(' ').replace(/\s+/g, ' ').includes(t2), 'the next page is read on its own');
     await page.locator('#hear').click(); await page.locator('.w').first().click(); const n2 = (await page.evaluate(() => window.__said)).length; await page.waitForTimeout(900); const n3 = await page.evaluate(() => window.__said.length); await page.waitForTimeout(900); eq(await page.evaluate(() => window.__said.length), n3, 'tapping a word stops the sentences (only the tapped word may still be said)'); assert.ok(n3 - n2 <= 1);
     eq(await page.evaluate(() => localStorage.getItem('read20.story')), '1', 'it stays on'); await page.locator('#story').click(); eq(await page.locator('#hear').count(), 0, 'off hides the repeat button'); eq(await page.evaluate(() => localStorage.getItem('read20.story')), null);
+  });
+  await test('log: remove one entry from a day, with a confirmation; cancel keeps it; it stays removed after a reload', async () => {
+    const { page } = await mk(); await logMin(page, 'Test entry', 2); await logMin(page, 'Real book', 5); eq(await sec(page), 420);
+    await page.locator('#nav [data-go="log"]').click(); await page.waitForSelector('.cal'); await page.locator('.day.now').click(); await page.waitForSelector('#detail .del');
+    eq(await page.locator('#detail .del').count(), 2); let msg = ''; page.once('dialog', d => { msg = d.message(); d.dismiss(); });
+    await page.locator('#detail li', { hasText: 'Test entry' }).locator('.del').click(); assert.ok(/Remove Test entry/.test(msg) && /cannot be undone/.test(msg), msg); eq(await sec(page), 420, 'cancel keeps it');
+    page.once('dialog', d => d.accept()); await page.locator('#detail li', { hasText: 'Test entry' }).locator('.del').click(); await page.waitForFunction(() => R20App._state().days[window.__today].sec === 300);
+    eq(await page.locator('#detail .del').count(), 1); assert.ok(/5 min/.test(await page.locator('#detail').innerText()));
+    await page.reload(); await page.waitForSelector('.cal'); eq(await sec(page), 300, 'still removed after a reload');
   });
   await test('offline: the service worker caches the app and it reopens with no network', async () => {
     const o = await newPage(br, { sw: true, today: TODAY }); const { page, ctx } = o;

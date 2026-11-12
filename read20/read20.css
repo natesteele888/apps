@@ -285,3 +285,6 @@ html.night{color-scheme:dark;--bg:#1a1626;--ink:#efe6d4;--soft:#a79fbd;--card:#2
 
 .mini.wide{min-width:0;padding:0 16px}
 .tools{flex-wrap:wrap}
+
+.list .del{flex:none;width:44px;height:44px;border-radius:12px;border:2px solid var(--line);background:var(--card);color:var(--red);font-size:1.1rem;display:inline-flex;align-items:center;justify-content:center;padding:0}
+.list .del:active{transform:translateY(1px)}

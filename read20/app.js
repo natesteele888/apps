@@ -6,7 +6,7 @@
   const CL = window.R20Cloud, WD = window.R20Words, AU = window.R20Audio, I = window.R20Icons;
   // Anonymous "someone really used it" counts for the owner's numbers page: a phone code and the week, nothing else (see install.js).
   function count(kind) { try { if (window.nateCount) window.nateCount(kind); } catch (e) {} }
-  const BUILD = "2026-11-15";   // change on each release; shown in Settings so a phone that is behind is easy to spot
+  const BUILD = "2026-11-16";   // change on each release; shown in Settings so a phone that is behind is easy to spot
   const teen = () => S.lv === "older";   // older readers get the darker look with line icons
   const icon = (name, fallback, size) => (teen() ? I(name, size) : fallback);
   const KEY = "read20.v1";
@@ -417,15 +417,22 @@
     document.querySelectorAll(".day[data-d]").forEach(b => (b.onclick = () => { ui.sel = b.dataset.d; renderLog(); }));
     renderDetail();
   }
+  const delBtn = (attrs, title) => `<button class="del" ${attrs} data-t="${esc(title)}" aria-label="Remove ${esc(title)} from this day">${teen() ? I("trash", 18) : "🗑"}</button>`;
   function renderDetail() {
     const k = ui.sel, d = S.days[k], dt = C.parseDay(k);
     const label = dt.toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" });
     let rows = "";
     if (d) {
-      Object.keys(d.books).forEach(id => { const b = byId[id], x = d.books[id]; if (!b) return; rows += `<li><span class="le">${b.shelf === "older" ? I(b.topic, 30) : esc(b.cover)}</span><span class="lt">${esc(b.title)}<small>${b.shelf === "older" ? esc(topicName(b.topic)) : "Level " + b.level}${x.fin ? " · finished ✓" : ""}</small></span><span class="lm">${C.fmtMin(x.sec)}</span></li>`; });
-      d.extra.forEach(x => { rows += `<li><span class="le">📕</span><span class="lt">${esc(x.title)}<small>from home</small></span><span class="lm">${C.fmtMin(x.sec)}</span></li>`; });
+      Object.keys(d.books).forEach(id => { const b = byId[id], x = d.books[id]; if (!b) return; rows += `<li><span class="le">${b.shelf === "older" ? I(b.topic, 30) : esc(b.cover)}</span><span class="lt">${esc(b.title)}<small>${b.shelf === "older" ? esc(topicName(b.topic)) : "Level " + b.level}${x.fin ? " · finished ✓" : ""}</small></span><span class="lm">${C.fmtMin(x.sec)}</span>${delBtn(`data-bk="${esc(id)}"`, b.title)}</li>`; });
+      d.extra.forEach(x => { rows += `<li><span class="le">📕</span><span class="lt">${esc(x.title)}<small>from home</small></span><span class="lm">${C.fmtMin(x.sec)}</span>${delBtn(`data-xd="${esc(x.dev)}" data-xi="${x.i}"`, x.title)}</li>`; });
     }
     $("#detail").innerHTML = `<section class="dcard"><h3>${esc(label)}</h3>${d && d.sec ? `<p class="dtot">${C.fmtMin(d.sec)} total${C.isDone(S, k) ? (teen() ? "" : " ⭐") : ""}</p><ul class="list">${rows}</ul>` : "<p class='dtot'>No reading logged this day.</p>"}</section>`;
+    document.querySelectorAll("#detail .del").forEach(b => (b.onclick = () => {
+      const what = b.dataset.t, day = label;
+      if (!confirm("Remove " + what + " from " + day + " for " + who(S) + "?\n\nThis takes that reading time out of the log and cannot be undone.")) return;
+      const ok = b.dataset.bk ? C.removeBook(S, k, b.dataset.bk) : C.removeExtra(S, k, b.dataset.xd, +b.dataset.xi);
+      if (ok) { save(true); if (CL.status === "ok") CL.syncNow(); renderLog(); }
+    }));
   }
 
   /* ---------- sheets ---------- */
