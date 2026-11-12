@@ -96,6 +96,14 @@ const TODAY = '2026-11-08';
     eq(C.dayKey(new Date(2026, 10, 8)), '2026-11-08'); eq(C.addDays('2026-11-30', 1), '2026-12-01'); eq(C.addDays('2026-01-01', -1), '2025-12-31'); eq(C.addDays('2028-02-28', 1), '2028-02-29');
     eq(C.parseDay('2026-02-30'), null); eq(C.parseDay('nope'), null);
   });
+  await test('core: longest streak, best day and the cheers for tonight', () => {
+    const s = C.empty(); ['2026-11-03', '2026-11-04', '2026-11-05', '2026-11-06'].forEach(k => C.addSeconds(s, k, 'a', 1200)); C.addSeconds(s, '2026-11-01', 'a', 1500);
+    eq(C.bestStreak(s), 4); eq(C.bestDay(s), 1500); eq(C.bestDay(s, '2026-11-01'), 1200);
+    C.addSeconds(s, '2026-11-07', 'a', 1200); const c = C.cheers(s, '2026-11-07'); eq(c.streak, 5); eq(c.milestone, 5); eq(c.record, true);
+    const u = C.empty(); ['2026-11-01', '2026-11-02', '2026-11-03', '2026-11-04'].forEach(k => C.addSeconds(u, k, 'a', 1200)); ['2026-11-07', '2026-11-08'].forEach(k => C.addSeconds(u, k, 'a', 1200));
+    const d = C.cheers(u, '2026-11-08'); eq(d.streak, 2); eq(d.milestone, 0); eq(d.record, false, 'a shorter run than the best is not a record');
+    eq(C.cheers(C.empty(), TODAY).record, false);
+  });
   await test('core: seconds add to the day and the story; goal and streak math', () => {
     const s = C.empty();
     eq(C.addSeconds(s, TODAY, 'a', 600), 600); eq(C.addSeconds(s, TODAY, 'b', 599), 599); eq(C.daySec(s, TODAY), 1199); assert.ok(!C.isDone(s, TODAY), '19:59 is not done');
@@ -679,6 +687,40 @@ const TODAY = '2026-11-08';
     eq(await say('plenty'), 'plen tee'); eq(await say('happy'), 'hap pee'); eq(await say('people'), 'pee puhl'); eq(await say('nation'), 'nay shun'); eq(await say('reply'), await say('reply'));
     eq(await say('table'), 'tab uhl'); eq(await say('measure'), 'meh zhur'); eq(await say('cat'), 'cat', 'one-syllable words are said as written');
     eq(await say('gymnast'), 'gym nist', 'an unstressed part is said as it sounds in the word, not as its own word'); eq(await say('apply'), 'uh plye'); eq(await say('focused'), 'foe kist'); eq(await say('nowhere'), 'no where'); eq(await say('action'), 'ax shun'); eq(await say('almost'), 'all most'); eq(await say('achilles'), 'uh kill eez'); eq(await say('everyone'), 'ev ree wun'); eq(await say('pianist'), 'pih an ist');
+  });
+  const seedDays = (keys, secs) => page => page.addInitScript(([ks, sc]) => { if (!sessionStorage.x) { sessionStorage.x = 1; const days = {}; ks.forEach(k => { days[k] = { done: 1, parts: { old: { sec: sc, books: {}, extra: [] } } }; }); localStorage.setItem('read20.v1', JSON.stringify({ v: 1, name: 'Riley', goal: 20, size: 1, days })); } }, [keys, secs]);
+  const readMin = async (page, n) => { for (let i = 0; i < n; i++) { await page.clock.runFor(60000); await page.locator('.w').first().click(); } };
+  await test('celebrations: the 5th night in a row gets confetti and a streak cheer; a plain night gets confetti and no streak cheer', async () => {
+    const o = await newPage(br, { today: TODAY }); await seedDays(['2026-11-04', '2026-11-05', '2026-11-06', '2026-11-07'], 1200)(o.page);
+    await o.page.clock.install({ time: new Date('2026-11-08T19:00:00') }); await o.page.goto(srv.url); await o.page.waitForSelector('.cover'); const page = o.page;
+    await page.locator('.cover', { hasText: 'Sam the Cat' }).click(); await page.waitForSelector('.reader'); await page.locator('.w').first().click(); await readMin(page, 19); await page.clock.runFor(60000);
+    await page.locator('#party').waitFor(); assert.ok(/5 nights in a row/.test(await page.locator('#party').innerText()), 'milestone'); assert.ok(/longest streak/i.test(await page.locator('#party').innerText()), 'record');
+    eq(await page.locator('#confetti').count(), 1, 'confetti');
+    const p = await mk(); await p.page.locator('.cover', { hasText: 'Sam the Cat' }).click(); await p.page.waitForSelector('.reader'); await p.page.locator('.w').first().click(); await readMin(p.page, 19); await p.page.clock.runFor(60000);
+    await p.page.locator('#party').waitFor(); eq(await p.page.locator('.cheer').count(), 0, 'no streak cheer on the first night'); eq(await p.page.locator('#confetti').count(), 1);
+  });
+  await test('celebrations: a new best night shows a note once, and confetti is skipped when the phone asks for less motion', async () => {
+    const o = await newPage(br, { today: TODAY }); await seedDays(['2026-11-05'], 1500)(o.page);
+    await o.page.clock.install({ time: new Date('2026-11-08T19:00:00') }); await o.page.goto(srv.url); await o.page.waitForSelector('.cover'); const page = o.page;
+    await page.locator('.cover', { hasText: 'Sam the Cat' }).click(); await page.waitForSelector('.reader'); await page.locator('.w').first().click(); await readMin(page, 19); await page.clock.runFor(60000);
+    await page.locator('#party').waitFor(); await page.locator('#keep').click(); eq(await page.locator('.pbtoast').count(), 0, 'not a record yet (25 min is the best)');
+    await readMin(page, 6); await page.locator('.pbtoast').waitFor(); assert.ok(/New personal best/.test(await page.locator('.pbtoast').innerText()));
+    await page.clock.runFor(6000); eq(await page.locator('.pbtoast').count(), 0, 'it fades'); await readMin(page, 3); eq(await page.locator('.pbtoast').count(), 0, 'only once a night');
+    const q = await newPage(br, { today: TODAY }); await q.page.emulateMedia({ reducedMotion: 'reduce' }); await q.page.clock.install({ time: new Date('2026-11-08T19:00:00') }); await q.page.goto(srv.url); await q.page.waitForSelector('.cover');
+    await q.page.locator('.cover', { hasText: 'Sam the Cat' }).click(); await q.page.waitForSelector('.reader'); await q.page.locator('.w').first().click(); await readMin(q.page, 19); await q.page.clock.runFor(60000); await q.page.locator('#party').waitFor(); eq(await q.page.locator('#confetti').count(), 0);
+  });
+  await test('dark mode: follows the phone by default, a moon button and a Settings choice override it, older readers keep their own dark look', async () => {
+    const bg = p => p.evaluate(() => getComputedStyle(document.body).backgroundColor);
+    const d = await newPage(br, { today: TODAY }); await d.page.emulateMedia({ colorScheme: 'dark' }); await d.page.goto(srv.url); await d.page.waitForSelector('.cover');
+    eq(await d.page.evaluate(() => document.documentElement.classList.contains('night')), true, 'phone is dark'); eq(await bg(d.page), 'rgb(26, 22, 38)');
+    await d.page.locator('#moon').click(); await d.page.waitForSelector('.cover'); eq(await d.page.evaluate(() => document.documentElement.classList.contains('night')), false, 'moon switches to light'); eq(await bg(d.page), 'rgb(255, 246, 227)');
+    eq(await d.page.evaluate(() => localStorage.getItem('read20.look')), 'light');
+    await d.page.reload(); await d.page.waitForSelector('.cover'); eq(await d.page.evaluate(() => document.documentElement.classList.contains('night')), false, 'remembered');
+    await d.page.locator('#gear').click(); await d.page.selectOption('#slk', 'auto'); eq(await d.page.evaluate(() => document.documentElement.classList.contains('night')), true, 'Match my phone');
+    await d.page.selectOption('#slk', 'light'); eq(await d.page.evaluate(() => document.documentElement.classList.contains('night')), false);
+    const l = await newPage(br, { today: TODAY }); await l.page.emulateMedia({ colorScheme: 'light' }); await l.page.goto(srv.url); await l.page.waitForSelector('.cover'); eq(await l.page.evaluate(() => document.documentElement.classList.contains('night')), false, 'phone is light');
+    await l.page.locator('#moon').click(); await l.page.waitForSelector('.cover'); eq(await l.page.evaluate(() => document.documentElement.classList.contains('night')), true); await l.page.screenshot({ path: SHOTS + '/read20-night.png' });
+    await l.page.evaluate(() => { const r = R20App._state(); r.lv = 'older'; }); await l.page.reload(); await l.page.waitForSelector('.cover');
   });
   await test('offline: the service worker caches the app and it reopens with no network', async () => {
     const o = await newPage(br, { sw: true, today: TODAY }); const { page, ctx } = o;
