@@ -1,6 +1,6 @@
 {
   "about": "The one list of Nathan's apps. Live links, which apps show where, and each app's App Store listing (text, highlights, screenshots) all come from here. Edit listings and icons in the Toolbox; the sync job copies them here. Don't hand-edit text in store/index.html.",
-  "updated": "2026-11-11",
+  "updated": "2026-11-12",
   "toolbox": "https://natesteele888.github.io/apps/toolbox/",
   "store": "https://natesteele888.github.io/apps/store/",
   "apps": [
@@ -1189,11 +1189,15 @@
         "autoShots": [],
         "latest": {
           "d": "Nov 11, 2026",
-          "t": "Add the shared health check and a Something wrong? button",
-          "url": "https://github.com/natesteele888/sponsor-banner-inventory/commit/1b40433151222e56c4166f87b2da27ecc640590a"
+          "t": "Keep buttons and headings in a sans font when the web font can't load",
+          "url": "https://github.com/natesteele888/sponsor-banner-inventory/commit/feedd758cf37f054007e220fd37e17b2830c03ac"
         },
-        "version": "1.2.1",
+        "version": "1.2.2",
         "history": [
+          {
+            "v": "1.2.2",
+            "t": "Keep buttons and headings in a sans font when the web font can't load"
+          },
           {
             "v": "1.2.1",
             "t": "Add the shared health check and a Something wrong? button"
@@ -1209,10 +1213,6 @@
           {
             "v": "1.1.8",
             "t": "Say 'check your signal' when a save or new banner can't get through"
-          },
-          {
-            "v": "1.1.7",
-            "t": "Keep the banner list showing after Sign out and back in"
           }
         ],
         "caps": [
@@ -1302,12 +1302,16 @@
         ],
         "autoShots": [],
         "latest": {
-          "d": "Nov 9, 2026",
-          "t": "Tell hosts when the signal drops on Save, password reset and the guest list",
-          "url": "https://github.com/natesteele888/events/commit/f8aa2a0d69324bdd5f724fe3912c489148d48633"
+          "d": "Nov 12, 2026",
+          "t": "Tests: always run the browser run against the real security rules",
+          "url": "https://github.com/natesteele888/events/commit/6971d8f1b46beeaf5fab1ffd27ab2b8e9eef994d"
         },
-        "version": "1.2.9",
+        "version": "1.3.0",
         "history": [
+          {
+            "v": "1.3.0",
+            "t": "Tests: always run the browser run against the real security rules"
+          },
           {
             "v": "1.2.9",
             "t": "Tell hosts when the signal drops on Save, password reset and the guest list"
@@ -1323,10 +1327,6 @@
           {
             "v": "1.2.6",
             "t": "Say check your signal instead of wrong code or event not found"
-          },
-          {
-            "v": "1.2.5",
-            "t": "Fix Add to calendar for events that end after midnight"
           }
         ],
         "caps": [
@@ -2635,7 +2635,9 @@
       "live": "https://natesteele888.github.io/apps/secretary/",
       "repo": "natesteele888/apps",
       "path": "secretary/",
-      "toolboxIds": ["meeting-secretary"],
+      "toolboxIds": [
+        "meeting-secretary"
+      ],
       "private": true,
       "store": false
     }
