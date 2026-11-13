@@ -1,5 +1,5 @@
 // Network first, so updates show up right away; falls back to the last saved copy when offline.
-const CACHE = "eightcount-v1";
+const CACHE = "eightcount-v2";
 // Save the page and every script at install. Without this, the first visit caches nothing
 // (the page loaded before the worker existed), so opening it offline right after installing fails.
 // Each file is added on its own so one miss can't block install.
