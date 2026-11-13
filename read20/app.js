@@ -13,6 +13,9 @@
   const $ = s => document.querySelector(s);
   const esc = s => String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
   const today = () => window.__today || C.dayKey();
+  /* Which day reading counts for: today, or last night while finishing it in the morning (ui.makeup). */
+  const dayKey = () => ui.makeup || today();
+  const nowHour = () => new Date().getHours();
   const byId = {}; B.books.forEach(b => (byId[b.id] = b));
 
   let stale = false;   // the log changed (from the cloud) while a pop-up covered the screen
@@ -121,7 +124,7 @@
     } else if (h === "log") { ui.book = null; renderLog(); }
     else if (h.startsWith("reader=")) { const key = CL.parseReaderKey(h); try { history.replaceState(null, "", location.pathname + location.search); } catch (e) {} ui.book = null; renderShelf(); if (key && !kid()) openJoinReader(key); }
     else if (h.startsWith("join=")) { const key = CL.parseKey(h); try { history.replaceState(null, "", location.pathname + location.search); } catch (e) {} ui.book = null; renderShelf(); if (key) openJoin(key); }
-    else { ui.book = null; renderShelf(); }
+    else { ui.book = null; renderShelf(); setTimeout(maybeMakeupPrompt, 350); }
   }
   const go = h => { if (location.hash.replace(/^#/, "") === h) route(); else location.hash = h; };
 
@@ -137,7 +140,7 @@
     if (!ui.book) return;
     if (!ui.paused && !ui.idle && now - ui.lastAct > 120000) { ui.idle = true; paintTimer(); return; }
     if (!running()) return;
-    const k = today(), before = C.daySec(S, k);
+    const k = dayKey(), before = C.daySec(S, k);
     ui.acc += Math.min(dt, 3);
     const whole = Math.floor(ui.acc); ui.acc -= whole;
     if (whole > 0) { C.addSeconds(S, k, ui.book.id, whole); save(); count("reads"); }
@@ -148,9 +151,9 @@
   }
   function paintTimer() {
     const el = $("#tm"); if (!el) return;
-    const sec = C.daySec(S, today()), goal = C.goalSec(S);
+    const sec = C.daySec(S, dayKey()), goal = C.goalSec(S);
     $("#tmnum").textContent = C.fmtClock(sec);
-    $("#tmgoal").textContent = sec >= goal ? (teen() ? "goal reached" : "goal reached! ⭐") : "of " + C.fmtClock(goal);
+    $("#tmgoal").textContent = sec >= goal ? (teen() ? "goal reached" : "goal reached! ⭐") : "of " + C.fmtClock(goal) + (ui.makeup ? " · last night" : "");
     $("#tmbar").style.width = Math.min(100, sec / goal * 100) + "%";
     const st = ui.paused ? "paused" : ui.idle ? "idle" : "";
     el.className = "tm " + st;
@@ -188,16 +191,16 @@
   /* Reached tonight's goal: always the party card; plus a bigger cheer for a milestone streak or a new longest streak. */
   function celebrate() {
     chime();
-    const ch = C.cheers(S, today()), who = S.name ? esc(S.name) + ", you" : "You", lines = [];
+    const mk = !!ui.makeup, ch = C.cheers(S, dayKey()), who = S.name ? esc(S.name) + ", you" : "You", lines = [];
     const fl = teen() ? I("flame", 20) : "🔥", tr = teen() ? I("star", 20) : "🏆";
     if (ch.milestone) lines.push(`${fl} <b>${ch.milestone} nights in a row!</b>`);
     if (ch.record && !ch.milestone) lines.push(`${tr} <b>New longest streak: ${ch.streak} nights!</b>`);
     else if (ch.record && ch.milestone) lines.push(`${tr} New longest streak!`);
     const o = document.createElement("div"); o.className = "overlay"; o.id = "party";
-    o.innerHTML = `<div class="card party" role="dialog" aria-label="Twenty minutes done"><div class="big">${teen() ? I("star", 56) : ch.milestone ? "🎊🏆🎊" : "🎉⭐🎉"}</div><h2>${S.goal} minutes!</h2>${lines.map(l => `<p class="cheer">${l}</p>`).join("")}<p>${who} did your reading tonight. Great job!</p><button class="btn" id="keep">Keep reading</button><button class="btn alt" id="stop">I'm done tonight</button></div>`;
+    o.innerHTML = `<div class="card party" role="dialog" aria-label="Twenty minutes done"><div class="big">${teen() ? I("star", 56) : ch.milestone ? "🎊🏆🎊" : "🎉⭐🎉"}</div><h2>${mk ? "Last night is finished!" : S.goal + " minutes!"}</h2>${lines.map(l => `<p class="cheer">${l}</p>`).join("")}<p>${mk ? who + " finished last night's reading. Great job!" : who + " did your reading tonight. Great job!"}</p><button class="btn" id="keep">${mk ? "Start today's reading" : "Keep reading"}</button><button class="btn alt" id="stop">${mk ? "I'm done for now" : "I'm done tonight"}</button></div>`;
     document.body.appendChild(o); trackOverlay(o); confetti(!!(ch.milestone || ch.record));
-    $("#keep").onclick = () => { closeOverlay(o); touch(); };
-    $("#stop").onclick = () => closeOverlay(o, () => go(""));
+    $("#keep").onclick = () => { if (ui.makeup) { ui.makeup = null; ui.pbm = ""; } closeOverlay(o); touch(); };
+    $("#stop").onclick = () => closeOverlay(o, () => { ui.makeup = null; go(""); });
   }
   /* A new personal best for minutes in one night (once per reader per night, after the goal, and only if there is a past night to beat). */
   function checkBestDay(k) {
@@ -221,8 +224,20 @@
     const r = 54, c = 2 * Math.PI * r, p = Math.min(1, sec / goal);
     return `<svg viewBox="0 0 130 130" class="ring" aria-hidden="true"><circle cx="65" cy="65" r="${r}" class="rbg"/><circle cx="65" cy="65" r="${r}" class="rfg" stroke-dasharray="${(c * p).toFixed(1)} ${c.toFixed(1)}" transform="rotate(-90 65 65)"/></svg>`;
   }
+  /* Second chance in the morning: last night ended short of the goal, so offer to finish it. Reading then counts for last night. */
+  function startMakeup() { const m = C.makeup(S, today(), nowHour()); if (!m) return; ui.makeup = m.day; ui.pbm = ""; renderShelf(); }
+  const mkSeen = () => { try { return JSON.parse(localStorage.getItem("read20.mkno") || "{}"); } catch (e) { return {}; } };
+  function maybeMakeupPrompt() {
+    const m = ui.makeup ? null : C.makeup(S, today(), nowHour()); if (!m) return;
+    const key = R.active + "|" + m.day, seen = mkSeen(); if (seen[key] || ui.mkAsked === key) return; ui.mkAsked = key;
+    const o = sheet(`<div class="wordpop"><h2>${teen() ? "" : "🌅 "}Good morning${S.name ? ", " + esc(S.name) : ""}!</h2>
+      <p class="fine left" style="text-align:center">Last night you read ${Math.floor(m.sec / 60)} of ${S.goal} minutes. Want to finish the other ${Math.ceil(m.left / 60)} now?</p>
+      <button class="btn" id="mkyes">Yes, finish last night</button><button class="btn alt" id="mkno">Not now</button></div>`);
+    $("#mkyes").onclick = () => { closeOverlay(o, startMakeup); };
+    $("#mkno").onclick = () => { const s2 = mkSeen(); s2[key] = 1; const ks = Object.keys(s2).slice(-30), out = {}; ks.forEach(x => (out[x] = 1)); try { localStorage.setItem("read20.mkno", JSON.stringify(out)); } catch (e) {} closeOverlay(o); };
+  }
   function renderShelf() {
-    const k = today(), sec = C.daySec(S, k), goal = C.goalSec(S), done = sec >= goal, streak = C.streak(S, k);
+    const k = dayKey(), sec = C.daySec(S, k), goal = C.goalSec(S), done = sec >= goal, streak = C.streak(S, k), offer = ui.makeup ? null : C.makeup(S, today(), nowHour());
     const fin = C.finishedIds(S), nx = nextUp(), left = Math.max(0, Math.ceil((goal - sec) / 60));
     const older = S.lv === "older";
     if (!ui.levelSet) { ui.level = nx.level || 1; ui.topic = nx.topic || "sports"; ui.levelSet = true; }
@@ -233,11 +248,13 @@
     <header class="top"><h1>${icon("logo", "📖 ")}Read ${S.goal}</h1><span class="cloudbadge" id="cloudbadge" title="Backed up online" ${CL.status === "ok" ? "" : "hidden"}>☁️✓</span>${teen() ? "" : `<button class="icon moon" id="moon" aria-label="${night() ? "Switch to light screen" : "Switch to dark screen (easier on the eyes in bed)"}">${night() ? "☀️" : "🌙"}</button>`}<button class="icon" id="gear" aria-label="Settings">${icon("sliders", "⚙️")}</button></header>
     ${warnHtml()}
     <div class="readers" role="tablist" aria-label="Readers">${R.order.map(id => `<button role="tab" aria-selected="${id === R.active}" class="rd ${id === R.active ? "on" : ""}" data-id="${esc(id)}"><span class="av" aria-hidden="true">${avOf(id)}</span><span class="nm">${esc(who(R.profiles[id]))}</span></button>`).join("")}${kid() ? "" : '<button class="rd add" id="addrd" aria-label="Add a reader"><span class="av" aria-hidden="true">＋</span><span class="nm">Add</span></button>'}</div>
+    ${offer ? `<section class="nudge makeup"><b>${teen() ? "" : "🌅 "}Finish last night?</b><p>${S.name ? esc(S.name) + ", you" : "You"} read ${Math.floor(offer.sec / 60)} of ${S.goal} minutes last night. You have until noon to finish the other ${Math.ceil(offer.left / 60)}.</p><button class="btn" id="mkgo">Finish last night's reading</button></section>` : ""}
+    ${ui.makeup ? `<p class="nudge makeup"><b>Finishing last night.</b> Your reading now counts for last night.<br><button class="linkbtn" id="mkoff">Never mind, back to tonight</button></p>` : ""}
     <section class="today ${done ? "ok" : ""}">
       <div class="ringbox">${ring(sec, goal)}<div class="rtxt"><b>${Math.floor(sec / 60)}</b><span>min</span></div></div>
       <div class="ttxt">
-        <h2>${done ? "Tonight's reading is done!" + (teen() ? "" : " ⭐") : (S.name ? esc(S.name) + ", " + (sec ? "keep going!" : "ready to read?") : (sec ? "Keep going!" : "Ready to read?"))}</h2>
-        <p>${done ? "You can read more if you want." : left + " more minute" + (left === 1 ? "" : "s") + " to go tonight."}</p>
+        <h2>${ui.makeup ? (done ? "Last night is finished!" : "Finish last night") : ""}${ui.makeup ? "" : done ? "Tonight's reading is done!" + (teen() ? "" : " ⭐") : (S.name ? esc(S.name) + ", " + (sec ? "keep going!" : "ready to read?") : (sec ? "Keep going!" : "Ready to read?"))}</h2>
+        <p>${done ? "You can read more if you want." : left + " more minute" + (left === 1 ? "" : "s") + (ui.makeup ? " to finish last night." : " to go tonight.")}</p>
         <p class="streak">${streak ? icon("flame", "🔥", 18) + " " + streak + " night" + (streak === 1 ? "" : "s") + " in a row" : "Start a streak tonight!"}</p>
       </div>
     </section>
@@ -253,6 +270,8 @@
     <p class="fine">Stories are free to share: written for this app, or old public-domain rhymes and fables. Everything stays on this phone.</p>`;
     nav("books");
     $("#gear").onclick = openSettings;
+    if ($("#mkgo")) $("#mkgo").onclick = () => { startMakeup(); };
+    if ($("#mkoff")) $("#mkoff").onclick = () => { ui.makeup = null; ui.levelSet = false; renderShelf(); };
     if ($("#moon")) $("#moon").onclick = () => { setLook(night() ? "light" : "dark"); route(); };
     document.querySelectorAll(".rd[data-id]").forEach(b => (b.onclick = () => { if (b.dataset.id !== R.active) switchTo(b.dataset.id); }));
     if ($("#addrd")) $("#addrd").onclick = openAddReader;
@@ -302,7 +321,7 @@
     if ($("#hear")) $("#hear").onclick = () => { readAloud(); };
     if ($("#spd")) $("#spd").onclick = () => { const i = SPEEDS.findIndex(s => s[1] === speedName()); setRate(SPEEDS[(i + 1) % SPEEDS.length][0]); $("#spd").textContent = "Speed: " + speedName(); readAloud(); };
     if (end) {
-      if (!ui.finishedNow) { ui.finishedNow = true; C.finish(S, today(), bk.id); save(); }
+      if (!ui.finishedNow) { ui.finishedNow = true; C.finish(S, dayKey(), bk.id); save(); }
       $("#more").onclick = () => { const nx = nextUp(); go(nx && nx.id !== bk.id ? "b/" + nx.id : ""); };
       $("#again").onclick = () => { ui.page = 0; ui.hl = -1; renderReader(); startTimerKeep(); };
       if (older && bk.quiz && bk.quiz.length) wireQuiz(bk);

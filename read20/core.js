@@ -102,6 +102,14 @@
     const p = myPart(d); p.sec += min * 60; p.extra.push({ title: clean(title, 60) || "A book from home", sec: min * 60 }); C.derive(d);
     return true;
   };
+  /* A second chance: if last night ended short of the goal (some reading, but not enough), and it is still morning, return
+     { day, sec, left } so the app can offer to finish it. Otherwise null. */
+  C.makeup = (s, today, hour) => {
+    if (!(hour >= 0 && hour < 12)) return null;
+    const day = C.addDays(today, -1), sec = C.daySec(s, day);
+    if (sec <= 0 || sec >= C.goalSec(s)) return null;
+    return { day, sec, left: C.goalSec(s) - sec };
+  };
   C.finishedIds = s => { const out = {}; for (const k of Object.keys(s.days)) for (const id of Object.keys(s.days[k].books)) if (s.days[k].books[id].fin) out[id] = (out[id] || 0) + 1; return out; };
 
   /* Nights in a row that reached the goal. Today not being done yet doesn't break the streak. */
