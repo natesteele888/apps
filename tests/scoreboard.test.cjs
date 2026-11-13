@@ -1212,8 +1212,8 @@ function rng(seed) { return function () { seed |= 0; seed = seed + 0x6D2B79F5 | 
   await test('Offline: after one visit the service worker serves the whole app with no network, and only prunes its own caches', async () => {
     const { ctx, page, errors } = await fresh({ np: { sw: true }, init: () => { if (!sessionStorage.getItem('__c')) { sessionStorage.setItem('__c', '1'); caches.open('situations-v99').then(c => c.put('/x', new Response('x'))); caches.open('scoreboard-v0').then(c => c.put('/y', new Response('y'))); } } });
     await page.evaluate(() => navigator.serviceWorker.ready.then(() => 1));
-    await page.waitForFunction(async () => { const k = await caches.keys(); return k.includes('scoreboard-v1') && !k.includes('scoreboard-v0') && (await (await caches.open('scoreboard-v1')).keys()).length >= 8; }, null, { timeout: 10000 });
-    const cached = await page.evaluate(async () => (await (await caches.open('scoreboard-v1')).keys()).map(r => new URL(r.url).pathname));
+    await page.waitForFunction(async () => { const k = await caches.keys(); return k.includes('scoreboard-v2') && !k.includes('scoreboard-v0') && (await (await caches.open('scoreboard-v2')).keys()).length >= 8; }, null, { timeout: 10000 });
+    const cached = await page.evaluate(async () => (await (await caches.open('scoreboard-v2')).keys()).map(r => new URL(r.url).pathname));
     for (const f of ['/apps/scoreboard/', '/apps/scoreboard/core.js', '/apps/scoreboard/ui.js', '/apps/scoreboard/rules.js', '/apps/scoreboard/share.js', '/apps/scoreboard/board.js', '/apps/scoreboard/app.js', '/apps/scoreboard/scoreboard.css', '/apps/scoreboard/manifest.json']) assert.ok(cached.includes(f), 'cached ' + f + ' in ' + cached.join());
     await reload(page); await page.waitForTimeout(400);
     assert.ok(await page.evaluate(() => !!navigator.serviceWorker.controller), 'the page is controlled by the worker');
@@ -1303,7 +1303,7 @@ function rng(seed) { return function () { seed |= 0; seed = seed + 0x6D2B79F5 | 
     files.forEach(f => assert.ok(fs.statSync(path.join(dir, f)).size < 60 * 1024, f + ' is ' + fs.statSync(path.join(dir, f)).size + ' bytes'));
     const sw = fs.readFileSync(path.join(dir, 'sw.js'), 'utf8');
     files.filter(f => f !== 'sw.js' && !/\.(png)$/.test(f)).forEach(f => assert.ok(f === 'index.html' ? sw.includes('"./"') : sw.includes('"' + f + '"'), 'sw.js lists ' + f));
-    assert.ok(sw.includes('const CACHE = "scoreboard-v1"') && sw.includes('startsWith("scoreboard-")'));
+    assert.ok(sw.includes('const CACHE = "scoreboard-v2"') && sw.includes('startsWith("scoreboard-")'));
     const man = JSON.parse(fs.readFileSync(path.join(dir, 'manifest.json'), 'utf8'));
     eq(man.orientation, 'any'); eq(man.display, 'standalone'); assert.ok(man.icons.length >= 2 && man.name && man.short_name);
     const code = files.filter(f => /\.(js|html)$/.test(f) && f !== 'sw.js').map(f => fs.readFileSync(path.join(dir, f), 'utf8')).join('\n');
@@ -1313,6 +1313,55 @@ function rng(seed) { return function () { seed |= 0; seed = seed + 0x6D2B79F5 | 
     assert.ok(!/[\w.+-]+@[\w-]+\.[a-z]{2,}|\b\d{3}[.) -]\d{3}[.-]\d{4}\b/i.test(code + fs.readFileSync(path.join(dir, 'scoreboard.css'), 'utf8')), 'no emails or phone numbers');
     assert.ok(/<script src="https:\/\/natesteele888\.github\.io\/apps\/(install|health)\.js" defer><\/script>/.test(code), 'shared install script');
   });
+
+  /* ---- big scores never touch (390x844 and 320x640, every sport, 2 and 3 digit scores), long names in Recent games wrap ---- */
+  const SCORE_SEED = (sport, a, b) => {
+    if (sport === 'baseball') return mk('baseball', [{ type: 'set', k: 'inn', team: 0, i: 0, v: a }, { type: 'set', k: 'inn', team: 1, i: 0, v: b }]);
+    return mk(sport, [...sc(0, 1, a), ...sc(1, 1, b)]);
+  };
+  async function scoreGaps(page) {
+    return page.evaluate(() => {
+      const box = i => { const el = document.querySelector('.t-score[data-i="' + i + '"]'), r = document.createRange(); r.selectNodeContents(el); const g = r.getBoundingClientRect(), t = el.closest('.team').getBoundingClientRect(); return { l: g.left, r: g.right, tl: t.left, tr: t.right, fs: parseFloat(getComputedStyle(el).fontSize) }; };
+      const h = box(0), a = box(1);
+      return { gap: a.l - h.r, hOut: Math.max(h.tl - h.l, h.r - h.tr, 0), aOut: Math.max(a.tl - a.l, a.r - a.tr, 0), fs: [h.fs, a.fs] };
+    });
+  }
+  for (const [w, h] of [[390, 844], [320, 640]]) {
+    await test('Layout ' + w + 'x' + h + ': two big scores always have a gap and stay in their own half (21/17, 100/99, every sport, locked too)', async () => {
+      const { page, errors } = await fresh({ np: { ctx: { viewport: { width: w, height: h } } } });
+      const bad = [];
+      for (const sport of ['basketball', 'baseball', 'football', 'generic']) {
+        for (const [a, b] of [[21, 17], [88, 88], [100, 99], [999, 999]]) {
+          await loadState(page, board(SCORE_SEED(sport, a, b)));
+          for (const locked of [false, true]) {
+            if (locked) { await page.evaluate(() => document.querySelector('.board').classList.add('locked')); await page.waitForTimeout(50); }
+            const r = await scoreGaps(page);
+            const tag = w + ' ' + sport + ' ' + a + '/' + b + (locked ? ' locked' : '');
+            if (r.gap < 8) bad.push(tag + ': gap only ' + Math.round(r.gap) + 'px');
+            if (r.hOut > 0.5 || r.aOut > 0.5) bad.push(tag + ': a score spills out of its half by ' + Math.round(Math.max(r.hOut, r.aOut)) + 'px');
+            if (Math.min(...r.fs) < 40) bad.push(tag + ': shrank below 40px (' + r.fs + ')');
+          }
+        }
+      }
+      deq(bad, [], 'score layout problems');
+      noErr(errors); await page.context().close();
+    });
+    await test('Layout ' + w + 'x' + h + ': Recent games lines wrap instead of cutting off team names', async () => {
+      const { page, errors } = await fresh({ np: { ctx: { viewport: { width: w, height: h } } } });
+      const mkR = (sport, a, b, id) => { const g = SCORE_SEED(sport, a, b); g.teams = [{ n: 'HAWKS', c: COL[0] }, { n: 'THUNDERBOLTS', c: COL[1] }]; g.id = id; return C.makeRecent(g, 'final', NOW); };
+      await loadState(page, { recent: [mkR('basketball', 48, 41, 'r-1'), mkR('basketball', 100, 99, 'r-2'), mkR('football', 21, 17, 'r-3')] });
+      const rows = await page.$$eval('.grow-row .gs', els => els.map(e => ({ t: e.textContent, sw: e.scrollWidth, cw: e.clientWidth, ws: getComputedStyle(e).whiteSpace, to: getComputedStyle(e).textOverflow, fs: parseFloat(getComputedStyle(e).fontSize) })));
+      eq(rows.length, 3);
+      rows.forEach(r => {
+        assert.ok(r.sw <= r.cw + 1, '"' + r.t + '" is cut off (' + r.sw + ' > ' + r.cw + ')');
+        assert.ok(r.ws !== 'nowrap' || r.to !== 'ellipsis', '"' + r.t + '" still uses an ellipsis');
+        assert.ok(r.fs >= 16, 'text stayed readable');
+      });
+      eq(await overflow(page), 0, 'no sideways scroll');
+      await shot(page, 95, 'recent-long-names', w);
+      noErr(errors); await page.context().close();
+    });
+  }
 
 //__UI2__
 
