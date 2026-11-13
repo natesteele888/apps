@@ -1189,12 +1189,16 @@
         ],
         "autoShots": [],
         "latest": {
-          "d": "Nov 12, 2026",
-          "t": "Let a keyboard or screen reader open a banner from the list",
-          "url": "https://github.com/natesteele888/sponsor-banner-inventory/commit/a249458a75f836f1956915baadf6b6969571fe4f"
+          "d": "Nov 13, 2026",
+          "t": "Load the map library without holding up the banner list",
+          "url": "https://github.com/natesteele888/sponsor-banner-inventory/commit/9f61573b213eae6d1c832e850d6af2d472799222"
         },
-        "version": "1.2.3",
+        "version": "1.2.4",
         "history": [
+          {
+            "v": "1.2.4",
+            "t": "Load the map library without holding up the banner list"
+          },
           {
             "v": "1.2.3",
             "t": "Let a keyboard or screen reader open a banner from the list"
@@ -1210,10 +1214,6 @@
           {
             "v": "1.2.0",
             "t": "Say why when the map can't load, instead of a blank box"
-          },
-          {
-            "v": "1.1.9",
-            "t": "Open with no signal instead of a browser error page"
           }
         ],
         "caps": [
