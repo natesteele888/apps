@@ -329,6 +329,7 @@ async function newPlay(page, { sport, variant, start, name }) {
   await page.click('.back'); await page.waitForSelector('.card');
   const names = await page.locator('.card-t').allTextContents();
   ok(names.includes('Edit test') && names.includes('Touch test') && names.includes('Pick and roll'), 'saved plays persist after reload', names);
+  ok(await page.$$eval('.card-t', t => t.every(x => x.scrollWidth <= x.clientWidth && x.scrollHeight <= x.clientHeight + 1)), 'library card titles are not cut off sideways');
   const cardsBefore = await page.locator('.card').count();
   await page.click('.card:has(.card-t:text-is("Edit test")) .card-more');
   await page.click('.sheet .row-btn:has-text("Duplicate")');
@@ -534,7 +535,7 @@ async function newPlay(page, { sport, variant, start, name }) {
   await page.waitForFunction(() => navigator.serviceWorker.controller !== null, null, { timeout: 8000 }).catch(() => {});
   await sleep(800);
   const cached = await page.evaluate(async () => { const ks = await caches.keys(); const k = ks.find(k => k.startsWith('playboard-')); if (!k) return null; const c = await caches.open(k); return { k, urls: (await c.keys()).map(r => new URL(r.url).pathname) }; });
-  ok(cached && cached.k === 'playboard-v1' && cached.urls.some(u => /app\.js$/.test(u)) && cached.urls.some(u => /engine\.js$/.test(u)) && cached.urls.some(u => /style\.css$/.test(u)), 'service worker cached the app shell in playboard-v1', cached);
+  ok(cached && cached.k === 'playboard-v2' && cached.urls.some(u => /app\.js$/.test(u)) && cached.urls.some(u => /engine\.js$/.test(u)) && cached.urls.some(u => /style\.css$/.test(u)), 'service worker cached the app shell in playboard-v2', cached);
   await ctx.setOffline(true);
   await page.reload();
   await page.waitForSelector('#lyrTokens .tok, .card', { timeout: 8000 });
