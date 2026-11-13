@@ -1,6 +1,6 @@
 {
   "about": "The one list of Nathan's apps. Live links, which apps show where, and each app's App Store listing (text, highlights, screenshots) all come from here. Edit listings and icons in the Toolbox; the sync job copies them here. Don't hand-edit text in store/index.html.",
-  "updated": "2026-11-12",
+  "updated": "2026-11-13",
   "toolbox": "https://natesteele888.github.io/apps/toolbox/",
   "store": "https://natesteele888.github.io/apps/store/",
   "apps": [
@@ -443,12 +443,16 @@
         ],
         "autoShots": [],
         "latest": {
-          "d": "Nov 11, 2026",
-          "t": "Make the name button at the top of every screen easy to tap",
-          "url": "https://github.com/natesteele888/ASL-Bengals/commit/15faaef5bd134ee436a4b3fa0adabb3b322a2741"
+          "d": "Nov 12, 2026",
+          "t": "Load the PDF and GIF libraries without holding up the page",
+          "url": "https://github.com/natesteele888/ASL-Bengals/commit/88e012c1e73ab6f75befb38f644d34bcf51c4d1a"
         },
-        "version": "1.50.2",
+        "version": "1.50.3",
         "history": [
+          {
+            "v": "1.50.3",
+            "t": "Load the PDF and GIF libraries without holding up the page"
+          },
           {
             "v": "1.50.2",
             "t": "Make the name button at the top of every screen easy to tap"
@@ -464,10 +468,6 @@
           {
             "v": "1.49.9",
             "t": "Stat Keeper: make the small buttons easy to tap on the sideline"
-          },
-          {
-            "v": "1.49.8",
-            "t": "Super Bowl banner: Let's go Bengals, D1 Super Bowl vs Milford Hawks"
           }
         ],
         "caps": [
@@ -950,12 +950,16 @@
         ],
         "autoShots": [],
         "latest": {
-          "d": "Nov 11, 2026",
-          "t": "Power Program: make Reset all progress a full-size tap",
-          "url": "https://github.com/natesteele888/fitness-hub/commit/abd518a6e687b69cb107507024fecb1e86ff40e0"
+          "d": "Nov 12, 2026",
+          "t": "Power Program: keep the check-in units on screen on a small phone",
+          "url": "https://github.com/natesteele888/fitness-hub/commit/a99a323fc4d6119294bf7cddf5ff93d221aff7d8"
         },
-        "version": "1.3.7",
+        "version": "1.3.8",
         "history": [
+          {
+            "v": "1.3.8",
+            "t": "Power Program: keep the check-in units on screen on a small phone"
+          },
           {
             "v": "1.3.7",
             "t": "Power Program: make Reset all progress a full-size tap"
@@ -971,10 +975,6 @@
           {
             "v": "1.3.4",
             "t": "Power Program: add the shared problem report and save check"
-          },
-          {
-            "v": "1.3.3",
-            "t": "Power Program: reload with no signal instead of a browser error"
           }
         ],
         "caps": [
@@ -2400,33 +2400,33 @@
           "store/shots/read20-5.webp",
           "store/shots/read20-6.webp"
         ],
-        "version": "1.3.0",
+        "version": "1.3.6",
         "history": [
           {
-            "v": "1.3.0",
-            "t": "Add a copyright notice and an all-rights-reserved LICENSE"
+            "v": "1.3.6",
+            "t": "Read 20: remove an entry from the log (with confirmation)"
           },
           {
-            "v": "1.2.9",
-            "t": "Read 20: the reading hint points to the speaker when sound is off"
+            "v": "1.3.5",
+            "t": "Read 20: fix the slow, cut-off first Storytime page"
           },
           {
-            "v": "1.2.8",
-            "t": "Read 20: syllable pop-up off for now, tapping a word says it"
+            "v": "1.3.4",
+            "t": "Read 20: the speed set in Settings carries into the story"
           },
           {
-            "v": "1.2.7",
-            "t": "Read 20: pronunciation fixes from the word check"
+            "v": "1.3.3",
+            "t": "Read 20: slower Storytime and a highlight that keeps pace with the voice"
           },
           {
-            "v": "1.2.6",
-            "t": "Read 20: fix focused, nowhere, and some/any/every pronunciations"
+            "v": "1.3.2",
+            "t": "Read 20: Storytime, a more natural voice, and adjustable speed"
           }
         ],
         "latest": {
           "d": "Nov 12, 2026",
-          "t": "Add a copyright notice and an all-rights-reserved LICENSE",
-          "url": "https://github.com/natesteele888/apps/commit/25fd10682c4fe1ef072b42512df48ff23a75faea"
+          "t": "Read 20: remove an entry from the log (with confirmation)",
+          "url": "https://github.com/natesteele888/apps/commit/eec35b70800f7dd79cd92aae1f7730093896270f"
         },
         "caps": [
           "Every child gets their own profile, streak and shelf",
