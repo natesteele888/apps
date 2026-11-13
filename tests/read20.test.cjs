@@ -815,6 +815,10 @@ const TODAY = '2026-11-08';
     await readMin(page, 7); await page.clock.runFor(60000); await page.locator('#party').waitFor(); assert.ok(/Last night is finished/.test(await page.locator('#party').innerText()));
     eq(await daySecOf(page, '2026-11-08'), 1200, 'last night is now complete'); eq(await daySecOf(page, '2026-11-09'), 0, 'nothing leaked into today');
     await page.locator('#keep').click(); await readMin(page, 1); eq(await daySecOf(page, '2026-11-09') >= 60, true, 'now it counts for today'); eq(await daySecOf(page, '2026-11-08'), 1200);
+    await page.locator('#back').click(); await page.waitForSelector('.cover'); await page.locator('#nav [data-go="log"]').click(); await page.waitForSelector('.cal');
+    const cell = page.locator('.day[data-d="2026-11-08"]'); assert.ok(/done/.test(await cell.getAttribute('class')), 'last night shows as a finished night on the calendar'); assert.ok(!/done/.test(await page.locator('.day[data-d="2026-11-09"]').getAttribute('class')), 'today is not marked done');
+    await cell.click(); await page.waitForSelector('#detail .list'); const det = await page.locator('#detail').innerText(); assert.ok(/Sam the Cat/.test(det) && /20 min/.test(det), 'last night lists the story and the full 20 minutes: ' + det);
+    eq(await page.evaluate(() => R20App._state().days['2026-11-08'].done), 1, 'and it is marked as reached, so the streak counts it'); eq(await page.evaluate(() => { const C = R20Core; return C.streak(R20App._state(), '2026-11-09'); }), 1, 'streak: last night counts');
   });
   await test('second chance: Not now keeps the card but does not ask again; never mind goes back to tonight; no offer in the afternoon or for a night with no reading', async () => {
     const a = await morning(); await a.page.locator('#mkno').click(); await a.page.waitForSelector('#mkgo'); eq(await a.page.evaluate(() => Object.keys(JSON.parse(localStorage.getItem('read20.mkno'))).join()), 'main|2026-11-08', 'remembered, so it is not asked again'); eq(await a.page.locator('#mkyes').count(), 0); eq(await a.page.locator('#mkgo').count(), 1, 'but the card is still there');
