@@ -288,3 +288,5 @@ html.night{color-scheme:dark;--bg:#1a1626;--ink:#efe6d4;--soft:#a79fbd;--card:#2
 
 .list .del{flex:none;width:44px;height:44px;border-radius:12px;border:2px solid var(--line);background:var(--card);color:var(--red);font-size:1.1rem;display:inline-flex;align-items:center;justify-content:center;padding:0}
 .list .del:active{transform:translateY(1px)}
+.nudge.makeup{background:#fff3c4;border-color:#ffd84d}.night .nudge.makeup{background:#40361a;border-color:#a88420}.teen .nudge.makeup{background:#2b2a14;border-color:#7a6a1c}
+.nudge.makeup .linkbtn{padding:6px 0}

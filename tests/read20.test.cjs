@@ -105,6 +105,12 @@ const TODAY = '2026-11-08';
     C.addSeconds(back, TODAY, 'x', 60); eq(C.daySec(back, TODAY), 360, 'new reading of the same story after removal still counts'); eq(back.days[TODAY].books.x.sec, 60);
     C.dev = 'local';
   });
+  await test('core: the morning second chance appears only for a short night, before noon', () => {
+    const s = C.empty(); C.addSeconds(s, '2026-11-08', 'a', 720);
+    const m = C.makeup(s, '2026-11-09', 8); eq(m.day, '2026-11-08'); eq(m.sec, 720); eq(m.left, 480);
+    eq(C.makeup(s, '2026-11-09', 12), null, 'not after noon'); eq(C.makeup(s, '2026-11-09', 19), null); eq(C.makeup(s, '2026-11-10', 8), null, 'only the night just before');
+    C.addSeconds(s, '2026-11-08', 'a', 480); eq(C.makeup(s, '2026-11-09', 8), null, 'a finished night is not offered'); eq(C.makeup(C.empty(), '2026-11-09', 8), null, 'a night with no reading is not offered');
+  });
   await test('core: longest streak, best day and the cheers for tonight', () => {
     const s = C.empty(); ['2026-11-03', '2026-11-04', '2026-11-05', '2026-11-06'].forEach(k => C.addSeconds(s, k, 'a', 1200)); C.addSeconds(s, '2026-11-01', 'a', 1500);
     eq(C.bestStreak(s), 4); eq(C.bestDay(s), 1500); eq(C.bestDay(s, '2026-11-01'), 1200);
@@ -798,6 +804,23 @@ const TODAY = '2026-11-08';
     page.once('dialog', d => d.accept()); await page.locator('#detail li', { hasText: 'Test entry' }).locator('.del').click(); await page.waitForFunction(() => R20App._state().days[window.__today].sec === 300);
     eq(await page.locator('#detail .del').count(), 1); assert.ok(/5 min/.test(await page.locator('#detail').innerText()));
     await page.reload(); await page.waitForSelector('.cal'); eq(await sec(page), 300, 'still removed after a reload');
+  });
+  const morning = async (opts = {}) => { const o = await newPage(br, { today: '2026-11-09' }); await o.page.addInitScript(([sec]) => { if (!sessionStorage.x) { sessionStorage.x = 1; localStorage.setItem('read20.v1', JSON.stringify({ v: 1, name: 'Riley', goal: 20, size: 1, days: sec ? { '2026-11-08': { done: 0, parts: { old: { sec, books: {}, extra: [] } } } } : {} })); } }, [opts.sec === undefined ? 720 : opts.sec]);
+    await o.page.clock.install({ time: new Date(opts.at || '2026-11-09T08:00:00') }); await o.page.goto(srv.url); await o.page.waitForSelector('.cover'); return o; };
+  const daySecOf = (page, k) => page.evaluate(k => (R20App._state().days[k] || { sec: 0 }).sec, k);
+  await test('second chance: a short night is offered in the morning, the reading counts for last night until it is done, then today starts fresh', async () => {
+    const { page } = await morning(); await page.locator('#mkyes').waitFor(); assert.ok(/12 of 20 minutes/.test(await page.locator('.sheet').innerText()), await page.locator('.sheet').innerText()); assert.ok(/other 8/.test(await page.locator('.sheet').innerText()));
+    await page.locator('#mkyes').click(); await page.waitForSelector('.makeup #mkoff'); assert.ok(/Finish last night/.test(await page.locator('.ttxt h2').innerText()));
+    await page.locator('.cover', { hasText: 'Sam the Cat' }).click(); await page.waitForSelector('.reader'); await page.locator('.w').first().click(); assert.ok(/last night/.test(await page.locator('#tmgoal').innerText()));
+    await readMin(page, 7); await page.clock.runFor(60000); await page.locator('#party').waitFor(); assert.ok(/Last night is finished/.test(await page.locator('#party').innerText()));
+    eq(await daySecOf(page, '2026-11-08'), 1200, 'last night is now complete'); eq(await daySecOf(page, '2026-11-09'), 0, 'nothing leaked into today');
+    await page.locator('#keep').click(); await readMin(page, 1); eq(await daySecOf(page, '2026-11-09') >= 60, true, 'now it counts for today'); eq(await daySecOf(page, '2026-11-08'), 1200);
+  });
+  await test('second chance: Not now keeps the card but does not ask again; never mind goes back to tonight; no offer in the afternoon or for a night with no reading', async () => {
+    const a = await morning(); await a.page.locator('#mkno').click(); await a.page.waitForSelector('#mkgo'); eq(await a.page.evaluate(() => Object.keys(JSON.parse(localStorage.getItem('read20.mkno'))).join()), 'main|2026-11-08', 'remembered, so it is not asked again'); eq(await a.page.locator('#mkyes').count(), 0); eq(await a.page.locator('#mkgo').count(), 1, 'but the card is still there');
+    await a.page.locator('#mkgo').click(); await a.page.locator('#mkoff').click(); await a.page.waitForSelector('#mkgo'); eq(await a.page.locator('#mkoff').count(), 0);
+    const b = await morning({ at: '2026-11-09T14:00:00' }); await b.page.waitForTimeout(800); eq(await b.page.locator('#mkyes').count() + await b.page.locator('#mkgo').count(), 0, 'afternoon: no offer');
+    const c = await morning({ sec: 0 }); await c.page.waitForTimeout(800); eq(await c.page.locator('#mkyes').count() + await c.page.locator('#mkgo').count(), 0, 'no reading last night: no offer');
   });
   await test('offline: the service worker caches the app and it reopens with no network', async () => {
     const o = await newPage(br, { sw: true, today: TODAY }); const { page, ctx } = o;
