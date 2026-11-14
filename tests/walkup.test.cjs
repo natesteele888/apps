@@ -299,6 +299,14 @@ const dbKeys = page => page.evaluate(() => window.WalkupApp.WU.db.keys());
     deep(C.fillLineup(s2, { voice: false }), { players: 5, kept: 0, matched: 0, picked: 0, sounds: 5, voiced: 0 }, 'an empty lineup means the whole roster');
     deep(s2.roster.map(p => p.songId), ['b:horn', 'b:drumroll', 'b:chime', 'b:siren', 'b:horn']); eq(s2.roster[0].voice, null);
     eq(C.sanitizeState(s2).roster[1].songId, 'b:drumroll', 'built-in sounds survive saving');
+    // names as coaches really type them: a missing space after the dash, a last initial, a last name alone
+    eq(C.songOwner({ kind: 'file', title: 'KILO -Artist - Song' }), 'kilo'); eq(C.songOwner({ kind: 'file', title: 'Jay-Z - Song' }), '', 'a hyphen inside a word is not a tag');
+    const s3 = C.emptyState();
+    s3.songs = [song('songfff1', 'GOLF K - Song F'), song('songggg1', 'HOTEL -Song G'), song('songhhh1', 'Song H'), song('songiii1', 'MIKE - Song I')];
+    ['Golf Kilo', 'India Hotel', 'Juliet Lima', 'Golf Mike', 'Oscar Mike'].forEach(n => { const p = C.newPlayer({ name: n }); s3.roster.push(p); s3.lineup.push(p.id); });
+    deep(C.fillLineup(s3, { voice: false }), { players: 5, kept: 0, matched: 2, picked: 3, sounds: 0, voiced: 0 });
+    deep(s3.roster.map(p => p.songId), ['songfff1', 'songggg1', 'songhhh1', 'songhhh1', 'songhhh1'],
+      'first name and last initial; a last name only one player has; MIKE is two players\' last name and nobody\'s first, so it stays out of the shared pool');
   });
 
   await test('core: where a song kicks in, and Ballclub lineups made into a batting order', async () => {

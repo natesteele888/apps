@@ -804,7 +804,7 @@
   }
   function songOwner(song) {
     if (!song || song.kind !== "file") return "";
-    var m = /^\s*([A-Za-zÀ-ɏ][A-Za-zÀ-ɏ'.]*(?:\s+[A-Za-zÀ-ɏ][A-Za-zÀ-ɏ'.]*)?)\s*[-–—]\s+\S/.exec(String(song.title || ""));
+    var m = /^\s*([A-Za-zÀ-ɏ][A-Za-zÀ-ɏ'.]*(?:\s+[A-Za-zÀ-ɏ][A-Za-zÀ-ɏ'.]*)?)(?:\s+[-–—]\s*|\s*[-–—]\s+)\S/.exec(String(song.title || ""));
     return m ? normName(m[1]) : "";
   }
 
@@ -816,18 +816,29 @@
     opts = opts || {};
     var rep = { players: 0, kept: 0, matched: 0, picked: 0, sounds: 0, voiced: 0 };
     if (!st || !Array.isArray(st.roster)) return rep;
-    var songs = Array.isArray(st.songs) ? st.songs : [], byId = Object.create(null), uses = Object.create(null), names = Object.create(null);
+    var songs = Array.isArray(st.songs) ? st.songs : [], byId = Object.create(null), uses = Object.create(null);
+    var lasts = Object.create(null);
     st.roster.forEach(function (p) {
       byId[p.id] = p;
       if (p.songId && songById(songs, p.songId)) uses[p.songId] = (uses[p.songId] || 0) + 1;
-      var full = normName(p.name), first = full.split(" ")[0];
-      if (full) names[full] = 1;
-      if (first) names[first] = 1;
+      var w = normName(p.name).split(" "); if (w.length > 1) lasts[w[w.length - 1]] = (lasts[w[w.length - 1]] || 0) + 1;
     });
+    /* how well a song's name fits a player: 3 full name, 2 first name and last initial ("Jordan L"), 1 first name,
+       1 last name when only one player has it ("LEE - Song"), 0 not theirs */
+    function fit(own, p) {
+      if (!own) return 0;
+      var full = normName(p.name), w = full.split(" "), o = own.split(" ");
+      if (!full) return 0;
+      if (own === full) return 3;
+      if (o.length === 2 && w.length > 1 && o[0] === w[0] && o[1].length <= 2 && w[w.length - 1].indexOf(o[1].replace(/\.$/, "")) === 0) return 2;
+      if (o.length === 1 && o[0] === w[0]) return 1;
+      if (o.length === 1 && w.length > 1 && o[0] === w[w.length - 1] && lasts[o[0]] === 1) return 1;
+      return 0;
+    }
     var owner = Object.create(null);
     songs.forEach(function (s) { owner[s.id] = songOwner(s); });
     /* a song named for someone on this team is theirs, so it isn't handed to anyone else */
-    var pool = songs.filter(function (s) { return s.kind === "file" && !(owner[s.id] && names[owner[s.id]]); });
+    var pool = songs.filter(function (s) { return s.kind === "file" && !lasts[owner[s.id]] && !st.roster.some(function (p) { return fit(owner[s.id], p) > 0; }); });
     var ids = (Array.isArray(st.lineup) && st.lineup.length ? st.lineup : st.roster.map(function (p) { return p.id; })).slice(), nSound = 0;
     ids.forEach(function (id) {
       var p = byId[id]; if (!p) return;
@@ -835,9 +846,8 @@
       if (!p.voice && opts.voice !== false) { p.voice = defaultVoice("tts", {}, null); rep.voiced++; }
       if (p.songId && songById(songs, p.songId)) { rep.kept++; return; }
       p.songId = null; p.trim = null;
-      var full = normName(p.name), first = full.split(" ")[0], mine = null;
-      if (full) mine = songs.filter(function (s) { return owner[s.id] === full && !uses[s.id]; })[0] || null;
-      if (!mine && first) mine = songs.filter(function (s) { return owner[s.id] === first && !uses[s.id]; })[0] || null;
+      var mine = null, best = 0;
+      songs.forEach(function (s) { var f = uses[s.id] ? 0 : fit(owner[s.id], p); if (f > best) { best = f; mine = s; } });
       if (mine) { p.songId = mine.id; uses[mine.id] = 1; rep.matched++; return; }
       if (pool.length) {
         var pick = pool[0];
