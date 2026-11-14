@@ -25,7 +25,8 @@
     h += "</section>";
     h += '<section class="card"><h3>Recording</h3><label class="chk"><input type="checkbox" data-setting="countIn"' + (s.countIn ? " checked" : "") + "> <span>3-2-1 count-in before recording</span></label>" +
       U.range({ key: "thr", label: "Silence threshold for auto-trim", min: -70, max: -20, step: 1, value: s.thr, text: s.thr + " dB" }) + "</section>";
-    h += '<section class="card"><h3>Game mode</h3><label class="chk"><input type="checkbox" data-setting="wake"' + (s.wake ? " checked" : "") + "> <span>Keep the screen on while Game is open</span></label>" + (("wakeLock" in navigator) ? "" : '<p class="mute small-note">This browser can\'t keep the screen on by itself. Turn off auto-lock in the phone\'s settings during games.</p>') + "</section>";
+    h += '<section class="card"><h3>Game mode</h3><label class="chk"><input type="checkbox" data-setting="wake"' + (s.wake ? " checked" : "") + "> <span>Keep the screen on while Game is open</span></label>" +
+      (WU.pitch ? '<label class="chk"><input type="checkbox" id="setPitchShow"' + (WU.pitch.shown() ? " checked" : "") + '> <span>Pitch counter on the Game screen</span></label>' : "") + (("wakeLock" in navigator) ? "" : '<p class="mute small-note">This browser can\'t keep the screen on by itself. Turn off auto-lock in the phone\'s settings during games.</p>') + "</section>";
     if (WU.req) h += WU.req.settingsHTML();
     h += '<section class="card"><h3>My announcer sound</h3><p class="msg">' + esc("EQ: " + (pre === "custom" ? "custom" : C.EQ_PRESETS.filter(function (x) { return x.id === pre; })[0].label) + ", compressor " + an.comp + ", room " + (an.wet ? C.REVERB[an.size].label + " " + an.wet + "%" : "off") + ".") +
       '</p><p class="mute small-note">New recordings start with this sound. Change it from any voice: tap "Save as my announcer sound".</p><button type="button" class="btn ghost" data-act="reset-ann">Reset to the factory sound</button></section>';

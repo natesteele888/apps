@@ -47,11 +47,13 @@
     return p ? '<div class="role"><span class="rk">' + label + '</span><span class="rv">' + WU.team.nameHTML(p) + "</span></div>" : "";
   }
   var HELP = { "needs-song": "The song file isn't on this phone. Open Songs and choose the file again.", "needs-voice": "The voice file isn't on this phone. Tap Voice to record or add it again.", empty: "Nothing to play yet. Tap Voice and Song to set this player up.", "no-song": "No song yet. The voice will play on its own.", "no-voice": "No voice yet. The song will play on its own." };
+  /* pitching sits on top of the Game screen (pitch.js), walk-up below */
+  function pitchHTML() { return WU.pitch && WU.pitch.shown() ? WU.pitch.cardHTML() : ""; }
   function gameHTML() {
     var st = S.st, n = st.lineup.length;
-    if (!st.roster.length) return emptyGame();
-    if (!n) return noLineup();
-    var p = WU.cur(), r = C.roles(n, st.batter), s = WU.status(p), h = "";
+    if (!st.roster.length) return pitchHTML() + emptyGame();
+    if (!n) return pitchHTML() + noLineup();
+    var p = WU.cur(), r = C.roles(n, st.batter), s = WU.status(p), h = pitchHTML();
     h += '<section class="card now" aria-label="Now batting"><div class="kick"><span>Now batting</span><span class="idx">' + (st.batter + 1) + " of " + n + "</span></div>" +
       '<div class="bigline">' + (p.num ? '<b class="bignum">#' + esc(p.num) + "</b>" : "") + '<h2 class="bigname">' + (p.name ? esc(p.name) : '<i class="mute">No name</i>') + "</h2></div>" +
       '<div class="pchips">' + (p.pos ? '<em class="pos">' + esc(p.pos) + "</em>" : "") + WU.team.chip(p) + WU.team.sub(p) + "</div>" +
@@ -66,7 +68,8 @@
     h += '<div class="prog"><div class="bar" id="gBar" role="progressbar" aria-label="Playback" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><i id="gProg"></i></div><div class="row sp"><span class="mono" id="gTime">0:00</span><span class="gstate" id="gState"></span></div></div>';
     if (n > 1) h += '<div class="roles">' + roleLine("On deck", r.onDeck) + roleLine("In the hole", r.inHole) + "</div>";
     h += '<section class="card tools">' + U.range({ key: "master", label: "Master volume", min: 0, max: 100, step: 1, value: st.settings.master, text: st.settings.master + "%" }) +
-      '<div class="row wrap"><button type="button" class="btn ghost small" data-act="sound-check">Sound check</button><button type="button" class="btn ghost small" data-act="bt-help">Using a Bluetooth speaker</button></div></section>';
+      '<div class="row wrap"><button type="button" class="btn ghost small" data-act="sound-check">Sound check</button><button type="button" class="btn ghost small" data-act="bt-help">Using a Bluetooth speaker</button>' +
+      (WU.pitch && !WU.pitch.shown() ? '<button type="button" class="btn ghost small" data-act="pt-show">Count pitches too</button>' : "") + "</div></section>";
     h += '<div class="sec-title"><h2>Batting order</h2><span class="sub">tap to jump</span></div><div class="llist">';
     st.lineup.forEach(function (id, i) {
       var q = WU.player(id); if (!q) return;
@@ -278,6 +281,7 @@
     if (!host) return;
     U.mount(host);
     WU.load();
+    if (WU.pitch) WU.pitch.load();
     E.setMaster(S.st.settings.master);
     E.onchange = function () { WU.emit("audio"); };
     WU.on(function (what) {

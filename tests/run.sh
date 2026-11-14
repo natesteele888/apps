@@ -21,10 +21,10 @@ cp "$REPO"/tests/*.cjs "$W/tests/"
 trap 'kill $S1 $S2 2>/dev/null; rm -rf "$W"' EXIT
 sleep 1
 FILTER="${1:-}"; FAIL=0
-for t in health photoblueprint picks picks-stats getready eightcount-core eightcount eightcount-more playboard locker locker-back practiceclock read20 whoswhere tournamentpack walkup walkup-requests scoreboard filmlite situations; do
+for t in health photoblueprint picks picks-stats getready eightcount-core eightcount eightcount-more playboard locker locker-back practiceclock read20 whoswhere tournamentpack walkup walkup-requests walkup-pitch scoreboard filmlite situations; do
   [ -n "$FILTER" ] && [[ "$t" != *"$FILTER"* ]] && continue
   echo "=== $t"
-  (cd "$W/tests" && node "$t.test.cjs") 2>&1 | grep -E "^(PASS|FAIL|ALL|[0-9]+/[0-9]+|[0-9]+ passed|all passed|  FAIL|HARNESS)|failed" | tail -60
+  (cd "$W/tests" && node "$t.test.cjs") 2>&1 | grep -E "^(PASS|FAIL|ALL|[0-9]+/[0-9]+|[0-9]+ passed|all passed|  FAIL|HARNESS|      )|failed" | tail -60
   [ "${PIPESTATUS[0]}" -ne 0 ] && FAIL=1
 done
 [ "$FAIL" -eq 0 ] && echo "ALL TEST FILES PASSED" || echo "SOME TEST FILES FAILED"

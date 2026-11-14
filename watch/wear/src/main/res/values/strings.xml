@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Dugout</string>
+    <string name="walkup_name">Walk-Up</string>
+    <string name="pitch_name">Pitch Count</string>
+</resources>
