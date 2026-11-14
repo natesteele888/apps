@@ -556,7 +556,9 @@ const waitReq = (page, i, fn) => page.waitForFunction(([i, f]) => { const p = wi
     await page.waitForFunction(() => /Clip: 0:02/.test(document.querySelector('#clipInfo').textContent), null, { timeout: 10000 }); await page.click('#send'); await page.waitForSelector('#done:not([hidden])');
     w = wavInfo((await shares(page))[2].files[0].b64); assert.ok(Math.abs(w.sec - 2) < 0.02, 'only 2 s are left after 10 s: ' + w.sec);
     // a file this phone cannot decode: say so, send the whole song
-    await page.click('#again'); await pickSong(page, mem('broken.mp3', fs.readFileSync(fx('broken.mp3')), 'audio/mpeg')); await page.check('#clipOn');
+    await page.click('#again'); await pickSong(page, mem('broken.mp3', fs.readFileSync(fx('broken.mp3')), 'audio/mpeg'));
+    // click, not check: the page unticks the box again as soon as it finds it can't cut, which can beat check's own re-read
+    await page.click('#clipOn');
     await page.waitForFunction(() => /can.t cut that file/.test(document.querySelector('#msg').textContent), null, { timeout: 10000 });
     eq(await page.isChecked('#clipOn'), false); await page.click('#send'); await page.waitForSelector('#done:not([hidden])'); f = (await shares(page))[3].files[0]; deep([f.name, f.size], ['WU-abc1234-broken.mp3', fs.readFileSync(fx('broken.mp3')).length], 'the whole song went');
     deep(errors.filter(e => !/Failed to load|decode|EncodingError/i.test(e)), []); await A.ctx.close();
