@@ -2693,6 +2693,16 @@
       ],
       "private": true,
       "store": false
+    },
+    {
+      "id": "bills",
+      "name": "Bills",
+      "live": "https://natesteele888.github.io/apps/bills/",
+      "repo": "natesteele888/apps",
+      "path": "bills/",
+      "toolboxIds": [],
+      "private": true,
+      "store": false
     }
   ],
   "comingSoon": []
