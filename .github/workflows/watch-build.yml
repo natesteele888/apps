@@ -1,0 +1,64 @@
+name: Dugout watch and phone apps
+# Builds the Dugout phone app and the Wear OS watch app (watch/), runs their tests, and runs Walk-Up's browser tests.
+# The two APKs are attached to each run as "dugout-apks". Each run signs them with a fresh debug key, so install the
+# phone app and the watch app from the same run.
+on:
+  push:
+    paths:
+      - "watch/**"
+      - "walkup/**"
+      - "tests/walkup*"
+      - "tests/lib.cjs"
+      - "tests/run.sh"
+      - ".github/workflows/watch-build.yml"
+  workflow_dispatch: {}
+permissions:
+  contents: read
+concurrency:
+  group: watch-build-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  apps:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: watch
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Build and test
+        run: ./gradlew --no-daemon :shared:test :phone:assembleDebug :wear:assembleDebug
+      - name: Name the APKs
+        run: |
+          mkdir -p out
+          cp phone/build/outputs/apk/debug/phone-debug.apk out/dugout-phone.apk
+          cp wear/build/outputs/apk/debug/wear-debug.apk out/dugout-watch.apk
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dugout-apks
+          path: watch/out/*.apk
+          retention-days: 30
+      - if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-reports
+          path: watch/*/build/reports
+          retention-days: 7
+
+  walkup-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Install Playwright
+        run: |
+          mkdir -p /tmp/pw && cd /tmp/pw && npm init -y >/dev/null && npm install --no-save playwright@1.48.2
+          npx playwright install --with-deps chromium
+      - name: Walk-Up tests
+        run: NODE_PATH=/tmp/pw/node_modules tests/run.sh walkup

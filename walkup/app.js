@@ -47,11 +47,13 @@
     return p ? '<div class="role"><span class="rk">' + label + '</span><span class="rv">' + WU.team.nameHTML(p) + "</span></div>" : "";
   }
   var HELP = { "needs-song": "The song file isn't on this phone. Open Songs and choose the file again.", "needs-voice": "The voice file isn't on this phone. Tap Voice to record or add it again.", empty: "Nothing to play yet. Tap Voice and Song to set this player up.", "no-song": "No song yet. The voice will play on its own.", "no-voice": "No voice yet. The song will play on its own." };
+  /* pitching sits on top of the Game screen (pitch.js), walk-up below */
+  function pitchHTML() { return WU.pitch && WU.pitch.shown() ? WU.pitch.cardHTML() : ""; }
   function gameHTML() {
     var st = S.st, n = st.lineup.length;
-    if (!st.roster.length) return emptyGame();
-    if (!n) return noLineup();
-    var p = WU.cur(), r = C.roles(n, st.batter), s = WU.status(p), h = "";
+    if (!st.roster.length) return pitchHTML() + emptyGame();
+    if (!n) return pitchHTML() + noLineup();
+    var p = WU.cur(), r = C.roles(n, st.batter), s = WU.status(p), h = pitchHTML();
     h += '<section class="card now" aria-label="Now batting"><div class="kick"><span>Now batting</span><span class="idx">' + (st.batter + 1) + " of " + n + "</span></div>" +
       '<div class="bigline">' + (p.num ? '<b class="bignum">#' + esc(p.num) + "</b>" : "") + '<h2 class="bigname">' + (p.name ? esc(p.name) : '<i class="mute">No name</i>') + "</h2></div>" +
       '<div class="pchips">' + (p.pos ? '<em class="pos">' + esc(p.pos) + "</em>" : "") + WU.team.chip(p) + WU.team.sub(p) + "</div>" +
@@ -278,6 +280,7 @@
     if (!host) return;
     U.mount(host);
     WU.load();
+    if (WU.pitch) WU.pitch.load();
     E.setMaster(S.st.settings.master);
     E.onchange = function () { WU.emit("audio"); };
     WU.on(function (what) {
