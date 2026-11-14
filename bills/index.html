@@ -576,6 +576,8 @@ $('#setBtn').onclick = openSettings;
 $('#addBtn').onclick = () => { if (!Cloud.ready) { toast('Sign in first.'); return; } openBill(null); };
 if (!lockId()) document.documentElement.classList.remove('locked');
 takeImportFromLink();
+// A link opened while Bills is already open only changes the #hash, so check again then.
+addEventListener('hashchange', () => { takeImportFromLink(); offerImport(); });
 render();
 initAuth();
 if (lockId()) setTimeout(tryUnlock, 300);
