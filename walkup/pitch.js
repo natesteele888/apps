@@ -163,7 +163,7 @@
   WU.act["pt-pen"] = function () {
     sheet = U.openSheet({
       title: "Bullpen", html: penHTML(),
-      footer: '<button type="button" class="btn ghost" data-act="pt-settings">Pitching settings</button><button type="button" class="btn" data-close>Done</button>',
+      footer: '<button type="button" class="btn ghost" data-act="pt-league">Official counts</button><button type="button" class="btn ghost" data-act="pt-settings">Pitching settings</button><button type="button" class="btn" data-close>Done</button>',
       onClose: function () { sheet = null; }
     });
     sheet.repaint = function () { var y = sheet.body.scrollTop; sheet.body.innerHTML = penHTML(); sheet.body.scrollTop = y; };
@@ -178,6 +178,13 @@
     i.value = "";
   };
   WU.act["pt-choose"] = function (el) { PT.choose(el.dataset.id); if (sheet) sheet.close(); };
+  /* the official counts live on the MAC League's website: Dugout opens it in its own screen, a browser in a new tab */
+  PT.LEAGUE = "https://www.macleague.org/";
+  WU.act["pt-league"] = function () {
+    var N = window.WalkupNative;
+    if (N && N.openLeague) { try { N.openLeague(); return; } catch (e) { /* fall through */ } }
+    window.open(PT.LEAGUE, "_blank", "noopener");
+  };
   WU.act["pt-add"] = function () { PT.add(); };
   WU.act["pt-undo"] = function () { PT.undo(); };
 

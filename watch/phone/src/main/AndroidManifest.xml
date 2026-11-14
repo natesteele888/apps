@@ -25,6 +25,7 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+        <activity android:name=".LeagueActivity" android:exported="false" android:label="MAC League" />
         <activity android:name=".WatchActivity" android:exported="false" android:label="@string/watch_title" />
         <service
             android:name=".KeepAliveService"
