@@ -16,9 +16,10 @@ Songs a coach already picked are never replaced. Tapping again only fills the ga
 
 ## Where the songs live
 
-- Keep the songs in **one private Google Drive folder owned by the league account**, shared only with that season's coaches (Viewer). Never "anyone with the link", never a public site, and **never in GitHub**: the songs are copyrighted and file names can carry kids' names.
+- The league's songs live in **Assets and Logos > Walk-Up Songs**, in the Google Drive of the league's info account. Share it only with that season's coaches (Viewer). Never "anyone with the link", never a public site, and **never in GitHub**: the songs are copyrighted and file names can carry kids' names.
+- Upload new songs while signed in as the league's info account, so they use the league's storage and stay with the league when board members change.
 - Use clean versions. MP3, M4A or WAV all work; MP3 keeps phones lighter.
-- Name a returning player's song **`First - Artist - Song`** (or `First Last - Artist - Song` when two players share a first name). Walk-Up gives it to that player automatically. Any other name is a general library song anyone can get.
+- Name a returning player's song **`First - Artist - Song`**. `First L - Artist - Song` (last initial) or `First Last - Artist - Song` sorts out two players with the same first name, and a last name alone works when only one player has it. Walk-Up gives it to that player automatically. Any other name is a general library song anyone can get.
 
 ## What a coach does once a season
 
@@ -32,3 +33,11 @@ Each new song starts where it kicks in, not on a quiet intro. Coaches can still 
 
 - Add new songs to the folder, rename any that belong to a player, and remove the folder sharing for coaches who left.
 - Nothing in the app needs to change.
+
+## Free songs anyone may share
+
+Pop songs are copyrighted, so they stay in the private folder. These kinds of tracks may be shared freely, so they are safe to add to the folder for every team:
+
+- **Public domain recordings**, such as the 1908 "Take Me Out to the Ball Game" and orchestra recordings of the William Tell Overture or Ride of the Valkyries on Wikimedia Commons. Check that the file's page says public domain.
+- **Kevin MacLeod's music at incompetech.com** (Creative Commons Attribution 4.0). Free to use and share as long as the credit goes with it: put "Title Kevin MacLeod (incompetech.com), licensed under Creative Commons: By Attribution 4.0" in the file's description in Drive.
+- Skip "royalty free" sites whose license forbids passing the file on (Pixabay, YouTube Audio Library and most paid libraries): fine for one person's video, not for a shared folder.
