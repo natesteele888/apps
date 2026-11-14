@@ -56,6 +56,7 @@ class MainActivity : ComponentActivity() {
     lateinit var web: WebView
     lateinit var link: WearLink
     lateinit var tts: Tts
+    private lateinit var updater: Updater
     private lateinit var speaker: SpeakerWatch
     private lateinit var speakerText: TextView
     private lateinit var pocket: View
@@ -89,6 +90,7 @@ class MainActivity : ComponentActivity() {
         when (res.data?.getStringExtra(EXTRA_OPEN)) {
             "ballclub" -> web.loadUrl(BALLCLUB)
             "walkup" -> web.loadUrl(WALKUP)
+            "update" -> updater.check(force = true, tell = true)
         }
     }
 
@@ -98,6 +100,7 @@ class MainActivity : ComponentActivity() {
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         tts = Tts(this)
         link = WearLink(this)
+        updater = Updater(this)
 
         val root = FrameLayout(this)
         val col = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
@@ -176,6 +179,8 @@ class MainActivity : ComponentActivity() {
             askNotify.launch(Manifest.permission.POST_NOTIFICATIONS)
         }
     }
+
+    override fun onResume() { super.onResume(); updater.check() }
 
     override fun onSaveInstanceState(out: Bundle) { super.onSaveInstanceState(out); web.saveState(out) }
 
