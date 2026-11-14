@@ -581,7 +581,7 @@ addEventListener('hashchange', () => { takeImportFromLink(); offerImport(); });
 render();
 initAuth();
 if (lockId()) setTimeout(tryUnlock, 300);
-if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(() => {});
+if ('serviceWorker' in navigator && (location.protocol === 'https:' || /^(localhost|127\.0\.0\.1)$/.test(location.hostname))) navigator.serviceWorker.register('sw.js').catch(() => {});
 </script>
 </body>
 </html>

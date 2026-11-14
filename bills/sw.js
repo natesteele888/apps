@@ -1,6 +1,6 @@
 // Bills: network first, so updates show up right away; falls back to the last saved copy of the app when offline.
 // Only the app's own files and the Firebase scripts are cached. Bills, database and sign-in traffic are never cached.
-const CACHE = "bills-v2";
+const CACHE = "bills-v3";
 const SHELL = ["./", "manifest.json", "/apps/icons/bills-192.png", "/apps/icons/bills-512.png"];
 self.addEventListener("install", e => {
   self.skipWaiting();
