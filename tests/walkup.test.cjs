@@ -288,15 +288,15 @@ const dbKeys = page => page.evaluate(() => window.WalkupApp.WU.db.keys());
     st.roster[2].songId = 'songccc1';
     const bench = C.newPlayer({ name: 'Bench Kid' }); st.roster.push(bench);
     const rep = C.fillLineup(st);
-    deep(rep, { players: 7, kept: 1, matched: 2, picked: 4, sounds: 0, voiced: 7 });
+    deep(rep, { players: 7, kept: 1, matched: 2, picked: 4, sounds: 0, voiced: 7, said: 0 });
     deep(st.roster.slice(0, 7).map(p => p.songId), ['songaaa1', 'songddd1', 'songccc1', 'songbbb1', 'songeee1', 'songbbb1', 'songccc1'],
       'full name and first name tags match; the first Bravo gets BRAVO; the rest share Song B, Song C and Zulu (a name nobody on the team has), least used first');
     eq(st.roster.every(p => p === bench || (p.voice && p.voice.kind === 'tts')), true, 'everyone batting has the announcer voice');
     eq(bench.songId, null, 'the bench is left alone'); eq(bench.voice, null);
-    deep(C.fillLineup(st), { players: 7, kept: 7, matched: 0, picked: 0, sounds: 0, voiced: 0 }, 'a second tap changes nothing');
+    deep(C.fillLineup(st), { players: 7, kept: 7, matched: 0, picked: 0, sounds: 0, voiced: 0, said: 0 }, 'a second tap changes nothing');
     // no songs at all: the built-in sounds take turns; no voice when the phone can't speak
     const s2 = C.emptyState(); ['A1', 'B2', 'C3', 'D4', 'E5'].forEach(n => s2.roster.push(C.newPlayer({ name: n })));
-    deep(C.fillLineup(s2, { voice: false }), { players: 5, kept: 0, matched: 0, picked: 0, sounds: 5, voiced: 0 }, 'an empty lineup means the whole roster');
+    deep(C.fillLineup(s2, { voice: false }), { players: 5, kept: 0, matched: 0, picked: 0, sounds: 5, voiced: 0, said: 0 }, 'an empty lineup means the whole roster');
     deep(s2.roster.map(p => p.songId), ['b:horn', 'b:drumroll', 'b:chime', 'b:siren', 'b:horn']); eq(s2.roster[0].voice, null);
     eq(C.sanitizeState(s2).roster[1].songId, 'b:drumroll', 'built-in sounds survive saving');
     // names as coaches really type them: a missing space after the dash, a last initial, a last name alone
@@ -304,9 +304,25 @@ const dbKeys = page => page.evaluate(() => window.WalkupApp.WU.db.keys());
     const s3 = C.emptyState();
     s3.songs = [song('songfff1', 'GOLF K - Song F'), song('songggg1', 'HOTEL -Song G'), song('songhhh1', 'Song H'), song('songiii1', 'MIKE - Song I')];
     ['Golf Kilo', 'India Hotel', 'Juliet Lima', 'Golf Mike', 'Oscar Mike'].forEach(n => { const p = C.newPlayer({ name: n }); s3.roster.push(p); s3.lineup.push(p.id); });
-    deep(C.fillLineup(s3, { voice: false }), { players: 5, kept: 0, matched: 2, picked: 3, sounds: 0, voiced: 0 });
+    deep(C.fillLineup(s3, { voice: false }), { players: 5, kept: 0, matched: 2, picked: 3, sounds: 0, voiced: 0, said: 0 });
     deep(s3.roster.map(p => p.songId), ['songfff1', 'songggg1', 'songhhh1', 'songhhh1', 'songhhh1'],
       'first name and last initial; a last name only one player has; MIKE is two players\' last name and nobody\'s first, so it stays out of the shared pool');
+    // last season's clips already say the name: they go to their player, never to anyone else, and the announcer stays quiet
+    const R = [{ name: 'Kilo Lima' }, { name: 'Papa Romeo' }];
+    eq(C.introGuess('Number 7 Kilo Lima_01', 22, R), true); eq(C.introGuess('#12 Kilo', 90), true, 'a number in front is a clip at any length');
+    eq(C.introGuess('7 Kilo Lima', 12, R), true); eq(C.introGuess('Kilo Lima', 12, R), true, 'a short file named just for a player');
+    eq(C.introGuess('Kilo', 12, R), true, 'a first name alone counts'); eq(C.introGuess('Kilo Lima', 200, R), false, 'a full-length file is a song');
+    eq(C.introGuess('Roxanne', 20, R), false, 'a short file named for nobody on the team is a song'); eq(C.introGuess('Kilo Lima', 12), false, 'no roster, no bare-name guess');
+    eq(C.introGuess('Kilo - Artist - Song', 20, R), false, 'a song tagged for a player is their song, not a clip'); eq(C.introGuess('99 Red Balloons', 230, R), false); eq(C.introGuess('Song', 10, R), false);
+    eq(C.clipOwner('Number 7 Kilo Lima_01'), 'kilo lima'); eq(C.clipOwner('#12 Kilo'), 'kilo'); eq(C.clipOwner('Artist - Song'), ''); eq(C.clipOwner('Kilo Lima'), 'kilo lima');
+    const s4 = C.emptyState();
+    s4.songs = [Object.assign(song('songjjj1', 'Number 7 Papa Quebec_01'), { intro: true }), Object.assign(song('songkkk1', '9 Romeo'), { intro: true }), song('songlll1', 'Song L')];
+    ['Papa Quebec', 'Sierra Tango', 'Uniform Victor'].forEach(n => { const p = C.newPlayer({ name: n }); s4.roster.push(p); s4.lineup.push(p.id); });
+    deep(C.fillLineup(s4), { players: 3, kept: 0, matched: 1, picked: 2, sounds: 0, voiced: 2, said: 1 });
+    deep(s4.roster.map(p => p.songId), ['songjjj1', 'songlll1', 'songlll1'], 'Romeo\'s clip is nobody else\'s, even with no Romeo on the team');
+    eq(s4.roster[0].voice, null, 'no announcer over a clip that already says the name');
+    eq(C.statusOf(s4.roster[0], s4.songs, () => true).code, 'ready', 'a clip that says the name needs no voice');
+    eq(C.sanitizeState(s4).songs[0].intro, true, 'the setting survives saving'); eq(C.sanitizeState(s4).songs[2].intro, false);
   });
 
   await test('core: where a song kicks in, and Ballclub lineups made into a batting order', async () => {
