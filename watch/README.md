@@ -65,6 +65,7 @@ Nothing goes through the internet or a server. Player names and photos stay on t
 - Pitch Count on the watch works whether or not the phone shows the pitch counter. Its pitches still sync to the phone.
 - **Watch** in the top bar opens a screen where you set a photo for each batter and open LYBS Ballclub inside Dugout.
 - **Pocket** turns the screen black and ignores touches, so the phone can't play or stop anything in your pocket. Music and the watch keep working. Hold the screen for 1.5 seconds to unlock it.
+- The Bullpen has an **Official counts** button. In Dugout it opens the MAC League website on its own screen, and remembers the last league page you were on, so next time it opens straight to your team. Dugout only shows the league's page; it doesn't read or copy it. In Chrome the button opens the site in a new tab.
 - Pitching settings has a **Copy for Ballclub** button. It copies today's totals so you can paste them into the game in Ballclub.
 
 ## Try it now, without a watch (Android Studio emulators)

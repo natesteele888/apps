@@ -25,6 +25,9 @@ class Bridge(private val a: MainActivity) {
         if (!a.pageOk) return
         a.tts.speak(id.take(40), text.take(400), rate, vol)
     }
+    /** the MAC League's site, in its own screen with no bridge: one tap to the official pitch counts */
+    @JavascriptInterface fun openLeague() { if (a.pageOk) a.runOnUiThread { a.startActivity(android.content.Intent(a, LeagueActivity::class.java)) } }
+
     @JavascriptInterface fun ttsStop() { if (a.pageOk) a.tts.stop() }
 
     /* Backups: the web view can't download, so files go to the phone's Downloads folder. */

@@ -59,6 +59,8 @@ class WatchActivity : ComponentActivity() {
         col.addView(text("\nPitching", 18f))
         col.addView(text("Walk-Up reads your pitchers and logged pitch counts from LYBS Ballclub on this phone. Inside Dugout, open your team in Ballclub once, then come back to Walk-Up.", 14f, Color.parseColor("#94A3B8")))
         col.addView(button("Open LYBS Ballclub here") { done("ballclub") })
+        col.addView(text("\nOfficial pitch counts are the ones on the MAC League website. Dugout opens it here, and remembers your team's page.", 14f, Color.parseColor("#94A3B8")))
+        col.addView(button("Official counts (MAC League)") { startActivity(Intent(this, LeagueActivity::class.java)) })
         col.addView(button("Back to Walk-Up") { done("walkup") })
         setContentView(ScrollView(this).apply { setBackgroundColor(Color.parseColor("#0B1220")); addView(col) })
         refresh()

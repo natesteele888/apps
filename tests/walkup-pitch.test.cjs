@@ -17,12 +17,13 @@ const eq = (a, b, m) => assert.strictEqual(a, b, (m ? m + ': ' : '') + 'expected
 const FAKE_NATIVE = () => {
   // Android's web view has no speech; take Chrome's away so the bridge's stand-in (Android text-to-speech) is used.
   try { delete Window.prototype.speechSynthesis; delete window.speechSynthesis; delete window.SpeechSynthesisUtterance; } catch (e) {}
-  window.__sent = { state: [], pitch: [], tts: [] };
+  window.__sent = { state: [], pitch: [], tts: [], league: 0 };
   window.WalkupNative = {
     postState: j => window.__sent.state.push(JSON.parse(j)),
     postPitch: j => window.__sent.pitch.push(JSON.parse(j)),
     ttsSpeak: (id, text) => { window.__sent.tts.push(text); setTimeout(() => window.__wuTts && window.__wuTts(id, 'end'), 30); },
-    ttsStop: () => {}
+    ttsStop: () => {},
+    openLeague: () => { window.__sent.league++; }
   };
 };
 
@@ -94,6 +95,7 @@ const FAKE_NATIVE = () => {
     eq(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth <= 0), true);
     // the bullpen: add a second pitcher and switch to them
     await page.click('#ptCard [data-act=pt-pen]'); await page.waitForSelector('.sheet-wrap.open #ptNew');
+    assert.ok(await page.$('.sheet-wrap.open [data-act=pt-league]'), 'the bullpen offers the official counts');
     await page.fill('#ptNew', 'Pitcher Two'); await page.click('.sheet-wrap.open [data-act=pt-newp]');
     await page.waitForFunction(() => /Pitcher Two/.test(document.querySelector('#ptCard .pt-who').textContent));
     eq(await page.textContent('#ptCount'), '0');
@@ -130,6 +132,9 @@ const FAKE_NATIVE = () => {
     watchLog.events.push({ i: 'ewatch0001', k: 'p', p: pid, t: Date.now() }, { i: 'ewatch0002', k: 'p', p: pid, t: Date.now() + 1 });
     await page.evaluate(l => { window.__wuCmd(JSON.stringify({ cmd: 'pitchlog', log: l })); window.__wuCmd(JSON.stringify({ cmd: 'pitchlog', log: l })); }, watchLog);
     eq(await page.evaluate(() => window.WU.pitch.row(window.WU.pitch.cur().id).count), 3);
+    // "Official counts" opens the MAC League's site in Dugout's own screen
+    await page.evaluate(() => window.WU.act['pt-league']());
+    eq(await page.evaluate(() => window.__sent.league), 1);
     assert.deepStrictEqual(errors, []); await ctx.close();
   });
 
