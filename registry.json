@@ -1,6 +1,6 @@
 {
   "about": "The one list of Nathan's apps. Live links, which apps show where, and each app's App Store listing (text, highlights, screenshots) all come from here. Edit listings and icons in the Toolbox; the sync job copies them here. Don't hand-edit text in store/index.html.",
-  "updated": "2026-11-13",
+  "updated": "2026-11-14",
   "toolbox": "https://natesteele888.github.io/apps/toolbox/",
   "store": "https://natesteele888.github.io/apps/store/",
   "apps": [
@@ -765,12 +765,20 @@
         ],
         "autoShots": [],
         "latest": {
-          "d": "Nov 11, 2026",
-          "t": "Situations: note that the App Store's Where Do I Go? runs this trainer too",
-          "url": "https://github.com/natesteele888/lybs-ballclub/commit/df9e0672ef1265604be91ba266d7862c08e9f553"
+          "d": "Nov 14, 2026",
+          "t": "Bring in pitch counts from Walk-Up's Pitch Count with one tap",
+          "url": "https://github.com/natesteele888/lybs-ballclub/commit/03a70469ab86c61521df208f872e9d88527e88dc"
         },
-        "version": "1.25.3",
+        "version": "1.25.5",
         "history": [
+          {
+            "v": "1.25.5",
+            "t": "Bring in pitch counts from Walk-Up's Pitch Count with one tap"
+          },
+          {
+            "v": "1.25.4",
+            "t": "Public info: don't log a crash when League Events can't load"
+          },
           {
             "v": "1.25.3",
             "t": "Situations: note that the App Store's Where Do I Go? runs this trainer too"
@@ -782,14 +790,6 @@
           {
             "v": "1.25.0",
             "t": "Public info: keep Back to login on screen on a phone"
-          },
-          {
-            "v": "1.24.9",
-            "t": "Sign-in page: make View public info easy to tap"
-          },
-          {
-            "v": "1.24.7",
-            "t": "Where Do I Go: give extra-base hits a realistic roll instead of always reaching the fence"
           }
         ],
         "caps": [
@@ -1061,12 +1061,16 @@
         ],
         "autoShots": [],
         "latest": {
-          "d": "Nov 10, 2026",
-          "t": "Statistics: say 1 solve, not 1 solves",
-          "url": "https://github.com/natesteele888/cube-clock/commit/6eb6ad236ed5dc16df3743e861b98b93597b75b1"
+          "d": "Nov 14, 2026",
+          "t": "Leaderboard: plain no-signal message, and reconnect when the signal comes back",
+          "url": "https://github.com/natesteele888/cube-clock/commit/41a506bf6251b822d4a2d3ef70477806cfd8937b"
         },
-        "version": "1.2.8",
+        "version": "1.2.9",
         "history": [
+          {
+            "v": "1.2.9",
+            "t": "Leaderboard: plain no-signal message, and reconnect when the signal comes back"
+          },
           {
             "v": "1.2.8",
             "t": "Statistics: say 1 solve, not 1 solves"
@@ -1082,10 +1086,6 @@
           {
             "v": "1.2.5",
             "t": "Cube Clock: keep the top buttons on screen on small phones"
-          },
-          {
-            "v": "1.2.4",
-            "t": "Tutorial cards: bottom sheet on a phone instead of a floating box"
           }
         ],
         "caps": [
@@ -2077,12 +2077,24 @@
         ],
         "autoShots": [],
         "latest": {
-          "d": "Nov 12, 2026",
-          "t": "Add a copyright notice and an all-rights-reserved LICENSE",
-          "url": "https://github.com/natesteele888/apps/commit/25fd10682c4fe1ef072b42512df48ff23a75faea"
+          "d": "Nov 14, 2026",
+          "t": "Pitch Count: one tap to the official counts on the MAC League site",
+          "url": "https://github.com/natesteele888/apps/commit/6a1cae3fde5748cce0b63714dcc62006b140b9fb"
         },
-        "version": "1.0.7",
+        "version": "1.1.0",
         "history": [
+          {
+            "v": "1.1.0",
+            "t": "Pitch Count: one tap to the official counts on the MAC League site"
+          },
+          {
+            "v": "1.0.9",
+            "t": "Walk-Up: get a whole lineup ready in one tap"
+          },
+          {
+            "v": "1.0.8",
+            "t": "Walk-Up and Pitch Count on the Galaxy Watch, with an optional pitch counter on the phone"
+          },
           {
             "v": "1.0.7",
             "t": "Add a copyright notice and an all-rights-reserved LICENSE"
@@ -2090,18 +2102,6 @@
           {
             "v": "1.0.6",
             "t": "Every app: a health check on open, a problem log, and a Something wrong? report"
-          },
-          {
-            "v": "1.0.5",
-            "t": "Walk-Up: the mixer fits a phone with no scrolling"
-          },
-          {
-            "v": "1.0.4",
-            "t": "Walk-Up: simpler mixer, Power Program colors and a baseball icon"
-          },
-          {
-            "v": "1.0.3",
-            "t": "Walk-Up: name the player when a song file can't be read"
           }
         ],
         "caps": [
