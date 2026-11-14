@@ -21,10 +21,10 @@
     var st = S.st, n = st.lineup.length, bench = C.benchIds(st.roster, st.lineup).map(WU.player).filter(Boolean), h = "";
     if (!st.roster.length) {
       return '<div class="sec-title"><h2>Team</h2></div><div class="empty"><h3>No players yet</h3><p>Add players one at a time, paste a list, or start with a sample team.</p>' +
-        '<div class="stack"><button type="button" class="btn block" data-act="sample">Add a sample lineup</button><button type="button" class="btn ghost block" data-act="add-player">Add a player</button><button type="button" class="btn ghost block" data-act="paste-list">Paste a list of players</button></div></div>';
+        '<div class="stack">' + (WU.ready && WU.ready.club() ? '<button type="button" class="btn block" data-act="club-lineup">Bring in my Ballclub lineup</button>' : "") + '<button type="button" class="btn block" data-act="sample">Add a sample lineup</button><button type="button" class="btn ghost block" data-act="add-player">Add a player</button><button type="button" class="btn ghost block" data-act="paste-list">Paste a list of players</button></div></div>';
     }
     h += '<div class="sec-title"><h2>Batting order</h2><span class="sub">' + n + (n === 1 ? " player" : " players") + "</span></div>";
-    h += '<div class="row wrap tools"><button type="button" class="btn small" data-act="add-player">Add a player</button><button type="button" class="btn ghost small" data-act="paste-list">Paste a list</button><button type="button" class="btn ghost small" data-act="rq-list">Song requests</button></div>';
+    h += '<div class="row wrap tools"><button type="button" class="btn small" data-act="fill-lineup">Get lineup ready</button>' + (WU.ready && WU.ready.club() ? '<button type="button" class="btn ghost small" data-act="club-lineup">From Ballclub</button>' : "") + '<button type="button" class="btn ghost small" data-act="add-player">Add a player</button><button type="button" class="btn ghost small" data-act="paste-list">Paste a list</button><button type="button" class="btn ghost small" data-act="rq-list">Song requests</button></div>';
     if (!n) h += '<p class="mute pad">Nobody is in the batting order. Add players from the bench below.</p>';
     st.lineup.forEach(function (id, i) {
       var p = WU.player(id); if (!p) return;
@@ -138,7 +138,7 @@
     function paintCards() {
       var p = WU.player(pid); if (!p) return;
       var s = p.songId ? WU.song(p.songId) : null, stt = WU.status(p), inLu = lineupIdx(pid) >= 0, plan = E.planFor(p, S.st);
-      var vtxt = !p.voice ? "No voice yet. Record the announcement, or use a voice file." : p.voice.kind === "tts" ? "Computer voice: your phone reads \"" + C.announceText(p) + "\"." : (p.voice.kind === "rec" ? "Recorded voice" : "Voice file") + " · " + C.fmtSecs(Math.max(0, p.voice.te - p.voice.ts)) + (stt.code === "needs-voice" ? " · the file isn't on this phone" : "");
+      var vtxt = !p.voice ? "No voice yet. Record the announcement, or use a voice file." : p.voice.kind === "tts" ? "Computer voice: your phone reads \"" + C.announceText(p, S.st.settings.tstyle) + "\"." : (p.voice.kind === "rec" ? "Recorded voice" : "Voice file") + " · " + C.fmtSecs(Math.max(0, p.voice.te - p.voice.ts)) + (stt.code === "needs-voice" ? " · the file isn't on this phone" : "");
       var stxt = !p.songId ? "No song yet. Choose one from your saved songs." : !s ? "The saved song is missing." : s.title + " · " + C.fmtClock(s.dur) + (stt.code === "needs-song" ? " · the file isn't on this phone" : "");
       q("#plCards").innerHTML =
         '<div class="row sp statusrow"><span class="label">Status</span>' + T.chip(p) + "</div>" +
@@ -150,7 +150,7 @@
     paintCards();
     var ask = WU.req ? WU.req.mountAsk(api, q("#plAsk"), pid) : null;
     off = WU.on(function (what) { if (!api.closed && what === "data") paintCards(); });
-    function field(id, key, max) { q(id).addEventListener("input", function (e) { pl[key] = C.str(e.target.value, max); WU.save(); api.setTitle(pl.name || "Player"); var t = q("#plVoiceTx"); if (t && pl.voice && pl.voice.kind === "tts") t.textContent = "Computer voice: your phone reads \"" + C.announceText(pl) + "\"."; }); }
+    function field(id, key, max) { q(id).addEventListener("input", function (e) { pl[key] = C.str(e.target.value, max); WU.save(); api.setTitle(pl.name || "Player"); var t = q("#plVoiceTx"); if (t && pl.voice && pl.voice.kind === "tts") t.textContent = "Computer voice: your phone reads \"" + C.announceText(pl, S.st.settings.tstyle) + "\"."; }); }
     field("#plName", "name", C.LIM.name); field("#plNum", "num", C.LIM.num); field("#plPos", "pos", C.LIM.pos);
     if (pl.name) api.setTitle(pl.name);
     el.addEventListener("click", function (e) {

@@ -63,6 +63,8 @@ fs.writeFileSync(fx('Slow Jam.wav'), SONG);
 fs.writeFileSync(fx('Fast Jam.wav'), SONG2);
 fs.writeFileSync(fx('broken.mp3'), Buffer.from('this is not audio at all, just some text pretending to be an mp3 '.repeat(20)));
 const VOICE_B64 = VOICE.toString('base64'), SONG_B64 = SONG.toString('base64');
+/* 24 s: a quiet 8 s intro, then the song kicks in */
+const INTRO_B64 = wavFile((() => { const sr = 11025, a = new Float32Array(sr * 24); for (let i = 0; i < a.length; i++) { const t = i / sr; a[i] = (t < 8 ? 0.02 : 0.5) * Math.sin(2 * Math.PI * 330 * t); } return a; })(), 11025).toString('base64');
 
 /* ---------- the page: spies and stubs installed before the app loads ---------- */
 const SPY = () => {
@@ -262,6 +264,57 @@ const dbKeys = page => page.evaluate(() => window.WalkupApp.WU.db.keys());
     eq(C.announceText({ num: '#12', name: '  Player   Twelve ' }), 'Now batting, number 12, Player Twelve');
     eq(C.announceText({ num: '', name: 'Player 7' }), 'Now batting, Player 7'); eq(C.announceText({ num: '7', name: '' }), 'Now batting, number 7'); eq(C.announceText({ num: '', name: '' }), 'Now batting');
     eq(C.playerLabel({ num: '7', name: 'Player 7' }), '#7 Player 7'); eq(C.playerLabel({ num: '', name: '' }), 'Player');
+    // the ballpark announcer style: short sentences, so the voice pauses, and a little more time for the pauses
+    eq(C.announceText({ num: '#7', name: ' Player  7 ' }, 'pa'), 'Now batting. Number 7. Player 7!');
+    eq(C.announceText({ num: '', name: 'Player 7' }, 'pa'), 'Now batting. Player 7!'); eq(C.announceText({ num: '', name: '' }, 'pa'), 'Now batting.');
+    eq(C.estimateSpeech('Now batting. Number 7. Player 7!'), 3.28);
+    eq(C.sanitizeSettings({}).tstyle, 'pa'); eq(C.sanitizeSettings({ tstyle: 'plain' }).tstyle, 'plain'); eq(C.sanitizeSettings({ tstyle: '<b>' }).tstyle, 'pa');
+  });
+
+  await test('core: the best announcer voice on the phone', async () => {
+    eq(C.pickVoice([]), ''); eq(C.pickVoice(null), ''); eq(C.pickVoice([{ name: 'Anna', lang: 'de-DE', voiceURI: 'de' }]), '', 'no English voice: the phone decides');
+    eq(C.pickVoice([{ name: 'Voice A', lang: 'en-GB', voiceURI: 'gb' }, { name: 'Voice B', lang: 'en-US', voiceURI: 'us' }]), 'us', 'US English first');
+    eq(C.pickVoice([{ name: 'Voice B', lang: 'en-US', voiceURI: 'us' }, { name: 'Voice C Online (Natural)', lang: 'en-US', voiceURI: 'nat' }]), 'nat', 'a natural voice beats a plain one');
+    eq(C.pickVoice([{ name: 'Bubbles', lang: 'en-US', voiceURI: 'b' }, { name: 'Voice D', lang: 'en_GB', voiceURI: 'd' }]), 'd', 'novelty voices are skipped');
+  });
+
+  await test('core: Get lineup ready keeps choices, gives named songs to their player, shares out the rest, then built-in sounds', async () => {
+    eq(C.songOwner({ kind: 'file', title: 'PLAYER - Artist - Song' }), 'player'); eq(C.songOwner({ kind: 'file', title: 'Player Two - Song' }), 'player two');
+    eq(C.songOwner({ kind: 'file', title: 'Just A Song Title' }), ''); eq(C.songOwner({ kind: 'file', title: 'Three Word Name - Song' }), ''); eq(C.songOwner({ kind: 'synth', title: 'Horn - x' }), '');
+    const song = (id, title) => ({ id, kind: 'file', title, dur: 200, start: 0, len: 10, fade: 1 });
+    const st = C.emptyState();
+    st.songs = [song('songaaa1', 'Alpha One - Artist - Song A'), song('songbbb1', 'Artist - Song B'), song('songccc1', 'Song C'), song('songddd1', 'BRAVO - Song D'), song('songeee1', 'Zulu - Song E')];
+    ['Alpha One', 'Bravo Two', 'Charlie Three', 'Delta Four', 'Echo Five', 'Fox Six', 'Bravo Seven'].forEach(n => { const p = C.newPlayer({ name: n }); st.roster.push(p); st.lineup.push(p.id); });
+    st.roster[2].songId = 'songccc1';
+    const bench = C.newPlayer({ name: 'Bench Kid' }); st.roster.push(bench);
+    const rep = C.fillLineup(st);
+    deep(rep, { players: 7, kept: 1, matched: 2, picked: 4, sounds: 0, voiced: 7 });
+    deep(st.roster.slice(0, 7).map(p => p.songId), ['songaaa1', 'songddd1', 'songccc1', 'songbbb1', 'songeee1', 'songbbb1', 'songccc1'],
+      'full name and first name tags match; the first Bravo gets BRAVO; the rest share Song B, Song C and Zulu (a name nobody on the team has), least used first');
+    eq(st.roster.every(p => p === bench || (p.voice && p.voice.kind === 'tts')), true, 'everyone batting has the announcer voice');
+    eq(bench.songId, null, 'the bench is left alone'); eq(bench.voice, null);
+    deep(C.fillLineup(st), { players: 7, kept: 7, matched: 0, picked: 0, sounds: 0, voiced: 0 }, 'a second tap changes nothing');
+    // no songs at all: the built-in sounds take turns; no voice when the phone can't speak
+    const s2 = C.emptyState(); ['A1', 'B2', 'C3', 'D4', 'E5'].forEach(n => s2.roster.push(C.newPlayer({ name: n })));
+    deep(C.fillLineup(s2, { voice: false }), { players: 5, kept: 0, matched: 0, picked: 0, sounds: 5, voiced: 0 }, 'an empty lineup means the whole roster');
+    deep(s2.roster.map(p => p.songId), ['b:horn', 'b:drumroll', 'b:chime', 'b:siren', 'b:horn']); eq(s2.roster[0].voice, null);
+    eq(C.sanitizeState(s2).roster[1].songId, 'b:drumroll', 'built-in sounds survive saving');
+  });
+
+  await test('core: where a song kicks in, and Ballclub lineups made into a batting order', async () => {
+    const env = []; for (let i = 0; i < 800; i++) env.push(i < 120 ? 0.02 : i < 400 ? 0.3 : 0.6);
+    eq(C.loudStart(env, 0.25, 10, 200), 97.3, 'just before the loud part'); eq(C.loudStart(new Array(100).fill(0.3), 0.25, 10, 25), 0, 'an even song starts at the top');
+    eq(C.loudStart([1, 1], 0.25, 10, 0.5), 0); eq(C.loudStart(new Array(100).fill(0), 0.25, 10, 25), 0, 'silence'); eq(C.loudStart(null, 0.25, 10, 25), 0);
+    const roster = [{ id: 'r1', name: 'Player One', number: 7 }, { id: 'r2', name: 'Player Two', number: '12' }];
+    const rows = C.clubRows({ slots: [{ playerId: 'r1', name: 'Player One', position: 'SS' }, { playerId: 'r3', name: 'Player Three', position: 'Bench' }, { name: 'player two', position: 'CF' }, { name: '', position: 'C' }, 'junk'] }, roster);
+    deep(rows, [{ name: 'Player One', num: '7', pos: 'SS' }, { name: 'player two', num: '12', pos: 'CF' }], 'numbers by id or name; bench and blanks left out');
+    deep(C.clubRows({ slots: { 1: { name: 'B', position: '2B' }, 0: { name: 'A', position: 'P' } } }, null).map(r => r.name), ['A', 'B'], 'slots saved as an object keep their order');
+    deep(C.clubRows(null, null), []);
+    const st = C.emptyState(), keep = C.newPlayer({ name: 'Player Two' }), other = C.newPlayer({ name: 'Player Nine' });
+    keep.songId = 'b:horn'; st.roster.push(keep, other); st.lineup = [other.id]; st.batter = 0;
+    deep(C.applyRows(st, rows.concat([{ name: 'PLAYER ONE', num: '', pos: '' }])), { added: 1, matched: 1, full: false });
+    deep(st.lineup.map(id => st.roster.find(p => p.id === id).name), ['Player One', 'Player Two'], 'the batting order is Ballclub\'s; a repeated name counts once');
+    eq(keep.songId, 'b:horn', 'a player already here keeps their song'); eq(keep.num, '12'); eq(keep.pos, 'CF'); eq(st.roster.length, 3, 'Player Nine stays on the bench');
   });
 
   await test('core: batting order moves, wrap-around, bench, swap', async () => {
@@ -424,16 +477,16 @@ const dbKeys = page => page.evaluate(() => window.WalkupApp.WU.db.keys());
     const sp = await spies(page), run = await lastRun(page);
     eq(sp.starts.length, 1, 'only the song is a buffer; the computer voice is spoken');
     approx(sp.starts[0].duration, 1.8, 1e-9); eq(sp.starts[0].offset, 0); approx(sp.starts[0].when, sp.t0, 1e-9);
-    eq(run.plan.tracks.length, 2); eq(run.plan.tracks[1].tts, true); eq(run.plan.tracks[1].when, 1); approx(run.plan.total, 3.78, 1e-9);
+    eq(run.plan.tracks.length, 2); eq(run.plan.tracks[1].tts, true); eq(run.plan.tracks[1].when, 1); approx(run.plan.total, 4.28, 1e-9);
     // the numbers that reached the music's gain: 0 at the start, up in 8 ms, hold, fade to 0 at the end of the 1.8 s horn (0.9 s fade)
     const g = run.nodes.find(n => n.track === 'music').gain, t0 = run.t0;
     deep(g.map(c => c[0]), ['setValueAtTime', 'linearRampToValueAtTime', 'linearRampToValueAtTime', 'linearRampToValueAtTime']);
     [[0, 0], [1, 0.008], [1, 0.9], [0, 1.8]].forEach(([v, t], i) => { approx(g[i][1], v, 1e-9); approx(g[i][2], t0 + t, 1e-9); });
     // and the duck stage: dips to 9 dB down (0.354813) as the voice starts at 1 s
-    const d = run.nodes.find(n => n.track === 'music').duck; approx(d[0][1], 1, 1e-9); approx(d[0][2], t0 + 0.9, 1e-9); approx(d[1][1], 0.354813, 1e-6); approx(d[1][2], t0 + 1, 1e-9); approx(d[3][2], t0 + 4.08, 1e-9);
+    const d = run.nodes.find(n => n.track === 'music').duck; approx(d[0][1], 1, 1e-9); approx(d[0][2], t0 + 0.9, 1e-9); approx(d[1][1], 0.354813, 1e-6); approx(d[1][2], t0 + 1, 1e-9); approx(d[3][2], t0 + 4.58, 1e-9);
     assert.ok(/STOP/.test(await page.textContent('#gPlay')));
     await page.waitForFunction(() => window.__spoken.length >= 1, null, { timeout: 4000 });
-    const spoken = (await spies(page)).spoken; eq(spoken[0].text, 'Now batting, number 7, Player 1'); eq(spoken[0].rate, 1); eq(spoken[0].volume, 1);
+    const spoken = (await spies(page)).spoken; eq(spoken[0].text, 'Now batting. Number 7. Player 1!', 'the ballpark announcer style is the default'); eq(spoken[0].voice, 'test-a', 'and the best English voice on the phone'); eq(spoken[0].rate, 1); eq(spoken[0].volume, 1);
     await shot(page, '03-game-playing-390');
     await page.click('#gPlay');
     await page.waitForFunction(() => /PLAY/.test(document.querySelector('#gPlay').textContent));
@@ -887,6 +940,70 @@ const dbKeys = page => page.evaluate(() => window.WalkupApp.WU.db.keys());
   /* ============ settings ============ */
   const codeOf = (page, name) => page.evaluate(n => { const A = window.WalkupApp, p = A.S.st.roster.find(x => x.name === n); return p ? A.core.statusOf(p, A.S.st.songs, k => A.S.have.has(k)).code : null; }, name);
   const setRange = (page, sel, v) => page.$eval(sel, (el, v) => { el.value = String(v); el.dispatchEvent(new Event('input', { bubbles: true })); }, v);
+
+  await test('Get lineup ready: one tap gives everyone a voice and a song, named songs go to their player, any song can be changed', async () => {
+    const { page, errors, ctx } = await open();
+    await page.evaluate(async ([sb]) => {
+      const A = window.WalkupApp, WU = A.WU, C = A.core;
+      const bin = atob(sb), u = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i);
+      ['Player One', 'Player Two', 'Player Three'].forEach((n, i) => { const p = C.newPlayer({ name: n, num: String(i + 1) }); WU.S.st.roster.push(p); WU.S.st.lineup.push(p.id); });
+      await WU.songs.addFiles([new File([u], 'Player Two - Slow Jam.wav', { type: 'audio/wav' }), new File([u], 'Team Song.wav', { type: 'audio/wav' })]);
+      WU.commit('data');
+    }, [SONG_B64]);
+    await tab(page, 'team'); await page.click('[data-act=fill-lineup]'); await page.waitForSelector(sheetSel + ' #rdList');
+    const txt = await page.textContent(sheetSel);
+    assert.ok(/3 batters are ready to go/.test(txt) && /1 got the song named for them/.test(txt) && /2 got a song from your library/.test(txt) && /3 players got the announcer voice/.test(txt), txt);
+    let s = await state(page);
+    const title = id => s.songs.find(x => x.id === id).title;
+    deep(s.roster.map(p => title(p.songId)), ['Team Song', 'Player Two - Slow Jam', 'Team Song']);
+    eq(s.roster.every(p => p.voice && p.voice.kind === 'tts'), true);
+    eq(await page.$$eval('.llist .chip.ok', c => c.length) >= 0, true);
+    await shot(page, '41-lineup-ready-390');
+    // change one song from the list: the picker opens on top, and the list follows
+    await page.click(sheetSel + ' [data-do=song]'); await page.waitForSelector('.sheet.picker');
+    await page.click('.sheet.picker [data-do=use][data-id="b:siren"]');
+    await page.waitForFunction(() => /Siren/.test(document.querySelector('#rdList').textContent));
+    s = await state(page); eq(s.roster[0].songId, 'b:siren');
+    await page.click(sheetSel + ' [data-do=game]'); await noSheets(page);
+    assert.ok(/Now batting/.test(await page.textContent('.now')));
+    deep(errors, []); await ctx.close();
+  });
+
+  await test('Ballclub: a lineup saved on this phone comes in at one tap, ready to play', async () => {
+    const init = () => {
+      localStorage.setItem('lybsAuthedTeam', JSON.stringify({ teamId: 'team-a' }));
+      localStorage.setItem('lybsOfflineCopy:teams/team-a/roster', JSON.stringify([{ id: 'r1', name: 'Player One', number: '7' }, { id: 'r2', name: 'Player Two', number: '12' }, { id: 'r3', name: 'Player Three', number: '3' }]));
+      localStorage.setItem('lybsOfflineCopy:teams/team-a/lineups', JSON.stringify([
+        { id: 'l1', name: 'Default', date: '2026-04-01', slots: [{ playerId: 'r1', name: 'Player One', position: 'SS' }, { playerId: 'r2', name: 'Player Two', position: 'CF' }] },
+        { id: 'l2', name: 'Game day', date: '2026-05-02', slots: [{ playerId: 'r2', name: 'Player Two', position: 'P' }, { playerId: 'r3', name: 'Player Three', position: 'C' }, { playerId: 'r1', name: 'Player One', position: 'Bench' }] }]));
+    };
+    const { page, errors, ctx } = await open({ init });
+    await page.click('[data-act=club-lineup]'); await page.waitForSelector(sheetSel + ' [data-do=use]');
+    const names = await page.$$eval(sheetSel + ' .smain b', b => b.map(x => x.textContent)); deep(names, ['Game day', 'Default'], 'newest first');
+    await page.click(sheetSel + ' [data-do=use][data-i="0"]'); await page.waitForSelector(sheetSel + ' #rdList');
+    assert.ok(/Brought in "Game day" from Ballclub, with 2 new players/.test(await page.textContent(sheetSel)));
+    const s = await state(page);
+    deep(s.lineup.map(id => s.roster.find(p => p.id === id)).map(p => [p.num, p.name, p.pos]), [['12', 'Player Two', 'P'], ['3', 'Player Three', 'C']]);
+    eq(s.roster.every(p => p.songId && p.voice), true, 'built-in sounds and the announcer voice, so Play works right away');
+    await page.click(sheetSel + ' [data-do=game]'); await noSheets(page);
+    await page.click('#gPlay'); await page.waitForFunction(() => window.__spoken.length >= 1, null, { timeout: 5000 });
+    eq((await spies(page)).spoken[0].text, 'Now batting. Number 12. Player Two!');
+    // the Team tab offers Ballclub too, and nothing shows when this phone has no Ballclub lineup
+    await tab(page, 'team'); eq(!!(await page.$('#wuView [data-act=club-lineup]')), true);
+    deep(errors, []); await ctx.close();
+    const o2 = await open(); eq(await o2.page.$('[data-act=club-lineup]'), null); await o2.ctx.close();
+  });
+
+  await test('Songs: a new song starts where it kicks in, not on a quiet intro', async () => {
+    const { page, errors, ctx } = await open();
+    const r = await page.evaluate(async ([b64]) => {
+      const A = window.WalkupApp, bin = atob(b64), u = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i);
+      const out = await A.WU.songs.addFiles([new File([u], 'Quiet Intro.wav', { type: 'audio/wav' })]);
+      return out.added[0];
+    }, [INTRO_B64]);
+    assert.ok(r.start >= 7.5 && r.start <= 8.1, 'starts near 8 s, got ' + r.start); eq(r.len, 10);
+    deep(errors, []); await ctx.close();
+  });
 
   await test('Settings: master volume, computer voice, recording and game options, announcer sound, storage line, version; all remembered', async () => {
     const { page, errors, ctx } = await open();

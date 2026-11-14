@@ -295,8 +295,8 @@
   }
   /* A rough length for the computer voice (it can't be measured): about 0.38 s a word plus half a second. */
   function estimateSpeech(text) {
-    var words = String(text || "").split(/\s+/).filter(Boolean).length;
-    return clamp(r6(0.5 + 0.38 * words), 1, 8);
+    var t = String(text || ""), words = t.split(/\s+/).filter(Boolean).length, stops = (t.match(/[.!?]\s+\S/g) || []).length;
+    return clamp(r6(0.5 + 0.38 * words + 0.25 * stops), 1, 8);
   }
   /* ONE plan for Preview and for game-mode Play. Times are seconds after the Play press.
        inp.music = { len, offset, fade }                      (null when there is no song)
@@ -370,9 +370,11 @@
   function playerLabel(p) { return (p.num ? "#" + p.num + " " : "") + (p.name || "Player"); }
 
   /* "Now batting, number 7, Player 7"; handles a missing number or name */
-  function announceText(p) {
+  /* style "pa" reads like a ballpark announcer: short sentences, so the voice pauses between them, and the name said last with a lift */
+  function announceText(p, style) {
     var num_ = p ? String(p.num || "").replace(/^\s*#\s*/, "").replace(/\s+/g, " ").trim() : "";
     var name = p ? String(p.name || "").replace(/\s+/g, " ").trim() : "";
+    if (style === "pa") return "Now batting." + (num_ ? " Number " + num_ + "." : "") + (name ? " " + name + "!" : "");
     var parts = ["Now batting"];
     if (num_) parts.push("number " + num_);
     if (name) parts.push(name);
@@ -697,7 +699,7 @@
   /* ---------- sanitising saved data and backups ---------- */
   function sanitizeSettings(r) {
     r = isObj(r) ? r : {};
-    return { master: int(r.master, 0, 100, 100), wake: r.wake !== false, countIn: r.countIn !== false, thr: int(r.thr, -70, -20, -45), tvoice: str(r.tvoice, 200), trate: clamp(q1(num(r.trate, 1)), 0.5, 1.5), tvol: int(r.tvol, 0, 100, 100), reqTpl: sanitizeTemplate(r.reqTpl), team: cleanLabel(r.team, REQ.team) };
+    return { master: int(r.master, 0, 100, 100), wake: r.wake !== false, countIn: r.countIn !== false, thr: int(r.thr, -70, -20, -45), tvoice: str(r.tvoice, 200), trate: clamp(q1(num(r.trate, 1)), 0.5, 1.5), tvol: int(r.tvol, 0, 100, 100), tstyle: r.tstyle === "plain" ? "plain" : "pa", reqTpl: sanitizeTemplate(r.reqTpl), team: cleanLabel(r.team, REQ.team) };
   }
   function sanitizeSong(r, seen) {
     if (!isObj(r) || r.kind !== "file") return null;
@@ -772,6 +774,146 @@
     return { ok: true, kind: kind, state: st, counts: counts(st), audio: audio };
   }
 
+  /* ---------- one tap: the whole lineup ready ---------- */
+  /* The best voice this phone has for a ballpark announcer, as a voiceURI ("" = the phone's default).
+     English first (US best), then the natural/neural/online voices that sound least robotic. */
+  var VOICE_GOOD = /natural|neural|online|enhanced|premium|wavenet|studio/i;
+  function voiceScore(v) {
+    if (!v || typeof v.voiceURI !== "string" || !v.voiceURI) return -1;
+    var lang = String(v.lang || "").replace("_", "-").toLowerCase(), name = String(v.name || "");
+    if (lang.indexOf("en") !== 0 && !/english/i.test(name)) return 0;
+    var sc = 10;
+    if (lang === "en-us" || /united states|\bUS\b/i.test(name)) sc += 4; else if (/^en-(gb|au|ca|ie|nz)/.test(lang)) sc += 2;
+    if (VOICE_GOOD.test(name) || VOICE_GOOD.test(v.voiceURI)) sc += 5;
+    if (/google/i.test(name)) sc += 2;
+    if (/novelty|whisper|bells|bubbles|boing|zarvox|trinoids|cellos|bad news|good news|organ|jester|superstar|wobble|albert|hysterical/i.test(name)) sc -= 9;
+    return sc;
+  }
+  function pickVoice(voices) {
+    var best = "", bs = 0;
+    (Array.isArray(voices) ? voices : []).forEach(function (v) { var sc = voiceScore(v); if (sc > bs) { bs = sc; best = v.voiceURI; } });
+    return best;
+  }
+
+  /* A song file named "Jordan - Artist - Song" (or "JORDAN LEE - Song") belongs to the player called Jordan (or Jordan Lee).
+     Returns the name part, lower case, or "" when the title doesn't start with one or two plain words and a dash. */
+  function normName(s) {
+    var t = String(s == null ? "" : s).toLowerCase();
+    if (t.normalize) t = t.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+    return t.replace(/[^a-z' ]+/g, " ").replace(/\s+/g, " ").trim();
+  }
+  function songOwner(song) {
+    if (!song || song.kind !== "file") return "";
+    var m = /^\s*([A-Za-zÀ-ɏ][A-Za-zÀ-ɏ'.]*(?:\s+[A-Za-zÀ-ɏ][A-Za-zÀ-ɏ'.]*)?)\s*[-–—]\s+\S/.exec(String(song.title || ""));
+    return m ? normName(m[1]) : "";
+  }
+
+  /* Gives every batter in the lineup (or everyone, when the lineup is empty) a voice and a song, keeping whatever is already chosen.
+     A song named for the player goes to that player; the rest share out the other library songs, unused ones first and in library
+     order; with no songs at all, the built-in sounds take turns. Changes st in place and says what it did. */
+  var FILL_SOUNDS = ["horn", "drumroll", "chime", "siren"];
+  function fillLineup(st, opts) {
+    opts = opts || {};
+    var rep = { players: 0, kept: 0, matched: 0, picked: 0, sounds: 0, voiced: 0 };
+    if (!st || !Array.isArray(st.roster)) return rep;
+    var songs = Array.isArray(st.songs) ? st.songs : [], byId = Object.create(null), uses = Object.create(null), names = Object.create(null);
+    st.roster.forEach(function (p) {
+      byId[p.id] = p;
+      if (p.songId && songById(songs, p.songId)) uses[p.songId] = (uses[p.songId] || 0) + 1;
+      var full = normName(p.name), first = full.split(" ")[0];
+      if (full) names[full] = 1;
+      if (first) names[first] = 1;
+    });
+    var owner = Object.create(null);
+    songs.forEach(function (s) { owner[s.id] = songOwner(s); });
+    /* a song named for someone on this team is theirs, so it isn't handed to anyone else */
+    var pool = songs.filter(function (s) { return s.kind === "file" && !(owner[s.id] && names[owner[s.id]]); });
+    var ids = (Array.isArray(st.lineup) && st.lineup.length ? st.lineup : st.roster.map(function (p) { return p.id; })).slice(), nSound = 0;
+    ids.forEach(function (id) {
+      var p = byId[id]; if (!p) return;
+      rep.players++;
+      if (!p.voice && opts.voice !== false) { p.voice = defaultVoice("tts", {}, null); rep.voiced++; }
+      if (p.songId && songById(songs, p.songId)) { rep.kept++; return; }
+      p.songId = null; p.trim = null;
+      var full = normName(p.name), first = full.split(" ")[0], mine = null;
+      if (full) mine = songs.filter(function (s) { return owner[s.id] === full && !uses[s.id]; })[0] || null;
+      if (!mine && first) mine = songs.filter(function (s) { return owner[s.id] === first && !uses[s.id]; })[0] || null;
+      if (mine) { p.songId = mine.id; uses[mine.id] = 1; rep.matched++; return; }
+      if (pool.length) {
+        var pick = pool[0];
+        pool.forEach(function (s) { if ((uses[s.id] || 0) < (uses[pick.id] || 0)) pick = s; });
+        p.songId = pick.id; uses[pick.id] = (uses[pick.id] || 0) + 1; rep.picked++;
+        return;
+      }
+      p.songId = "b:" + FILL_SOUNDS[nSound++ % FILL_SOUNDS.length]; rep.sounds++;
+    });
+    return rep;
+  }
+
+  /* The loudest stretch of a song, so a library song starts where it kicks in rather than on a quiet intro.
+     env = loudness (RMS) every `step` seconds. Picks the earliest window of `len` seconds that is nearly as loud as the loudest one. */
+  function loudStart(env, step, len, dur) {
+    env = Array.isArray(env) || (env && typeof env.length === "number") ? env : [];
+    step = num(step, 0); len = num(len, LIM.defLen); dur = num(dur, env.length * step);
+    var n = env.length, w = step > 0 ? Math.max(1, Math.round(len / step)) : 0;
+    if (!w || n <= w || dur <= len) return 0;
+    var pre = [0];
+    for (var i = 0; i < n; i++) pre.push(pre[i] + Math.max(0, num(env[i], 0)));
+    var best = 0, i2;
+    for (i2 = 0; i2 + w <= n; i2++) best = Math.max(best, pre[i2 + w] - pre[i2]);
+    if (best <= 0) return 0;
+    for (i2 = 0; i2 + w <= n; i2++) if (pre[i2 + w] - pre[i2] >= best * 0.85) break;
+    /* skip a quiet lead-in at the front of that window, keeping one step before the song kicks in */
+    var top = 0, j, k = i2;
+    for (j = i2; j < i2 + w; j++) top = Math.max(top, num(env[j], 0));
+    while (k < i2 + w - 1 && num(env[k], 0) < top * 0.3) k++;
+    if (k > i2) i2 = Math.max(i2, k - 1);
+    return clamp(q1(i2 * step), 0, fl2(Math.max(0, dur - len)));
+  }
+
+  /* LYBS Ballclub's saved lineups ([{id, name, date, slots:[{playerId, name, position}]}]) and roster ([{id, name, number}]),
+     made into Walk-Up rows [{name, num, pos}] in batting order. Bench slots and empty names are left out. */
+  function clubRows(lineup, roster) {
+    var nums = Object.create(null), out = [];
+    (Array.isArray(roster) ? roster : []).forEach(function (r) {
+      if (!isObj(r)) return;
+      var n = str(r.number == null ? "" : r.number, LIM.num);
+      if (r.id != null) nums["i:" + r.id] = n;
+      if (typeof r.name === "string") nums["n:" + normName(r.name)] = n;
+    });
+    var slots = isObj(lineup) ? lineup.slots : null;
+    (Array.isArray(slots) ? slots : isObj(slots) ? Object.keys(slots).sort(function (a, b) { return a - b; }).map(function (k) { return slots[k]; }) : []).forEach(function (s) {
+      if (!isObj(s)) return;
+      var name = str(s.name, LIM.name), pos = str(s.position, LIM.pos);
+      if (!name || /^bench$/i.test(pos)) return;
+      var n = s.playerId != null && nums["i:" + s.playerId] != null ? nums["i:" + s.playerId] : nums["n:" + normName(name)] || "";
+      out.push({ name: name, num: n, pos: pos });
+    });
+    return out.slice(0, LIM.roster);
+  }
+  /* Puts rows in as the batting order. A player already on this phone (same name) keeps their song, voice and mix;
+     new names join the roster; everyone else sits on the bench. Changes st in place. */
+  function applyRows(st, rows) {
+    var rep = { added: 0, matched: 0, full: false }, lu = [], byName = Object.create(null);
+    st.roster.forEach(function (p) { var k = normName(p.name); if (k && !byName[k]) byName[k] = p; });
+    (Array.isArray(rows) ? rows : []).forEach(function (r) {
+      var k = normName(r.name), p = k ? byName[k] : null;
+      if (p) {
+        if (lu.indexOf(p.id) >= 0) return;
+        if (r.num && !p.num) p.num = str(r.num, LIM.num);
+        if (r.pos) p.pos = str(r.pos, LIM.pos);
+        rep.matched++;
+      } else {
+        if (st.roster.length >= LIM.roster) { rep.full = true; return; }
+        p = newPlayer({ name: r.name, num: r.num, pos: r.pos });
+        st.roster.push(p); if (k) byName[k] = p; rep.added++;
+      }
+      lu.push(p.id);
+    });
+    st.lineup = lu; st.batter = 0;
+    return rep;
+  }
+
   /* ---------- a sample team ---------- */
   function sampleState(withSpeech) {
     var names = ["Player 1", "Player 2", "Player 3", "Player 4", "Player 5", "Player 6", "Player 7", "Player 8", "Player 9"];
@@ -807,7 +949,8 @@
     buildSongFileName: buildSongFileName, parseSongFileName: parseSongFileName, parseReplyText: parseReplyText, sanitizeWant: sanitizeWant, sanitizeReq: sanitizeReq,
     libraryTitle: libraryTitle, startRequest: startRequest, playerByToken: playerByToken, hasSongFile: hasSongFile, requestCode: requestCode, requestProgress: requestProgress, findDuplicateSong: findDuplicateSong,
     sanitizeSettings: sanitizeSettings, sanitizeSong: sanitizeSong, sanitizeVoice: sanitizeVoice, sanitizeState: sanitizeState, emptyState: emptyState,
-    audioKeys: audioKeys, counts: counts, makeBackup: makeBackup, validateBackup: validateBackup, sampleState: sampleState
+    audioKeys: audioKeys, counts: counts, makeBackup: makeBackup, validateBackup: validateBackup, sampleState: sampleState,
+    voiceScore: voiceScore, pickVoice: pickVoice, normName: normName, songOwner: songOwner, fillLineup: fillLineup, loudStart: loudStart, clubRows: clubRows, applyRows: applyRows
   };
   root.WalkupCore = api;
   if (typeof module !== "undefined" && module.exports) module.exports = api;

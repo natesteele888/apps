@@ -7,6 +7,20 @@
   WU.onFile = WU.onFile || {};
 
   var round3 = function (x) { return Math.round(x * 1000) / 1000; };
+  /* loudness every `step` seconds (RMS of every 4th sample of the first two channels), for finding where a song kicks in */
+  function envelope(buf, step) {
+    try {
+      var hop = Math.max(4, Math.round(buf.sampleRate * step)), chs = [], out = [];
+      for (var c = 0; c < Math.min(2, buf.numberOfChannels); c++) chs.push(buf.getChannelData(c));
+      for (var i = 0; (i + 1) * hop <= buf.length; i++) {
+        var sum = 0, k = 0;
+        for (var j = i * hop; j < (i + 1) * hop; j += 4) for (var q = 0; q < chs.length; q++) { sum += chs[q][j] * chs[q][j]; k++; }
+        out.push(k ? Math.sqrt(sum / k) : 0);
+      }
+      return out;
+    } catch (e) { return []; }
+  }
+  SG.envelope = envelope;
   /* A file that came back from a parent carries a WU-<code>- tag; when the code belongs to a player, say whose song it was. */
   SG.decodeMessage = function (name) {
     var p = C.parseSongFileName(name), pl = p ? C.playerByToken(S.st.roster, p.token) : null, who = pl ? C.firstWord(pl.name) : "";
@@ -30,6 +44,8 @@
         var id = C.uid();
         try { await WU.putAudio("s:" + id, f); } catch (e) { failed.push(e.plain || "Couldn't save \"" + f.name + "\"."); if (e.message === "quota") break; continue; }
         var t = C.defaultTrim(buf.duration, { len: C.LIM.defLen, fade: C.LIM.defFade });
+        /* start where the song kicks in, not on a quiet intro; the coach can still move it with Trim */
+        t = C.clampTrim(buf.duration, { start: C.loudStart(envelope(buf, 0.25), 0.25, t.len, buf.duration), len: t.len, fade: t.fade });
         var song = { id: id, kind: "file", title: C.libraryTitle(f.name), name: C.str(f.name, C.LIM.file), dur: round3(buf.duration), size: f.size, mime: C.str(f.type, 60), start: t.start, len: t.len, fade: t.fade };
         S.st.songs.push(song);
         try { E.putSongBuffer(song, buf, t); } catch (e) { /* the cache is only a speed-up */ }
@@ -91,6 +107,7 @@
     var n = S.st.songs.length;
     return '<div class="sec-title"><h2>Songs</h2><span class="sub">' + n + " saved</span></div>" +
       '<p class="mute lead">Add each song once. Then choose it for any player. Two players can share one song.</p>' +
+      '<p class="mute small-note">Building a team or league library? Pick many songs at once; Google Drive shows up in the file picker. Name a file like "Jordan - Artist - Song" and Get lineup ready gives it to Jordan.</p>' +
       U.fileBtn({ text: "Add songs", cls: "block", multiple: true, attr: 'data-file="songs-add"', label: "Add song files" }) +
       '<button type="button" class="btn ghost block top" data-act="rq-list">' + U.I.team + " Ask parents for songs</button>" +
       '<div class="card slist" id="songList">' + (n ? S.st.songs.map(function (s) {

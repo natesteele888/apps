@@ -18,8 +18,9 @@
     h += '<section class="card"><h3>Computer voice</h3>';
     if (sp) {
       h += '<p class="mute small-note">Used when a player has the computer voice instead of a recording, and for the sound check.</p>' +
-        '<label class="field"><span class="label">Voice</span><select id="tvoice" data-setting="tvoice"><option value="">This phone\'s default</option>' + voices.map(function (v) { return '<option value="' + esc(v.voiceURI) + '"' + (v.voiceURI === s.tvoice ? " selected" : "") + ">" + esc(v.name + (v.lang ? " (" + v.lang + ")" : "")) + "</option>"; }).join("") + "</select></label>" +
+        '<label class="field"><span class="label">Voice</span><select id="tvoice" data-setting="tvoice"><option value="">Best announcer voice on this phone</option>' + voices.map(function (v) { return '<option value="' + esc(v.voiceURI) + '"' + (v.voiceURI === s.tvoice ? " selected" : "") + ">" + esc(v.name + (v.lang ? " (" + v.lang + ")" : "")) + "</option>"; }).join("") + "</select></label>" +
         U.range({ key: "trate", label: "Speed", min: 0.5, max: 1.5, step: 0.1, value: s.trate, text: s.trate.toFixed(1) + "x" }) + U.range({ key: "tvol", label: "Voice volume", min: 0, max: 100, step: 1, value: s.tvol, text: s.tvol + "%" }) +
+        '<label class="chk"><input type="checkbox" data-setting="tstyle"' + (s.tstyle === "pa" ? " checked" : "") + '> <span>Ballpark announcer style ("Now batting. Number 7. Name!")</span></label>' +
         '<button type="button" class="btn ghost" data-act="tts-test">Say "Sound check"</button>';
     } else h += '<p class="mute">This browser can\'t speak. Recorded voices still work.</p>';
     h += "</section>";
@@ -75,6 +76,7 @@
     if (t.dataset.setting === "countIn") s.countIn = t.checked;
     else if (t.dataset.setting === "wake") { s.wake = t.checked; WU.emit("wake"); }
     else if (t.dataset.setting === "tvoice") s.tvoice = C.str(t.value, 200);
+    else if (t.dataset.setting === "tstyle") s.tstyle = t.checked ? "pa" : "plain";
     else return;
     WU.save();
   };
