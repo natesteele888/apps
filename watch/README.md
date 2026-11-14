@@ -120,7 +120,7 @@ Both apps must be signed with the same key, because the watch only talks to a ph
 - `wear/` is the watch install, built with Compose for Wear OS. It has two launcher activities, `WalkUpActivity` and `PitchCountActivity`, so the watch shows two apps. They share `PhoneLink` and `PitchStore`, and one application id with the phone app, which the Wear OS link needs.
 - Build: `./gradlew :shared:test :phone:assembleDebug :wear:assembleDebug` (JDK 17, Android SDK 35). GitHub Actions runs this on every push that touches `watch/` or Walk-Up.
 - The phone app loads the live site. Web changes reach Dugout once they're merged to `main` and published.
-- **Signing and releases.** The workflow signs both apps with the key in the `DUGOUT_KEY` secret (a base64 PKCS12 keystore with the alias `dugout`) and its password in `DUGOUT_KEY_PASSWORD`, sets the version code to the run number, and publishes main builds as releases. The key is never committed. `phone/.../Updater.kt` reads the releases list, and Android only installs an update signed with the same key.
+- **Signing and releases.** The workflow signs both apps with the key in the `DUGOUT_KEY` secret (a base64 PKCS12 keystore with the alias `dugout`) and its password in `DUGOUT_KEY_PASSWORD`, sets the version code to the run number, and publishes main builds as releases. The key is never committed: `.github/workflows/dugout-key-setup.yml` makes it once, on GitHub's runner, and saves it straight into the secrets. `phone/.../Updater.kt` reads the releases list, and Android only installs an update signed with the same key.
 
 ## Setting up another coach
 

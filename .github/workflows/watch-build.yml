@@ -91,9 +91,9 @@ jobs:
         run: NODE_PATH=/tmp/pw/node_modules tests/run.sh walkup
 
   release:
-    # Publishes the APKs that Dugout updates itself from: only on main, only when the apps changed, only when signed.
+    # Publishes the APKs that Dugout updates itself from: only on main (a push or a manual run), only when the apps changed, only when signed.
     needs: [apps, walkup-tests]
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && needs.apps.outputs.signed == '1' && needs.apps.outputs.changed == '1'
+    if: (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/main' && needs.apps.outputs.signed == '1' && needs.apps.outputs.changed == '1'
     runs-on: ubuntu-latest
     permissions:
       contents: write
