@@ -32,7 +32,7 @@
     return '<div class="empty hero"><h2>Walk-up music for your team</h2>' +
       "<p>Record each player's announcement, pick the song they chose, and play it on cue. Everything stays on this phone.</p>" +
       '<ol class="how"><li>Add your players.</li><li>Record a voice and pick a song for each.</li><li>On game day, tap Play when they step up.</li></ol>' +
-      '<div class="stack"><button type="button" class="btn block big" data-act="sample">Add a sample lineup</button>' +
+      '<div class="stack">' + (WU.ready && WU.ready.club() ? '<button type="button" class="btn block big" data-act="club-lineup">Bring in my Ballclub lineup</button>' : "") + '<button type="button" class="btn block big" data-act="sample">Add a sample lineup</button>' +
       '<button type="button" class="btn ghost block" data-act="add-player">Add a player</button>' +
       '<button type="button" class="btn ghost block" data-act="paste-list">Paste a list of players</button>' +
       U.fileBtn({ text: "Restore from a backup file", cls: "ghost block", accept: "application/json,.json", attr: 'data-file="restore"', label: "Choose a Walk-Up backup file" }) +
