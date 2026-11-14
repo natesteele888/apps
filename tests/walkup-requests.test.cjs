@@ -968,7 +968,7 @@ const waitReq = (page, i, fn) => page.waitForFunction(([i, f]) => { const p = wi
 
   await test('Service worker: the cache list names every new file and everything the two pages load, each one is served, the cache version moved, and an update never deletes the share inbox', async () => {
     const sw = fs.readFileSync(path.join(__dirname, '../apps/walkup/sw.js'), 'utf8');
-    eq(/const CACHE = "walkup-v3"/.test(sw), true, 'cache bumped from v2'); eq(/const INBOX = "walkup-inbox-v1"/.test(sw), true); assert.ok(/k !== INBOX/.test(sw) && /startsWith\("walkup-"\)/.test(sw), 'activate keeps the inbox and only touches our own caches');
+    eq(+((/const CACHE = "walkup-v(\d+)"/.exec(sw) || [])[1] || 0) >= 3, true, 'cache bumped from v2'); eq(/const INBOX = "walkup-inbox-v1"/.test(sw), true); assert.ok(/k !== INBOX/.test(sw) && /startsWith\("walkup-"\)/.test(sw), 'activate keeps the inbox and only touches our own caches');
     const shell = JSON.parse(/const SHELL = (\[[^\]]*\])/.exec(sw)[1]); for (const f of ['requests.js', 'send.html', 'send.js', 'send.css']) assert.ok(shell.includes(f), f + ' is in the shell');
     const refs = new Set(); for (const html of ['index.html', 'send.html']) { const t = fs.readFileSync(path.join(__dirname, '../apps/walkup', html), 'utf8'); for (const m of t.matchAll(/(?:src|href)="([^"#?]+)"/g)) if (!/^(https?:|\/\/|\/)/.test(m[1])) refs.add(m[1]); }
     assert.ok(refs.has('requests.js') && refs.has('send.js') && refs.has('send.css') && refs.has('core.js') && refs.has('walkup.css'), 'the pages load what we expect: ' + Array.from(refs).join(','));

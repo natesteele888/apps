@@ -863,6 +863,11 @@
     for (i2 = 0; i2 + w <= n; i2++) best = Math.max(best, pre[i2 + w] - pre[i2]);
     if (best <= 0) return 0;
     for (i2 = 0; i2 + w <= n; i2++) if (pre[i2 + w] - pre[i2] >= best * 0.85) break;
+    /* skip a quiet lead-in at the front of that window, keeping one step before the song kicks in */
+    var top = 0, j, k = i2;
+    for (j = i2; j < i2 + w; j++) top = Math.max(top, num(env[j], 0));
+    while (k < i2 + w - 1 && num(env[k], 0) < top * 0.3) k++;
+    if (k > i2) i2 = Math.max(i2, k - 1);
     return clamp(q1(i2 * step), 0, fl2(Math.max(0, dur - len)));
   }
 
