@@ -28,7 +28,7 @@ import kotlinx.coroutines.withContext
 import java.io.File
 
 /**
- * The watch's side of the link to Dugout on the phone. Every few seconds it says hello, and the phone answers with
+ * The watch's side of the link to Dugout on the phone, shared by the Walk-Up and Pitch Count watch apps. Every few seconds it says hello, and the phone answers with
  * who is up, the batting order and what is playing. No answer for 9 seconds means "Open Dugout on your phone".
  */
 object PhoneLink : MessageClient.OnMessageReceivedListener, DataClient.OnDataChangedListener {
@@ -39,8 +39,12 @@ object PhoneLink : MessageClient.OnMessageReceivedListener, DataClient.OnDataCha
     private var scope: CoroutineScope? = null
     private var localId: String? = null
 
+    /** how many of the two watch apps (Walk-Up, Pitch Count) are on screen; the link runs while either is */
+    private var users = 0
+
     fun start(ctx: Context) {
         app = ctx.applicationContext
+        users++
         if (scope != null) return
         val s = CoroutineScope(SupervisorJob() + Dispatchers.Main)
         scope = s
@@ -54,6 +58,8 @@ object PhoneLink : MessageClient.OnMessageReceivedListener, DataClient.OnDataCha
     }
 
     fun stop() {
+        users = (users - 1).coerceAtLeast(0)
+        if (users > 0 || scope == null) return
         Wearable.getMessageClient(app).removeListener(this)
         Wearable.getDataClient(app).removeListener(this)
         scope?.cancel(); scope = null

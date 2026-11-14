@@ -966,23 +966,23 @@ const waitReq = (page, i, fn) => page.waitForFunction(([i, f]) => { const p = wi
 
   await test('Service worker: the cache list names every new file and everything the two pages load, each one is served, the cache version moved, and an update never deletes the share inbox', async () => {
     const sw = fs.readFileSync(path.join(__dirname, '../apps/walkup/sw.js'), 'utf8');
-    eq(/const CACHE = "walkup-v2"/.test(sw), true, 'cache bumped from v1'); eq(/const INBOX = "walkup-inbox-v1"/.test(sw), true); assert.ok(/k !== INBOX/.test(sw) && /startsWith\("walkup-"\)/.test(sw), 'activate keeps the inbox and only touches our own caches');
+    eq(/const CACHE = "walkup-v3"/.test(sw), true, 'cache bumped from v2'); eq(/const INBOX = "walkup-inbox-v1"/.test(sw), true); assert.ok(/k !== INBOX/.test(sw) && /startsWith\("walkup-"\)/.test(sw), 'activate keeps the inbox and only touches our own caches');
     const shell = JSON.parse(/const SHELL = (\[[^\]]*\])/.exec(sw)[1]); for (const f of ['requests.js', 'send.html', 'send.js', 'send.css']) assert.ok(shell.includes(f), f + ' is in the shell');
     const refs = new Set(); for (const html of ['index.html', 'send.html']) { const t = fs.readFileSync(path.join(__dirname, '../apps/walkup', html), 'utf8'); for (const m of t.matchAll(/(?:src|href)="([^"#?]+)"/g)) if (!/^(https?:|\/\/|\/)/.test(m[1])) refs.add(m[1]); }
     assert.ok(refs.has('requests.js') && refs.has('send.js') && refs.has('send.css') && refs.has('core.js') && refs.has('walkup.css'), 'the pages load what we expect: ' + Array.from(refs).join(','));
     for (const r of refs) assert.ok(shell.includes(r) || (r === 'index.html'), r + ' is loaded by a page but missing from the shell list');
     for (const r of shell) { if (r.startsWith('/')) continue; const res = await fetch(srv.url + (r === './' ? '' : r)); eq(res.status, 200, r + ' is served'); }
     const { page, errors, ctx } = await open({ sw: true }); await page.evaluate(() => navigator.serviceWorker.ready);
-    await until(() => page.evaluate(async () => (await (await caches.open('walkup-v2')).keys()).length >= 18));
-    const cached = await page.evaluate(async () => (await (await caches.open('walkup-v2')).keys()).map(r => new URL(r.url).pathname.split('/').pop() || 'index')); for (const f of ['requests.js', 'send.html', 'send.js', 'send.css', 'core.js']) assert.ok(cached.includes(f), f + ' is really cached: ' + cached.join(','));
+    await until(() => page.evaluate(async () => (await (await caches.open('walkup-v3')).keys()).length >= 18));
+    const cached = await page.evaluate(async () => (await (await caches.open('walkup-v3')).keys()).map(r => new URL(r.url).pathname.split('/').pop() || 'index')); for (const f of ['requests.js', 'send.html', 'send.js', 'send.css', 'core.js']) assert.ok(cached.includes(f), f + ' is really cached: ' + cached.join(','));
     // an update: the new worker's activate step, run here exactly as written in sw.js against a pretend Cache Storage (a browser keeps the same
     // worker alive while a page is open, so a real second activation cannot be forced from a test). Stale walkup caches go; other apps' caches
     // and the share inbox, with what is waiting in it, stay.
-    const vm = require('vm'), listeners = {}, store = new Map(['walkup-v1', 'walkup-v2', 'walkup-old-thing', 'walkup-inbox-v1', 'other-app-v1', 'locker-v3'].map(k => [k, 'data of ' + k]));
+    const vm = require('vm'), listeners = {}, store = new Map(['walkup-v1', 'walkup-v2', 'walkup-v3', 'walkup-old-thing', 'walkup-inbox-v1', 'other-app-v1', 'locker-v3'].map(k => [k, 'data of ' + k]));
     let claimed = false;
     vm.runInNewContext(sw, { self: { addEventListener: (t, f) => { listeners[t] = f; }, skipWaiting() {}, location: { origin: srv.url }, registration: { scope: srv.url }, clients: { claim: async () => { claimed = true; } } }, caches: { keys: async () => Array.from(store.keys()), delete: async k => store.delete(k) }, URL, Request, Response, Promise, Array, String });
     await new Promise(res => listeners.activate({ waitUntil: p => p.then(res) }));
-    deep(Array.from(store.keys()).sort(), ['locker-v3', 'other-app-v1', 'walkup-inbox-v1', 'walkup-v2'], 'old walkup caches gone; the inbox and other apps\' caches kept'); eq(claimed, true);
+    deep(Array.from(store.keys()).sort(), ['locker-v3', 'other-app-v1', 'walkup-inbox-v1', 'walkup-v3'], 'old walkup caches gone; the inbox and other apps\' caches kept'); eq(claimed, true);
     deep(errors.filter(e => !/net::ERR|Failed to fetch|install\.js|health\.js|fonts/.test(e)), []); await ctx.close();
   });
 

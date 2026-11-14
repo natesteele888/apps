@@ -78,9 +78,11 @@ const FAKE_NATIVE = () => {
     return { ctx, page, errors };
   }
 
-  await test('Page: the pitching card sits above the walk-up player, counts, undoes and turns red near the limit', async () => {
+  await test('Page: pitching is off until turned on, then sits above the walk-up player, counts, undoes and turns red near the limit', async () => {
     const { page, errors, ctx } = await open(false);
     await page.click('text=Add a sample lineup'); await page.waitForSelector('#gPlay');
+    eq(await page.$('#ptCard'), null, 'no pitching card by default');
+    await page.click('[data-act=pt-show]'); await page.waitForSelector('#ptCard');
     const order = await page.evaluate(() => { const a = document.querySelector('#ptCard'), b = document.querySelector('#gPlay'); return a.getBoundingClientRect().top < b.getBoundingClientRect().top; });
     eq(order, true, 'pitching is on top');
     await page.click('#ptCard [data-act=pt-add]'); await page.click('#ptCard [data-act=pt-add]'); await page.click('#ptCard [data-act=pt-add]');
@@ -119,14 +121,15 @@ const FAKE_NATIVE = () => {
     eq(await page.evaluate(() => !!window.WalkupApp.eng.playing()), true, 'still playing');
     await page.evaluate(() => window.__wuCmd(JSON.stringify({ cmd: 'stop' })));
     await page.waitForFunction(() => !window.WalkupApp.eng.playing());
-    // pitches from the watch merge in once
-    await page.click('#ptCard [data-act=pt-add]');
+    // pitches merge in once, even with the pitching card hidden on the phone (the watch's Pitch Count app works alone)
+    eq(await page.$('#ptCard'), null);
+    await page.evaluate(() => window.WU.pitch.add());
     await page.waitForFunction(() => window.__sent.pitch.length > 0);
     const watchLog = await page.evaluate(() => JSON.parse(JSON.stringify(window.WU.pitch.log())));
     const pid = watchLog.events.filter(e => e.k === 'p')[0].p;
     watchLog.events.push({ i: 'ewatch0001', k: 'p', p: pid, t: Date.now() }, { i: 'ewatch0002', k: 'p', p: pid, t: Date.now() + 1 });
     await page.evaluate(l => { window.__wuCmd(JSON.stringify({ cmd: 'pitchlog', log: l })); window.__wuCmd(JSON.stringify({ cmd: 'pitchlog', log: l })); }, watchLog);
-    eq(await page.textContent('#ptCount'), '3');
+    eq(await page.evaluate(() => window.WU.pitch.row(window.WU.pitch.cur().id).count), 3);
     assert.deepStrictEqual(errors, []); await ctx.close();
   });
 

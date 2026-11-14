@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Pitch Count: a baseball -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android" android:width="108dp" android:height="108dp" android:viewportWidth="108" android:viewportHeight="108">
+    <path android:fillColor="#FFFFFFFF" android:pathData="M54,32a22,22 0,1 1,0 44a22,22 0,1 1,0 -44z" />
+    <path android:strokeColor="#FFDC2626" android:strokeWidth="2.5" android:fillColor="#00000000" android:strokeLineCap="round" android:pathData="M40,37c6,8 6,26 0,34M68,37c-6,8 -6,26 0,34" />
+</vector>

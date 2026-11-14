@@ -27,7 +27,11 @@
   function changed() { persist(); WU.emit("pitch"); }
   PT.log = function () { return log; };
   PT.history = function () { return hist; };
-  PT.shown = function () { return WU.store.get("pitchShow") !== "0"; };
+  /* pitching is off until a coach turns it on: Walk-Up is often used without a pitch count */
+  PT.shown = function () { return WU.store.get("pitchShow") === "1"; };
+  PT.show = function (on) { WU.store.set("pitchShow", on ? "1" : "0"); WU.emit("data"); };
+  WU.act["pt-show"] = function () { PT.show(true); };
+  document.addEventListener("change", function (e) { var t = e.target; if (t && t.id === "setPitchShow") PT.show(t.checked); });
 
   /* ---------- who is pitching, and the numbers ---------- */
   PT.cur = function () {
@@ -207,7 +211,7 @@
       if (t.id === "ptDiv") { log.division = P.DIVISIONS.indexOf(t.value) >= 0 ? t.value : "Majors"; setupChanged(); }
       else if (t.id === "ptMax") { log.max = Math.max(0, Math.min(200, parseInt(t.value, 10) || 0)); setupChanged(); }
       else if (t.dataset && t.dataset.plim) { var p = P.pitcherById(log, t.dataset.plim); if (p) { p.limit = Math.max(0, Math.min(200, parseInt(t.value, 10) || 0)); setupChanged(); } }
-      else if (t.id === "ptShow") { WU.store.set("pitchShow", t.checked ? "1" : "0"); WU.emit("data"); }
+      else if (t.id === "ptShow") PT.show(t.checked);
     });
     s.repaintAll = function () { s.body.innerHTML = settingsHTML(); };
     PT.settingsSheet = s;

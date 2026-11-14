@@ -78,7 +78,7 @@ fun BattingScreen(onOrder: () -> Unit) {
     val t = now()
     if (st == null || !st.ready || st.lineup.isEmpty() || !PhoneLink.phoneOk(t)) {
         Column(Modifier.fillMaxSize().padding(20.dp), verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally) {
-            Text("Batting", fontSize = 18.sp, fontWeight = FontWeight.Bold)
+            Text("Walk-Up", fontSize = 18.sp, fontWeight = FontWeight.Bold)
             Spacer(Modifier.height(6.dp))
             Text(
                 if (st != null && st.ready && PhoneLink.phoneOk(t)) "Set up the batting order in Walk-Up on your phone." else line,

@@ -23,14 +23,14 @@ class Tts(private val a: MainActivity) {
     init {
         tts.setAudioAttributes(AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_MEDIA).setContentType(AudioAttributes.CONTENT_TYPE_SPEECH).build())
         tts.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
-            override fun onStart(id: String) = event(id, "start")
-            override fun onDone(id: String) = event(id, "end")
-            @Deprecated("old API") override fun onError(id: String) = event(id, "error")
-            override fun onError(id: String, code: Int) = event(id, "error")
+            override fun onStart(id: String) { event(id, "start") }
+            override fun onDone(id: String) { event(id, "end") }
+            @Deprecated("old API") override fun onError(id: String) { event(id, "error") }
+            override fun onError(id: String, code: Int) { event(id, "error") }
         })
     }
 
-    private fun event(id: String, ev: String) = a.runJs("window.__wuTts&&window.__wuTts(" + JSONObject.quote(id) + "," + JSONObject.quote(ev) + ")")
+    private fun event(id: String, ev: String) { a.runJs("window.__wuTts&&window.__wuTts(" + JSONObject.quote(id) + "," + JSONObject.quote(ev) + ")") }
 
     fun speak(id: String, text: String, rate: Double, vol: Double) = a.runOnUiThread {
         when {
