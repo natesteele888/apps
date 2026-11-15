@@ -440,7 +440,7 @@ function fbLoad(){
 const docRef = () => Cloud.db.collection('bills_users').doc(Cloud.uid);
 let authUser = null, authKnown = false;
 async function initAuth(){
-  try { await fbLoad(); } catch(e){ setStatus('Can’t reach Google. Check your connection.'); showSign('You’re offline. Your bills open once the phone is back online.'); return; }
+  try { await fbLoad(); } catch(e){ setStatus('Can’t reach Google. Check your connection.'); showSign(OFFLINE_MSG); return; }
   const fb = window.firebase; if (!fb.apps.length) fb.initializeApp(FB_CONFIG);
   fb.auth().getRedirectResult().catch(e => { if (e && e.code) toast('Sign-in didn’t finish. Try again.'); });
   fb.auth().onAuthStateChanged(u => {
@@ -451,7 +451,10 @@ async function initAuth(){
     if (!isLocked()) startCloud();
   });
 }
-function showSign(msg){ $('#signGate').classList.remove('hidden'); if (msg) $('#signMsg').textContent = msg; }
+// With no signal the sign-in button can't work, so say so, even when the Firebase scripts came from the offline copy.
+const OFFLINE_MSG = 'You’re offline. Your bills open once the phone is back online.', SIGN_MSG = $('#signMsg').textContent;
+function showSign(msg){ $('#signGate').classList.remove('hidden'); if (!msg && navigator.onLine === false) msg = OFFLINE_MSG; $('#signMsg').textContent = msg || SIGN_MSG; }
+addEventListener('online', () => { if (!authUser && window.firebase && window.firebase.auth && $('#signMsg').textContent === OFFLINE_MSG) $('#signMsg').textContent = SIGN_MSG; });
 function hideSign(){ $('#signGate').classList.add('hidden'); }
 async function signIn(force){
   try { await fbLoad(); } catch(e){ toast('Can’t reach Google right now.'); return null; }
