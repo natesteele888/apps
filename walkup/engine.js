@@ -329,7 +329,8 @@
 
   /* Everything a player's mix needs, loaded and rendered, so Play is instant. */
   E.prepare = function (player, st, speechOpts) {
-    var song = player.songId ? C.songById(st.songs, player.songId) : null, tr = song ? C.effectiveTrim(player, song) : null, v = player.voice;
+    /* a song that already says the player's name plays on its own, with no announcer over it */
+    var song = player.songId ? C.songById(st.songs, player.songId) : null, tr = song ? C.effectiveTrim(player, song) : null, v = song && song.intro ? null : player.voice;
     var pm = song ? E.songBuffer(song, tr) : Promise.resolve(null);
     var pv = v && v.kind !== "tts" ? E.renderVoice(v) : Promise.resolve(null);
     return Promise.all([pm, pv]).then(function (r) {
@@ -344,7 +345,7 @@
   };
   /* the plan alone (no audio needed), for drawing the timeline */
   E.planFor = function (player, st) {
-    var song = player.songId ? C.songById(st.songs, player.songId) : null, tr = song ? C.effectiveTrim(player, song) : null, v = player.voice;
+    var song = player.songId ? C.songById(st.songs, player.songId) : null, tr = song ? C.effectiveTrim(player, song) : null, v = song && song.intro ? null : player.voice;
     var text = C.announceText(player, st.settings && st.settings.tstyle), est = C.estimateSpeech(text), vlen = 0, speech = 0;
     if (v && v.kind === "tts") { vlen = speech = est; }
     else if (v) { speech = Math.max(0.1, (v.te || v.dur) - (v.ts || 0)); vlen = speech + C.reverbTail(v.polish); }

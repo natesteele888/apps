@@ -43,10 +43,12 @@
         if (buf.duration < 0.2) { failed.push("\"" + f.name + "\" is too short to use."); continue; }
         var id = C.uid();
         try { await WU.putAudio("s:" + id, f); } catch (e) { failed.push(e.plain || "Couldn't save \"" + f.name + "\"."); if (e.message === "quota") break; continue; }
-        var t = C.defaultTrim(buf.duration, { len: C.LIM.defLen, fade: C.LIM.defFade });
-        /* start where the song kicks in, not on a quiet intro; the coach can still move it with Trim */
-        t = C.clampTrim(buf.duration, { start: C.loudStart(envelope(buf, 0.25), 0.25, t.len, buf.duration), len: t.len, fade: t.fade });
-        var song = { id: id, kind: "file", title: C.libraryTitle(f.name), name: C.str(f.name, C.LIM.file), dur: round3(buf.duration), size: f.size, mime: C.str(f.type, 60), start: t.start, len: t.len, fade: t.fade };
+        var title = C.libraryTitle(f.name), said = C.introGuess(title, buf.duration, S.st.roster), t = C.defaultTrim(buf.duration, { len: C.LIM.defLen, fade: C.LIM.defFade });
+        /* a clip that already says the player's name plays from the top, as long as it allows; any other song starts where it
+           kicks in, not on a quiet intro. The coach can still move either with Trim. */
+        t = said ? C.clampTrim(buf.duration, { start: 0, len: C.LIM.maxLen, fade: 0.5 })
+          : C.clampTrim(buf.duration, { start: C.loudStart(envelope(buf, 0.25), 0.25, t.len, buf.duration), len: t.len, fade: t.fade });
+        var song = { id: id, kind: "file", title: title, name: C.str(f.name, C.LIM.file), dur: round3(buf.duration), size: f.size, mime: C.str(f.type, 60), start: t.start, len: t.len, fade: t.fade, intro: said };
         S.st.songs.push(song);
         try { E.putSongBuffer(song, buf, t); } catch (e) { /* the cache is only a speed-up */ }
         added.push(song);
@@ -114,6 +116,7 @@
         return '<div class="srow tall" data-sid="' + s.id + '"><button type="button" class="pbtn" data-act="song-preview" data-id="' + s.id + '" data-title="' + esc(s.title) + '" aria-label="Play ' + esc(s.title) + '">' + U.I.play + "</button>" +
           '<div class="smain"><b>' + esc(s.title) + "</b><small>" + subtitle(s) + '</small></div><div class="sacts">' +
           '<button type="button" class="btn ghost small" data-act="song-trim" data-id="' + s.id + '">Trim</button>' +
+          '<button type="button" class="btn ' + (s.intro ? "" : "ghost ") + 'small" data-act="song-intro" data-id="' + s.id + '" aria-pressed="' + (s.intro ? "true" : "false") + '">' + (s.intro ? "Says the name" : "No name in it") + "</button>" +
           '<button type="button" class="btn ghost small" data-act="song-rename" data-id="' + s.id + '">Rename</button>' +
           '<button type="button" class="btn danger small" data-act="song-delete" data-id="' + s.id + '">Delete</button></div>' +
           (WU.have("s:" + s.id) ? "" : '<div class="refill full"><p class="warn-txt">The file for this song isn\'t on this phone. Choose the same file again and every player keeps this song.</p>' + U.fileBtn({ text: "Choose the file again", cls: "small", attr: 'data-file="song-refill" data-id="' + s.id + '"', label: "Choose the file for " + s.title + " again" }) + "</div>") + "</div>";
@@ -122,6 +125,12 @@
   };
   WU.act["song-preview"] = function (el) { var s = WU.song(el.dataset.id); if (s) SG.togglePreview(s); };
   WU.act["song-trim"] = function (el) { var s = WU.song(el.dataset.id); if (s) SG.openSongTrim(s); };
+  /* the song already says the player's name, so the announcer stays quiet for whoever gets it */
+  WU.act["song-intro"] = function (el) {
+    var s = WU.song(el.dataset.id); if (!s) return;
+    s.intro = !s.intro; WU.commit("data");
+    U.toast(s.intro ? "\"" + s.title + "\" already says the name, so the announcer will stay quiet for it." : "The announcer will read the name before \"" + s.title + "\".", "ok");
+  };
   WU.act["song-rename"] = function (el) { var s = WU.song(el.dataset.id); if (s) SG.openRename(s); };
   WU.act["song-delete"] = function (el) { var s = WU.song(el.dataset.id); if (s) SG.askDelete(s); };
   WU.onFile["songs-add"] = async function (files) {

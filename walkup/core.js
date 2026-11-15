@@ -383,10 +383,16 @@
 
   /* Ready / No song / No voice / needs a file. `have(key)` says whether a saved audio file is on this phone. */
   var STATUS_TEXT = { ready: "Ready", "no-song": "No song", "no-voice": "No voice", empty: "Nothing set up", "needs-song": "Needs song file", "needs-voice": "Needs voice file" };
+  /* The announcer that actually plays for a player: none when their song is a clip that already says the name. */
+  function activeVoice(p, songs) {
+    var song = p && p.songId ? songById(songs, p.songId) : null;
+    return song && song.intro ? null : (p && p.voice) || null;
+  }
+  function saysName(p, songs) { var song = p && p.songId ? songById(songs, p.songId) : null; return !!(song && song.intro); }
   function statusOf(p, songs, have) {
-    var song = p.songId ? songById(songs, p.songId) : null, v = p.voice;
-    var songOk = song && (song.kind === "synth" || have("s:" + song.id)), voiceOk = v && (v.kind === "tts" || have("v:" + v.id));
-    var code = song && !songOk ? "needs-song" : v && !voiceOk ? "needs-voice" : !song && !v ? "empty" : !song ? "no-song" : !v ? "no-voice" : "ready";
+    var song = p.songId ? songById(songs, p.songId) : null, said = !!(song && song.intro), v = said ? null : p.voice;
+    var songOk = song && (song.kind === "synth" || have("s:" + song.id)), voiceOk = said || (v && (v.kind === "tts" || have("v:" + v.id)));
+    var code = song && !songOk ? "needs-song" : v && !voiceOk ? "needs-voice" : !song && !v ? "empty" : !song ? "no-song" : !v && !said ? "no-voice" : "ready";
     return { code: code, text: STATUS_TEXT[code], song: !!songOk, voice: !!voiceOk };
   }
 
@@ -706,7 +712,7 @@
     var id = typeof r.id === "string" && ID_RE.test(r.id) && !seen[r.id] ? r.id : uid();
     seen[id] = 1;
     var dur = clamp(num(r.dur, 0), 0, 86400), t = clampTrim(dur, r);
-    return { id: id, kind: "file", title: str(r.title, LIM.title) || "Song", name: str(r.name, LIM.file), dur: dur, size: int(r.size, 0, 1e12, 0), mime: str(r.mime, 60), start: t.start, len: t.len, fade: t.fade };
+    return { id: id, kind: "file", title: str(r.title, LIM.title) || "Song", name: str(r.name, LIM.file), dur: dur, size: int(r.size, 0, 1e12, 0), mime: str(r.mime, 60), start: t.start, len: t.len, fade: t.fade, intro: r.intro === true };
   }
   function sanitizeVoice(r, seen) {
     if (!isObj(r)) return null;
@@ -807,6 +813,37 @@
     var m = /^\s*([A-Za-zÀ-ɏ][A-Za-zÀ-ɏ'.]*(?:\s+[A-Za-zÀ-ɏ][A-Za-zÀ-ɏ'.]*)?)(?:\s+[-–—]\s*|\s*[-–—]\s+)\S/.exec(String(song.title || ""));
     return m ? normName(m[1]) : "";
   }
+  /* The player a clip is named for: "Number 7 Jordan Lee", "#7 Jordan", "7 Jordan Lee" or just "Jordan Lee" (a bare name, which only
+     counts when it fits someone on the team). "" when the title isn't shaped like a name. */
+  function clipOwner(title) {
+    var W = "[A-Za-zÀ-ɏ][A-Za-zÀ-ɏ'.]*(?:\\s+[A-Za-zÀ-ɏ][A-Za-zÀ-ɏ'.]*){0,2}";
+    var m = new RegExp("^\\s*(?:(?:(?:number|no\\.?|#)\\s*)?\\d{1,2}\\s+)?(" + W + ")(?:[_\\s-]*\\d+)?\\s*$", "i").exec(String(title || ""));
+    return m ? normName(m[1]) : "";
+  }
+  /* How well a name tag fits a player: 3 full name, 2 first name + last initial, 1 first name, 1 a last name only one player has. */
+  function nameFit(own, p, lasts) {
+    if (!own || !p) return 0;
+    var full = normName(p.name), w = full.split(" "), o = own.split(" ");
+    if (!full) return 0;
+    if (own === full) return 3;
+    if (o.length === 2 && w.length > 1 && o[0] === w[0] && o[1].length <= 2 && w[w.length - 1].indexOf(o[1].replace(/\.$/, "")) === 0) return 2;
+    if (o.length === 1 && o[0] === w[0]) return 1;
+    if (o.length === 1 && w.length > 1 && o[0] === w[w.length - 1] && lasts && lasts[o[0]] === 1) return 1;
+    return 0;
+  }
+  function lastNames(roster) {
+    var lasts = Object.create(null);
+    (Array.isArray(roster) ? roster : []).forEach(function (p) { var w = normName(p && p.name).split(" "); if (w.length > 1) lasts[w[w.length - 1]] = (lasts[w[w.length - 1]] || 0) + 1; });
+    return lasts;
+  }
+  /* Whether a new file is a clip that already says the player's name, so the announcer stays quiet: a title that starts with
+     "Number 7" or "#7", or a short file (45 seconds or less) named just for someone on the roster. "Jordan Lee - Song" is a song. */
+  function introGuess(title, dur, roster) {
+    var t = String(title || "");
+    if (/^\s*(?:number|no\.?|#)\s*\d{1,2}\b/i.test(t)) return true;
+    var own = clipOwner(t), d = num(dur, 0), lasts = lastNames(roster);
+    return !!own && d > 0 && d <= 45 && (Array.isArray(roster) ? roster : []).some(function (p) { return nameFit(own, p, lasts) > 0; });
+  }
 
   /* Gives every batter in the lineup (or everyone, when the lineup is empty) a voice and a song, keeping whatever is already chosen.
      A song named for the player goes to that player; the rest share out the other library songs, unused ones first and in library
@@ -814,7 +851,7 @@
   var FILL_SOUNDS = ["horn", "drumroll", "chime", "siren"];
   function fillLineup(st, opts) {
     opts = opts || {};
-    var rep = { players: 0, kept: 0, matched: 0, picked: 0, sounds: 0, voiced: 0 };
+    var rep = { players: 0, kept: 0, matched: 0, picked: 0, sounds: 0, voiced: 0, said: 0 };
     if (!st || !Array.isArray(st.roster)) return rep;
     var songs = Array.isArray(st.songs) ? st.songs : [], byId = Object.create(null), uses = Object.create(null);
     var lasts = Object.create(null);
@@ -825,25 +862,23 @@
     });
     /* how well a song's name fits a player: 3 full name, 2 first name and last initial ("Jordan L"), 1 first name,
        1 last name when only one player has it ("LEE - Song"), 0 not theirs */
-    function fit(own, p) {
-      if (!own) return 0;
-      var full = normName(p.name), w = full.split(" "), o = own.split(" ");
-      if (!full) return 0;
-      if (own === full) return 3;
-      if (o.length === 2 && w.length > 1 && o[0] === w[0] && o[1].length <= 2 && w[w.length - 1].indexOf(o[1].replace(/\.$/, "")) === 0) return 2;
-      if (o.length === 1 && o[0] === w[0]) return 1;
-      if (o.length === 1 && w.length > 1 && o[0] === w[w.length - 1] && lasts[o[0]] === 1) return 1;
-      return 0;
-    }
+    function fit(own, p) { return nameFit(own, p, lasts); }
     var owner = Object.create(null);
-    songs.forEach(function (s) { owner[s.id] = songOwner(s); });
+    songs.forEach(function (s) { owner[s.id] = songOwner(s) || (s.kind === "file" ? clipOwner(s.title) : ""); });
     /* a song named for someone on this team is theirs, so it isn't handed to anyone else */
-    var pool = songs.filter(function (s) { return s.kind === "file" && !lasts[owner[s.id]] && !st.roster.some(function (p) { return fit(owner[s.id], p) > 0; }); });
+    /* and a clip that says someone's name never goes to anyone else */
+    var pool = songs.filter(function (s) { return s.kind === "file" && !s.intro && !lasts[owner[s.id]] && !st.roster.some(function (p) { return fit(owner[s.id], p) > 0; }); });
     var ids = (Array.isArray(st.lineup) && st.lineup.length ? st.lineup : st.roster.map(function (p) { return p.id; })).slice(), nSound = 0;
     ids.forEach(function (id) {
       var p = byId[id]; if (!p) return;
       rep.players++;
-      if (!p.voice && opts.voice !== false) { p.voice = defaultVoice("tts", {}, null); rep.voiced++; }
+      give(p);
+      var s = p.songId ? songById(songs, p.songId) : null;
+      if (s && s.intro) rep.said++;
+      else if (!p.voice && opts.voice !== false) { p.voice = defaultVoice("tts", {}, null); rep.voiced++; }
+    });
+    return rep;
+    function give(p) {
       if (p.songId && songById(songs, p.songId)) { rep.kept++; return; }
       p.songId = null; p.trim = null;
       var mine = null, best = 0;
@@ -856,8 +891,7 @@
         return;
       }
       p.songId = "b:" + FILL_SOUNDS[nSound++ % FILL_SOUNDS.length]; rep.sounds++;
-    });
-    return rep;
+    }
   }
 
   /* The loudest stretch of a song, so a library song starts where it kicks in rather than on a quiet intro.
@@ -960,7 +994,7 @@
     libraryTitle: libraryTitle, startRequest: startRequest, playerByToken: playerByToken, hasSongFile: hasSongFile, requestCode: requestCode, requestProgress: requestProgress, findDuplicateSong: findDuplicateSong,
     sanitizeSettings: sanitizeSettings, sanitizeSong: sanitizeSong, sanitizeVoice: sanitizeVoice, sanitizeState: sanitizeState, emptyState: emptyState,
     audioKeys: audioKeys, counts: counts, makeBackup: makeBackup, validateBackup: validateBackup, sampleState: sampleState,
-    voiceScore: voiceScore, pickVoice: pickVoice, normName: normName, songOwner: songOwner, fillLineup: fillLineup, loudStart: loudStart, clubRows: clubRows, applyRows: applyRows
+    voiceScore: voiceScore, pickVoice: pickVoice, normName: normName, songOwner: songOwner, introGuess: introGuess, clipOwner: clipOwner, activeVoice: activeVoice, saysName: saysName, fillLineup: fillLineup, loudStart: loudStart, clubRows: clubRows, applyRows: applyRows
   };
   root.WalkupCore = api;
   if (typeof module !== "undefined" && module.exports) module.exports = api;

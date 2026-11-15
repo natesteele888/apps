@@ -37,6 +37,7 @@
     if (rep.picked) out.push(rep.picked + " got a song from your library");
     if (rep.sounds) out.push(rep.sounds + " got a built-in sound for now");
     if (rep.kept) out.push(rep.kept + " kept the song you chose");
+    if (rep.said) out.push(rep.said + (rep.said === 1 ? " has a clip that says their name, so the announcer stays quiet" : " have clips that say their names, so the announcer stays quiet"));
     return out;
   }
   R.fill = function (note) {
@@ -67,7 +68,7 @@
       $("#rdList", el).innerHTML = S.st.lineup.map(function (id, i) {
         var p = WU.player(id); if (!p) return "";
         var s = p.songId ? WU.song(p.songId) : null;
-        return '<div class="srow"><div class="smain"><b>' + (i + 1) + ". " + WU.team.nameHTML(p) + "</b><small>" + U.I.note + " " + esc(s ? s.title : "No song") + '</small></div><button type="button" class="btn ghost small" data-do="song" data-id="' + p.id + '" aria-label="Change song for ' + esc(C.playerLabel(p)) + '">Change</button></div>';
+        return '<div class="srow"><div class="smain"><b>' + (i + 1) + ". " + WU.team.nameHTML(p) + "</b><small>" + U.I.note + " " + esc(s ? s.title : "No song") + (s && s.intro ? " · says the name" : "") + '</small></div><button type="button" class="btn ghost small" data-do="song" data-id="' + p.id + '" aria-label="Change song for ' + esc(C.playerLabel(p)) + '">Change</button></div>';
       }).join("");
     }
     paint();
