@@ -97,12 +97,24 @@ If you'd rather not use Android Studio's window, the same install works from a t
 5. Run `adb install dugout-watch.apk`. **Walk-Up** and **Pitch Count** appear in the watch's app list.
 6. Turn **ADB debugging** off again when you're done.
 
+### An older watch (Android Wear 2.0 or Wear OS 2, like the Huawei Watch 2)
+
+These watches have no **Wireless debugging** pairing screen, so the watch install goes like this instead. Step 1 on the phone is the same, and the watch pairs with the phone through Google's **Wear OS** app (not Galaxy Wearable).
+
+1. Download `dugout-watch.apk` to the computer from the newest `dugout-v…` release (**Releases** on this repo's GitHub page), the same release as the phone's `dugout-phone.apk`.
+2. On the watch, open **Settings › System › About** and tap **Build number** 7 times. That turns on **Developer options**.
+3. Connect the watch to the same Wi-Fi as the computer (**Settings › Connectivity › Wi-Fi**).
+4. In **Settings › Developer options**, turn on **ADB debugging**, then **Debug over Wi-Fi**. After a few seconds it shows the watch's address, like `192.168.1.40:5555`.
+5. On the computer (Android's platform tools; on a Mac, `brew install android-platform-tools`), run `adb connect <that address>`. The watch asks **Allow debugging?**: tap **OK**.
+6. Run `adb install dugout-watch.apk`. **Walk-Up** and **Pitch Count** appear in the watch's app list.
+7. Turn **Debug over Wi-Fi** and **ADB debugging** off again when you're done.
+
 Both apps must be signed with the same key, because the watch only talks to a phone app signed the same way. Builds from the `dugout-v…` releases all share one key, so any phone and watch build from there match.
 
 ## Updates
 
 - **Phone:** Dugout checks for a new version when it opens (at most every 6 hours) and asks **Update Dugout?** Tap **Update**, then **Update** on Android's own screen. The first time, Android asks you to allow Dugout to install apps. **Watch › Check for updates** looks right away.
-- **Watch:** the watch app doesn't update itself. When a release changes the watch app, install its `dugout-watch.apk` with step 5 above.
+- **Watch:** the watch app doesn't update itself. When a release changes the watch app, install its `dugout-watch.apk` with step 5 above (step 6 on an older watch).
 - Only main-branch builds that change the apps are published, as `dugout-v<number>` releases in this repo. A Walk-Up-only change needs no app update, because Dugout loads the live site.
 - **Switching over once:** a Dugout installed from an older build (signed with a throwaway debug key) can't update itself. Uninstall it, then install `dugout-phone.apk` from the newest `dugout-v…` release. Do the same for the watch.
 
