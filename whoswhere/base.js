@@ -172,8 +172,11 @@
     $("#sheets").appendChild(wrap);
     syncInert();
     requestAnimationFrame(() => requestAnimationFrame(() => wrap.classList.add("open")));
+    // Focus moves into the sheet straight away, so it never sits on the page behind it, which is now inert;
+    // a field the sheet asks for gets focus a moment later, once the sheet has started to slide up.
+    try { api.sheet.focus({ preventScroll: true }); } catch (e) { /* ignore */ }
     const af = o.autofocus ? $(o.autofocus, wrap) : null;
-    setTimeout(() => { try { (af || api.sheet).focus({ preventScroll: true }); } catch (e) { /* ignore */ } }, 30);
+    if (af) setTimeout(() => { if (!api.closed) { try { af.focus({ preventScroll: true }); } catch (e) { /* ignore */ } } }, 30);
     if (o.onOpen) o.onOpen(api);
     return api;
   }
