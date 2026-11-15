@@ -236,6 +236,19 @@ fs.writeFileSync(PHOTO, Buffer.from('iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAIAAACQkWg
     await A.page.evaluate("cancelCatch()");
     await A.page.setViewportSize({ width: 390, height: 844 });
   });
+  await test('a save the database refuses says the crew database isn’t switched on, and a trip stays on the phone', async () => {
+    deny = true;
+    await A.page.evaluate(() => mutate(d => { d.x = 1; }));
+    await A.page.waitForSelector('text=isn’t switched on');
+    deny = false;
+  });
+  await test('tapping a spot opens that spot’s trophy board, with a chip to go back to all spots', async () => {
+    await A.page.evaluate(() => setTab('spots'));
+    await A.page.locator('.spot-card', { hasText: 'Test Pond' }).click();
+    await A.page.waitForSelector('text=📍 Test Pond ✕');
+    await A.page.locator('.chip', { hasText: 'Test Pond ✕' }).click();
+    eq(await A.page.locator('.chip.active').first().innerText(), 'By Spot');
+  });
   await test('no console errors on the first phone through the whole run', async () => {
     eq(A.errors.length, 0, A.errors.join(' | '));
   });

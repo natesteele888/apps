@@ -1,6 +1,6 @@
 // Catch Log: network first, so updates show up right away; falls back to the last saved copy when offline.
 // Only the app's own files and the Firebase and map scripts are cached. Database and sign-in traffic are never cached.
-const CACHE = "catchlog-v4";
+const CACHE = "catchlog-v5";
 const SHELL = ["./", "manifest.json", "/apps/icons/catchlog-192.png", "/apps/icons/catchlog-512.png"];
 self.addEventListener("install", e => {
   self.skipWaiting();

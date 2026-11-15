@@ -35,6 +35,8 @@
   .note{background:#3A2A1A;border:1.5px solid var(--accent);color:var(--accent);font-size:12px;font-weight:700;padding:9px 14px;border-radius:12px;margin:0 0 12px;}
   .toast{position:fixed;left:50%;bottom:calc(92px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--panel2);border:1.5px solid var(--accent);color:var(--text);padding:10px 16px;border-radius:12px;font-size:13px;font-weight:700;z-index:9999;max-width:90vw;text-align:center;}
 
+  .net-bar{position:fixed;top:calc(8px + env(safe-area-inset-top,0px));left:50%;transform:translateX(-50%);z-index:9998;background:#3A2A1A;border:1.5px solid var(--accent);color:var(--accent);font-size:11.5px;font-weight:800;padding:5px 12px;border-radius:999px;white-space:nowrap;pointer-events:none;display:none;}
+  .net-bar.on{display:block;}
   .gate{max-width:420px;margin:0 auto;padding:clamp(24px,7dvh,60px) 22px 24px;text-align:center;}
   .gate .big{font-size:56px;}
   .gate h1{font-size:30px;margin:8px 0 6px;letter-spacing:1px;}
@@ -217,7 +219,11 @@ async function initAuth(){
   fb.auth().onAuthStateChanged(u => {
     Cloud.user = u;
     if(!u){ stopCloud(); phase='signin'; render(); return; }
-    Cloud.db = fb.firestore();
+    if(!Cloud.db){
+      Cloud.db = fb.firestore();
+      // Keep a copy of the crew on the phone, so it opens with no signal at the lake.
+      try{ if(Cloud.db.enablePersistence) Cloud.db.enablePersistence({ synchronizeTabs:true }).catch(()=>{}); }catch(e){}
+    }
     const fromLink = crewFromHash();
     if(fromLink){ LS.set('cl_crew', fromLink); history.replaceState(null,'',location.pathname); }
     const code = LS.get('cl_crew');
@@ -240,6 +246,8 @@ function startCloud(code){
   phase = 'loading'; render();
   state.me = LS.get('cl_me_'+code);
   Cloud.unsub = crewRef().onSnapshot(snap => {
+    // No signal and no copy on this phone yet: wait for signal instead of showing an empty crew.
+    if(!snap.exists && snap.metadata && snap.metadata.fromCache){ if(phase !== 'ready'){ phase = 'waiting'; render(); } return; }
     let d = {};
     if(snap.exists){ try{ d = JSON.parse(snap.data().data || '{}'); }catch(e){ d = {}; } }
     applyData(d);
@@ -253,7 +261,7 @@ function startCloud(code){
   }, err => {
     if(window.nateHealth) try{ window.nateHealth.note('sync', (err && err.code) || 'error'); }catch(x){}
     if(err && err.code === 'permission-denied'){ phase='denied'; render(); }
-    else { toast('Can’t reach your crew right now.'); }
+    else { if(phase !== 'ready'){ phase = 'waiting'; render(); } toast('Can’t reach your crew right now.'); }
   });
 }
 async function startNewCrew(){
@@ -295,6 +303,14 @@ function applyData(d){
   norm(d);
   state.profiles = d.profiles; state.gearMap = d.gear; state.sessions = d.sessions; state.spots = d.spots;
 }
+/* What a failed save says, by why it failed. Nothing typed is lost: trips stay on the phone until they save. */
+function saveFailText(e){
+  const code = (e && e.code) || '';
+  if(e && e.message==='full') return 'Your crew’s log is full. Ask Nate to make room.';
+  if(/permission-denied/.test(code)) return 'Catch Log can’t save yet: the crew’s database isn’t switched on. Ask Nate. Nothing you logged is lost.';
+  if(!navigator.onLine || /unavailable|deadline-exceeded|network/.test(code)) return 'No signal, so it didn’t save. Nothing is lost; try again when you have signal.';
+  return 'Didn’t save. Check your connection and try again.';
+}
 async function mutate(fn){
   try{
     await Cloud.db.runTransaction(async t => {
@@ -308,9 +324,9 @@ async function mutate(fn){
     });
     return true;
   }catch(e){
-    console.error('save failed', e);
+    console.warn('save failed', e);
     if(window.nateHealth) try{ window.nateHealth.note('save', (e && e.code) || (e && e.message) || 'error'); }catch(x){}
-    toast(e && e.message==='full' ? 'Your crew’s log is full. Ask Nate to make room.' : 'Didn’t save. Check your connection and try again.');
+    toast(saveFailText(e), 5200);
     return false;
   }
 }
@@ -327,11 +343,15 @@ function photoSrc(pid){
   }
   return null;
 }
-async function uploadPhoto(dataUrl){
+async function uploadPhoto(dataUrl, opts={}){
   if(!dataUrl) return null;
   const pid = 'ph_' + Date.now().toString(36) + Math.random().toString(36).slice(2,7);
   try{ await photoRef(pid).set({ img:dataUrl, updated:Date.now() }); photoCache[pid] = dataUrl; return pid; }
-  catch(e){ toast('Photo didn’t upload, so it was left off.'); return null; }
+  catch(e){
+    if(window.nateHealth) try{ window.nateHealth.note('photo', (e && e.code) || 'error'); }catch(x){}
+    if(opts.quiet) throw e;
+    toast('Photo didn’t upload, so it was left off.'); return null;
+  }
 }
 function deletePhoto(pid){ if(pid && !pid.startsWith('data:')) photoRef(pid).delete().catch(()=>{}); }
 
@@ -385,6 +405,7 @@ let newSpotDraft = { name:'', lat:null, lng:null };
 let savingTrip = false;
 
 let lbView = 'daily';
+let lbSpot = null;          // one spot's board, from tapping a spot
 let myRecordsOnly = false;
 let locTab = 'freshwater';
 let addingLocation = false;
@@ -481,7 +502,7 @@ async function initLocAddMap(){
 function setTab(t){
   state.tab = t;
   if(t==='gear' && state.me) initGearDraft();
-  if(t==='trophies'){ myRecordsOnly = false; lbView='daily'; }
+  if(t==='trophies'){ myRecordsOnly = false; lbView='daily'; lbSpot=null; }
   if(t==='spots'){ locTab='freshwater'; addingLocation=false; }
   render();
   window.scrollTo(0,0);
@@ -490,7 +511,7 @@ function setTab(t){
 function render(){
   teardownMaps();
   const root = document.getElementById('root');
-  if(phase === 'boot' || phase === 'loading'){ root.innerHTML = `<div class="loading-screen">🎣<small>${phase==='loading'?'Loading your crew…':''}</small></div>`; return; }
+  if(phase === 'boot' || phase === 'loading' || phase === 'waiting'){ root.innerHTML = `<div class="loading-screen">🎣<small>${phase==='loading'?'Loading your crew…':phase==='waiting'?'Waiting for signal to load your crew…':''}</small></div>`; updateNet(); return; }
   if(phase === 'offline'){ root.innerHTML = gate('📡','You’re offline','Catch Log needs a connection to sign in and load your crew. Try again once you have signal.', `<button class="btn btn-primary" onclick="location.reload()">Try again</button>`); return; }
   if(phase === 'signin'){ root.innerHTML = gate('🎣','Catch Log','Sign in with Google to see your crew’s catches, spots and trophies. Only people with your crew link can see them.', `<button class="btn btn-primary" onclick="signIn()">Sign in with Google</button>`); return; }
   if(phase === 'denied'){ root.innerHTML = gate('🔒','Can’t open this crew','This crew link didn’t work. Ask whoever runs your crew to send it again.', `<button class="btn btn-primary" onclick="leaveCrew()">Use a different link</button><div style="height:10px"></div><button class="btn btn-secondary" onclick="signOut()">Sign out</button>`); return; }
@@ -514,6 +535,7 @@ function render(){
   else if(state.tab === 'editcatch') html = renderEditCatch();
   root.innerHTML = html;
   afterRender();
+  updateNet();
 }
 function gate(icon, title, text, actions){
   return `<div class="gate"><div class="big">${icon}</div><h1>${esc(title)}</h1><p>${esc(text)}</p>${actions}</div>`;
@@ -645,27 +667,35 @@ async function finishOuting(){
   if(savingTrip) return;
   if(catchDraft && catchDraft.catches.length > 0){
     savingTrip = true; render();
-    const catches = [];
-    for(const c of catchDraft.catches){
-      const out = {...c};
-      if(c.photo && c.photo.startsWith('data:')) out.photo = await uploadPhoto(c.photo);
-      catches.push(out);
+    const d0 = catchDraft;
+    if(!d0.id){ d0.id = `s_${Date.now()}_${Math.random().toString(36).slice(2,6)}`; saveDraft(); }
+    // Upload each photo once; the photo's id goes back into the trip on this phone, so a retry doesn't upload it again.
+    try{
+      for(const c of d0.catches){
+        if(c.photo && c.photo.startsWith('data:')){ c.photo = await uploadPhoto(c.photo, { quiet:true }); saveDraft(); }
+      }
+    }catch(e){
+      savingTrip = false; render();
+      toast(saveFailText(e) + ' Your trip is kept on this phone.', 6000);
+      return;
     }
-    const me = state.me, d0 = catchDraft;
+    const catches = d0.catches.map(c => ({...c}));
+    const me = state.me;
     const ok = await mutate(d => {
+      if(d.sessions.some(s => s.id === d0.id)) return;   // already saved (a retry after a slow save)
       if(d0.spotName && !d.spots.some(s=>s.name===d0.spotName)){
         d.spots.push({ id:`loc_${Date.now()}`, name:d0.spotName, type:'freshwater', lat:d0.lat, lng:d0.lng, addedBy:me, createdAt:new Date().toISOString() });
       }
       const g = d.gear[me] || {};
       d.sessions.push({
-        id:`s_${Date.now()}`, profileId: me,
+        id: d0.id, profileId: me,
         spotName: d0.spotName, lat: d0.lat, lng: d0.lng,
         startTime: d0.startTime, endTime: new Date().toISOString(),
         tackle: {...g, combos: undefined}, combos: g.combos || [], catches, loggedAt: new Date().toISOString()
       });
     });
     savingTrip = false;
-    if(!ok){ render(); return; }
+    if(!ok){ render(); return; }   // the trip stays on this phone; Done Fishing tries again
     toast('Trip saved 🎣');
   }
   catchDraft = null; catchJustSaved = false; saveDraft();
@@ -946,19 +976,20 @@ function renderTrophies(){
     const all = flattenCatches(meFilter);
     content = all.length===0?gmEmpty("No catches logged yet","Be the first!"):all.slice(0,10).map((e,i)=>rankRowHTML(e,i)).join('');
   } else {
-    const spots = [...new Set(state.sessions.filter(meFilter).map(s=>s.spotName))].filter(Boolean);
-    if(!spots.length) content = gmEmpty("No spots fished yet");
+    const spots = [...new Set(state.sessions.filter(meFilter).map(s=>s.spotName))].filter(n => n && (!lbSpot || n===lbSpot));
+    if(!spots.length) content = lbSpot ? gmEmpty("No catches here yet", "Log one at "+esc(lbSpot)+" to start its board.") : gmEmpty("No spots fished yet");
     else content = spots.map(spot => {
       const top = flattenCatches(s => s.spotName === spot && meFilter(s));
       if(!top.length) return '';
-      return `<div style="margin-bottom:14px;"><div class="section-title">📍 ${esc(spot)}</div>${top.slice(0,3).map((e,i)=>rankRowHTML(e,i)).join('')}</div>`;
+      return `<div style="margin-bottom:14px;"><div class="section-title">📍 ${esc(spot)}</div>${top.slice(0, lbSpot?10:3).map((e,i)=>rankRowHTML(e,i)).join('')}</div>`;
     }).join('');
   }
   const body = `
     <div class="chip-wrap" style="margin-bottom:14px;">
       <button class="chip ${lbView==='daily'?'active':''}" onclick="lbView='daily';render()">Today</button>
       <button class="chip ${lbView==='lifetime'?'active':''}" onclick="lbView='lifetime';render()">All-Time</button>
-      <button class="chip ${lbView==='spots'?'active':''}" onclick="lbView='spots';render()">By Spot</button>
+      <button class="chip ${lbView==='spots'&&!lbSpot?'active':''}" onclick="lbView='spots';lbSpot=null;render()">By Spot</button>
+      ${lbView==='spots'&&lbSpot ? `<button class="chip active" onclick="lbSpot=null;render()">📍 ${esc(lbSpot)} ✕</button>` : ''}
     </div>
     ${content}
   `;
@@ -988,7 +1019,7 @@ function renderHistory(){
 function openEdit(sid, cid){
   const s = state.sessions.find(x=>x.id===sid); const c = s && (s.catches||[]).find(x=>x.id===cid);
   if(!c || s.profileId!==state.me) return;
-  editRef = { sid, cid, species:c.species||'', weight:c.weight!=null?String(c.weight):'', length:c.length!=null?String(c.length):'' };
+  editRef = { sid, cid, species:c.species||'', weight:c.weight!=null?String(c.weight):'', length:c.length!=null?String(c.length):'', combo:c.combo||'', bait:c.bait||'' };
   state.tab='editcatch'; render(); window.scrollTo(0,0);
 }
 function renderEditCatch(){
@@ -1002,12 +1033,25 @@ function renderEditCatch(){
         <div style="flex:1;"><label class="small">LENGTH (IN)</label><input class="input" id="edLength" inputmode="decimal" value="${esc(editRef.length)}" oninput="editRef.length=this.value.replace(/[^0-9.]/g,'');this.value=editRef.length"></div>
       </div>
     </div>
+    ${editTackleHTML()}
     <button class="btn btn-danger" onclick="deleteCatch()">🗑 Remove this catch</button>
   `;
   return simpleScreen('✏️','EDIT CATCH', body,
     `<button class="btn btn-secondary" style="flex:1;" onclick="editRef=null;setTab('history')">Cancel</button><button class="btn btn-primary" style="flex:1;" onclick="saveEdit()">✅ Save</button>`,
     "editRef=null;setTab('history')");
 }
+/* The angler's combos and baits as chips (plus whatever this catch already had), tap again to clear. */
+function editTackleHTML(){
+  const combos = [...new Set([...myCombos().map(c=>c.name), editRef.combo].filter(Boolean))];
+  const baits = [...new Set([...myBaits(), editRef.bait].filter(Boolean))];
+  if(!combos.length && !baits.length) return '';
+  const chips = (field, list) => list.map(v => `<button type="button" class="chip ${editRef[field]===v?'active':''}" onclick="editPick('${field}','${jsq(v)}')">${esc(v)}</button>`).join('');
+  return `<div class="card"><div class="section-title">🪝 Caught On</div>
+    ${combos.length ? `<label class="small">ROD &amp; REEL</label><div class="chip-wrap" style="margin-bottom:10px;">${chips('combo', combos)}</div>` : ''}
+    ${baits.length ? `<label class="small">BAIT</label><div class="chip-wrap">${chips('bait', baits)}</div>` : ''}
+  </div>`;
+}
+function editPick(field, v){ editRef[field] = editRef[field]===v ? '' : v; render(); }
 async function saveEdit(){
   const r = editRef; if(!r || !r.species.trim()){ toast('Species can’t be blank.'); return; }
   const me = state.me;
@@ -1015,6 +1059,7 @@ async function saveEdit(){
     const s = d.sessions.find(x=>x.id===r.sid); if(!s || s.profileId!==me) return;
     const c = (s.catches||[]).find(x=>x.id===r.cid); if(!c) return;
     c.species = r.species.trim(); c.weight = r.weight?Number(r.weight):null; c.length = r.length?Number(r.length):null;
+    c.combo = r.combo || null; c.bait = r.bait || null;
   });
   if(ok){ editRef = null; toast('Catch updated'); setTab('history'); }
 }
@@ -1059,7 +1104,7 @@ function spotCardHTML(loc){
     </button>
   `;
 }
-function viewSpotBoard(){ lbView='spots'; myRecordsOnly=false; state.tab='trophies'; render(); window.scrollTo(0,0); }
+function viewSpotBoard(name){ lbView='spots'; lbSpot = name || null; myRecordsOnly=false; state.tab='trophies'; render(); }
 function toggleAddLocation(){
   addingLocation = !addingLocation;
   if(addingLocation) newLocDraft = { name:'', type: locTab, lat:null, lng:null };
@@ -1223,6 +1268,15 @@ function renderSettings(){
 /* =========================================================
    BOOT
 ========================================================= */
+/* No signal: say so once, at the top. A trip being logged lives on this phone until Done Fishing saves it. */
+function updateNet(){
+  let b = document.getElementById('netBar');
+  if(!b){ b = document.createElement('div'); b.id = 'netBar'; b.className = 'net-bar'; b.setAttribute('role','status'); document.body.appendChild(b); }
+  b.textContent = '📡 No signal · catches stay on this phone';
+  b.classList.toggle('on', navigator.onLine === false && (phase === 'ready' || phase === 'waiting'));
+}
+window.addEventListener('online', () => { updateNet(); if(phase==='ready') toast('Back online'); });
+window.addEventListener('offline', updateNet);
 initAuth();
 if('serviceWorker' in navigator && (location.protocol === 'https:' || /^(localhost|127\.0\.0\.1)$/.test(location.hostname))) navigator.serviceWorker.register('sw.js').catch(()=>{});
 </script>
