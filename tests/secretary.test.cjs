@@ -17,7 +17,9 @@ const plain = html => html.replace(/<[^>]+>/g, ' ').replace(/&amp;/g, '&').repla
 
 // Six members, Member F absent, so five can vote.
 async function setup(page, extra) {
-  await page.waitForFunction(() => typeof newMeeting === 'function' && typeof view !== 'undefined' && view === 'home');
+  // view starts as 'home' before boot runs, and boot's own go('home') closes any open sheet. Cloud.state leaves
+  // 'off' only once boot has drawn home and started the cloud, so waiting on it keeps boot from closing the motion box.
+  await page.waitForFunction(() => typeof newMeeting === 'function' && typeof view !== 'undefined' && view === 'home' && typeof Cloud !== 'undefined' && Cloud.state !== 'off');
   await page.evaluate(extra => {
     SETTINGS.roster = ['A', 'B', 'C', 'D', 'E', 'F'].map(l => ({ name: 'Member ' + l, role: 'Director' }));
     SETTINGS.secretary = extra.secretary || '';
