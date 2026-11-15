@@ -125,7 +125,7 @@ input[type=range]:focus-visible{outline-offset:-2px}
 .thumb{aspect-ratio:4/3;background:#0a1220;display:grid;place-items:center;overflow:hidden}
 .thumb svg{width:100%;height:100%;display:block}
 .card-b{padding:8px 44px 10px 10px}
-.card-t{font-family:var(--disp);font-weight:700;font-size:19px;line-height:1.15;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.card-t{font-family:var(--disp);font-weight:700;font-size:19px;line-height:1.15;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;line-clamp:2;-webkit-box-orient:vertical;overflow-wrap:anywhere}
 .card-m{font-size:12.5px;color:var(--mute);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .card-more{position:absolute;right:0;bottom:0}
 .empty{text-align:center;padding:40px 12px;color:var(--mute)}

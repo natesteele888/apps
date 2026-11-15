@@ -96,6 +96,29 @@ const TODAY = '2026-11-08';
     eq(C.dayKey(new Date(2026, 10, 8)), '2026-11-08'); eq(C.addDays('2026-11-30', 1), '2026-12-01'); eq(C.addDays('2026-01-01', -1), '2025-12-31'); eq(C.addDays('2028-02-28', 1), '2028-02-29');
     eq(C.parseDay('2026-02-30'), null); eq(C.parseDay('nope'), null);
   });
+  await test('core: removing a story or a book from home takes the time out, keeps reading that comes later, and survives merging with an older copy', () => {
+    const s = C.empty(); C.dev = 'a'; C.addSeconds(s, TODAY, 'x', 120); C.addManual(s, TODAY, 'Home', 3); C.addSeconds(s, TODAY, 'y', 300); const before = JSON.parse(JSON.stringify(C.serialize(s)));
+    eq(C.daySec(s, TODAY), 600); eq(C.removeBook(s, TODAY, 'x'), true); eq(C.daySec(s, TODAY), 480); eq(s.days[TODAY].books.x, undefined); eq(C.removeExtra(s, TODAY, 'a', 0), true); eq(C.daySec(s, TODAY), 300);
+    eq(C.removeBook(s, TODAY, 'nope'), false); eq(C.removeExtra(s, TODAY, 'a', 5), false);
+    const back = C.sanitize(JSON.parse(JSON.stringify(C.serialize(s)))); eq(C.daySec(back, TODAY), 300, 'saved and loaded');
+    eq(C.daySec(C.merge(back, C.sanitize(before)), TODAY), 300, 'an older copy cannot bring it back'); eq(C.daySec(C.merge(C.sanitize(before), back), TODAY), 300, 'in either order');
+    C.addSeconds(back, TODAY, 'x', 60); eq(C.daySec(back, TODAY), 360, 'new reading of the same story after removal still counts'); eq(back.days[TODAY].books.x.sec, 60);
+    C.dev = 'local';
+  });
+  await test('core: the morning second chance appears only for a short night, before noon', () => {
+    const s = C.empty(); C.addSeconds(s, '2026-11-08', 'a', 720);
+    const m = C.makeup(s, '2026-11-09', 8); eq(m.day, '2026-11-08'); eq(m.sec, 720); eq(m.left, 480);
+    eq(C.makeup(s, '2026-11-09', 12), null, 'not after noon'); eq(C.makeup(s, '2026-11-09', 19), null); eq(C.makeup(s, '2026-11-10', 8), null, 'only the night just before');
+    C.addSeconds(s, '2026-11-08', 'a', 480); eq(C.makeup(s, '2026-11-09', 8), null, 'a finished night is not offered'); eq(C.makeup(C.empty(), '2026-11-09', 8), null, 'a night with no reading is not offered');
+  });
+  await test('core: longest streak, best day and the cheers for tonight', () => {
+    const s = C.empty(); ['2026-11-03', '2026-11-04', '2026-11-05', '2026-11-06'].forEach(k => C.addSeconds(s, k, 'a', 1200)); C.addSeconds(s, '2026-11-01', 'a', 1500);
+    eq(C.bestStreak(s), 4); eq(C.bestDay(s), 1500); eq(C.bestDay(s, '2026-11-01'), 1200);
+    C.addSeconds(s, '2026-11-07', 'a', 1200); const c = C.cheers(s, '2026-11-07'); eq(c.streak, 5); eq(c.milestone, 5); eq(c.record, true);
+    const u = C.empty(); ['2026-11-01', '2026-11-02', '2026-11-03', '2026-11-04'].forEach(k => C.addSeconds(u, k, 'a', 1200)); ['2026-11-07', '2026-11-08'].forEach(k => C.addSeconds(u, k, 'a', 1200));
+    const d = C.cheers(u, '2026-11-08'); eq(d.streak, 2); eq(d.milestone, 0); eq(d.record, false, 'a shorter run than the best is not a record');
+    eq(C.cheers(C.empty(), TODAY).record, false);
+  });
   await test('core: seconds add to the day and the story; goal and streak math', () => {
     const s = C.empty();
     eq(C.addSeconds(s, TODAY, 'a', 600), 600); eq(C.addSeconds(s, TODAY, 'b', 599), 599); eq(C.daySec(s, TODAY), 1199); assert.ok(!C.isDone(s, TODAY), '19:59 is not done');
@@ -165,10 +188,10 @@ const TODAY = '2026-11-08';
   await test('core: readers (several children on one phone): legacy saves become "main", merges union, removed stays removed', () => {
     const legacy = C.sanitizeRoot({ name: 'Old', days: { [TODAY]: { sec: 900, books: {}, extra: [] } } }); eq(legacy.order.join(), 'main'); eq(legacy.active, 'main'); eq(legacy.profiles.main.name, 'Old'); eq(C.totalAll(legacy), 900);
     eq(JSON.stringify(C.sanitizeRoot(null)), JSON.stringify(C.emptyRoot())); eq(C.sanitizeRoot('junk').order.join(), 'main'); eq(C.sanitizeRoot({ profiles: {} }).order.join(), 'main');
-    const a = C.emptyRoot(); a.profiles.main.name = 'Gigi'; a.profiles.p1 = C.empty(); a.profiles.p1.name = 'Ava'; a.profiles.p1.av = '🐼'; a.order.push('p1'); a.active = 'p1';
+    const a = C.emptyRoot(); a.profiles.main.name = 'Riley'; a.profiles.p1 = C.empty(); a.profiles.p1.name = 'Ava'; a.profiles.p1.av = '🐼'; a.order.push('p1'); a.active = 'p1';
     const rt = C.sanitizeRoot(JSON.parse(JSON.stringify(C.serializeRoot(a)))); eq(rt.order.join(), 'main,p1'); eq(rt.active, 'p1'); eq(rt.profiles.p1.av, '🐼'); eq(C.sanitize({ av: '💣' }).av, '', 'only the picture list is allowed');
     const b = C.emptyRoot(); C.dev = 'mom'; C.addSeconds(b.profiles.main, TODAY, 'x', 600); C.dev = 'local';
-    const m = C.mergeRoot(a, b); eq(m.order.join(), 'main,p1'); eq(m.active, 'p1', 'each phone keeps its own current reader'); eq(C.daySec(m.profiles.main, TODAY), 600); eq(m.profiles.main.name, 'Gigi');
+    const m = C.mergeRoot(a, b); eq(m.order.join(), 'main,p1'); eq(m.active, 'p1', 'each phone keeps its own current reader'); eq(C.daySec(m.profiles.main, TODAY), 600); eq(m.profiles.main.name, 'Riley');
     eq(C.mergeRoot(C.emptyRoot(), a).order.join(), 'main,p1'); eq(C.mergeRoot(m, m).order.join(), 'main,p1');
     const g = C.mergeRoot(a, { profiles: { p1: a.profiles.p1 }, gone: { p1: 1 }, order: ['p1'] }); eq(g.order.join(), 'main', 'removed on one phone, removed everywhere'); eq(C.mergeRoot(g, a).order.join(), 'main', 'and an old copy cannot bring it back');
     const f = C.mergeRoot(C.emptyRoot(), { profiles: { p9: Object.assign(C.empty(), { name: 'Zed' }) }, order: ['p9'] }); eq(f.order.join(), 'p9', 'an untouched starter reader steps aside for real ones');
@@ -265,7 +288,7 @@ const TODAY = '2026-11-08';
     await page.screenshot({ path: SHOTS + '/read20-log-keep.png', fullPage: true });
   });
   await test('press and hold: a word opens a pop-up with its syllables and sounds; a quick tap only highlights', async () => {
-    const { page } = await mk(); await page.locator('.lv[data-lv="4"]').click(); await page.locator('.cover', { hasText: 'Pete the Bee' }).click(); await page.waitForSelector('.reader');
+    const { page } = await mk(); await page.evaluate(() => localStorage.setItem('read20.syllables', '1'));  await page.locator('.lv[data-lv="4"]').click(); await page.locator('.cover', { hasText: 'Pete the Bee' }).click(); await page.waitForSelector('.reader');
     const w = page.locator('.w').first(); const press = async (loc, ms) => { const b = await loc.boundingBox(); await page.mouse.move(b.x + b.width / 2, b.y + b.height / 2); await page.mouse.down(); await page.clock.runFor(ms); await page.mouse.up(); };
     await press(w, 100); eq(await page.locator('.wordpop').count(), 0, 'quick tap: no pop-up'); eq(await page.locator('.w.hl').count(), 1);
     await press(w, 100); eq(await page.locator('.w.hl').count(), 0, 'second tap clears');
@@ -280,7 +303,7 @@ const TODAY = '2026-11-08';
     await page.locator('#prev').click(); await page.locator('#prev').click(); await page.locator('#prev').click(); // "Zoom! Pete lands on the rose."
   });
   await test('press and hold: syllable chips for long words, tricky words get a note, and reading time keeps counting', async () => {
-    const { page } = await mk(); await page.locator('.lv[data-lv="3"]').click(); await page.locator('.cover', { hasText: 'Hickory Dickory Dock' }).click(); await page.waitForSelector('.reader');
+    const { page } = await mk(); await page.evaluate(() => localStorage.setItem('read20.syllables', '1'));  await page.locator('.lv[data-lv="3"]').click(); await page.locator('.cover', { hasText: 'Hickory Dickory Dock' }).click(); await page.waitForSelector('.reader');
     const press = async (loc, ms) => { const b = await loc.boundingBox(); await page.mouse.move(b.x + b.width / 2, b.y + b.height / 2); await page.mouse.down(); await page.clock.runFor(ms); await page.mouse.up(); };
     const before = await sec(page); await press(page.locator('.w').first(), 700); await page.locator('.wordpop').waitFor();
     eq((await page.locator('.syl .st').allInnerTexts()).join('-').toLowerCase(), 'hick-o-ry'); eq(await page.locator('.syl').count(), 3);
@@ -364,17 +387,17 @@ const TODAY = '2026-11-08';
   const FAKE_FB = `(function(){ if (window.firebase) return; var L = [], user = null; try { user = JSON.parse(localStorage.getItem('fakeUser')); } catch (e) {}
     function Tx() { this.w = []; } Tx.prototype.get = async function (r) { var d = await window.__fsGet(r.path); if (d && d.__deny) { var e = new Error('denied'); e.code = 'permission-denied'; throw e; } return { exists: d != null, data: function () { return d; } }; }; Tx.prototype.set = function (r, d) { this.w.push([r.path, d]); };
     var auth = { get currentUser() { return user; }, onAuthStateChanged: function (cb) { L.push(cb); setTimeout(function () { cb(user); }, 0); }, signInWithPopup: async function () { user = { uid: window.__uid || 'parent1', email: 'parent@example.com' }; localStorage.setItem('fakeUser', JSON.stringify(user)); L.forEach(function (f) { f(user); }); }, signOut: async function () { user = null; localStorage.removeItem('fakeUser'); L.forEach(function (f) { f(null); }); } };
-    var fs = { collection: function (c) { return { doc: function (id) { return { path: c + '/' + id }; } }; }, runTransaction: async function (fn) { var t = new Tx(); await fn(t); for (var i = 0; i < t.w.length; i++) await window.__fsSet(t.w[i][0], t.w[i][1]); } };
+    var fs = { collection: function (c) { return { doc: function (id) { var path = c + '/' + id; return { path: path, get: async function () { var d = await window.__fsGet(path); if (d && d.__deny) { var e = new Error('denied'); e.code = 'permission-denied'; throw e; } return { exists: d != null, data: function () { return d; } }; } }; } }; }, runTransaction: async function (fn) { var t = new Tx(); await fn(t); for (var i = 0; i < t.w.length; i++) await window.__fsSet(t.w[i][0], t.w[i][1]); } };
     window.firebase = { apps: [], initializeApp: function () { this.apps.push(1); }, auth: Object.assign(function () { return auth; }, { GoogleAuthProvider: function () { this.setCustomParameters = function () {}; } }), firestore: Object.assign(function () { return fs; }, { FieldValue: { serverTimestamp: function () { return 'TS'; } } }) }; })();`;
   const cloudDb = new Map(); let fsDeny = false;
   const mkPhone = async (opts = {}) => {
     const ctx = await br.newContext({ viewport: { width: 390, height: 844 }, serviceWorkers: 'block' });
-    let hits = 0;
-    await ctx.exposeFunction('__fsGet', async p => { if (fsDeny) return { __deny: true }; return cloudDb.has(p) ? cloudDb.get(p) : null; });
-    await ctx.exposeFunction('__fsSet', async (p, d) => { cloudDb.set(p, d); });
+    let hits = 0; const paths = [];
+    await ctx.exposeFunction('__fsGet', async p => { paths.push('get ' + p); if (fsDeny) return { __deny: true }; return cloudDb.has(p) ? cloudDb.get(p) : null; });
+    await ctx.exposeFunction('__fsSet', async (p, d) => { paths.push('set ' + p); cloudDb.set(p, d); });
     await ctx.route(/gstatic\.com\/firebasejs/, r => { hits++; opts.offline ? r.abort() : r.fulfill({ contentType: 'text/javascript', body: FAKE_FB }); });
     const o = await newPage(br, { context: ctx, today: TODAY }); await o.page.clock.install({ time: new Date('2026-11-08T19:00:00') }); if (opts.uid) await o.page.addInitScript(u => { window.__uid = u; }, opts.uid);
-    await o.page.goto(srv.url + (opts.hash || '')); await o.page.waitForSelector('.cover'); o.hits = () => hits; return o;
+    await o.page.goto(srv.url + (opts.hash || '')); await o.page.waitForSelector('.cover'); o.hits = () => hits; o.paths = paths; return o;
   };
   const logMin = async (page, title, min) => { await page.locator('#manual').click(); await page.fill('#mt', title); await page.fill('#mm', String(min)); await page.locator('#ms').click(); await page.waitForSelector('.cover'); };
   const cloudSec = (day, path = 'r20_users/parent1') => { const d = cloudDb.get(path); return d ? (C.sanitizeRoot(JSON.parse(d.log)).profiles.main.days[day] || { sec: 0 }).sec : -1; };
@@ -444,7 +467,7 @@ const TODAY = '2026-11-08';
   });
   await test('audio: popup buttons and tapped words speak through the same voice; no voice on the phone hides the speaker button', async () => {
     const { page } = await mkAudio(); await page.locator('#gear').click(); await page.locator('#ss').check(); await page.locator('#sd').click();
-    await page.locator('.cover', { hasText: 'Sam the Cat' }).click(); await page.waitForSelector('.reader'); await page.locator('.w').nth(3).click(); await page.waitForTimeout(150);
+    await page.locator('.cover', { hasText: 'Sam the Cat' }).click(); await page.waitForSelector('.reader'); await page.evaluate(() => localStorage.setItem('read20.syllables', '1')); await page.locator('.w').nth(3).click(); await page.waitForTimeout(150);
     assert.ok((await page.evaluate(() => window.__said)).some(x => /^cat@/.test(x)), 'tapped word spoken');
     const b = await page.locator('.w').nth(0).boundingBox(); await page.mouse.move(b.x + b.width / 2, b.y + b.height / 2); await page.mouse.down(); await page.waitForTimeout(600); await page.mouse.up(); await page.locator('.wordpop').waitFor();
     await page.locator('#wphear').click(); await page.waitForTimeout(150); assert.ok((await page.evaluate(() => window.__said)).some(x => /^sam@0\.75/.test(x)));
@@ -502,14 +525,14 @@ const TODAY = '2026-11-08';
     eq(await sec(page), 0, 'a new reader starts fresh'); assert.ok(/ready to read/i.test(await page.locator('.today h2').innerText()));
     await page.locator('#manual').click(); await page.fill('#mm', '7'); await page.locator('#ms').click(); await page.waitForSelector('.cover'); eq(await sec(page), 420);
     await page.locator('.rd[data-id]').first().click(); await page.waitForFunction(() => document.querySelector('.rd.on .nm').textContent === 'Reader'); eq(await sec(page), 1200, 'the first reader still has their 20 minutes'); assert.ok(/done/i.test(await page.locator('.today h2').innerText()));
-    await page.locator('#gear').click(); await page.selectOption('#sg', '10'); await page.fill('#sn', 'Gigi'); await page.locator('.avp[data-av="🦄"]').click(); await page.locator('#sd').click(); await page.waitForSelector('.cover');
-    eq(await page.locator('.rd.on .nm').innerText(), 'Gigi'); eq(await page.locator('.rd.on .av').innerText(), '🦄'); eq(await page.locator('.rd:not(.on):not(.add) .nm').innerText(), 'Ava', 'only the open reader changed');
+    await page.locator('#gear').click(); await page.selectOption('#sg', '10'); await page.fill('#sn', 'Riley'); await page.locator('.avp[data-av="🦄"]').click(); await page.locator('#sd').click(); await page.waitForSelector('.cover');
+    eq(await page.locator('.rd.on .nm').innerText(), 'Riley'); eq(await page.locator('.rd.on .av').innerText(), '🦄'); eq(await page.locator('.rd:not(.on):not(.add) .nm').innerText(), 'Ava', 'only the open reader changed');
     await page.locator('.rd:not(.on):not(.add)').click(); await page.waitForFunction(() => document.querySelector('.rd.on .nm').textContent === 'Ava'); eq(await page.evaluate(() => R20App._state().goal), 20, 'Ava still has the 20 minute goal'); eq(await sec(page), 420);
     await page.locator('#nav button[data-go="log"]').click(); await page.waitForSelector('.cal'); assert.ok(/Ava's Reading Log/.test(await page.locator('h1').innerText())); assert.ok(/7 min/.test(await page.locator('#detail').innerText()));
     await page.screenshot({ path: SHOTS + '/read20-readers-log.png' }); await page.locator('#nav button[data-go=""]').click(); await page.waitForSelector('.cover');
     await page.reload(); await page.waitForSelector('.cover'); eq(await page.locator('.rd.on .nm').innerText(), 'Ava', 'the open reader is remembered'); eq(await page.locator('.rd[data-id]').count(), 2);
     await page.locator('.cover', { hasText: 'Sam the Cat' }).click(); await page.waitForSelector('.reader'); await page.clock.runFor(30000); eq(await sec(page), 450, 'reading time goes to the open reader');
-    await page.locator('#back').click(); await page.waitForSelector('.cover'); await page.locator('.rd[data-id]').first().click(); await page.waitForFunction(() => document.querySelector('.rd.on .nm').textContent === 'Gigi'); eq(await sec(page), 1200, 'and not to the other');
+    await page.locator('#back').click(); await page.waitForSelector('.cover'); await page.locator('.rd[data-id]').first().click(); await page.waitForFunction(() => document.querySelector('.rd.on .nm').textContent === 'Riley'); eq(await sec(page), 1200, 'and not to the other');
     await page.screenshot({ path: SHOTS + '/read20-readers.png' }); eq(errors.length, 0, errors.join('|'));
   });
   await test('readers: an old single-reader save moves over untouched; removing a reader asks first, keeps the last one, and stays removed', async () => {
@@ -529,13 +552,13 @@ const TODAY = '2026-11-08';
     eq(await page.locator('.sheet .set').count(), 3, 'three groups'); assert.ok(await page.locator('.sheet button:visible:not(.avp)').count() <= 7, 'few buttons: ' + await page.locator('.sheet button:visible:not(.avp)').count());
     for (const id of ['#cin', '#shmake', '#jcode', '#sb', '#sr', '#se']) eq(await page.locator(id).count(), 0, id + ' is not on the first settings screen');
     assert.ok(await page.locator('#setsafe').isVisible()); await page.screenshot({ path: SHOTS + '/read20-settings.png' });
-    await page.locator('#setsafe').click(); await page.locator('#cin').waitFor(); eq(await page.locator('.sheet').last().locator('.set').count(), 3, 'online, sharing, and file'); await page.screenshot({ path: SHOTS + '/read20-safe.png' });
+    await page.locator('#setsafe').click(); await page.locator('#cin').waitFor(); eq(await page.locator('.sheet').last().locator('.set').count(), 4, 'online, sharing, one reader\'s own phone, and file'); await page.screenshot({ path: SHOTS + '/read20-safe.png' });
     await closeSafe(page);
   });
   await test('readers: the cloud and backup files carry every reader; a removed reader stays removed on the other phone', async () => {
     cloudDb.clear(); fsDeny = false; const a = await mkPhone({ uid: 'dadr' });
     await a.page.locator('#addrd').click(); await a.page.fill('#rn', 'Ava'); await a.page.locator('#ra').click(); await a.page.waitForFunction(() => document.querySelector('.rd.on .nm').textContent === 'Ava'); await logMin(a.page, 'Ava book', 9);
-    await a.page.locator('.rd[data-id]').first().click(); await logMin(a.page, 'Gigi book', 12);
+    await a.page.locator('.rd[data-id]').first().click(); await logMin(a.page, 'Riley book', 12);
     await openSafe(a.page); await a.page.locator('#cin').click(); await a.page.waitForFunction(() => /Backed up as/.test(document.querySelector('#cl').textContent));
     const dl = a.page.waitForEvent('download'); await a.page.locator('#sb').click(); const d = await dl; const j = JSON.parse(require('fs').readFileSync(await d.path(), 'utf8')); eq(Object.keys(j.data.profiles).length, 2, 'the backup file holds both readers');
     await closeSafe(a.page);
@@ -555,6 +578,7 @@ const TODAY = '2026-11-08';
     eq(await page.locator('.cover').count(), 5, 'sports first'); await page.locator('.lv[data-tp="athletes"]').click(); eq(await page.locator('.cover').count(), 16); await page.locator('.lv[data-tp="photo"]').click(); eq(await page.locator('.cover').count(), 6); await page.locator('.lv[data-tp="social"]').click(); eq(await page.locator('.cover').count(), 11); await page.locator('.lv[data-tp="english"]').click(); eq(await page.locator('.cover').count(), 5);
     assert.ok(await page.locator('#next').isVisible()); assert.ok(/Curveball/.test(await page.locator('#next').innerText())); await page.screenshot({ path: SHOTS + '/read20-older-shelf.png' });
     await page.locator('.lv[data-tp="sports"]').click(); await page.locator('.cover', { hasText: 'Curveball' }).click(); await page.waitForSelector('.reader.older');
+    assert.ok(/tap a word to hear it/i.test(await page.locator('.hint').innerText()), 'syllables are off for now'); await page.evaluate(() => localStorage.setItem('read20.syllables', '1')); await page.locator('#back').click(); await page.waitForSelector('.cover'); await page.locator('.cover', { hasText: 'Curveball' }).click(); await page.waitForSelector('.reader.older');
     assert.ok(/Press and hold a word to see its syllables/.test(await page.locator('.hint').innerText())); assert.ok((await page.locator('.w').count()) > 30, 'a full paragraph'); await page.screenshot({ path: SHOTS + '/read20-older-reader.png' });
     // press and hold a long word: syllables only, no sound chips, no "tricky" note
     const w = page.locator('.w', { hasText: 'seconds' }).first(); await page.locator('#nextp').click(); await page.locator('#nextp').click();
@@ -607,9 +631,200 @@ const TODAY = '2026-11-08';
     await page.locator('#manual').click(); await page.fill('#mm', '12'); await page.locator('#ms').click(); await page.waitForSelector('.cover'); eq(await sec(page), 720);
     await page.locator('#gear').click(); assert.ok(/Library: \d+ stories · version 20\d\d-\d\d-\d\d/.test(await page.locator('#sver').innerText()), await page.locator('#sver').innerText());
     const total = await page.evaluate(() => R20Books.books.length); assert.ok(new RegExp('Library: ' + total + ' stories').test(await page.locator('#sver').innerText()), 'the count is the real library size, so a phone with an old library shows a smaller number');
-    await page.evaluate(() => { window.__marker = 1; }); await Promise.all([page.waitForNavigation({ timeout: 15000 }), page.locator('#srefresh').click()]); await page.waitForSelector('.cover');
+    await page.evaluate(() => { window.__marker = 1; }); await page.locator('#srefresh').click(); await page.waitForFunction(() => window.__marker === undefined, null, { timeout: 15000 }); await page.waitForSelector('.cover');
     eq(await page.evaluate(() => window.__marker === undefined), true, 'the page reloaded'); eq(await sec(page), 720, 'her 12 minutes are still there');
     eq(await page.evaluate(() => JSON.parse(localStorage.getItem('read20.v1')).profiles.main.days[window.__today || Object.keys(JSON.parse(localStorage.getItem('read20.v1')).profiles.main.days)[0]] !== undefined), true);
+  });
+  await test('one reader per phone: a parent links a child\'s phone to a single reader; the child\'s phone sees only that reader and its reading is merged, not lost', async () => {
+    cloudDb.clear(); fsDeny = false;
+    const par = await mkPhone({ uid: 'parentR' }); await logMin(par.page, 'Parent-phone book', 10);   // the starter reader: 10 minutes
+    await par.page.locator('#addrd').click(); await par.page.fill('#rn', 'Kidtwo'); await par.page.locator('#ra').click(); await par.page.waitForFunction(() => document.querySelector('.rd.on .nm').textContent === 'Kidtwo');
+    await logMin(par.page, 'Kid book', 15); const kidId = await par.page.evaluate(() => R20App._root().active), otherId = await par.page.evaluate(() => R20App._root().order[0]); assert.ok(kidId !== otherId);
+    await openSafe(par.page); await par.page.locator('#cin').click(); await par.page.waitForFunction(() => /Backed up as/.test(document.querySelector('#cl').textContent));
+    eq(await par.page.locator('#rdname').innerText(), 'Kidtwo'); await par.page.locator('#rlmake').click(); await par.page.waitForFunction(() => /This reader is linked/.test(document.querySelector('#rlmsg').textContent));
+    const key = await par.page.evaluate(() => Object.values(R20Cloud.readerKeys())[0]); assert.ok(/^[a-z2-7]{20}$/.test(key)); eq(await par.page.evaluate(() => Object.keys(R20Cloud.readerKeys()).join()), kidId);
+    // what is stored for the link: ONE reader, nothing about the others
+    const doc = JSON.parse(cloudDb.get('r20_shared/' + key).log); eq(doc.kind, 'reader'); eq(doc.id, kidId); assert.ok(!('profiles' in doc) && !JSON.stringify(doc).includes(otherId), 'the other reader is not in the link\'s record'); eq(doc.profile.name, 'Kidtwo');
+    await par.page.screenshot({ path: SHOTS + '/read20-readerlink.png' }); const link = await par.page.evaluate(k => R20Cloud.readerLink(k), key); assert.ok(link.endsWith('#reader=' + key));
+    await closeSafe(par.page);
+    // the child's own phone: it already has 7 minutes of its own reading and an unrelated starter reader
+    const kid = await mkPhone({ uid: 'kidAcct' }); await logMin(kid.page, 'Own book', 7); const before = await kid.page.evaluate(() => R20Core.totalAll(R20App._root()));
+    await kid.page.waitForTimeout(500); await kid.page.evaluate(h => { location.hash = h; }, '#reader=' + key); await kid.page.locator('#jryes').waitFor(); assert.ok(/only that one reader/.test(await kid.page.locator('.sheet').innerText()) && /Any Google account works/.test(await kid.page.locator('.sheet').innerText()));
+    await kid.page.locator('#jryes').click(); await kid.page.waitForFunction(() => R20Cloud.kid() && document.querySelector('.rd.on .nm').textContent === 'Kidtwo', null, { timeout: 8000 });
+    const root = await kid.page.evaluate(() => R20App._root()); eq(root.order.join(), kidId, 'exactly one reader on the child\'s phone'); eq(await kid.page.locator('.rd[data-id]').count(), 1); eq(await kid.page.locator('#addrd').count(), 0, 'no way to add readers');
+    eq(await sec(kid.page), 15 * 60 + 7 * 60, 'the reader\'s 15 minutes plus the 7 already read on this phone'); assert.ok(before === 420);
+    assert.ok(await kid.page.evaluate(() => (localStorage.getItem('read20.v1.beforelink') || '').length > 20), 'a safety copy of the old save is kept');
+    await kid.page.locator('#nav button[data-go="log"]').click(); await kid.page.waitForSelector('.cal'); eq(await kid.page.locator('.keep').count(), 0, 'no backup card on the log screen'); await kid.page.locator('#nav button[data-go=""]').click(); await kid.page.waitForSelector('.cover');
+    await kid.page.locator('#gear').click(); await kid.page.waitForSelector('.sheet'); eq(await kid.page.locator('#setsafe').count(), 0, 'no parent screens in Settings'); eq(await kid.page.locator('#srm').count(), 0); eq(await kid.page.locator('#kunlink').count(), 1); await kid.page.screenshot({ path: SHOTS + '/read20-kidsettings.png' }); await kid.page.locator('#sd').click();
+    // reading on the child's phone shows up for the parent; the child's phone only ever touches that one record
+    await logMin(kid.page, 'More reading', 5); await kid.page.evaluate(() => R20Cloud.syncNow()); await kid.page.waitForTimeout(500);
+    for (const p of kid.paths) assert.ok(p === 'get r20_shared/' + key || p === 'set r20_shared/' + key, 'the child\'s phone touched ' + p); assert.ok(!kid.paths.some(p => /r20_users/.test(p)), 'never the family backup');
+    await par.page.evaluate(() => R20Cloud.syncNow()); await par.page.waitForTimeout(500); eq(await par.page.evaluate(id => R20Core.daySec(R20App._root().profiles[id], window.__today), kidId), (15 + 7 + 5) * 60, 'the parent\'s copy of this reader now includes the child\'s phone');
+    eq(await par.page.evaluate(id => R20Core.daySec(R20App._root().profiles[id], window.__today), otherId), 600, 'the other reader is untouched');
+    eq(JSON.parse(cloudDb.get('r20_shared/' + key).log).kind, 'reader');
+    // stopping: the child's phone keeps its reading but stops syncing
+    await kid.page.locator('#gear').click(); kid.page.once('dialog', d => d.accept()); await kid.page.locator('#kunlink').click(); await kid.page.waitForTimeout(300); eq(await kid.page.evaluate(() => R20Cloud.kid()), null);
+    const docBefore = cloudDb.get('r20_shared/' + key).log; await logMin(kid.page, 'After unlink', 3); await kid.page.evaluate(() => R20Cloud.syncNow()); await kid.page.waitForTimeout(300); eq(cloudDb.get('r20_shared/' + key).log, docBefore, 'nothing is sent after unlinking');
+    await openSafe(par.page); assert.ok(await par.page.locator('#rlstop').isVisible()); await par.page.locator('#rlstop').click(); eq(await par.page.evaluate(() => Object.keys(R20Cloud.readerKeys()).length), 0); await closeSafe(par.page);
+  });
+  await test('one reader per phone: a bad or old reader link changes nothing, and a phone that is already a family-link phone is not hijacked', async () => {
+    cloudDb.clear(); fsDeny = false; const a = await mkPhone({ uid: 'someone' }); await logMin(a.page, 'Mine', 9); await a.page.waitForTimeout(500); await a.page.evaluate(() => { location.hash = '#reader=aaaaaaaaaaaaaaaaaaaa'; }); await a.page.locator('#jryes').waitFor();
+    await a.page.locator('#jryes').click(); await a.page.waitForFunction(() => /not found/.test(document.querySelector('#jrmsg').textContent), null, { timeout: 8000 }); eq(await a.page.evaluate(() => R20Cloud.kid()), null); eq(await sec(a.page), 540, 'its reading is untouched');
+    eq(await a.page.evaluate(() => R20App._root().order.length), 1);
+    const q = await a.page.evaluate(() => [R20Cloud.parseReaderKey('https://x.github.io/apps/read20/#reader=abcdefghijklmnopqrst'), R20Cloud.parseReaderKey('ABCDE-FGHIJ-KLMNO-PQRST'), R20Cloud.parseReaderKey('nope')]); eq(q.join('|'), 'abcdefghijklmnopqrst|abcdefghijklmnopqrst|');
+  });
+  await test('one reader per phone: the code can be pasted inside the app (for a home-screen app that cannot see the browser)', async () => {
+    cloudDb.clear(); fsDeny = false; const par = await mkPhone({ uid: 'p1' }); await par.page.locator('#addrd').click(); await par.page.fill('#rn', 'Pasted'); await par.page.locator('#ra').click(); await par.page.waitForFunction(() => document.querySelector('.rd.on .nm').textContent === 'Pasted');
+    await logMin(par.page, 'x', 11); await openSafe(par.page); await par.page.locator('#cin').click(); await par.page.waitForFunction(() => /Backed up as/.test(document.querySelector('#cl').textContent)); await par.page.locator('#rlmake').click(); await par.page.waitForFunction(() => /This reader is linked/.test(document.querySelector('#rlmsg').textContent));
+    const pretty = await par.page.evaluate(() => R20Cloud.pretty(Object.values(R20Cloud.readerKeys())[0])); await closeSafe(par.page);
+    const kid = await mkPhone({ uid: 'k1' }); await openSafe(kid.page); await kid.page.fill('#rcode', 'nonsense'); await kid.page.locator('#rgo').click(); assert.ok(/does not look like/.test(await kid.page.locator('#rlmsg').innerText()));
+    await kid.page.fill('#rcode', pretty.toUpperCase()); await kid.page.locator('#rgo').click(); await kid.page.locator('#jryes').waitFor(); await kid.page.locator('#jryes').click();
+    await kid.page.waitForFunction(() => R20Cloud.kid() && document.querySelector('.rd.on .nm').textContent === 'Pasted', null, { timeout: 8000 }); eq(await sec(kid.page), 660); eq(await kid.page.locator('#setsafe').count(), 0);
+  });
+  await test('numbers: counts "reads" when real reading time is logged and "goals" when the goal is met, and nothing else leaves the phone', async () => {
+    const o = await newPage(br, { today: TODAY }); const { page } = o; await page.addInitScript(() => { window.__counts = []; window.nateCount = k => window.__counts.push(k); });
+    await page.clock.install({ time: new Date('2026-11-08T19:00:00') }); await page.goto(srv.url); await page.waitForSelector('.cover');
+    eq(await page.evaluate(() => window.__counts.length), 0, 'opening the app counts no reading');
+    await page.locator('.cover', { hasText: 'Sam the Cat' }).click(); await page.waitForSelector('.reader'); await page.locator('.w').first().click();
+    await page.clock.runFor(5000); assert.ok((await page.evaluate(() => window.__counts)).includes('reads'));
+    eq(await page.evaluate(() => window.__counts.includes('goals')), false);
+    for (let i = 0; i < 19; i++) { await page.clock.runFor(60000); await page.locator('.w').first().click(); } await page.clock.runFor(60000); await page.locator('#party').waitFor(); eq(await page.evaluate(() => window.__counts.filter(k => k === 'goals').length), 1);
+  });
+  await test('syllables are off by default: a long press on a word does not open the pop-up, and a tap says the word', async () => {
+    const { page } = await mk(); await page.locator('.cover', { hasText: 'Sam the Cat' }).click(); await page.waitForSelector('.reader'); const b = await page.locator('.w').first().boundingBox();
+    await page.mouse.move(b.x + 5, b.y + 5); await page.mouse.down(); await page.clock.runFor(900); await page.mouse.up(); eq(await page.locator('.wordpop').count(), 0);
+    eq(await page.locator('.hint').innerText(), '👆 Turn on the speaker, then tap a word to hear it', 'sound starts off, so the hint points to the speaker');
+    await page.locator('#spk').click(); eq(await page.locator('.hint').innerText(), '👆 Tap a word to hear it', 'speaker on: a tap says the word');
+  });
+  await test('syllables: a part is respelled for the voice so it sounds like it does inside the word (plen-ty says "plen" "tee")', async () => {
+    const o = await newPage(br, { today: TODAY }); const say = w => o.page.evaluate(x => R20Words.analyze(x).syllables.map(s => s.say).join(' '), w);
+    await o.page.goto(srv.url); await o.page.waitForSelector('.cover');
+    eq(await say('plenty'), 'plen tee'); eq(await say('happy'), 'hap pee'); eq(await say('people'), 'pee puhl'); eq(await say('nation'), 'nay shun'); eq(await say('reply'), await say('reply'));
+    eq(await say('table'), 'tab uhl'); eq(await say('measure'), 'meh zhur'); eq(await say('cat'), 'cat', 'one-syllable words are said as written');
+    eq(await say('gymnast'), 'gym nist', 'an unstressed part is said as it sounds in the word, not as its own word'); eq(await say('apply'), 'uh plye'); eq(await say('focused'), 'foe kist'); eq(await say('nowhere'), 'no where'); eq(await say('action'), 'ax shun'); eq(await say('almost'), 'all most'); eq(await say('achilles'), 'uh kill eez'); eq(await say('everyone'), 'ev ree wun'); eq(await say('pianist'), 'pih an ist');
+  });
+  const seedDays = (keys, secs) => page => page.addInitScript(([ks, sc]) => { if (!sessionStorage.x) { sessionStorage.x = 1; const days = {}; ks.forEach(k => { days[k] = { done: 1, parts: { old: { sec: sc, books: {}, extra: [] } } }; }); localStorage.setItem('read20.v1', JSON.stringify({ v: 1, name: 'Riley', goal: 20, size: 1, days })); } }, [keys, secs]);
+  const readMin = async (page, n) => { for (let i = 0; i < n; i++) { await page.clock.runFor(60000); await page.locator('.w').first().click(); } };
+  await test('celebrations: the 5th night in a row gets confetti and a streak cheer; a plain night gets confetti and no streak cheer', async () => {
+    const o = await newPage(br, { today: TODAY }); await seedDays(['2026-11-04', '2026-11-05', '2026-11-06', '2026-11-07'], 1200)(o.page);
+    await o.page.clock.install({ time: new Date('2026-11-08T19:00:00') }); await o.page.goto(srv.url); await o.page.waitForSelector('.cover'); const page = o.page;
+    await page.locator('.cover', { hasText: 'Sam the Cat' }).click(); await page.waitForSelector('.reader'); await page.locator('.w').first().click(); await readMin(page, 19); await page.clock.runFor(60000);
+    await page.locator('#party').waitFor(); assert.ok(/5 nights in a row/.test(await page.locator('#party').innerText()), 'milestone'); assert.ok(/longest streak/i.test(await page.locator('#party').innerText()), 'record');
+    eq(await page.locator('#confetti').count(), 1, 'confetti');
+    const p = await mk(); await p.page.locator('.cover', { hasText: 'Sam the Cat' }).click(); await p.page.waitForSelector('.reader'); await p.page.locator('.w').first().click(); await readMin(p.page, 19); await p.page.clock.runFor(60000);
+    await p.page.locator('#party').waitFor(); eq(await p.page.locator('.cheer').count(), 0, 'no streak cheer on the first night'); eq(await p.page.locator('#confetti').count(), 1);
+  });
+  await test('celebrations: a new best night shows a note once, and confetti is skipped when the phone asks for less motion', async () => {
+    const o = await newPage(br, { today: TODAY }); await seedDays(['2026-11-05'], 1500)(o.page);
+    await o.page.clock.install({ time: new Date('2026-11-08T19:00:00') }); await o.page.goto(srv.url); await o.page.waitForSelector('.cover'); const page = o.page;
+    await page.locator('.cover', { hasText: 'Sam the Cat' }).click(); await page.waitForSelector('.reader'); await page.locator('.w').first().click(); await readMin(page, 19); await page.clock.runFor(60000);
+    await page.locator('#party').waitFor(); await page.locator('#keep').click(); eq(await page.locator('.pbtoast').count(), 0, 'not a record yet (25 min is the best)');
+    await readMin(page, 6); await page.locator('.pbtoast').waitFor(); assert.ok(/New personal best/.test(await page.locator('.pbtoast').innerText()));
+    await page.clock.runFor(6000); eq(await page.locator('.pbtoast').count(), 0, 'it fades'); await readMin(page, 3); eq(await page.locator('.pbtoast').count(), 0, 'only once a night');
+    const q = await newPage(br, { today: TODAY }); await q.page.emulateMedia({ reducedMotion: 'reduce' }); await q.page.clock.install({ time: new Date('2026-11-08T19:00:00') }); await q.page.goto(srv.url); await q.page.waitForSelector('.cover');
+    await q.page.locator('.cover', { hasText: 'Sam the Cat' }).click(); await q.page.waitForSelector('.reader'); await q.page.locator('.w').first().click(); await readMin(q.page, 19); await q.page.clock.runFor(60000); await q.page.locator('#party').waitFor(); eq(await q.page.locator('#confetti').count(), 0);
+  });
+  await test('dark mode: follows the phone by default, a moon button and a Settings choice override it, older readers keep their own dark look', async () => {
+    const bg = p => p.evaluate(() => getComputedStyle(document.body).backgroundColor);
+    const d = await newPage(br, { today: TODAY }); await d.page.emulateMedia({ colorScheme: 'dark' }); await d.page.goto(srv.url); await d.page.waitForSelector('.cover');
+    eq(await d.page.evaluate(() => document.documentElement.classList.contains('night')), true, 'phone is dark'); eq(await bg(d.page), 'rgb(26, 22, 38)');
+    await d.page.locator('#moon').click(); await d.page.waitForSelector('.cover'); eq(await d.page.evaluate(() => document.documentElement.classList.contains('night')), false, 'moon switches to light'); eq(await bg(d.page), 'rgb(255, 246, 227)');
+    eq(await d.page.evaluate(() => localStorage.getItem('read20.look')), 'light');
+    await d.page.reload(); await d.page.waitForSelector('.cover'); eq(await d.page.evaluate(() => document.documentElement.classList.contains('night')), false, 'remembered');
+    await d.page.locator('#gear').click(); await d.page.selectOption('#slk', 'auto'); eq(await d.page.evaluate(() => document.documentElement.classList.contains('night')), true, 'Match my phone');
+    await d.page.selectOption('#slk', 'light'); eq(await d.page.evaluate(() => document.documentElement.classList.contains('night')), false);
+    const l = await newPage(br, { today: TODAY }); await l.page.emulateMedia({ colorScheme: 'light' }); await l.page.goto(srv.url); await l.page.waitForSelector('.cover'); eq(await l.page.evaluate(() => document.documentElement.classList.contains('night')), false, 'phone is light');
+    await l.page.locator('#moon').click(); await l.page.waitForSelector('.cover'); eq(await l.page.evaluate(() => document.documentElement.classList.contains('night')), true); await l.page.screenshot({ path: SHOTS + '/read20-night.png' });
+    await l.page.evaluate(() => { const r = R20App._state(); r.lv = 'older'; }); await l.page.reload(); await l.page.waitForSelector('.cover');
+  });
+  const VOICE_SPEECH = `(function(){ window.__said = []; window.__cancels = 0; window.__voice = '';
+    window.SpeechSynthesisUtterance = function (t) { this.text = t; };
+    const vs = [{ name: 'Fred', voiceURI: 'Fred', lang: 'en-US', localService: true }, { name: 'Samantha', voiceURI: 'Samantha', lang: 'en-US', localService: true }, { name: 'Samantha (Enhanced)', voiceURI: 'SamE', lang: 'en-US', localService: true }, { name: 'Albert', voiceURI: 'Albert', lang: 'en-US', localService: true }, { name: 'Amelie', voiceURI: 'Amelie', lang: 'fr-FR', localService: true }];
+    let cur = null;
+    Object.defineProperty(window, 'speechSynthesis', { configurable: true, value: { get speaking() { return !!cur; }, pending: false, cancel: function () { window.__cancels++; const u = cur; cur = null; if (u && u.onend) u.onend({}); }, resume: function () {}, getVoices: function () { return vs; },
+      speak: function (u) { cur = u; window.__said.push(u.text); window.__voice = u.voice ? u.voice.name : ''; setTimeout(function () { if (cur !== u) return; if (u.onboundary) { let p = 0; u.text.split(' ').forEach(function (w) { u.onboundary({ name: 'word', charIndex: p }); p += w.length + 1; }); } cur = null; if (u.onend) u.onend({}); }, 120); } } });
+  })();`;
+  await test('voice: the most natural voice is picked on its own, novelty voices are never offered, and a choice is kept on the phone', async () => {
+    const o = await newPage(br, { today: TODAY }); await o.page.addInitScript(VOICE_SPEECH); await o.page.goto(srv.url); await o.page.waitForSelector('.cover');
+    eq(await o.page.evaluate(() => R20Audio.voices().map(v => v.name).join('|')), 'Samantha (Enhanced)|Samantha', 'best first, no Fred, Albert or French');
+    await o.page.evaluate(() => R20Audio.speak('hi', 0.9)); await o.page.waitForTimeout(150); eq(await o.page.evaluate(() => window.__voice), 'Samantha (Enhanced)');
+    await o.page.locator('#gear').click(); eq(await o.page.locator('#svc option').count(), 3); await o.page.selectOption('#svc', 'Samantha'); await o.page.waitForTimeout(200);
+    eq(await o.page.evaluate(() => window.__voice), 'Samantha', 'previewed in the chosen voice'); eq(await o.page.evaluate(() => localStorage.getItem('read20.voice')), 'Samantha');
+    await o.page.selectOption('#srt', '0.45'); eq(await o.page.evaluate(() => localStorage.getItem('read20.rate')), '0.45'); await o.page.locator('#sd').click(); await o.page.waitForSelector('.cover');
+    await o.page.locator('.cover', { hasText: 'Sam the Cat' }).click(); await o.page.waitForSelector('.reader'); await o.page.locator('#story').click(); eq(await o.page.locator('#spd').innerText(), 'Speed: Very slow', 'the story opens at the speed chosen in Settings');
+    await o.page.waitForTimeout(300); await o.page.locator('#back').click(); await o.page.waitForSelector('.cover'); await o.page.locator('#gear').click(); eq(await o.page.locator('#srt').inputValue(), '0.45', 'and Settings shows the same one');
+  });
+  const NOBOUND_SPEECH = `(function(){ window.__said = []; window.__starts = 0;
+    window.SpeechSynthesisUtterance = function (t) { this.text = t; };
+    let cur = null;
+    Object.defineProperty(window, 'speechSynthesis', { configurable: true, value: { get speaking() { return !!cur; }, pending: false, cancel: function () { const u = cur; cur = null; if (u && u.onend) u.onend({}); }, resume: function () {}, getVoices: function () { return [{ name: 'Samantha', voiceURI: 'Samantha', lang: 'en-US', localService: true }]; },
+      speak: function (u) { cur = u; window.__said.push(u.text); window.__starts++; setTimeout(function () { if (u.onstart) u.onstart({}); }, 50); setTimeout(function () { if (cur !== u) return; cur = null; if (u.onend) u.onend({}); }, 2400); } } });
+  })();`;
+  await test('storytime: when the voice does not report words, the highlight is timed to move along with the talking, left to right', async () => {
+    const o = await newPage(br, { today: TODAY }); await o.page.addInitScript(NOBOUND_SPEECH); await o.page.goto(srv.url); await o.page.waitForSelector('.cover'); const page = o.page;
+    await page.locator('.cover', { hasText: 'Sam the Cat' }).click(); await page.waitForSelector('.reader'); await page.locator('.w').nth(0).waitFor();
+    await page.evaluate(() => { window.__hl = []; setInterval(() => { const h = document.querySelector('.w.hl'); if (h) { const i = +h.dataset.i; if (window.__hl[window.__hl.length - 1] !== i) window.__hl.push(i); } }, 40); });
+    const words = await page.locator('.w').count(); await page.locator('#story').click(); await page.waitForTimeout(2800);
+    const hl = await page.evaluate(() => window.__hl); assert.ok(hl.length >= Math.min(words, 3), 'the highlight moved through the words: ' + hl.join());
+    assert.ok(hl.every((v, i) => i === 0 || v > hl[i - 1] || v === 0), 'and only forward: ' + hl.join()); eq(hl[0], 0, 'starts on the first word');
+  });
+  const COLD_SPEECH = `(function(){ window.__said = []; window.__heard = []; window.__done = 0; window.__primed = 0; var born = Date.now(), lastCancel = 0, cur = null;
+    window.SpeechSynthesisUtterance = function (t) { this.text = t; };
+    Object.defineProperty(window, 'speechSynthesis', { configurable: true, value: { get speaking() { return !!cur; }, pending: false, cancel: function () { lastCancel = Date.now(); const u = cur; cur = null; if (u && u.onend) u.onend({}); }, resume: function () {},
+      getVoices: function () { return Date.now() - born < 300 ? [] : [{ name: 'Samantha', voiceURI: 'Samantha', lang: 'en-US', localService: true }]; },
+      speak: function (u) { window.__said.push(u.text); if (u.text === ' ') { window.__primed++; return; }
+        if (Date.now() - lastCancel < 120) return;   // a cold phone drops a line spoken right after a cancel: it never starts and never ends
+        cur = u; window.__heard.push(u.text); setTimeout(function () { if (u.onstart) u.onstart({}); }, 400);
+        setTimeout(function () { if (cur !== u) return; cur = null; window.__done++; if (u.onend) u.onend({}); }, 1500); } } });
+  })();`;
+  await test('storytime: the very first page works on a cold phone (engine woken first, the first line is not dropped after a cancel, and it finishes)', async () => {
+    const o = await newPage(br, { today: TODAY }); await o.page.addInitScript(COLD_SPEECH); await o.page.goto(srv.url); await o.page.waitForSelector('.cover'); const page = o.page;
+    await page.locator('.cover', { hasText: 'Sam the Cat' }).click(); await page.waitForSelector('.reader'); const t1 = await page.evaluate(() => document.querySelector('#text').textContent.replace(/\s+/g, ' ').trim());
+    await page.locator('#story').click(); await page.waitForFunction(() => window.__done >= 1, null, { timeout: 9000 });
+    eq(await page.evaluate(() => window.__primed), 1, 'woke the voice engine first'); assert.ok((await page.evaluate(() => window.__heard)).join(' ').replace(/\s+/g, ' ').includes(t1), 'the first page was heard in full');
+  });
+  await test('storytime: a toggle next to the speaker reads each page aloud (again on every page turn), one sentence at a time with the words lit up; the repeat button reads it again; tapping a word or turning it off stops it', async () => {
+    const o = await newPage(br, { today: TODAY }); await o.page.addInitScript(VOICE_SPEECH); await o.page.goto(srv.url); await o.page.waitForSelector('.cover'); const page = o.page;
+    await page.locator('.cover', { hasText: 'Sam the Cat' }).click(); await page.waitForSelector('.reader');
+    eq(await page.locator('#story').getAttribute('aria-pressed'), 'false'); eq(await page.locator('#hear').count(), 0); eq((await page.evaluate(() => window.__said)).length, 0, 'off by default: nothing is read on its own');
+    const text = p => page.evaluate(() => document.querySelector('#text').textContent.replace(/\s+/g, ' ').trim());
+    const t1 = await text(); await page.locator('#story').click(); await page.waitForFunction(() => window.__said.length > 0); eq(await page.locator('#story').getAttribute('aria-pressed'), 'true'); eq(await page.locator('#hear').count(), 1);
+    await page.waitForTimeout(700); assert.ok((await page.evaluate(() => window.__said)).join(' ').replace(/\s+/g, ' ').includes(t1), 'read the page');
+    const n1 = (await page.evaluate(() => window.__said)).length; await page.locator('#hear').click(); await page.waitForTimeout(700); assert.ok((await page.evaluate(() => window.__said)).length > n1, 'repeat reads it again');
+    eq(await page.locator('#spd').innerText(), 'Speed: Slow', 'starts slow'); await page.locator('#spd').click(); eq(await page.locator('#spd').innerText(), 'Speed: Normal'); eq(await page.evaluate(() => localStorage.getItem('read20.rate')), '0.75'); for (let i = 0; i < 5; i++) await page.locator('#spd').click(); eq(await page.locator('#spd').innerText(), 'Speed: Normal', 'cycles round through five speeds'); await page.waitForTimeout(400);
+    await page.locator('#nextp').click(); const t2 = await text(); await page.waitForTimeout(700); assert.ok((await page.evaluate(() => window.__said)).slice(-3).join(' ').replace(/\s+/g, ' ').includes(t2), 'the next page is read on its own');
+    await page.locator('#hear').click(); await page.locator('.w').first().click(); const n2 = (await page.evaluate(() => window.__said)).length; await page.waitForTimeout(900); const n3 = await page.evaluate(() => window.__said.length); await page.waitForTimeout(900); eq(await page.evaluate(() => window.__said.length), n3, 'tapping a word stops the sentences (only the tapped word may still be said)'); assert.ok(n3 - n2 <= 1);
+    eq(await page.evaluate(() => localStorage.getItem('read20.story')), '1', 'it stays on'); await page.locator('#story').click(); eq(await page.locator('#hear').count(), 0, 'off hides the repeat button'); eq(await page.evaluate(() => localStorage.getItem('read20.story')), null);
+  });
+  await test('log: remove one entry from a day, with a confirmation; cancel keeps it; it stays removed after a reload', async () => {
+    const { page } = await mk(); await logMin(page, 'Test entry', 2); await logMin(page, 'Real book', 5); eq(await sec(page), 420);
+    await page.locator('#nav [data-go="log"]').click(); await page.waitForSelector('.cal'); await page.locator('.day.now').click(); await page.waitForSelector('#detail .del');
+    eq(await page.locator('#detail .del').count(), 2); let msg = ''; page.once('dialog', d => { msg = d.message(); d.dismiss(); });
+    await page.locator('#detail li', { hasText: 'Test entry' }).locator('.del').click(); assert.ok(/Remove Test entry/.test(msg) && /cannot be undone/.test(msg), msg); eq(await sec(page), 420, 'cancel keeps it');
+    page.once('dialog', d => d.accept()); await page.locator('#detail li', { hasText: 'Test entry' }).locator('.del').click(); await page.waitForFunction(() => R20App._state().days[window.__today].sec === 300);
+    eq(await page.locator('#detail .del').count(), 1); assert.ok(/5 min/.test(await page.locator('#detail').innerText()));
+    await page.reload(); await page.waitForSelector('.cal'); eq(await sec(page), 300, 'still removed after a reload');
+  });
+  const morning = async (opts = {}) => { const o = await newPage(br, { today: '2026-11-09' }); await o.page.addInitScript(([sec]) => { if (!sessionStorage.x) { sessionStorage.x = 1; localStorage.setItem('read20.v1', JSON.stringify({ v: 1, name: 'Riley', goal: 20, size: 1, days: sec ? { '2026-11-08': { done: 0, parts: { old: { sec, books: {}, extra: [] } } } } : {} })); } }, [opts.sec === undefined ? 720 : opts.sec]);
+    await o.page.clock.install({ time: new Date(opts.at || '2026-11-09T08:00:00') }); await o.page.goto(srv.url); await o.page.waitForSelector('.cover'); return o; };
+  const daySecOf = (page, k) => page.evaluate(k => (R20App._state().days[k] || { sec: 0 }).sec, k);
+  await test('second chance: a short night is offered in the morning, the reading counts for last night until it is done, then today starts fresh', async () => {
+    const { page } = await morning(); await page.locator('#mkyes').waitFor(); assert.ok(/12 of 20 minutes/.test(await page.locator('.sheet').innerText()), await page.locator('.sheet').innerText()); assert.ok(/other 8/.test(await page.locator('.sheet').innerText()));
+    await page.locator('#mkyes').click(); await page.waitForSelector('.makeup #mkoff'); assert.ok(/Finish last night/.test(await page.locator('.ttxt h2').innerText()));
+    await page.locator('.cover', { hasText: 'Sam the Cat' }).click(); await page.waitForSelector('.reader'); await page.locator('.w').first().click(); assert.ok(/last night/.test(await page.locator('#tmgoal').innerText()));
+    await readMin(page, 7); await page.clock.runFor(60000); await page.locator('#party').waitFor(); assert.ok(/Last night is finished/.test(await page.locator('#party').innerText()));
+    eq(await daySecOf(page, '2026-11-08'), 1200, 'last night is now complete'); eq(await daySecOf(page, '2026-11-09'), 0, 'nothing leaked into today');
+    await page.locator('#keep').click(); await readMin(page, 1); eq(await daySecOf(page, '2026-11-09') >= 60, true, 'now it counts for today'); eq(await daySecOf(page, '2026-11-08'), 1200);
+    await page.locator('#back').click(); await page.waitForSelector('.cover'); await page.locator('#nav [data-go="log"]').click(); await page.waitForSelector('.cal');
+    const cell = page.locator('.day[data-d="2026-11-08"]'); assert.ok(/done/.test(await cell.getAttribute('class')), 'last night shows as a finished night on the calendar'); assert.ok(!/done/.test(await page.locator('.day[data-d="2026-11-09"]').getAttribute('class')), 'today is not marked done');
+    await cell.click(); await page.waitForSelector('#detail .list'); const det = await page.locator('#detail').innerText(); assert.ok(/Sam the Cat/.test(det) && /20 min/.test(det), 'last night lists the story and the full 20 minutes: ' + det);
+    eq(await page.evaluate(() => R20App._state().days['2026-11-08'].done), 1, 'and it is marked as reached, so the streak counts it'); eq(await page.evaluate(() => { const C = R20Core; return C.streak(R20App._state(), '2026-11-09'); }), 1, 'streak: last night counts');
+  });
+  await test('second chance: Not now keeps the card but does not ask again; never mind goes back to tonight; no offer in the afternoon or for a night with no reading', async () => {
+    const a = await morning(); await a.page.locator('#mkno').click(); await a.page.waitForSelector('#mkgo'); eq(await a.page.evaluate(() => Object.keys(JSON.parse(localStorage.getItem('read20.mkno'))).join()), 'main|2026-11-08', 'remembered, so it is not asked again'); eq(await a.page.locator('#mkyes').count(), 0); eq(await a.page.locator('#mkgo').count(), 1, 'but the card is still there');
+    await a.page.locator('#mkgo').click(); await a.page.locator('#mkoff').click(); await a.page.waitForSelector('#mkgo'); eq(await a.page.locator('#mkoff').count(), 0);
+    const b = await morning({ at: '2026-11-09T14:00:00' }); await b.page.waitForTimeout(800); eq(await b.page.locator('#mkyes').count() + await b.page.locator('#mkgo').count(), 0, 'afternoon: no offer');
+    const c = await morning({ sec: 0 }); await c.page.waitForTimeout(800); eq(await c.page.locator('#mkyes').count() + await c.page.locator('#mkgo').count(), 0, 'no reading last night: no offer');
   });
   await test('offline: the service worker caches the app and it reopens with no network', async () => {
     const o = await newPage(br, { sw: true, today: TODAY }); const { page, ctx } = o;

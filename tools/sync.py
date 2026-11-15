@@ -98,11 +98,12 @@ for d in fs_docs("public_listings"):
     for k in LISTING_FIELDS:
         if k in data and data[k] not in (None, "", []):
             L[k] = data[k]
-    if isinstance(data.get("store"), bool):
-        if data["store"]:
-            apps[id_].pop("store", None)
+    # An app is in the App Store only when the owner turned "Show in the App Store" on in the Toolbox (doc field "show"). Default: hidden.
+    if isinstance(data.get("show"), bool):
+        if data["show"]:
+            apps[id_]["store"] = True
         else:
-            apps[id_]["store"] = False
+            apps[id_].pop("store", None)
 
 # 3. Latest change and version per app, straight from GitHub -------------------
 hdr = {"Accept": "application/vnd.github+json", "User-Agent": "app-catalog-sync"}

@@ -1,0 +1,50 @@
+name: Dugout signing key setup (run once)
+# Makes Dugout's signing key on GitHub's runner and saves it straight into this repo's Actions secrets, so the key
+# never exists anywhere else: not in the repo, not on a computer, not in a chat. Run it once from the Actions tab.
+#
+# Before running: add a repository secret named SETUP_TOKEN holding a fine-grained personal access token for this repo
+# only, with "Secrets: Read and write" and "Actions: Read and write" and a short expiry. The run deletes SETUP_TOKEN
+# when it's done, then starts a Dugout build, which publishes the first self-updating release.
+on:
+  workflow_dispatch: {}
+permissions:
+  contents: read
+jobs:
+  make-key:
+    runs-on: ubuntu-latest
+    env:
+      HAS_KEY: ${{ secrets.DUGOUT_KEY != '' }}
+      HAS_TOKEN: ${{ secrets.SETUP_TOKEN != '' }}
+    steps:
+      - name: Stop if a key already exists
+        if: env.HAS_KEY == 'true'
+        run: |
+          echo "DUGOUT_KEY is already set. Replacing it would stop installed copies of Dugout from updating, so nothing was changed."
+          exit 1
+      - name: Stop without a setup token
+        if: env.HAS_TOKEN != 'true'
+        run: |
+          echo "Add the SETUP_TOKEN secret first (see the top of this file)."
+          exit 1
+      - name: Make the key and save it as secrets
+        env:
+          GH_TOKEN: ${{ secrets.SETUP_TOKEN }}
+        run: |
+          set -euo pipefail
+          umask 077
+          pass=$(openssl rand -hex 24)
+          echo "::add-mask::$pass"
+          ks="$RUNNER_TEMP/dugout.p12"
+          keytool -genkeypair -alias dugout -keyalg EC -groupname secp256r1 -sigalg SHA256withECDSA -validity 20000 \
+            -dname "CN=Dugout" -storetype PKCS12 -keystore "$ks" -storepass "$pass" -keypass "$pass" >/dev/null 2>&1
+          base64 -w0 "$ks" | gh secret set DUGOUT_KEY --repo "$GITHUB_REPOSITORY"
+          printf '%s' "$pass" | gh secret set DUGOUT_KEY_PASSWORD --repo "$GITHUB_REPOSITORY"
+          shred -u "$ks"
+          echo "Saved DUGOUT_KEY and DUGOUT_KEY_PASSWORD."
+      - name: Remove the setup token and start a build
+        if: always() && env.HAS_TOKEN == 'true' && env.HAS_KEY != 'true'
+        env:
+          GH_TOKEN: ${{ secrets.SETUP_TOKEN }}
+        run: |
+          gh secret delete SETUP_TOKEN --repo "$GITHUB_REPOSITORY" || echo "Delete SETUP_TOKEN by hand in Settings."
+          gh workflow run watch-build.yml --repo "$GITHUB_REPOSITORY" --ref main || echo "Start 'Dugout watch and phone apps' by hand from the Actions tab."

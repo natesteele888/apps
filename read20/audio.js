@@ -17,7 +17,10 @@
   };
   ["pointerdown", "touchstart", "keydown"].forEach(ev => root.addEventListener && root.addEventListener(ev, A.unlock, { capture: true, passive: true }));
 
-  A.stop = () => { try { if (root.speechSynthesis) root.speechSynthesis.cancel(); } catch (e) {} };
+  let cancelAt = 0, primed = false, waited = false;
+  A.stop = () => { try { if (root.speechSynthesis) { cancelAt = Date.now(); root.speechSynthesis.cancel(); } } catch (e) {} };
+  /* The first line a phone speaks is slow to start and often cut off. Called from the tap that turns Storytime on: says a silent space so the voice engine is awake before the real sentence. */
+  A.prime = () => { if (primed || !A.canSpeak()) return false; primed = true; try { const u = new root.SpeechSynthesisUtterance(" "); u.volume = 0; u.lang = "en-US"; utt = u; root.speechSynthesis.speak(u); return true; } catch (e) { return false; } };
 
   /* A bright four-note chime (the 20 minutes are done) and a single beep (the sound test). */
   A.chime = () => A.tones([523, 659, 784, 1047], 0.18);
@@ -29,24 +32,59 @@
 
   /* The phone's own voice. Chrome drops a voice line that comes right after cancel(), keeps no reference to the line (it can be
      garbage collected mid-word), and may have no voices loaded yet, so each of those is handled. */
+  /* Phones ship several voices and the default one is often the most robotic. Rank them: natural, neural, enhanced, premium and
+     Siri voices first, then the network voices Google and Microsoft offer, then plain US and UK English, and never the novelty or
+     eSpeak voices. The family can pick another one in Settings (kept per phone). */
+  const NOVELTY = /espeak|albert|bad news|bahh|bells|boing|bubbles|cellos|deranged|good news|hysterical|jester|organ|superstar|trinoids|whisper|wobble|zarvox|fred|junior|kathy|ralph|princess/i;
+  A.score = v => {
+    const n = (v.name || "") + " " + (v.voiceURI || ""); let s = 0;
+    if (NOVELTY.test(n)) return -100;
+    if (/en[-_]US/i.test(v.lang)) s += 30; else if (/en[-_]GB/i.test(v.lang)) s += 26; else if (/en[-_](AU|CA|IE|NZ|ZA)/i.test(v.lang)) s += 18; else s += 10;
+    if (/natural|neural|premium|enhanced|studio|wavenet|siri/i.test(n)) s += 60;
+    if (/online/i.test(n)) s += 25;
+    if (/google/i.test(n)) s += 40;
+    if (/network/i.test(n) || v.localService === false) s += 12;
+    if (/^(samantha|ava|allison|susan|zoe|nicky|karen|moira|serena|daniel|tessa|aria|jenny|guy|libby|sonia)\b/i.test(v.name || "")) s += 25;
+    if (/compact/i.test(n)) s -= 30;
+    if (v.default) s += 3;
+    return s;
+  };
+  const englishVoices = () => { try { return (root.speechSynthesis.getVoices() || []).filter(v => /^en([-_]|$)/i.test(v.lang)); } catch (e) { return []; } };
+  const prefGet = k => { try { return root.localStorage.getItem(k); } catch (e) { return null; } };
+  const prefSet = (k, v) => { try { if (v) root.localStorage.setItem(k, v); else root.localStorage.removeItem(k); } catch (e) {} };
+  /* English voices, best first: [{ uri, name, lang, score }] */
+  A.voices = () => englishVoices().map(v => ({ uri: v.voiceURI || v.name, name: v.name, lang: v.lang, score: A.score(v) })).filter(v => v.score > -100).sort((x, y) => y.score - x.score);
+  A.setVoice = uri => { prefSet("read20.voice", uri || ""); voice = null; };
+  A.voiceName = () => { const v = pickVoice(); return v ? v.name : ""; };
+  A.rate = () => { const r = +prefGet("read20.rate"); return r >= 0.3 && r <= 1.3 ? r : 0.6; };
+  A.setRate = r => prefSet("read20.rate", r ? String(r) : "");
   function pickVoice() {
     try {
-      const vs = root.speechSynthesis.getVoices() || []; if (!vs.length) return null;
-      const en = vs.filter(v => /^en[-_]/i.test(v.lang) || /^en$/i.test(v.lang));
-      return en.find(v => /en[-_]US/i.test(v.lang) && v.localService) || en.find(v => /en[-_]US/i.test(v.lang)) || en[0] || null;
+      const en = englishVoices(); if (!en.length) return null;
+      const pref = prefGet("read20.voice"), mine = pref && en.find(v => (v.voiceURI || v.name) === pref);
+      if (mine) return mine;
+      return en.slice().sort((x, y) => A.score(y) - A.score(x))[0] || null;
     } catch (e) { return null; }
   }
   try { if (root.speechSynthesis) root.speechSynthesis.onvoiceschanged = () => { voice = pickVoice(); }; } catch (e) {}
   A.canSpeak = () => !!(root.speechSynthesis && root.SpeechSynthesisUtterance);
-  A.speak = (text, rate) => {
+  /* opts: { onend, onboundary } (used to read a whole sentence and light up each word as it is said) */
+  A.speak = (text, rate, opts) => {
     if (!A.canSpeak()) return false;
     try {
       const ss = root.speechSynthesis, busy = ss.speaking || ss.pending;
-      if (busy) ss.cancel();
+      if (busy) { cancelAt = Date.now(); ss.cancel(); }
       const u = new root.SpeechSynthesisUtterance(text); u.lang = "en-US"; u.rate = rate || 0.8; u.volume = 1;
-      voice = voice || pickVoice(); if (voice) u.voice = voice;
+      voice = voice || pickVoice(); if (voice) { u.voice = voice; if (voice.lang) u.lang = voice.lang; }
+      if (opts && opts.onend) { let done = false; const fin = () => { if (done) return; done = true; opts.onend(); }; u.onend = fin; u.onerror = fin; }
+      if (opts && opts.onboundary) u.onboundary = opts.onboundary;
+      if (opts && opts.onstart) u.onstart = opts.onstart;
       utt = u; A.log.push("say:" + text);
-      setTimeout(() => { try { ss.resume(); ss.speak(u); } catch (e) {} }, busy ? 80 : 0);
+      /* Chrome drops a line spoken right after a cancel, and a voice that has not loaded yet speaks late and cut short, so wait for both. */
+      let wait = Math.max(busy ? 80 : 0, 160 - (Date.now() - cancelAt)); let none = false;
+      try { none = !(ss.getVoices() || []).length; } catch (e) {}
+      if (none && !waited) { waited = true; wait = Math.max(wait, 400); }
+      setTimeout(() => { try { ss.resume(); ss.speak(u); } catch (e) {} }, Math.max(0, wait));
       return true;
     } catch (e) { return false; }
   };

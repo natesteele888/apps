@@ -400,3 +400,33 @@ input[type="range"].rng.rel { width: calc(80% + 30px); margin: 0 calc(10% - 15px
   .mx-soft { margin-top: 0; }
   .mx-panel .slide .row.sp { margin-bottom: -4px; }
 }
+
+/* ---------- pitching (top of the Game screen) ---------- */
+.card.pitch { border-width: 2px; --z: var(--ok); border-color: var(--z); background: linear-gradient(180deg, color-mix(in srgb, var(--z) 14%, var(--panel)), var(--panel)); }
+.card.pitch.z-none { --z: var(--line2); }
+.card.pitch.z-yellow { --z: #fbbf24; }
+.card.pitch.z-red, .card.pitch.z-limit { --z: #ff4d5e; }
+.card.pitch.z-limit { animation: ptPulse 1.2s ease-in-out infinite; }
+@keyframes ptPulse { 50% { box-shadow: 0 0 0 4px rgba(255, 77, 94, 0.35); } }
+@media (prefers-reduced-motion: reduce) { .card.pitch.z-limit { animation: none; } }
+.pt-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-width: 0; }
+.pt-who { min-height: 44px; padding: 0 4px; border: 0; background: none; font: 700 22px/1.1 "Barlow Condensed", "Barlow", system-ui, sans-serif; color: var(--text); cursor: pointer; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; text-align: left; }
+.pt-flag { font-size: 12px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink); background: var(--z); border-radius: 999px; padding: 4px 10px; white-space: nowrap; }
+.pt-mid { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; margin: 4px 0 2px; }
+.pt-count { display: flex; align-items: baseline; gap: 8px; }
+.pt-count b { font: 700 64px/0.95 "Barlow Condensed", "Barlow", system-ui, sans-serif; color: var(--z); }
+.pt-count span, .pt-left span { color: var(--mute); font-size: 14px; }
+.pt-left { text-align: right; display: flex; flex-direction: column; }
+.pt-left b { font-size: 20px; }
+.pt-hint { color: var(--mute); font-size: 14px; margin-top: 2px; }
+.pt-btns { display: grid; grid-template-columns: 1fr 2fr; gap: 10px; margin-top: 10px; }
+.pt-btns .btn { min-height: 56px; }
+.btn.pt-add { font-size: 20px; background: var(--z); border-color: var(--z); color: var(--ink); }
+.z-none .btn.pt-add { background: var(--accent); border-color: var(--accent); }
+.pt-row .pt-sub { flex: 1 1 100%; font-size: 14px; color: var(--mute); }
+.pt-row.z-yellow { border-color: #fbbf24; }
+.pt-row.z-red, .pt-row.z-limit { border-color: #ff4d5e; }
+.pt-row.z-rest { opacity: 0.7; }
+.pt-h { margin: 18px 0 6px; font: 700 18px/1.2 "Barlow Condensed", "Barlow", system-ui, sans-serif; }
+.pt-prow { flex-wrap: wrap; }
+.pt-lim input { width: 84px; }

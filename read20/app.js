@@ -4,13 +4,18 @@
   "use strict";
   const C = window.R20Core, B = window.R20Books;
   const CL = window.R20Cloud, WD = window.R20Words, AU = window.R20Audio, I = window.R20Icons;
-  const BUILD = "2026-11-11";   // change on each release; shown in Settings so a phone that is behind is easy to spot
+  // Anonymous "someone really used it" counts for the owner's numbers page: a phone code and the week, nothing else (see install.js).
+  function count(kind) { try { if (window.nateCount) window.nateCount(kind); } catch (e) {} }
+  const BUILD = "2026-11-16";   // change on each release; shown in Settings so a phone that is behind is easy to spot
   const teen = () => S.lv === "older";   // older readers get the darker look with line icons
   const icon = (name, fallback, size) => (teen() ? I(name, size) : fallback);
   const KEY = "read20.v1";
   const $ = s => document.querySelector(s);
   const esc = s => String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
   const today = () => window.__today || C.dayKey();
+  /* Which day reading counts for: today, or last night while finishing it in the morning (ui.makeup). */
+  const dayKey = () => ui.makeup || today();
+  const nowHour = () => new Date().getHours();
   const byId = {}; B.books.forEach(b => (byId[b.id] = b));
 
   let stale = false;   // the log changed (from the cloud) while a pop-up covered the screen
@@ -54,10 +59,29 @@
     R = m; act(); try { localStorage.setItem(KEY, JSON.stringify(C.serializeRoot(R))); } catch (e) {}
     store.idbAt = 0; if (ui.book) paintTimer(); else if (!document.querySelector(".overlay")) route(); else stale = true;   // a pop-up is open: redraw the screen under it when it closes
   }
+  /* A child's own phone, linked to one reader: it shows only that reader and none of the parent screens. */
+  const kid = () => { const k = CL.kid(); return !!(k && R.profiles[k.id]); };
   const bkDate = () => R.order.reduce((m, i) => (R.profiles[i].bk > m ? R.profiles[i].bk : m), "");
   const markBackup = () => R.order.forEach(i => (R.profiles[i].bk = today()));
   const who = p => p.name || "Reader";
   const avOf = id => R.profiles[id].av || C.AVATARS[R.order.indexOf(id) % C.AVATARS.length];
+  /* One reader's shared record has been merged in (a linked phone read, or a parent's phone got new reading from a child's phone). */
+  function adoptReader(id, profile) {
+    if (!R.profiles[id]) return;
+    const m = C.merge(R.profiles[id], profile); if (JSON.stringify(C.serialize(m)) === JSON.stringify(C.serialize(R.profiles[id]))) return;
+    R.profiles[id] = m; act(); try { localStorage.setItem(KEY, JSON.stringify(C.serializeRoot(R))); } catch (e) {}
+    store.idbAt = 0; if (ui.book) paintTimer(); else if (!document.querySelector(".overlay")) route(); else stale = true;
+  }
+  /* This phone becomes a single-reader phone. Everything already read on it is added to that reader first, and a safety copy of the
+     old save is kept, so nothing is lost. */
+  function kidJoin(id, remote) {
+    try { localStorage.setItem(KEY + ".beforelink", localStorage.getItem(KEY) || ""); } catch (e) {}
+    let target = C.sanitize(remote);
+    R.order.forEach(pid => { const p = R.profiles[pid]; if (p && !C.blank(p)) target = C.merge(target, p); });
+    R = { v: 2, active: id, order: [id], gone: {}, profiles: { [id]: target } }; act();
+    ui.levelSet = false; ui.month = null; ui.sel = null; save(true);
+    if (!document.querySelector(".overlay")) route(); else stale = true;
+  }
   function cloudLine() {
     const st = CL.status;
     if (st === "ok") return "☁️ Backed up as " + esc(CL.email) + (CL.at ? " · " + new Date(CL.at).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }) : "");
@@ -74,23 +98,33 @@
 
   /* ---------- sound, speech ---------- */
   function chime() { AU.chime(); }
+  // The press-and-hold syllable pop-up is switched off for now while the pronunciations are being checked. Tapping a word says it.
+  // Turn it back on for one phone with: localStorage.setItem("read20.syllables", "1")
+  const sylOn = () => { try { return localStorage.getItem("read20.syllables") === "1"; } catch (e) { return false; } };
   function say(w) { if (S.say) AU.speak(w, 0.8); }
 
   /* ---------- routing: #  (shelf), #log, #b/<id> (reading) ---------- */
+  /* Screen look (this phone, not each reader): "auto" follows the phone, or force "light" / "dark". Older readers always get their own dark look. */
+  const getLook = () => { try { const v = localStorage.getItem("read20.look"); return v === "light" || v === "dark" ? v : "auto"; } catch (e) { return "auto"; } };
+  const setLook = v => { try { localStorage.setItem("read20.look", v); } catch (e) {} };
+  const phoneDark = () => { try { return !!(window.matchMedia && matchMedia("(prefers-color-scheme: dark)").matches); } catch (e) { return false; } };
+  const night = () => !teen() && (getLook() === "dark" || (getLook() === "auto" && phoneDark()));
   function applyTheme() {
-    const t = teen(); document.documentElement.classList.toggle("teen", t);
-    const set = (n, v) => { const m = document.querySelector('meta[name="' + n + '"]'); if (m) m.setAttribute("content", v); };
-    set("theme-color", t ? "#0b1020" : "#fff6e3"); set("color-scheme", t ? "dark" : "light");
+    const t = teen(), n = night(), root = document.documentElement; root.classList.toggle("teen", t); root.classList.toggle("night", n);
+    const set = (nm, v) => { const m = document.querySelector('meta[name="' + nm + '"]'); if (m) m.setAttribute("content", v); };
+    set("theme-color", t ? "#0b1020" : n ? "#1a1626" : "#fff6e3"); set("color-scheme", t || n ? "dark" : "light");
   }
+  try { if (window.matchMedia) matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => { if (getLook() === "auto") applyTheme(); }); } catch (e) {}
   function route() {
     const h = location.hash.replace(/^#/, "");
-    stopTimer(); applyTheme();
+    stopTimer(); applyTheme(); if (ui.reading) { ui.reading = false; AU.stop(); }
     if (h.startsWith("b/") && byId[h.slice(2)]) {
-      if (!ui.book || ui.book.id !== h.slice(2)) { ui.book = byId[h.slice(2)]; ui.page = 0; ui.finishedNow = false; }
-      ui.paused = false; ui.hl = -1; renderReader(); startTimer();
+      let fresh = false; if (!ui.book || ui.book.id !== h.slice(2)) { ui.book = byId[h.slice(2)]; ui.page = 0; ui.finishedNow = false; fresh = true; }
+      ui.paused = false; ui.hl = -1; renderReader(); startTimer(); if (storyOn() && fresh) readAloud();
     } else if (h === "log") { ui.book = null; renderLog(); }
+    else if (h.startsWith("reader=")) { const key = CL.parseReaderKey(h); try { history.replaceState(null, "", location.pathname + location.search); } catch (e) {} ui.book = null; renderShelf(); if (key && !kid()) openJoinReader(key); }
     else if (h.startsWith("join=")) { const key = CL.parseKey(h); try { history.replaceState(null, "", location.pathname + location.search); } catch (e) {} ui.book = null; renderShelf(); if (key) openJoin(key); }
-    else { ui.book = null; renderShelf(); }
+    else { ui.book = null; renderShelf(); setTimeout(maybeMakeupPrompt, 350); }
   }
   const go = h => { if (location.hash.replace(/^#/, "") === h) route(); else location.hash = h; };
 
@@ -106,19 +140,20 @@
     if (!ui.book) return;
     if (!ui.paused && !ui.idle && now - ui.lastAct > 120000) { ui.idle = true; paintTimer(); return; }
     if (!running()) return;
-    const k = today(), before = C.daySec(S, k);
+    const k = dayKey(), before = C.daySec(S, k);
     ui.acc += Math.min(dt, 3);
     const whole = Math.floor(ui.acc); ui.acc -= whole;
-    if (whole > 0) { C.addSeconds(S, k, ui.book.id, whole); save(); }
+    if (whole > 0) { C.addSeconds(S, k, ui.book.id, whole); save(); count("reads"); }
     paintTimer();
     const d = C.day(S, k);
-    if (before < C.goalSec(S) && C.daySec(S, k) >= C.goalSec(S) && d && !d.done) { d.done = 1; save(); celebrate(); }
+    if (before < C.goalSec(S) && C.daySec(S, k) >= C.goalSec(S) && d && !d.done) { d.done = 1; save(); count("goals"); celebrate(); }
+    else if (d && d.done) { const m = R.active + "|" + k + "|" + Math.floor(C.daySec(S, k) / 60); if (ui.pbm !== m) { ui.pbm = m; checkBestDay(k); } }
   }
   function paintTimer() {
     const el = $("#tm"); if (!el) return;
-    const sec = C.daySec(S, today()), goal = C.goalSec(S);
+    const sec = C.daySec(S, dayKey()), goal = C.goalSec(S);
     $("#tmnum").textContent = C.fmtClock(sec);
-    $("#tmgoal").textContent = sec >= goal ? (teen() ? "goal reached" : "goal reached! ⭐") : "of " + C.fmtClock(goal);
+    $("#tmgoal").textContent = sec >= goal ? (teen() ? "goal reached" : "goal reached! ⭐") : "of " + C.fmtClock(goal) + (ui.makeup ? " · last night" : "");
     $("#tmbar").style.width = Math.min(100, sec / goal * 100) + "%";
     const st = ui.paused ? "paused" : ui.idle ? "idle" : "";
     el.className = "tm " + st;
@@ -129,13 +164,53 @@
   function touch() { ui.lastAct = Date.now(); if (ui.idle) { ui.idle = false; ui.last = Date.now(); paintTimer(); } }
   document.addEventListener("visibilitychange", () => { ui.last = Date.now(); if (!document.hidden) ui.lastAct = Date.now(); });
 
+  /* Confetti: a canvas of paper bits that falls for a few seconds. "big" is for milestones and records. Skipped when the phone asks for less motion. */
+  function confetti(big) {
+    try { if (window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches) return; } catch (e) {}
+    const old = document.getElementById("confetti"); if (old) old.remove();
+    const cv = document.createElement("canvas"); cv.id = "confetti"; cv.setAttribute("aria-hidden", "true");
+    const w = (cv.width = innerWidth), h = (cv.height = innerHeight), cx = cv.getContext("2d"); if (!cx) return;
+    document.body.appendChild(cv);
+    const cols = ["#6c4ff0", "#ffbe3b", "#2fbf71", "#d6455d", "#ffe14d", "#3de0ff", "#ff8a3d"], n = big ? 190 : 90, ps = [];
+    for (let i = 0; i < n; i++) ps.push({ x: Math.random() * w, y: -20 - Math.random() * h * 0.5, vx: (Math.random() - 0.5) * 4, vy: 2 + Math.random() * 4, s: 6 + Math.random() * 8, r: Math.random() * 6, vr: (Math.random() - 0.5) * 0.3, c: cols[i % cols.length] });
+    const t0 = Date.now(), life = big ? 4200 : 3000;
+    (function frame() {
+      const age = Date.now() - t0; cx.clearRect(0, 0, w, h);
+      if (age > life || !cv.isConnected) { cv.remove(); return; }
+      const fade = age > life - 800 ? Math.max(0, (life - age) / 800) : 1;
+      ps.forEach(p => { p.x += p.vx; p.y += p.vy; p.vy += 0.06; p.r += p.vr; cx.save(); cx.globalAlpha = fade; cx.translate(p.x, p.y); cx.rotate(p.r); cx.fillStyle = p.c; cx.fillRect(-p.s / 2, -p.s / 3, p.s, p.s * 0.6); cx.restore(); });
+      requestAnimationFrame(frame);
+    })();
+  }
+  /* A short note across the top that fades by itself (used while reading, so it never blocks the page). */
+  function banner(text) {
+    const b = document.createElement("div"); b.className = "pbtoast"; b.setAttribute("role", "status"); b.innerHTML = text; document.body.appendChild(b);
+    setTimeout(() => b.remove(), 5000);
+  }
+  const mm = sec => Math.max(1, Math.round(sec / 60));
+  /* Reached tonight's goal: always the party card; plus a bigger cheer for a milestone streak or a new longest streak. */
   function celebrate() {
     chime();
+    const mk = !!ui.makeup, ch = C.cheers(S, dayKey()), who = S.name ? esc(S.name) + ", you" : "You", lines = [];
+    const fl = teen() ? I("flame", 20) : "🔥", tr = teen() ? I("star", 20) : "🏆";
+    if (ch.milestone) lines.push(`${fl} <b>${ch.milestone} nights in a row!</b>`);
+    if (ch.record && !ch.milestone) lines.push(`${tr} <b>New longest streak: ${ch.streak} nights!</b>`);
+    else if (ch.record && ch.milestone) lines.push(`${tr} New longest streak!`);
     const o = document.createElement("div"); o.className = "overlay"; o.id = "party";
-    o.innerHTML = `<div class="card party" role="dialog" aria-label="Twenty minutes done"><div class="big">${teen() ? I("star", 56) : "🎉⭐🎉"}</div><h2>${S.goal} minutes!</h2><p>${S.name ? esc(S.name) + ", you" : "You"} did your reading tonight. Great job!</p><button class="btn" id="keep">Keep reading</button><button class="btn alt" id="stop">I'm done tonight</button></div>`;
-    document.body.appendChild(o); trackOverlay(o);
-    $("#keep").onclick = () => { closeOverlay(o); touch(); };
-    $("#stop").onclick = () => closeOverlay(o, () => go(""));
+    o.innerHTML = `<div class="card party" role="dialog" aria-label="Twenty minutes done"><div class="big">${teen() ? I("star", 56) : ch.milestone ? "🎊🏆🎊" : "🎉⭐🎉"}</div><h2>${mk ? "Last night is finished!" : S.goal + " minutes!"}</h2>${lines.map(l => `<p class="cheer">${l}</p>`).join("")}<p>${mk ? who + " finished last night's reading. Great job!" : who + " did your reading tonight. Great job!"}</p><button class="btn" id="keep">${mk ? "Start today's reading" : "Keep reading"}</button><button class="btn alt" id="stop">${mk ? "I'm done for now" : "I'm done tonight"}</button></div>`;
+    document.body.appendChild(o); trackOverlay(o); confetti(!!(ch.milestone || ch.record));
+    $("#keep").onclick = () => { if (ui.makeup) { ui.makeup = null; ui.pbm = ""; } closeOverlay(o); touch(); };
+    $("#stop").onclick = () => closeOverlay(o, () => { ui.makeup = null; go(""); });
+  }
+  /* A new personal best for minutes in one night (once per reader per night, after the goal, and only if there is a past night to beat). */
+  function checkBestDay(k) {
+    let seen = {}; try { seen = JSON.parse(localStorage.getItem("read20.pb") || "{}"); } catch (e) {}
+    const key = R.active + "|" + k; if (seen[key]) return;
+    const sec = C.daySec(S, k), prev = C.bestDay(S, k);
+    if (sec < C.goalSec(S) || prev < C.goalSec(S) || sec <= prev) return;
+    seen[key] = 1; const ks = Object.keys(seen).slice(-40), o = {}; ks.forEach(x => (o[x] = 1)); try { localStorage.setItem("read20.pb", JSON.stringify(o)); } catch (e) {}
+    banner((teen() ? I("star", 20) : "🏆") + " <b>New personal best!</b> " + mm(sec) + " minutes in one night");
+    confetti(true);
   }
 
   /* ---------- shelf ---------- */
@@ -149,8 +224,20 @@
     const r = 54, c = 2 * Math.PI * r, p = Math.min(1, sec / goal);
     return `<svg viewBox="0 0 130 130" class="ring" aria-hidden="true"><circle cx="65" cy="65" r="${r}" class="rbg"/><circle cx="65" cy="65" r="${r}" class="rfg" stroke-dasharray="${(c * p).toFixed(1)} ${c.toFixed(1)}" transform="rotate(-90 65 65)"/></svg>`;
   }
+  /* Second chance in the morning: last night ended short of the goal, so offer to finish it. Reading then counts for last night. */
+  function startMakeup() { const m = C.makeup(S, today(), nowHour()); if (!m) return; ui.makeup = m.day; ui.pbm = ""; renderShelf(); }
+  const mkSeen = () => { try { return JSON.parse(localStorage.getItem("read20.mkno") || "{}"); } catch (e) { return {}; } };
+  function maybeMakeupPrompt() {
+    const m = ui.makeup ? null : C.makeup(S, today(), nowHour()); if (!m) return;
+    const key = R.active + "|" + m.day, seen = mkSeen(); if (seen[key] || ui.mkAsked === key) return; ui.mkAsked = key;
+    const o = sheet(`<div class="wordpop"><h2>${teen() ? "" : "🌅 "}Good morning${S.name ? ", " + esc(S.name) : ""}!</h2>
+      <p class="fine left" style="text-align:center">Last night you read ${Math.floor(m.sec / 60)} of ${S.goal} minutes. Want to finish the other ${Math.ceil(m.left / 60)} now?</p>
+      <button class="btn" id="mkyes">Yes, finish last night</button><button class="btn alt" id="mkno">Not now</button></div>`);
+    $("#mkyes").onclick = () => { closeOverlay(o, startMakeup); };
+    $("#mkno").onclick = () => { const s2 = mkSeen(); s2[key] = 1; const ks = Object.keys(s2).slice(-30), out = {}; ks.forEach(x => (out[x] = 1)); try { localStorage.setItem("read20.mkno", JSON.stringify(out)); } catch (e) {} closeOverlay(o); };
+  }
   function renderShelf() {
-    const k = today(), sec = C.daySec(S, k), goal = C.goalSec(S), done = sec >= goal, streak = C.streak(S, k);
+    const k = dayKey(), sec = C.daySec(S, k), goal = C.goalSec(S), done = sec >= goal, streak = C.streak(S, k), offer = ui.makeup ? null : C.makeup(S, today(), nowHour());
     const fin = C.finishedIds(S), nx = nextUp(), left = Math.max(0, Math.ceil((goal - sec) / 60));
     const older = S.lv === "older";
     if (!ui.levelSet) { ui.level = nx.level || 1; ui.topic = nx.topic || "sports"; ui.levelSet = true; }
@@ -158,14 +245,16 @@
     const list = older ? B.books.filter(b => b.shelf === "older" && b.topic === tp.id) : B.books.filter(b => b.level === ui.level);
     const readIn = list.filter(b => fin[b.id]).length;
     $("#view").innerHTML = `
-    <header class="top"><h1>${icon("logo", "📖 ")}Read ${S.goal}</h1><span class="cloudbadge" id="cloudbadge" title="Backed up online" ${CL.status === "ok" ? "" : "hidden"}>☁️✓</span><button class="icon" id="gear" aria-label="Settings">${icon("sliders", "⚙️")}</button></header>
+    <header class="top"><h1>${icon("logo", "📖 ")}Read ${S.goal}</h1><span class="cloudbadge" id="cloudbadge" title="Backed up online" ${CL.status === "ok" ? "" : "hidden"}>☁️✓</span>${teen() ? "" : `<button class="icon moon" id="moon" aria-label="${night() ? "Switch to light screen" : "Switch to dark screen (easier on the eyes in bed)"}">${night() ? "☀️" : "🌙"}</button>`}<button class="icon" id="gear" aria-label="Settings">${icon("sliders", "⚙️")}</button></header>
     ${warnHtml()}
-    <div class="readers" role="tablist" aria-label="Readers">${R.order.map(id => `<button role="tab" aria-selected="${id === R.active}" class="rd ${id === R.active ? "on" : ""}" data-id="${esc(id)}"><span class="av" aria-hidden="true">${avOf(id)}</span><span class="nm">${esc(who(R.profiles[id]))}</span></button>`).join("")}<button class="rd add" id="addrd" aria-label="Add a reader"><span class="av" aria-hidden="true">＋</span><span class="nm">Add</span></button></div>
+    <div class="readers" role="tablist" aria-label="Readers">${R.order.map(id => `<button role="tab" aria-selected="${id === R.active}" class="rd ${id === R.active ? "on" : ""}" data-id="${esc(id)}"><span class="av" aria-hidden="true">${avOf(id)}</span><span class="nm">${esc(who(R.profiles[id]))}</span></button>`).join("")}${kid() ? "" : '<button class="rd add" id="addrd" aria-label="Add a reader"><span class="av" aria-hidden="true">＋</span><span class="nm">Add</span></button>'}</div>
+    ${offer ? `<section class="nudge makeup"><b>${teen() ? "" : "🌅 "}Finish last night?</b><p>${S.name ? esc(S.name) + ", you" : "You"} read ${Math.floor(offer.sec / 60)} of ${S.goal} minutes last night. You have until noon to finish the other ${Math.ceil(offer.left / 60)}.</p><button class="btn" id="mkgo">Finish last night's reading</button></section>` : ""}
+    ${ui.makeup ? `<p class="nudge makeup"><b>Finishing last night.</b> Your reading now counts for last night.<br><button class="linkbtn" id="mkoff">Never mind, back to tonight</button></p>` : ""}
     <section class="today ${done ? "ok" : ""}">
       <div class="ringbox">${ring(sec, goal)}<div class="rtxt"><b>${Math.floor(sec / 60)}</b><span>min</span></div></div>
       <div class="ttxt">
-        <h2>${done ? "Tonight's reading is done!" + (teen() ? "" : " ⭐") : (S.name ? esc(S.name) + ", " + (sec ? "keep going!" : "ready to read?") : (sec ? "Keep going!" : "Ready to read?"))}</h2>
-        <p>${done ? "You can read more if you want." : left + " more minute" + (left === 1 ? "" : "s") + " to go tonight."}</p>
+        <h2>${ui.makeup ? (done ? "Last night is finished!" : "Finish last night") : ""}${ui.makeup ? "" : done ? "Tonight's reading is done!" + (teen() ? "" : " ⭐") : (S.name ? esc(S.name) + ", " + (sec ? "keep going!" : "ready to read?") : (sec ? "Keep going!" : "Ready to read?"))}</h2>
+        <p>${done ? "You can read more if you want." : left + " more minute" + (left === 1 ? "" : "s") + (ui.makeup ? " to finish last night." : " to go tonight.")}</p>
         <p class="streak">${streak ? icon("flame", "🔥", 18) + " " + streak + " night" + (streak === 1 ? "" : "s") + " in a row" : "Start a streak tonight!"}</p>
       </div>
     </section>
@@ -176,13 +265,16 @@
     <div class="levels" role="tablist" aria-label="Levels">${B.LEVELS.map(l => `<button role="tab" aria-selected="${l.n === ui.level}" class="lv ${l.n === ui.level ? "on" : ""}" data-lv="${l.n}"><span>${l.icon}</span>Level ${l.n}</button>`).join("")}</div>
     <p class="lvinfo"><b>${esc(lv.name)}</b> · ${esc(lv.sub)}<br><small>${readIn} of ${list.length} read</small></p>`}
     <div class="shelf">${list.map(b => `<button class="cover${older ? " tp-" + b.topic : ""}" data-id="${esc(b.id)}" style="--c:${esc(b.color)}" aria-label="${esc(b.title)}${fin[b.id] ? ", read" : ""}"><span class="ce">${older ? I(b.topic, 46) : esc(b.cover)}</span><span class="ct">${esc(b.title)}</span>${older ? `<span class="pips" aria-label="difficulty ${b.diff} of 3">${"●".repeat(b.diff)}${"○".repeat(3 - b.diff)}</span>` : ""}${fin[b.id] ? `<span class="check" aria-hidden="true">${older ? I("check", 18) : "✓"}</span>` : ""}</button>`).join("")}</div>
-    ${C.totalAll(R) >= 600 && !CL.enabled() && (!bkDate() || C.daysSince(bkDate(), k) >= 7) ? '<section class="nudge"><b>Keep the reading log safe ☁️</b><p>The log lives on this phone. A parent can sign in with Google once to back it up online. Readers never have to sign in.</p><button class="btn alt" id="bknow">Set up the backup</button></section>' : ""}
+    ${!kid() && C.totalAll(R) >= 600 && !CL.enabled() && (!bkDate() || C.daysSince(bkDate(), k) >= 7) ? '<section class="nudge"><b>Keep the reading log safe ☁️</b><p>The log lives on this phone. A parent can sign in with Google once to back it up online. Readers never have to sign in.</p><button class="btn alt" id="bknow">Set up the backup</button></section>' : ""}
     <button class="btn alt" id="manual">＋ Log a book from home</button>
     <p class="fine">Stories are free to share: written for this app, or old public-domain rhymes and fables. Everything stays on this phone.</p>`;
     nav("books");
     $("#gear").onclick = openSettings;
+    if ($("#mkgo")) $("#mkgo").onclick = () => { startMakeup(); };
+    if ($("#mkoff")) $("#mkoff").onclick = () => { ui.makeup = null; ui.levelSet = false; renderShelf(); };
+    if ($("#moon")) $("#moon").onclick = () => { setLook(night() ? "light" : "dark"); route(); };
     document.querySelectorAll(".rd[data-id]").forEach(b => (b.onclick = () => { if (b.dataset.id !== R.active) switchTo(b.dataset.id); }));
-    $("#addrd").onclick = openAddReader;
+    if ($("#addrd")) $("#addrd").onclick = openAddReader;
     $("#next").onclick = () => go("b/" + nx.id);
     $("#manual").onclick = openManual;
     if ($("#bknow")) $("#bknow").onclick = openSafe;
@@ -211,13 +303,13 @@
       <div class="pic ${older ? "sm tp-" + bk.topic : cnt > 2 ? "m3" : cnt > 1 ? "m2" : ""}" aria-hidden="true">${older ? I(bk.topic, 40) : esc(emo)}</div>
       ${end ? `<div class="the-end"><h2>The End</h2><p>${esc(bk.title)}</p>${older && bk.gloss && bk.gloss.length ? glossHtml(bk) : ""}${older && bk.quiz && bk.quiz.length ? quizHtml(bk) : ""}<button class="btn big" id="more">Pick another story</button><button class="btn alt" id="again">Read it again</button></div>`
         : `<p class="text" id="text">${pg.text.split(/\s+/).map((w, i) => `<span class="w" role="button" tabindex="0" data-i="${i}">${esc(w)}</span>`).join(" ")}</p>`}
-      ${end ? "" : `<p class="hint">${older ? "" : "👆 "}Press and hold a word to ${older ? "see its syllables" : "break it into sounds"}</p>`}
+      ${end ? "" : `<p class="hint">${older ? "" : "👆 "}${sylOn() ? "Press and hold a word to " + (older ? "see its syllables" : "break it into sounds") : S.say ? "Tap a word to hear it" : "Turn on the speaker, then tap a word to hear it"}</p>`}
       <footer class="rnav">
         <button class="pgbtn" id="prev" ${ui.page === 0 ? "disabled" : ""} aria-label="Previous page">${icon("back", "◀", 26)}</button>
         <div class="pgnum" aria-live="polite">${end ? "The End" : "Page " + (ui.page + 1) + " of " + n}</div>
         <button class="pgbtn go" id="nextp" ${end ? "disabled" : ""} aria-label="${ui.page === n - 1 ? "Finish the story" : "Next page"}">${icon("next", "▶", 26)}</button>
       </footer>
-      <div class="tools"><button class="mini" id="sm" aria-label="Smaller words">A−</button><button class="mini" id="lg" aria-label="Bigger words">A+</button><button class="mini ${S.say ? "on" : ""}" id="spk" aria-pressed="${S.say}" aria-label="Say words out loud when tapped">${icon("volume", "🔊", 20)}</button></div>
+      <div class="tools"><button class="mini" id="sm" aria-label="Smaller words">A−</button><button class="mini" id="lg" aria-label="Bigger words">A+</button><button class="mini ${S.say ? "on" : ""}" id="spk" aria-pressed="${S.say}" aria-label="Say words out loud when tapped">${icon("volume", "🔊", 20)}</button>${AU.canSpeak() && !end ? `<button class="mini wide ${storyOn() ? "on" : ""}" id="story" aria-pressed="${storyOn()}" aria-label="Storytime: read each page aloud">${teen() ? I("volume", 18) + " " : "🎧 "}Storytime</button>${storyOn() ? `<button class="mini" id="hear" aria-label="Hear this page again">↻</button><button class="mini" id="spd" aria-label="Reading speed: ${speedName()}. Tap to change.">Speed: ${speedName()}</button>` : ""}` : ""}</div>
       ${end && !older ? '<div class="confetti" aria-hidden="true">🎉</div>' : ""}
     </div>`;
     $("#back").onclick = () => go("");
@@ -225,33 +317,80 @@
     $("#prev").onclick = () => turn(-1); $("#nextp").onclick = () => turn(1);
     $("#sm").onclick = () => size(-1); $("#lg").onclick = () => size(1);
     $("#spk").onclick = () => { S.say = !S.say; save(); renderReader(); startTimerKeep(); };
+    if ($("#story")) $("#story").onclick = () => { setStory(!storyOn()); if (!storyOn()) { stopReading(); renderReader(); } else { AU.prime(); renderReader(); setTimeout(readAloud, 300); } };
+    if ($("#hear")) $("#hear").onclick = () => { readAloud(); };
+    if ($("#spd")) $("#spd").onclick = () => { const i = SPEEDS.findIndex(s => s[1] === speedName()); setRate(SPEEDS[(i + 1) % SPEEDS.length][0]); $("#spd").textContent = "Speed: " + speedName(); readAloud(); };
     if (end) {
-      if (!ui.finishedNow) { ui.finishedNow = true; C.finish(S, today(), bk.id); save(); }
+      if (!ui.finishedNow) { ui.finishedNow = true; C.finish(S, dayKey(), bk.id); save(); }
       $("#more").onclick = () => { const nx = nextUp(); go(nx && nx.id !== bk.id ? "b/" + nx.id : ""); };
       $("#again").onclick = () => { ui.page = 0; ui.hl = -1; renderReader(); startTimerKeep(); };
       if (older && bk.quiz && bk.quiz.length) wireQuiz(bk);
     } else {
       document.querySelectorAll(".w").forEach(w => {
-        const hit = () => { const i = +w.dataset.i; ui.hl = ui.hl === i ? -1 : i; paintHl(); if (ui.hl >= 0) say(w.textContent.replace(/[^\w']/g, "")); };
+        const hit = () => { if (ui.reading) stopReading(); const i = +w.dataset.i; ui.hl = ui.hl === i ? -1 : i; paintHl(); if (ui.hl >= 0) say(w.textContent.replace(/[^\w']/g, "")); };
         let t = 0, x0 = 0, y0 = 0;
         const stop = () => { clearTimeout(t); t = 0; };
-        w.onpointerdown = e => { if (e.button) return; x0 = e.clientX; y0 = e.clientY; stop(); t = setTimeout(() => { t = 0; ui.lp = true; setTimeout(() => (ui.lp = false), 700); ui.hl = +w.dataset.i; paintHl(); openWord(w.textContent); }, 450); };
+        w.onpointerdown = e => { if (e.button || !sylOn()) return; x0 = e.clientX; y0 = e.clientY; stop(); t = setTimeout(() => { t = 0; ui.lp = true; setTimeout(() => (ui.lp = false), 700); ui.hl = +w.dataset.i; paintHl(); openWord(w.textContent); }, 450); };
         w.onpointermove = e => { if (t && Math.hypot(e.clientX - x0, e.clientY - y0) > 12) stop(); };
         w.onpointerup = w.onpointercancel = w.onpointerleave = stop;
         w.oncontextmenu = e => e.preventDefault();
         w.onclick = () => { if (ui.lp) { ui.lp = false; return; } hit(); };
-        w.onkeydown = e => { if (e.key === "Enter" && e.shiftKey || e.key === "?") { e.preventDefault(); ui.hl = +w.dataset.i; paintHl(); openWord(w.textContent); } else if (e.key === "Enter" || e.key === " ") { e.preventDefault(); hit(); } };
+        w.onkeydown = e => { if (sylOn() && (e.key === "Enter" && e.shiftKey || e.key === "?")) { e.preventDefault(); ui.hl = +w.dataset.i; paintHl(); openWord(w.textContent); } else if (e.key === "Enter" || e.key === " ") { e.preventDefault(); hit(); } };
       });
       paintHl();
     }
     paintTimer();
+  }
+  /* Read the page aloud one sentence at a time, lighting up each word as it is said (where the phone reports it). */
+  const SPEEDS = [[0.45, "Very slow"], [0.6, "Slow"], [0.75, "Normal"], [0.9, "Fast"], [1.05, "Very fast"]];
+  /* The reading speed lives here (one setting for the Settings page and the story buttons), kept on this phone. */
+  const getRate = () => { try { const r = parseFloat(localStorage.getItem("read20.rate")); return r >= 0.3 && r <= 1.3 ? r : 0.6; } catch (e) { return 0.6; } };
+  const setRate = r => { try { localStorage.setItem("read20.rate", String(r)); } catch (e) {} };
+  const speedName = () => (SPEEDS.reduce((b, s) => (Math.abs(s[0] - getRate()) < Math.abs(b[0] - getRate()) ? s : b), SPEEDS[1]))[1];
+  const storyOn = () => { try { return localStorage.getItem("read20.story") === "1"; } catch (e) { return false; } };
+  const setStory = on => { try { if (on) localStorage.setItem("read20.story", "1"); else localStorage.removeItem("read20.story"); } catch (e) {} };
+  function stopReading() { ui.reading = false; ui.gen = (ui.gen || 0) + 1; AU.stop(); ui.hl = -1; paintHl(); }
+  /* Storytime: reads the page aloud (and again each time the page is turned). "↻" reads this page again. */
+  function readAloud() {
+    ui.reading = false; AU.stop(); const gen = (ui.gen = (ui.gen || 0) + 1);
+    const pg = ui.book && ui.book.pages[ui.page]; if (!pg || !AU.canSpeak()) return;
+    const toks = pg.text.split(/\s+/), sents = []; let cur = [];
+    toks.forEach((w, i) => { cur.push(i); if (/[.!?]["'\u201d\u2019)]*$/.test(w)) { sents.push(cur); cur = []; } });
+    if (cur.length) sents.push(cur);
+    ui.reading = true;
+    let si = 0;
+    const next = () => {
+      if (!ui.reading || ui.gen !== gen) return;
+      if (si >= sents.length) return stopReading();
+      const idx = sents[si++], text = idx.map(i => toks[i]).join(" "), starts = []; let pos = 0;
+      idx.forEach(i => { starts.push(pos); pos += toks[i].length + 1; });
+      /* Where the voice reports each word (boundary events) the highlight follows it exactly. Many phone voices do not report, so
+         the highlight is also timed from how long this voice took on the sentences before (and a first guess), and re-timed
+         the moment a real boundary arrives. */
+      const light = k => { if (!ui.reading || ui.gen !== gen) return; ui.hl = idx[k]; paintHl(); const el = document.querySelector('.w[data-i="' + idx[k] + '"]'); if (el && el.scrollIntoView) { try { el.scrollIntoView({ block: "nearest", behavior: "smooth" }); } catch (e) { el.scrollIntoView(); } } };
+      const rate = getRate(), cps = ui.cps && ui.cpsRate === rate ? ui.cps : 13 * rate, timers = []; let real = false, t0 = 0;
+      const wts = idx.map(i => toks[i].length + 1 + (/[,;:]["'\u201d)]*$/.test(toks[i]) ? 4 : 0) + (/[.!?]["'\u201d)]*$/.test(toks[i]) ? 7 : 0)), tot = wts.reduce((x, y) => x + y, 0);
+      const kill = () => { timers.forEach(clearTimeout); timers.length = 0; };
+      const schedule = () => { let cum = 0; wts.forEach((w, k) => { const at = (cum / cps) * 1000; cum += w; timers.push(setTimeout(() => { if (!real) light(k); }, Math.max(0, at))); }); };
+      light(0); touch();
+      let ended = false;
+      const dog = setTimeout(() => { if (ended || !ui.reading || ui.gen !== gen) return; ended = true; kill(); AU.stop(); setTimeout(next, 300); }, (tot / cps) * 1000 * 1.8 + 3500);   // a voice that never says it is done
+      AU.speak(text, rate, {
+        onstart: () => { t0 = Date.now(); if (!real && !timers.length) schedule(); },
+        onboundary: e => { if (typeof e.charIndex !== "number") return; real = true; kill(); let k = 0; while (k + 1 < starts.length && starts[k + 1] <= e.charIndex) k++; light(k); },
+        onend: () => { if (ended) return; ended = true; clearTimeout(dog); kill(); if (t0 && !real) { const secs = (Date.now() - t0) / 1000; if (secs > 0.3) { ui.cps = tot / secs; ui.cpsRate = rate; } } if (ui.reading && ui.gen === gen) setTimeout(next, 300); }
+      });
+      setTimeout(() => { if (ui.reading && !t0 && !timers.length && !real) { t0 = Date.now(); schedule(); } }, 700);   // a voice that never says it has started
+    };
+    next();
   }
   function startTimerKeep() { paintTimer(); } // the interval keeps running across re-draws
   function paintHl() { document.querySelectorAll(".w").forEach(w => w.classList.toggle("hl", +w.dataset.i === ui.hl)); }
   function turn(d) {
     const n = ui.book.pages.length, p = ui.page + d;
     if (p < 0 || p > n) return;
-    ui.page = p; ui.hl = -1; renderReader(); touch();
+    if (ui.reading) { ui.reading = false; AU.stop(); }
+    ui.page = p; ui.hl = -1; renderReader(); touch(); if (storyOn()) readAloud();
   }
   function size(d) { S.size = Math.min(2, Math.max(0, S.size + d)); save(); renderReader(); }
 
@@ -281,31 +420,38 @@
     ${cells.map(c => { if (!c) return '<div class="day empty"></div>'; const s = C.daySec(S, c), dn = +c.slice(8); const cls = (C.isDone(S, c) ? "done " : s ? "some " : "") + (c === k ? "now " : "") + (c === ui.sel ? "sel" : "");
       return `<button class="day ${cls}" data-d="${c}" aria-label="${c}${s ? ", " + C.fmtMin(s) : ""}${C.isDone(S, c) ? ", goal reached" : ""}"><b>${dn}</b><i>${C.isDone(S, c) ? icon("star", "⭐", 14) : s ? Math.round(s / 60) + "m" : ""}</i></button>`; }).join("")}</div>
     <div id="detail"></div>
-    <section class="keep"><h3>Keep the log safe</h3>
+    ${kid() ? "" : `<section class="keep"><h3>Keep the log safe</h3>
       <p class="ok">${store.fail ? "⚠️ This phone is not letting the app save." : "✓ Saved on this phone"}</p>
       <p class="cl2" id="cl2">${esc(cloudLine()) || "☁️ Not backed up online yet."}</p>
       <button class="btn" id="kcloud">${CL.status === "ok" ? "☁️ Back up now" : "☁️ Back up online (a parent signs in once)"}</button>
       <button class="btn alt" id="kfile">💾 Save a backup file</button>
       <p class="fine left" id="kmsg" role="status"></p>
-    </section>`;
+    </section>`}`;
     nav("log");
     $("#gear").onclick = openSettings;
-    $("#kcloud").onclick = () => { if (CL.status === "ok") { CL.syncNow(); $("#kmsg").textContent = "Backing up…"; setTimeout(() => { if ($("#cl2")) renderLog(); }, 1500); } else openSafe(); };
-    $("#kfile").onclick = () => { backup(); $("#kmsg").textContent = "Backup file saved to this phone's Downloads."; };
+    if ($("#kcloud")) $("#kcloud").onclick = () => { if (CL.status === "ok") { CL.syncNow(); $("#kmsg").textContent = "Backing up…"; setTimeout(() => { if ($("#cl2")) renderLog(); }, 1500); } else openSafe(); };
+    if ($("#kfile")) $("#kfile").onclick = () => { backup(); $("#kmsg").textContent = "Backup file saved to this phone's Downloads."; };
     $("#pm").onclick = () => { ui.month = m === 0 ? { y: y - 1, m: 11 } : { y, m: m - 1 }; renderLog(); };
     $("#nm").onclick = () => { ui.month = m === 11 ? { y: y + 1, m: 0 } : { y, m: m + 1 }; renderLog(); };
     document.querySelectorAll(".day[data-d]").forEach(b => (b.onclick = () => { ui.sel = b.dataset.d; renderLog(); }));
     renderDetail();
   }
+  const delBtn = (attrs, title) => `<button class="del" ${attrs} data-t="${esc(title)}" aria-label="Remove ${esc(title)} from this day">${teen() ? I("trash", 18) : "🗑"}</button>`;
   function renderDetail() {
     const k = ui.sel, d = S.days[k], dt = C.parseDay(k);
     const label = dt.toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" });
     let rows = "";
     if (d) {
-      Object.keys(d.books).forEach(id => { const b = byId[id], x = d.books[id]; if (!b) return; rows += `<li><span class="le">${b.shelf === "older" ? I(b.topic, 30) : esc(b.cover)}</span><span class="lt">${esc(b.title)}<small>${b.shelf === "older" ? esc(topicName(b.topic)) : "Level " + b.level}${x.fin ? " · finished ✓" : ""}</small></span><span class="lm">${C.fmtMin(x.sec)}</span></li>`; });
-      d.extra.forEach(x => { rows += `<li><span class="le">📕</span><span class="lt">${esc(x.title)}<small>from home</small></span><span class="lm">${C.fmtMin(x.sec)}</span></li>`; });
+      Object.keys(d.books).forEach(id => { const b = byId[id], x = d.books[id]; if (!b) return; rows += `<li><span class="le">${b.shelf === "older" ? I(b.topic, 30) : esc(b.cover)}</span><span class="lt">${esc(b.title)}<small>${b.shelf === "older" ? esc(topicName(b.topic)) : "Level " + b.level}${x.fin ? " · finished ✓" : ""}</small></span><span class="lm">${C.fmtMin(x.sec)}</span>${delBtn(`data-bk="${esc(id)}"`, b.title)}</li>`; });
+      d.extra.forEach(x => { rows += `<li><span class="le">📕</span><span class="lt">${esc(x.title)}<small>from home</small></span><span class="lm">${C.fmtMin(x.sec)}</span>${delBtn(`data-xd="${esc(x.dev)}" data-xi="${x.i}"`, x.title)}</li>`; });
     }
     $("#detail").innerHTML = `<section class="dcard"><h3>${esc(label)}</h3>${d && d.sec ? `<p class="dtot">${C.fmtMin(d.sec)} total${C.isDone(S, k) ? (teen() ? "" : " ⭐") : ""}</p><ul class="list">${rows}</ul>` : "<p class='dtot'>No reading logged this day.</p>"}</section>`;
+    document.querySelectorAll("#detail .del").forEach(b => (b.onclick = () => {
+      const what = b.dataset.t, day = label;
+      if (!confirm("Remove " + what + " from " + day + " for " + who(S) + "?\n\nThis takes that reading time out of the log and cannot be undone.")) return;
+      const ok = b.dataset.bk ? C.removeBook(S, k, b.dataset.bk) : C.removeExtra(S, k, b.dataset.xd, +b.dataset.xi);
+      if (ok) { save(true); if (CL.status === "ok") CL.syncNow(); renderLog(); }
+    }));
   }
 
   /* ---------- sheets ---------- */
@@ -396,25 +542,36 @@
         <label>Reading goal each night<select id="sg">${C.GOALS.map(g => `<option ${g === S.goal ? "selected" : ""} value="${g}">${g} minutes</option>`).join("")}</select></label>
         <label>Reading level<select id="slv"><option value="early">Learning to read</option><option value="older">Older reader (grades 5 and up)</option></select></label>
         <label>Word size<select id="sz">${(S.lv === "older" ? ["Normal", "Large", "Extra large"] : ["Big", "Bigger", "Biggest"]).map((t, i) => `<option value="${i}">${t}</option>`).join("")}</select></label>
+        ${teen() ? "" : `<label>Screen look (this phone)<select id="slk">${[["auto", "Match my phone"], ["light", "Light"], ["dark", "Dark (easy on the eyes in bed)"]].map(([v, t]) => `<option value="${v}" ${getLook() === v ? "selected" : ""}>${t}</option>`).join("")}</select></label>`}
         <label class="chk"><input type="checkbox" id="ss" ${S.say ? "checked" : ""}> Say a word out loud when it is tapped</label>
-        ${R.order.length > 1 ? `<button class="linkbtn danger" id="srm">Remove ${esc(who(S))}…</button>` : ""}
+        ${AU.canSpeak() ? `<label>Reading voice (this phone)<select id="svc"></select></label><label>Voice speed<select id="srt">${SPEEDS.map(([v, t]) => `<option value="${v}" ${Math.abs(getRate() - v) < 0.02 ? "selected" : ""}>${t}</option>`).join("")}</select></label><p class="fine left" id="svh">Pick the most natural-sounding one. Voices that say "Enhanced", "Natural" or "Premium" sound the most like a person.</p>` : ""}
+        ${R.order.length > 1 && !kid() ? `<button class="linkbtn danger" id="srm">Remove ${esc(who(S))}…</button>` : ""}
       </section>
-      <section class="set"><h3>Keep the log safe</h3><p class="fine left">${esc(safe)}</p><button class="btn alt" id="setsafe">Back up and share…</button></section>
+      ${kid() ? "" : `<section class="set"><h3>Keep the log safe</h3><p class="fine left">${esc(safe)}</p><button class="btn alt" id="setsafe">Back up and share…</button></section>`}
       <section class="set"><h3>Help</h3>
         <button class="btn alt" id="stest">🔊 Test the sound</button><p class="fine left" id="stm" role="status"></p>
         <button class="btn alt" type="button" onclick="window.nateHealth&&nateHealth.report()">✉️ Send a problem report</button>
         <button class="btn alt" id="srefresh">🔄 Get the newest version</button>
-        <p class="fine left" id="sver">Library: ${B.books.length} stories · version ${BUILD}</p></section>
+        <p class="fine left" id="sver">Library: ${B.books.length} stories · version ${BUILD}</p>
+        <p class="fine left">© 2026 Nate Steele. All rights reserved. Please do not copy or resell this app.</p>
+        ${kid() ? '<button class="linkbtn" id="kunlink">Stop linking this phone…</button>' : ""}</section>
       <div class="row"><button class="btn" id="sd">Done</button></div>`);
     $("#sz").value = String(S.size); $("#slv").value = S.lv;
     wireAvatars(o, a => (av = a));
-    $("#setsafe").onclick = openSafe;
+    if ($("#setsafe")) $("#setsafe").onclick = openSafe;
+    if ($("#kunlink")) $("#kunlink").onclick = () => { if (confirm("Stop linking this phone? It keeps the reading it has, but it stops syncing with the parent's phone.")) { CL.unlinkKid(); closeOverlay(o); route(); } };
     $("#srefresh").onclick = refreshApp;
     if ($("#srm")) $("#srm").onclick = () => removeReader(o);
     $("#stest").onclick = () => {
       AU.unlock(); const ok = AU.beep(), i = AU.info(); if (i.speech) setTimeout(() => AU.speak("Hello! Can you hear me?", 0.85), 700);
       $("#stm").textContent = !ok ? "This browser cannot make sound." : "You should hear a beep" + (i.speech ? " and then a voice" : "") + ". " + (i.speech ? (i.voices ? "" : "This phone has not loaded a speaking voice yet; try again in a few seconds. ") : "This phone has no speaking voice, so word-reading is off. ") + "If you hear nothing: turn the media volume up and make sure the phone is not on silent.";
     };
+    const fillVoices = () => { const sel = $("#svc"); if (!sel) return; const cur = (() => { try { return localStorage.getItem("read20.voice") || ""; } catch (e) { return ""; } })(), vs = AU.voices();
+      sel.innerHTML = `<option value="">Best available${AU.voiceName() ? " (" + esc(AU.voiceName()) + ")" : ""}</option>` + vs.map(v => `<option value="${esc(v.uri)}" ${v.uri === cur ? "selected" : ""}>${esc(v.name)}</option>`).join(""); };
+    fillVoices(); if ($("#svc")) { try { speechSynthesis.addEventListener("voiceschanged", fillVoices); } catch (e) {}
+      $("#svc").onchange = () => { AU.setVoice($("#svc").value); AU.speak("Hello! Let's read a story together tonight.", getRate()); };
+      $("#srt").onchange = () => { setRate(+$("#srt").value); AU.speak("This is how fast I will read.", getRate()); }; }
+    if ($("#slk")) $("#slk").onchange = () => { setLook($("#slk").value); applyTheme(); };
     $("#sd").onclick = () => { S.name = $("#sn").value.replace(/[\u0000-\u001f]/g, "").trim().slice(0, 20); S.av = av; if ($("#slv").value !== S.lv) { S.lv = $("#slv").value; ui.levelSet = false; } S.goal = +$("#sg").value; S.size = +$("#sz").value; S.say = $("#ss").checked; save(); closeOverlay(o); route(); };
   }
 
@@ -432,6 +589,7 @@
       <p class="fine left">${store.fail ? "⚠️ This phone is not letting the app save." : "✓ Always saved on this phone."} This covers every reader on this phone.</p>
       <section class="set"><h3>1 · Back up online</h3>
         <p class="fine left">A parent signs in with Google once. After that a lost, reset or new phone gets the log back. Readers never need to sign in.</p>
+        <p class="fine left">🔒 Optional. Without it, your reading stays on this phone (the app only sends anonymous counts of how many phones use it: a random code, no names). If a parent turns it on, the readers\u2019 names, minutes and the Google email are stored in the app\u2019s private database, locked to that family\u2019s Google sign-in. No ads, no tracking, never shared.</p>
         <p class="fine left" id="cl" role="status"></p>
         <button class="btn" id="cin" hidden>Sign in with Google</button>
         <button class="btn alt" id="cnow" hidden>Back up now</button>
@@ -444,6 +602,15 @@
         <button class="btn alt" id="shstop" hidden>Stop sharing on this phone</button>
         <label class="fine left">Got a link or code from the other home?<input id="jcode" placeholder="Paste it here" autocomplete="off"></label>
         <button class="btn alt" id="jgo">Join their log</button></section>
+      <section class="set"><h3>3 · Give one reader their own phone</h3>
+        <p class="fine left">Makes a link for <b id="rdname"></b> only. The phone that opens it can see and use just this reader, with no other readers and no parent screens. Anything they already read on that phone is added in.</p>
+        <p class="fine left" id="rlmsg" role="status"></p>
+        <button class="btn" id="rlmake" hidden>Make a link for this reader</button>
+        <button class="btn" id="rlsend" hidden>📤 Send the reader link</button>
+        <button class="btn alt" id="rlcopy" hidden>Copy the link</button>
+        <button class="btn alt" id="rlstop" hidden>Stop linking this reader's phone</button>
+        <label class="fine left">Linking <b>this</b> phone to a reader? Paste the link or code you were sent<input id="rcode" placeholder="Paste it here" autocomplete="off"></label>
+        <button class="btn alt" id="rgo">Link this phone</button></section>
       <section class="set"><h3>Or use a file</h3>
         <p class="fine left">${bkDate() ? "Last backup file: " + esc(bkDate()) + "." : "No backup file yet."} Keep it somewhere safe.</p>
         <button class="btn alt" id="sb">💾 Save a backup file</button>
@@ -459,8 +626,18 @@
       const key = CL.shareKey(); $("#shmake").hidden = !(on && !key); $("#shsend").hidden = $("#shcopy").hidden = $("#shstop").hidden = !key;
       $("#shmsg").textContent = key ? "Sharing is on. Reading minutes from both homes add up. Code: " + CL.pretty(key) : on ? "Make one link and text it to the other home. They open it, sign in with their own Google account, and both phones share one log, so nobody needs your Google account." : "Sign in above first, then you can make a family link.";
     };
-    CL.onchange = () => { paintCloud(); cloudChanged(); if (!$("#cl")) CL.onchange = cloudChanged; };
-    paintCloud();
+    const paintReader = () => {
+      if (!$("#rlmsg")) return; const signed = CL.status === "ok" || CL.status === "signedin" || (CL.status === "offline" && CL.email), key = CL.readerKeys()[R.active];
+      $("#rdname").textContent = who(S); $("#rlmake").hidden = !(signed && !key); $("#rlsend").hidden = $("#rlcopy").hidden = $("#rlstop").hidden = !key;
+      $("#rlmsg").textContent = key ? "This reader is linked. Code: " + CL.pretty(key) : signed ? "" : "Sign in above first.";
+    };
+    CL.onchange = () => { paintCloud(); paintReader(); cloudChanged(); if (!$("#cl")) CL.onchange = cloudChanged; };
+    paintCloud(); paintReader();
+    $("#rlmake").onclick = async () => { $("#rlmsg").textContent = "Making the link…"; const k = await CL.makeReaderLink(R.active); paintReader(); if (!k) $("#rlmsg").textContent = "Could not make the link. Check the signal, and that the cloud backup is allowed."; };
+    $("#rlsend").onclick = async () => { const url = CL.readerLink(CL.readerKeys()[R.active]), text = "Open this link on the phone that should read " + who(S) + "'s stories:"; try { if (navigator.share) { await navigator.share({ title: "Read 20 reader link", text, url }); return; } } catch (e) { if (e && e.name === "AbortError") return; } try { await navigator.clipboard.writeText(url); $("#rlmsg").textContent = "Link copied. Paste it into a text message."; } catch (e) { $("#rlmsg").textContent = url; } };
+    $("#rlcopy").onclick = async () => { const url = CL.readerLink(CL.readerKeys()[R.active]); try { await navigator.clipboard.writeText(url); $("#rlmsg").textContent = "Link copied. Paste it into a text message."; } catch (e) { $("#rlmsg").textContent = url; } };
+    $("#rlstop").onclick = () => { CL.unlinkReader(R.active); paintReader(); };
+    $("#rgo").onclick = () => { const k = CL.parseReaderKey($("#rcode").value); if (!k) { $("#rlmsg").textContent = "That does not look like a Read 20 reader link or code."; return; } openJoinReader(k); };
     $("#cin").onclick = () => CL.signIn();
     $("#shmake").onclick = async () => { $("#shmsg").textContent = "Making the link…"; const k = await CL.makeShare(); paintCloud(); if (!k) $("#shmsg").textContent = "Could not make the link. Check the signal, and that the cloud backup is allowed."; };
     $("#shsend").onclick = () => shareLink($("#shmsg"));
@@ -517,9 +694,28 @@
       <div class="wp-syl">${chips}</div>
       ${can ? '<button class="btn alt" id="wphear">🔊 Say the whole word</button>' : ""}
       <button class="btn" id="wpdone">Got it</button></div>`);
-    o.querySelectorAll(".syl").forEach(b => (b.onclick = () => { o.querySelectorAll(".syl").forEach(x => x.classList.remove("on")); b.classList.add("on"); speak(a.syllables[+b.dataset.i].text); }));
+    o.querySelectorAll(".syl").forEach(b => (b.onclick = () => { o.querySelectorAll(".syl").forEach(x => x.classList.remove("on")); b.classList.add("on"); speak(a.syllables[+b.dataset.i].say); }));
     if ($("#wphear")) $("#wphear").onclick = () => speak(a.word.replace(/-/g, " "));
     $("#wpdone").onclick = () => closeOverlay(o); $("#wpdone").focus();
+  }
+
+  /* ---------- a child's own phone: one reader only ---------- */
+  function openJoinReader(key) {
+    const o = sheet(`<h2>Link this phone to a reader?</h2>
+      <p>This phone will show <b>only that one reader</b> and nothing else: no other readers, and none of the parent screens. Any reading already done on this phone is kept and added to that reader.</p>
+      <p class="fine left">You will sign in with Google to finish. Any Google account works; it does not have to be a parent's.</p>
+      <p class="fine left" id="jrmsg" role="status"></p>
+      <div class="row"><button class="btn alt" id="jrno">Not now</button><button class="btn" id="jryes">Link this phone</button></div>`);
+    const prev = CL.onchange;
+    const update = () => {
+      if (!$("#jrmsg")) { CL.onchange = prev; return; }
+      if (kid()) { CL.onchange = prev; while (overlays.length) closeOverlay(overlays[overlays.length - 1]); stale = false; route(); return; }   // linked: close every pop-up (the parent screens are gone on this phone) and redraw as the child's single reader
+      const st = CL.status;
+      $("#jrmsg").textContent = st === "badlink" ? "That link was not found. Ask for a new one." : st === "denied" ? "Sharing is not turned on yet. Ask a parent to publish the Read 20 rules in Firebase." : st === "offline" ? "No signal right now. Try again when you have signal." : st === "loading" || st === "signedin" ? "Linking…" : "";
+    };
+    CL.onchange = () => { prev(); update(); };
+    $("#jrno").onclick = () => { CL.forgetJoin(); closeOverlay(o); };
+    $("#jryes").onclick = async () => { $("#jrmsg").textContent = "Linking…"; $("#jryes").disabled = true; const ok = await CL.joinReader(key); $("#jryes").disabled = false; if (ok) { const el = document.querySelector(".overlay"); if (el === o) closeOverlay(o); } update(); };
   }
 
   /* ---------- family link: one log for two homes ---------- */
@@ -587,7 +783,7 @@
     document.addEventListener("visibilitychange", () => { if (document.hidden) { save(true); CL.flush(); } });
     try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist(); } catch (e) {} // ask Chrome never to clear her log to free space
     if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {});
-    CL.init({ get: () => R, apply: adopt, onchange: cloudChanged });
+    CL.init({ get: () => R, apply: adopt, applyReader: adoptReader, kidJoin, onchange: cloudChanged });
     route(); recover().then(() => { store.ready = true; save(true); });
   }
   window.R20App = { init, _state: () => S, _root: () => R };

@@ -18,14 +18,16 @@
     h += '<section class="card"><h3>Computer voice</h3>';
     if (sp) {
       h += '<p class="mute small-note">Used when a player has the computer voice instead of a recording, and for the sound check.</p>' +
-        '<label class="field"><span class="label">Voice</span><select id="tvoice" data-setting="tvoice"><option value="">This phone\'s default</option>' + voices.map(function (v) { return '<option value="' + esc(v.voiceURI) + '"' + (v.voiceURI === s.tvoice ? " selected" : "") + ">" + esc(v.name + (v.lang ? " (" + v.lang + ")" : "")) + "</option>"; }).join("") + "</select></label>" +
+        '<label class="field"><span class="label">Voice</span><select id="tvoice" data-setting="tvoice"><option value="">Best announcer voice on this phone</option>' + voices.map(function (v) { return '<option value="' + esc(v.voiceURI) + '"' + (v.voiceURI === s.tvoice ? " selected" : "") + ">" + esc(v.name + (v.lang ? " (" + v.lang + ")" : "")) + "</option>"; }).join("") + "</select></label>" +
         U.range({ key: "trate", label: "Speed", min: 0.5, max: 1.5, step: 0.1, value: s.trate, text: s.trate.toFixed(1) + "x" }) + U.range({ key: "tvol", label: "Voice volume", min: 0, max: 100, step: 1, value: s.tvol, text: s.tvol + "%" }) +
+        '<label class="chk"><input type="checkbox" data-setting="tstyle"' + (s.tstyle === "pa" ? " checked" : "") + '> <span>Ballpark announcer style ("Now batting. Number 7. Name!")</span></label>' +
         '<button type="button" class="btn ghost" data-act="tts-test">Say "Sound check"</button>';
     } else h += '<p class="mute">This browser can\'t speak. Recorded voices still work.</p>';
     h += "</section>";
     h += '<section class="card"><h3>Recording</h3><label class="chk"><input type="checkbox" data-setting="countIn"' + (s.countIn ? " checked" : "") + "> <span>3-2-1 count-in before recording</span></label>" +
       U.range({ key: "thr", label: "Silence threshold for auto-trim", min: -70, max: -20, step: 1, value: s.thr, text: s.thr + " dB" }) + "</section>";
-    h += '<section class="card"><h3>Game mode</h3><label class="chk"><input type="checkbox" data-setting="wake"' + (s.wake ? " checked" : "") + "> <span>Keep the screen on while Game is open</span></label>" + (("wakeLock" in navigator) ? "" : '<p class="mute small-note">This browser can\'t keep the screen on by itself. Turn off auto-lock in the phone\'s settings during games.</p>') + "</section>";
+    h += '<section class="card"><h3>Game mode</h3><label class="chk"><input type="checkbox" data-setting="wake"' + (s.wake ? " checked" : "") + "> <span>Keep the screen on while Game is open</span></label>" +
+      (WU.pitch ? '<label class="chk"><input type="checkbox" id="setPitchShow"' + (WU.pitch.shown() ? " checked" : "") + '> <span>Pitch counter on the Game screen</span></label>' : "") + (("wakeLock" in navigator) ? "" : '<p class="mute small-note">This browser can\'t keep the screen on by itself. Turn off auto-lock in the phone\'s settings during games.</p>') + "</section>";
     if (WU.req) h += WU.req.settingsHTML();
     h += '<section class="card"><h3>My announcer sound</h3><p class="msg">' + esc("EQ: " + (pre === "custom" ? "custom" : C.EQ_PRESETS.filter(function (x) { return x.id === pre; })[0].label) + ", compressor " + an.comp + ", room " + (an.wet ? C.REVERB[an.size].label + " " + an.wet + "%" : "off") + ".") +
       '</p><p class="mute small-note">New recordings start with this sound. Change it from any voice: tap "Save as my announcer sound".</p><button type="button" class="btn ghost" data-act="reset-ann">Reset to the factory sound</button></section>';
@@ -74,6 +76,7 @@
     if (t.dataset.setting === "countIn") s.countIn = t.checked;
     else if (t.dataset.setting === "wake") { s.wake = t.checked; WU.emit("wake"); }
     else if (t.dataset.setting === "tvoice") s.tvoice = C.str(t.value, 200);
+    else if (t.dataset.setting === "tstyle") s.tstyle = t.checked ? "pa" : "plain";
     else return;
     WU.save();
   };

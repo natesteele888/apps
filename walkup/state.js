@@ -53,7 +53,7 @@
   WU.have = function (k) { return S.have.has(k); };
   WU.status = function (p) { return C.statusOf(p, S.st.songs, WU.have); };
   WU.songUsers = function (songId) { return S.st.roster.filter(function (p) { return p.songId === songId; }); };
-  WU.speechOpts = function () { var s = S.st.settings; return { voiceURI: s.tvoice, rate: s.trate, volume: s.tvol / 100 }; };
+  WU.speechOpts = function () { var s = S.st.settings; return { voiceURI: s.tvoice || (WU.eng && WU.eng.speech ? C.pickVoice(WU.eng.speech.voices()) : ""), rate: s.trate, volume: s.tvol / 100 }; };
 
   /* ---------- audio files on this phone ---------- */
   WU.refreshHave = function () {

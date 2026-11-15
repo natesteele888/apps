@@ -1002,8 +1002,8 @@ const evByTitle = (st, title, date) => st.events.filter(e => e.title === title &
     await page.addInitScript(() => { if (!sessionStorage.getItem('__c')) { sessionStorage.setItem('__c', '1'); caches.open('locker-v99').then(c => c.put('/x', new Response('x'))); caches.open('whoswhere-v0').then(c => c.put('/y', new Response('y'))); } });
     await page.goto(srv.url); await page.waitForSelector('.welcome'); await page.click('[data-act=sample]');
     await page.evaluate(() => navigator.serviceWorker.ready.then(() => 1));
-    await page.waitForFunction(async () => { const k = await caches.keys(); return k.includes('whoswhere-v1') && !k.includes('whoswhere-v0') && (await (await caches.open('whoswhere-v1')).keys()).length >= 8; }, null, { timeout: 8000 });
-    const cached = await page.evaluate(async () => (await (await caches.open('whoswhere-v1')).keys()).map(r => new URL(r.url).pathname));
+    await page.waitForFunction(async () => { const k = await caches.keys(); return k.includes('whoswhere-v2') && !k.includes('whoswhere-v0') && (await (await caches.open('whoswhere-v2')).keys()).length >= 8; }, null, { timeout: 8000 });
+    const cached = await page.evaluate(async () => (await (await caches.open('whoswhere-v2')).keys()).map(r => new URL(r.url).pathname));
     for (const f of ['/apps/whoswhere/', '/apps/whoswhere/core.js', '/apps/whoswhere/base.js', '/apps/whoswhere/views.js', '/apps/whoswhere/forms.js', '/apps/whoswhere/app.js', '/apps/whoswhere/whoswhere.css', '/apps/whoswhere/manifest.json', '/apps/icons/whoswhere-192.png', '/apps/icons/whoswhere-512.png']) assert.ok(cached.includes(f), 'cached ' + f + ' in ' + cached.join());
     await page.reload(); await page.waitForTimeout(300); assert.ok(await page.evaluate(() => !!navigator.serviceWorker.controller), 'controlled by the worker');
     await ctx.setOffline(true); await page.reload(); await page.waitForSelector('.ev', { timeout: 6000 });
@@ -1071,6 +1071,8 @@ const evByTitle = (st, title, date) => st.events.filter(e => e.title === title &
     for (const [w, h, tag] of sizes) {
       const { page, errors } = await withSample({ ctx: { viewport: { width: w, height: h } } });
       const problems = [];
+      const brand = await page.evaluate(() => { const e = document.querySelector('.brand'); return { clipped: e.scrollWidth > e.clientWidth || e.scrollHeight > e.clientHeight + 1, lines: Math.round(e.clientHeight / parseFloat(getComputedStyle(e).lineHeight)) }; });
+      if (brand.clipped || brand.lines > 1) problems.push('header title clipped or wrapped: ' + JSON.stringify(brand));
       for (const t of ['week', 'month', 'attention', 'people']) {
         await tab(page, t); if (t === 'attention') await page.click('[data-act=horizon][data-n="0"]'); await page.waitForTimeout(80);
         const o = await overflow(page); if (o > 0) problems.push(t + ' overflows by ' + o);

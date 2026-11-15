@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <uses-feature android:name="android.hardware.type.watch" />
+    <uses-permission android:name="android.permission.VIBRATE" />
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+
+    <!-- One install, two apps in the watch's app list: Walk-Up and Pitch Count. Each works without the other. -->
+    <application
+        android:allowBackup="false"
+        android:icon="@mipmap/ic_launcher"
+        android:roundIcon="@mipmap/ic_launcher_round"
+        android:label="@string/app_name"
+        android:supportsRtl="true"
+        android:theme="@style/Dugout">
+        <!-- works with the phone app; Pitch Count also counts with no phone nearby and syncs later -->
+        <meta-data android:name="com.google.android.wearable.standalone" android:value="false" />
+        <activity
+            android:name=".WalkUpActivity"
+            android:exported="true"
+            android:icon="@mipmap/ic_walkup"
+            android:roundIcon="@mipmap/ic_walkup"
+            android:label="@string/walkup_name"
+            android:launchMode="singleTask"
+            android:taskAffinity="com.steele.dugout.walkup">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+        <activity
+            android:name=".PitchCountActivity"
+            android:exported="true"
+            android:icon="@mipmap/ic_pitch"
+            android:roundIcon="@mipmap/ic_pitch"
+            android:label="@string/pitch_name"
+            android:launchMode="singleTask"
+            android:taskAffinity="com.steele.dugout.pitch">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+    </application>
+</manifest>

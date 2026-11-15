@@ -62,7 +62,7 @@
   WU.mixSummary = function (pl) {
     var plan = E.planFor(pl, S.st), m = C.sanitizeMix(pl.mix);
     if (!plan.tracks.length) return "Nothing to mix yet.";
-    return "Total " + C.fmtSecs(plan.total) + (pl.voice ? " · voice starts at " + C.fmtSecs(m.vd) : "") + (plan.tracks.some(function (t) { return t.duckPoints; }) ? " · music ducks " + m.dd + " dB" : "");
+    return "Total " + C.fmtSecs(plan.total) + (C.activeVoice(pl, S.st.songs) ? " · voice starts at " + C.fmtSecs(m.vd) : "") + (plan.tracks.some(function (t) { return t.duckPoints; }) ? " · music ducks " + m.dd + " dB" : "");
   };
   /* run a playhead across an svg inside `wrap` while the mix with `key` plays */
   WU.timelineHead = function (wrap, key, T) {
@@ -83,6 +83,8 @@
   /* ---------- the Mix sheet ---------- */
   WU.openMix = function (pid) {
     var pl = WU.player(pid); if (!pl) return null;
+    /* a clip that already says the name plays with no announcer, so the voice controls step aside for it */
+    function voice() { return C.activeVoice(pl, S.st.songs); }
     var st = { closed: false, T: 0, stopHead: null, drag: null, prev: false, tab: "mix" }, off = null;
     var sh = U.openSheet({
       title: "Mix: " + (pl.name || "player"), cls: "mix", html: "", footer: '<button type="button" class="btn" id="mxPrev" data-st="play">' + U.I.play + " <span>Preview</span></button>" + '<button type="button" class="btn ghost" data-close>Done</button>',
@@ -109,17 +111,17 @@
     }
     /* The sheet is a picture and a row of readouts that always show, then one short tab at a time, so nothing needs scrolling on a phone. */
     function build() {
-      var m = C.sanitizeMix(pl.mix), sg = song(), tr = sg ? C.effectiveTrim(pl, sg) : null, both = !!(pl.voice && sg);
+      var m = C.sanitizeMix(pl.mix), sg = song(), tr = sg ? C.effectiveTrim(pl, sg) : null, both = !!(voice() && sg);
       var h = '<div class="tlwrap" id="mxTl"></div><div class="mx-read" id="mxRead"></div><div class="mx-tot"><b id="mxTotal"></b><span class="mute" id="mxNote"></span></div>';
       h += '<div class="mx-tabs" role="tablist" aria-label="Mix controls">' + TABS.map(function (t) { var on = st.tab === t[0]; return '<button type="button" role="tab" id="mxT-' + t[0] + '" aria-controls="mxP-' + t[0] + '" aria-selected="' + on + '" tabindex="' + (on ? 0 : -1) + '" data-tab="' + t[0] + '">' + t[1] + "</button>"; }).join("") + '</div><div class="mx-panels">';
       var mixIn = "";
-      if (pl.voice) mixIn += '<div class="mx-nudge"><button type="button" class="btn ghost" data-nudge="-0.1" aria-label="Start the voice 0.1 seconds earlier. Hold to keep going.">' + ICON_BACK + '</button><div class="mx-vd"><small>Voice starts at</small><b id="mxVd"></b></div><button type="button" class="btn ghost" data-nudge="0.1" aria-label="Start the voice 0.1 seconds later. Hold to keep going.">' + ICON_FWD + "</button></div>";
+      if (voice()) mixIn += '<div class="mx-nudge"><button type="button" class="btn ghost" data-nudge="-0.1" aria-label="Start the voice 0.1 seconds earlier. Hold to keep going.">' + ICON_BACK + '</button><div class="mx-vd"><small>Voice starts at</small><b id="mxVd"></b></div><button type="button" class="btn ghost" data-nudge="0.1" aria-label="Start the voice 0.1 seconds later. Hold to keep going.">' + ICON_FWD + "</button></div>";
       if (both) {
         mixIn += '<div class="mx-rel"><div class="mx-h">Relative volume</div><input type="range" class="rng rel" id="mxRel" min="0" max="4" step="1" value="' + relIndex(m.bal) + '" aria-label="Relative volume of the music and the voice">' +
           '<div class="rel-lbls" id="mxRelL">' + REL_NAMES.map(function (n, i) { return '<button type="button" data-rel="' + i + '">' + n.replace(" ", "<br>") + "</button>"; }).join("") + "</div>" +
           '<p class="mute small-note" id="mxRelNote" hidden></p></div>' +
           '<div class="row sp mx-soft"><span class="mx-h">Soften music during voice</span><label class="sw"><input type="checkbox" data-tg="duck"' + (m.duck ? " checked" : "") + ' aria-label="Soften the music while the voice talks"><span class="knob"></span></label></div>';
-      } else mixIn += '<p class="mute small-note">' + (pl.voice ? "This player has no song yet. Close this sheet and tap Change song to set the volume between music and voice." : "This player has no voice yet, so there is nothing to balance.") + "</p>";
+      } else mixIn += '<p class="mute small-note">' + (C.saysName(pl, S.st.songs) ? "This clip already says the name, so the announcer stays quiet and there is nothing to balance." : voice() ? "This player has no song yet. Close this sheet and tap Change song to set the volume between music and voice." : "This player has no voice yet, so there is nothing to balance.") + "</p>";
       h += panel("mix", mixIn);
       h += panel("timing",
         U.stepper({ key: "vd", label: "Voice starts at", value: m.vd.toFixed(1), min: 0, max: 20, step: 0.1, coarse: 1, slider: true }) +
@@ -165,9 +167,9 @@
     function redraw() {
       var plan = E.planFor(pl, S.st), m = C.sanitizeMix(pl.mix);
       st.T = Math.max(4, plan.total * 1.04);
-      q("#mxTl").innerHTML = WU.timeline(plan, { interactive: !!pl.voice, compact: true, label: WU.timelineLabel(pl, plan) });
+      q("#mxTl").innerHTML = WU.timeline(plan, { interactive: !!voice(), compact: true, label: WU.timelineLabel(pl, plan) });
       q("#mxTotal").textContent = "Total " + C.fmtSecs(plan.total);
-      q("#mxNote").textContent = pl.voice && pl.voice.kind === "tts" ? "Computer voice: length is estimated" : "";
+      q("#mxNote").textContent = voice() && voice().kind === "tts" ? "Computer voice: length is estimated" : "";
       paintRead(plan); paintRel();
       var g = plan.balance, mDb = C.levelDb(g.music * m.mv / 100), vDb = C.levelDb(g.voice * m.vv / 100);
       q("#mxLM").textContent = "Music " + C.fmtDb(mDb); q("#mxLV").textContent = "Voice " + C.fmtDb(vDb);
@@ -264,7 +266,7 @@
     // drag the voice bar on the timeline to move when the voice starts
     function tx(x) { var svg = $("svg", q("#mxTl")), r = svg.getBoundingClientRect(); return (x - r.left) / (r.width / TL.W); }
     el.addEventListener("pointerdown", function (e) {
-      var g = e.target.closest("#tlVoice"); if (!g || !pl.voice) return;
+      var g = e.target.closest("#tlVoice"); if (!g || !voice()) return;
       var m = C.sanitizeMix(pl.mix), meta = WU.timelineMeta({ total: 0 }, st.T);
       st.drag = { x0: tx(e.clientX), vd0: m.vd, pxs: meta.iw / st.T, T: st.T };
       try { q("#mxTl").setPointerCapture(e.pointerId); } catch (x) { /* ignore */ }

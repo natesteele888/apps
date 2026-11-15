@@ -1,6 +1,6 @@
 {
   "about": "The one list of Nathan's apps. Live links, which apps show where, and each app's App Store listing (text, highlights, screenshots) all come from here. Edit listings and icons in the Toolbox; the sync job copies them here. Don't hand-edit text in store/index.html.",
-  "updated": "2026-11-12",
+  "updated": "2026-11-15",
   "toolbox": "https://natesteele888.github.io/apps/toolbox/",
   "store": "https://natesteele888.github.io/apps/store/",
   "apps": [
@@ -79,31 +79,31 @@
         ],
         "autoShots": [],
         "latest": {
-          "d": "Nov 11, 2026",
-          "t": "App numbers: make the Back to Toolbox link easy to tap",
-          "url": "https://github.com/natesteele888/apps/commit/c110724d7f8407b546e5d551e86df0c003cecad8"
+          "d": "Nov 12, 2026",
+          "t": "Add a copyright notice and an all-rights-reserved LICENSE",
+          "url": "https://github.com/natesteele888/apps/commit/25fd10682c4fe1ef072b42512df48ff23a75faea"
         },
-        "version": "1.2.7",
+        "version": "1.3.1",
         "history": [
+          {
+            "v": "1.3.1",
+            "t": "Add a copyright notice and an all-rights-reserved LICENSE"
+          },
+          {
+            "v": "1.3.0",
+            "t": "Toolbox: keep the App Store Show box ticked after saving a listing"
+          },
+          {
+            "v": "1.2.9",
+            "t": "App Store: choose which apps are listed (default hidden), only Read 20 on"
+          },
+          {
+            "v": "1.2.8",
+            "t": "Read 20: syllables said as they sound in the word, and anonymous use counts"
+          },
           {
             "v": "1.2.7",
             "t": "App numbers: make the Back to Toolbox link easy to tap"
-          },
-          {
-            "v": "1.2.6",
-            "t": "App numbers: anonymous install and weekly open counts for every app, and a numbers page in the Toolbox"
-          },
-          {
-            "v": "1.2.5",
-            "t": "Read 20: family link so two homes share one log (each with their own Google account), and phones' minutes add up"
-          },
-          {
-            "v": "1.2.4",
-            "t": "Toolbox: open with no signal right after an update"
-          },
-          {
-            "v": "1.2.3",
-            "t": "Every app: a health check on open, a problem log, and a Something wrong? report"
           }
         ]
       }
@@ -190,12 +190,16 @@
         ],
         "autoShots": [],
         "latest": {
-          "d": "Nov 11, 2026",
-          "t": "Situations: note that the App Store's Where Do I Go? runs this trainer too",
-          "url": "https://github.com/natesteele888/lybs-ballclub/commit/df9e0672ef1265604be91ba266d7862c08e9f553"
+          "d": "Nov 12, 2026",
+          "t": "Add a copyright notice and an all-rights-reserved LICENSE",
+          "url": "https://github.com/natesteele888/apps/commit/25fd10682c4fe1ef072b42512df48ff23a75faea"
         },
-        "version": "1.5.0",
+        "version": "1.5.1",
         "history": [
+          {
+            "v": "1.5.1",
+            "t": "Add a copyright notice and an all-rights-reserved LICENSE"
+          },
           {
             "v": "1.5.0",
             "t": "Situations: note that the App Store's Where Do I Go? runs this trainer too"
@@ -211,10 +215,6 @@
           {
             "v": "1.4.6",
             "t": "Where Do I Go: give extra-base hits a realistic roll instead of always reaching the fence"
-          },
-          {
-            "v": "1.4.5",
-            "t": "Where Do I Go: stop sending two players to the same spot on a sure triple"
           }
         ],
         "caps": [
@@ -328,12 +328,16 @@
         ],
         "autoShots": [],
         "latest": {
-          "d": "Nov 10, 2026",
-          "t": "Gameday Picks: player stats on every team page",
-          "url": "https://github.com/natesteele888/apps/commit/9d085936e042aac5c4caf362a57d8d04f5d9f0c5"
+          "d": "Nov 12, 2026",
+          "t": "Add a copyright notice and an all-rights-reserved LICENSE",
+          "url": "https://github.com/natesteele888/apps/commit/25fd10682c4fe1ef072b42512df48ff23a75faea"
         },
-        "version": "1.1.0",
+        "version": "1.1.1",
         "history": [
+          {
+            "v": "1.1.1",
+            "t": "Add a copyright notice and an all-rights-reserved LICENSE"
+          },
           {
             "v": "1.1.0",
             "t": "Gameday Picks: player stats on every team page"
@@ -349,10 +353,6 @@
           {
             "v": "1.0.7",
             "t": "Gameday Picks: open with no signal after a first visit"
-          },
-          {
-            "v": "1.0.6",
-            "t": "Gameday Picks: MLB, NBA and NHL alongside the NFL"
           }
         ],
         "caps": [
@@ -443,12 +443,16 @@
         ],
         "autoShots": [],
         "latest": {
-          "d": "Nov 11, 2026",
-          "t": "Make the name button at the top of every screen easy to tap",
-          "url": "https://github.com/natesteele888/ASL-Bengals/commit/15faaef5bd134ee436a4b3fa0adabb3b322a2741"
+          "d": "Nov 12, 2026",
+          "t": "Load the PDF and GIF libraries without holding up the page",
+          "url": "https://github.com/natesteele888/ASL-Bengals/commit/88e012c1e73ab6f75befb38f644d34bcf51c4d1a"
         },
-        "version": "1.50.2",
+        "version": "1.50.3",
         "history": [
+          {
+            "v": "1.50.3",
+            "t": "Load the PDF and GIF libraries without holding up the page"
+          },
           {
             "v": "1.50.2",
             "t": "Make the name button at the top of every screen easy to tap"
@@ -464,10 +468,6 @@
           {
             "v": "1.49.9",
             "t": "Stat Keeper: make the small buttons easy to tap on the sideline"
-          },
-          {
-            "v": "1.49.8",
-            "t": "Super Bowl banner: Let's go Bengals, D1 Super Bowl vs Milford Hawks"
           }
         ],
         "caps": [
@@ -765,31 +765,31 @@
         ],
         "autoShots": [],
         "latest": {
-          "d": "Nov 11, 2026",
-          "t": "Situations: note that the App Store's Where Do I Go? runs this trainer too",
-          "url": "https://github.com/natesteele888/lybs-ballclub/commit/df9e0672ef1265604be91ba266d7862c08e9f553"
+          "d": "Nov 14, 2026",
+          "t": "Copy a game's pitch counts ready for the MAC League site",
+          "url": "https://github.com/natesteele888/lybs-ballclub/commit/2d06c838159830dda11424c485b72d26d8909332"
         },
-        "version": "1.25.3",
+        "version": "1.25.7",
         "history": [
+          {
+            "v": "1.25.7",
+            "t": "Copy a game's pitch counts ready for the MAC League site"
+          },
+          {
+            "v": "1.25.6",
+            "t": "Pull every team's roster from the Dashboard with one button"
+          },
+          {
+            "v": "1.25.5",
+            "t": "Bring in pitch counts from Walk-Up's Pitch Count with one tap"
+          },
+          {
+            "v": "1.25.4",
+            "t": "Public info: don't log a crash when League Events can't load"
+          },
           {
             "v": "1.25.3",
             "t": "Situations: note that the App Store's Where Do I Go? runs this trainer too"
-          },
-          {
-            "v": "1.25.1",
-            "t": "Add the shared health check and a Something wrong? button"
-          },
-          {
-            "v": "1.25.0",
-            "t": "Public info: keep Back to login on screen on a phone"
-          },
-          {
-            "v": "1.24.9",
-            "t": "Sign-in page: make View public info easy to tap"
-          },
-          {
-            "v": "1.24.7",
-            "t": "Where Do I Go: give extra-base hits a realistic roll instead of always reaching the fence"
           }
         ],
         "caps": [
@@ -950,12 +950,16 @@
         ],
         "autoShots": [],
         "latest": {
-          "d": "Nov 11, 2026",
-          "t": "Power Program: make Reset all progress a full-size tap",
-          "url": "https://github.com/natesteele888/fitness-hub/commit/abd518a6e687b69cb107507024fecb1e86ff40e0"
+          "d": "Nov 12, 2026",
+          "t": "Power Program: keep the check-in units on screen on a small phone",
+          "url": "https://github.com/natesteele888/fitness-hub/commit/a99a323fc4d6119294bf7cddf5ff93d221aff7d8"
         },
-        "version": "1.3.7",
+        "version": "1.3.8",
         "history": [
+          {
+            "v": "1.3.8",
+            "t": "Power Program: keep the check-in units on screen on a small phone"
+          },
           {
             "v": "1.3.7",
             "t": "Power Program: make Reset all progress a full-size tap"
@@ -971,10 +975,6 @@
           {
             "v": "1.3.4",
             "t": "Power Program: add the shared problem report and save check"
-          },
-          {
-            "v": "1.3.3",
-            "t": "Power Program: reload with no signal instead of a browser error"
           }
         ],
         "caps": [
@@ -985,7 +985,8 @@
           "Jump, sprint and plank numbers with a trend line for each",
           "See the gap between left and right leg at a glance"
         ]
-      }
+      },
+      "store": true
     },
     {
       "id": "cube",
@@ -1060,12 +1061,16 @@
         ],
         "autoShots": [],
         "latest": {
-          "d": "Nov 10, 2026",
-          "t": "Statistics: say 1 solve, not 1 solves",
-          "url": "https://github.com/natesteele888/cube-clock/commit/6eb6ad236ed5dc16df3743e861b98b93597b75b1"
+          "d": "Nov 14, 2026",
+          "t": "Leaderboard: plain no-signal message, and reconnect when the signal comes back",
+          "url": "https://github.com/natesteele888/cube-clock/commit/41a506bf6251b822d4a2d3ef70477806cfd8937b"
         },
-        "version": "1.2.8",
+        "version": "1.2.9",
         "history": [
+          {
+            "v": "1.2.9",
+            "t": "Leaderboard: plain no-signal message, and reconnect when the signal comes back"
+          },
           {
             "v": "1.2.8",
             "t": "Statistics: say 1 solve, not 1 solves"
@@ -1081,10 +1086,6 @@
           {
             "v": "1.2.5",
             "t": "Cube Clock: keep the top buttons on screen on small phones"
-          },
-          {
-            "v": "1.2.4",
-            "t": "Tutorial cards: bottom sheet on a phone instead of a floating box"
           }
         ],
         "caps": [
@@ -1188,31 +1189,31 @@
         ],
         "autoShots": [],
         "latest": {
-          "d": "Nov 11, 2026",
-          "t": "Keep buttons and headings in a sans font when the web font can't load",
-          "url": "https://github.com/natesteele888/sponsor-banner-inventory/commit/feedd758cf37f054007e220fd37e17b2830c03ac"
+          "d": "Nov 14, 2026",
+          "t": "Sponsor info form: catch a mistyped email before it sends",
+          "url": "https://github.com/natesteele888/sponsor-banner-inventory/commit/4fab0f4f5fe936bc35f64c951a92974b508925f2"
         },
-        "version": "1.2.2",
+        "version": "1.2.8",
         "history": [
           {
-            "v": "1.2.2",
-            "t": "Keep buttons and headings in a sans font when the web font can't load"
+            "v": "1.2.8",
+            "t": "Sponsor info form: catch a mistyped email before it sends"
           },
           {
-            "v": "1.2.1",
-            "t": "Add the shared health check and a Something wrong? button"
+            "v": "1.2.6",
+            "t": "2027 intake: sponsor emails are drafts only, and nothing happens until payment is in"
           },
           {
-            "v": "1.2.0",
-            "t": "Say why when the map can't load, instead of a blank box"
+            "v": "1.2.5",
+            "t": "Add 2027 sponsor banner intake: hourly sponsor check, info email, reply form, 2027 tab"
           },
           {
-            "v": "1.1.9",
-            "t": "Open with no signal instead of a browser error page"
+            "v": "1.2.4",
+            "t": "Load the map library without holding up the banner list"
           },
           {
-            "v": "1.1.8",
-            "t": "Say 'check your signal' when a save or new banner can't get through"
+            "v": "1.2.3",
+            "t": "Let a keyboard or screen reader open a banner from the list"
           }
         ],
         "caps": [
@@ -1417,12 +1418,20 @@
         ],
         "autoShots": [],
         "latest": {
-          "d": "Nov 9, 2026",
-          "t": "Every app: a health check on open, a problem log, and a Something wrong? report",
-          "url": "https://github.com/natesteele888/apps/commit/7ddeb6fa079516aa640b631af5c91b15a547d5ba"
+          "d": "Nov 13, 2026",
+          "t": "Fix phone-width clips in Who's Where, Eight Count and Play Board",
+          "url": "https://github.com/natesteele888/apps/commit/89d1f611742c334e4259a967f447876f71dc11d1"
         },
-        "version": "1.0.2",
+        "version": "1.0.4",
         "history": [
+          {
+            "v": "1.0.4",
+            "t": "Fix phone-width clips in Who's Where, Eight Count and Play Board"
+          },
+          {
+            "v": "1.0.3",
+            "t": "Add a copyright notice and an all-rights-reserved LICENSE"
+          },
           {
             "v": "1.0.2",
             "t": "Every app: a health check on open, a problem log, and a Something wrong? report"
@@ -1518,12 +1527,20 @@
         ],
         "autoShots": [],
         "latest": {
-          "d": "Nov 9, 2026",
-          "t": "Every app: a health check on open, a problem log, and a Something wrong? report",
-          "url": "https://github.com/natesteele888/apps/commit/7ddeb6fa079516aa640b631af5c91b15a547d5ba"
+          "d": "Nov 13, 2026",
+          "t": "Fix phone-width clips in Who's Where, Eight Count and Play Board",
+          "url": "https://github.com/natesteele888/apps/commit/89d1f611742c334e4259a967f447876f71dc11d1"
         },
-        "version": "1.0.2",
+        "version": "1.0.4",
         "history": [
+          {
+            "v": "1.0.4",
+            "t": "Fix phone-width clips in Who's Where, Eight Count and Play Board"
+          },
+          {
+            "v": "1.0.3",
+            "t": "Add a copyright notice and an all-rights-reserved LICENSE"
+          },
           {
             "v": "1.0.2",
             "t": "Every app: a health check on open, a problem log, and a Something wrong? report"
@@ -1618,12 +1635,16 @@
         ],
         "autoShots": [],
         "latest": {
-          "d": "Nov 9, 2026",
-          "t": "Every app: a health check on open, a problem log, and a Something wrong? report",
-          "url": "https://github.com/natesteele888/apps/commit/7ddeb6fa079516aa640b631af5c91b15a547d5ba"
+          "d": "Nov 12, 2026",
+          "t": "Add a copyright notice and an all-rights-reserved LICENSE",
+          "url": "https://github.com/natesteele888/apps/commit/25fd10682c4fe1ef072b42512df48ff23a75faea"
         },
-        "version": "1.0.3",
+        "version": "1.0.4",
         "history": [
+          {
+            "v": "1.0.4",
+            "t": "Add a copyright notice and an all-rights-reserved LICENSE"
+          },
           {
             "v": "1.0.3",
             "t": "Every app: a health check on open, a problem log, and a Something wrong? report"
@@ -1723,12 +1744,16 @@
         ],
         "autoShots": [],
         "latest": {
-          "d": "Nov 9, 2026",
-          "t": "Every app: a health check on open, a problem log, and a Something wrong? report",
-          "url": "https://github.com/natesteele888/apps/commit/7ddeb6fa079516aa640b631af5c91b15a547d5ba"
+          "d": "Nov 12, 2026",
+          "t": "Add a copyright notice and an all-rights-reserved LICENSE",
+          "url": "https://github.com/natesteele888/apps/commit/25fd10682c4fe1ef072b42512df48ff23a75faea"
         },
-        "version": "1.0.2",
+        "version": "1.0.3",
         "history": [
+          {
+            "v": "1.0.3",
+            "t": "Add a copyright notice and an all-rights-reserved LICENSE"
+          },
           {
             "v": "1.0.2",
             "t": "Every app: a health check on open, a problem log, and a Something wrong? report"
@@ -1824,12 +1849,20 @@
         ],
         "autoShots": [],
         "latest": {
-          "d": "Nov 9, 2026",
-          "t": "Every app: a health check on open, a problem log, and a Something wrong? report",
-          "url": "https://github.com/natesteele888/apps/commit/7ddeb6fa079516aa640b631af5c91b15a547d5ba"
+          "d": "Nov 13, 2026",
+          "t": "Fix phone-width clips in Who's Where, Eight Count and Play Board",
+          "url": "https://github.com/natesteele888/apps/commit/89d1f611742c334e4259a967f447876f71dc11d1"
         },
-        "version": "1.0.2",
+        "version": "1.0.4",
         "history": [
+          {
+            "v": "1.0.4",
+            "t": "Fix phone-width clips in Who's Where, Eight Count and Play Board"
+          },
+          {
+            "v": "1.0.3",
+            "t": "Add a copyright notice and an all-rights-reserved LICENSE"
+          },
           {
             "v": "1.0.2",
             "t": "Every app: a health check on open, a problem log, and a Something wrong? report"
@@ -1926,12 +1959,16 @@
         ],
         "autoShots": [],
         "latest": {
-          "d": "Nov 9, 2026",
-          "t": "Every app: a health check on open, a problem log, and a Something wrong? report",
-          "url": "https://github.com/natesteele888/apps/commit/7ddeb6fa079516aa640b631af5c91b15a547d5ba"
+          "d": "Nov 12, 2026",
+          "t": "Add a copyright notice and an all-rights-reserved LICENSE",
+          "url": "https://github.com/natesteele888/apps/commit/25fd10682c4fe1ef072b42512df48ff23a75faea"
         },
-        "version": "1.0.4",
+        "version": "1.0.5",
         "history": [
+          {
+            "v": "1.0.5",
+            "t": "Add a copyright notice and an all-rights-reserved LICENSE"
+          },
           {
             "v": "1.0.4",
             "t": "Every app: a health check on open, a problem log, and a Something wrong? report"
@@ -2040,31 +2077,31 @@
         ],
         "autoShots": [],
         "latest": {
-          "d": "Nov 9, 2026",
-          "t": "Every app: a health check on open, a problem log, and a Something wrong? report",
-          "url": "https://github.com/natesteele888/apps/commit/7ddeb6fa079516aa640b631af5c91b15a547d5ba"
+          "d": "Nov 14, 2026",
+          "t": "Walk-Up: match song names the way coaches type them",
+          "url": "https://github.com/natesteele888/apps/commit/bc4dcc15c42ad3f5b9736cbb159e7d9af1886c3e"
         },
-        "version": "1.0.6",
+        "version": "1.1.1",
         "history": [
           {
-            "v": "1.0.6",
-            "t": "Every app: a health check on open, a problem log, and a Something wrong? report"
+            "v": "1.1.1",
+            "t": "Walk-Up: match song names the way coaches type them"
           },
           {
-            "v": "1.0.5",
-            "t": "Walk-Up: the mixer fits a phone with no scrolling"
+            "v": "1.1.0",
+            "t": "Pitch Count: one tap to the official counts on the MAC League site"
           },
           {
-            "v": "1.0.4",
-            "t": "Walk-Up: simpler mixer, Power Program colors and a baseball icon"
+            "v": "1.0.9",
+            "t": "Walk-Up: get a whole lineup ready in one tap"
           },
           {
-            "v": "1.0.3",
-            "t": "Walk-Up: name the player when a song file can't be read"
+            "v": "1.0.8",
+            "t": "Walk-Up and Pitch Count on the Galaxy Watch, with an optional pitch counter on the phone"
           },
           {
-            "v": "1.0.2",
-            "t": "Walk-Up: ask a parent for a player's song by text or email"
+            "v": "1.0.7",
+            "t": "Add a copyright notice and an all-rights-reserved LICENSE"
           }
         ],
         "caps": [
@@ -2154,12 +2191,20 @@
         ],
         "autoShots": [],
         "latest": {
-          "d": "Nov 9, 2026",
-          "t": "Every app: a health check on open, a problem log, and a Something wrong? report",
-          "url": "https://github.com/natesteele888/apps/commit/7ddeb6fa079516aa640b631af5c91b15a547d5ba"
+          "d": "Nov 13, 2026",
+          "t": "Scoreboard: big scores shrink to fit their half; Recent games lines wrap",
+          "url": "https://github.com/natesteele888/apps/commit/2544bfcf5a8426bcd97bef222ef1b36950476482"
         },
-        "version": "1.0.3",
+        "version": "1.0.5",
         "history": [
+          {
+            "v": "1.0.5",
+            "t": "Scoreboard: big scores shrink to fit their half; Recent games lines wrap"
+          },
+          {
+            "v": "1.0.4",
+            "t": "Add a copyright notice and an all-rights-reserved LICENSE"
+          },
           {
             "v": "1.0.3",
             "t": "Every app: a health check on open, a problem log, and a Something wrong? report"
@@ -2181,7 +2226,8 @@
           "Lock the screen so a bumped phone cannot change the score",
           "Start a game in one tap, and look back at recent finals"
         ]
-      }
+      },
+      "store": true
     },
     {
       "id": "filmlite",
@@ -2259,12 +2305,16 @@
         ],
         "autoShots": [],
         "latest": {
-          "d": "Nov 9, 2026",
-          "t": "Every app: a health check on open, a problem log, and a Something wrong? report",
-          "url": "https://github.com/natesteele888/apps/commit/7ddeb6fa079516aa640b631af5c91b15a547d5ba"
+          "d": "Nov 12, 2026",
+          "t": "Add a copyright notice and an all-rights-reserved LICENSE",
+          "url": "https://github.com/natesteele888/apps/commit/25fd10682c4fe1ef072b42512df48ff23a75faea"
         },
-        "version": "1.0.3",
+        "version": "1.0.4",
         "history": [
+          {
+            "v": "1.0.4",
+            "t": "Add a copyright notice and an all-rights-reserved LICENSE"
+          },
           {
             "v": "1.0.3",
             "t": "Every app: a health check on open, a problem log, and a Something wrong? report"
@@ -2295,44 +2345,44 @@
       "path": "read20/",
       "toolboxIds": [],
       "listing": {
-        "sub": "Nightly reading for new readers",
+        "sub": "Nightly reading for every young reader",
         "cat": "family",
         "ac": "#6c4ff0",
         "install": true,
         "access": "Open",
-        "desc": "A book shop of short, free stories for first-grade readers, from easy to harder. Words are big, and tapping a word highlights it so a reader can keep her place. A timer starts when a story opens and carries across stories up to 20 minutes, and a calendar log keeps every night and every story. Everything stays on the phone.",
+        "desc": "A free reading app for kids who are learning to read, and for older readers too. Short stories in five easy-to-hard levels, plus a library for older readers with sports, photography, fitness, social studies and English, each with words to know and a quick quiz. Words are big and tappable, a press-and-hold shows a word's syllables and sounds, and a 20-minute timer carries from story to story. Every child gets their own profile and calendar log. A parent can sign in once to back it up and share it with another home, or give a child's phone just their own reader. Reading stays on the phone unless you choose to back it up.",
         "feats": [
           [
             "📚",
-            "Book shop in 5 levels",
-            "45 short stories and old rhymes, from three-letter words up to fables."
-          ],
-          [
-            "👆",
-            "Tap to highlight",
-            "Big words; tap one to mark where you are. Tap again to clear."
-          ],
-          [
-            "⏱️",
-            "20-minute timer",
-            "Starts on the first story and carries into the next, with a cheer at 20."
+            "Stories for every level",
+            "115 short stories in five levels, from first words to chapter-style tales, plus a library for older readers."
           ],
           [
             "🧒",
             "A profile for each child",
-            "Swap readers on the home screen; each keeps their own log, streak and goal."
+            "Swap readers on the home screen; each has their own streak, goal and shelf."
           ],
           [
-            "📚",
-            "Older readers' library",
-            "48 true stories on sports, photography, fitness, athletes, social studies and English, each with words to know and a quiz."
+            "⏱️",
+            "20-minute nightly timer",
+            "Starts on the first story and carries into the next, with a cheer at 20."
+          ],
+          [
+            "👆",
+            "Press and hold a word",
+            "See its syllables and letter sounds, tap a part to hear it."
+          ],
+          [
+            "🔒",
+            "Private by design",
+            "Backups and sharing are optional and behind Google sign-in; a child's phone can be linked to just one reader."
           ]
         ],
         "facts": [
           [
             "Stories",
-            "45",
-            "free to share, 5 levels"
+            "163",
+            "free to share, five levels plus an older-readers library"
           ],
           [
             "Nightly goal",
@@ -2340,14 +2390,14 @@
             "minutes, or pick 10 to 30"
           ],
           [
-            "Log",
-            "Calendar",
-            "nights, stories and streaks"
+            "Readers",
+            "Many",
+            "each child has their own profile and log"
           ]
         ],
         "news": {
           "d": "Nov 2026",
-          "t": "New: Read 20, a nightly reading log with a story shelf"
+          "t": "New: Read 20 now has profiles for each child and a library for older readers"
         },
         "parts": [
           "pwa",
@@ -2363,45 +2413,48 @@
           "store/shots/read20-2.webp",
           "store/shots/read20-3.webp",
           "store/shots/read20-4.webp",
-          "store/shots/read20-5.webp"
+          "store/shots/read20-5.webp",
+          "store/shots/read20-6.webp"
         ],
-        "version": "1.2.2",
+        "version": "1.3.7",
         "history": [
           {
-            "v": "1.2.2",
-            "t": "Read 20: 10 more Level 1 stories and 10 more Level 2 stories"
+            "v": "1.3.7",
+            "t": "Read 20: a morning second chance to finish last night's reading"
           },
           {
-            "v": "1.2.1",
-            "t": "Read 20: gymnastics biographies (Levels 4 and 5) and a sturdier update path"
+            "v": "1.3.6",
+            "t": "Read 20: remove an entry from the log (with confirmation)"
           },
           {
-            "v": "1.2.0",
-            "t": "Read 20: 18 more stories for Levels 4 and 5 (cheerleading, gymnastics, animals, princesses, nature, building)"
+            "v": "1.3.5",
+            "t": "Read 20: fix the slow, cut-off first Storytime page"
           },
           {
-            "v": "1.1.9",
-            "t": "Read 20: 25 more Level 3 stories (animals, princesses, step-by-step building, nature)"
+            "v": "1.3.4",
+            "t": "Read 20: the speed set in Settings carries into the story"
           },
           {
-            "v": "1.1.8",
-            "t": "Read 20: a darker, sleeker look with line icons for older readers"
+            "v": "1.3.3",
+            "t": "Read 20: slower Storytime and a highlight that keeps pace with the voice"
           }
         ],
         "latest": {
-          "d": "Nov 11, 2026",
-          "t": "Read 20: 10 more Level 1 stories and 10 more Level 2 stories",
-          "url": "https://github.com/natesteele888/apps/commit/d665e48a3a245aaa7acf124a1ad392868c88792f"
+          "d": "Nov 13, 2026",
+          "t": "Read 20: a morning second chance to finish last night's reading",
+          "url": "https://github.com/natesteele888/apps/commit/4484b4ddbf3950c833663571e473ab207b969172"
         },
         "caps": [
-          "A shelf of short stories, and tonight's reading at a glance",
-          "Five levels of free stories, from easy to harder",
+          "Every child gets their own profile, streak and shelf",
           "Big words; tap one to keep your place while the timer runs",
-          "A calendar of every night, with the stories and the streak",
-          "Look back at any month and see what was read"
+          "Press and hold any word to see its syllables and sounds",
+          "A library for older readers: sports, science, social studies and English",
+          "Words to know and a quick quiz at the end of every story",
+          "A calendar of every night, with the stories and the streak"
         ],
         "autoShots": []
-      }
+      },
+      "store": true
     },
     {
       "id": "getready",
@@ -2475,8 +2528,12 @@
           "store/shots/getready-5.webp",
           "store/shots/getready-6.webp"
         ],
-        "version": "1.0.5",
+        "version": "1.0.6",
         "history": [
+          {
+            "v": "1.0.6",
+            "t": "Add a copyright notice and an all-rights-reserved LICENSE"
+          },
           {
             "v": "1.0.5",
             "t": "App Store: real screenshots with demo data for every app, and a week-in-the-life view"
@@ -2492,16 +2549,12 @@
           {
             "v": "1.0.2",
             "t": "Get Ready: separate lists for different days"
-          },
-          {
-            "v": "1.0.1",
-            "t": "Add Get Ready: school-morning checklist with photos, timers, reminders and a dance celebration"
           }
         ],
         "latest": {
-          "d": "Nov 9, 2026",
-          "t": "App Store: real screenshots with demo data for every app, and a week-in-the-life view",
-          "url": "https://github.com/natesteele888/apps/commit/d1c76706b9bf39553a8a6de616d22fbf3dcf0109"
+          "d": "Nov 12, 2026",
+          "t": "Add a copyright notice and an all-rights-reserved LICENSE",
+          "url": "https://github.com/natesteele888/apps/commit/25fd10682c4fe1ef072b42512df48ff23a75faea"
         },
         "caps": [
           "Check things off with a picture of each item beside it",
@@ -2512,7 +2565,8 @@
           "Finish the list and a full-screen dance celebrates"
         ],
         "autoShots": []
-      }
+      },
+      "store": true
     },
     {
       "id": "photoblueprint",
@@ -2589,12 +2643,16 @@
           "store/shots/photoblueprint-6.webp"
         ],
         "latest": {
-          "d": "Nov 10, 2026",
-          "t": "Photo Blueprint: make the home link in the top bar easy to tap",
-          "url": "https://github.com/natesteele888/apps/commit/0dba7dbf817642e9e8be8be0f6610b413d7a9f45"
+          "d": "Nov 12, 2026",
+          "t": "Add a copyright notice and an all-rights-reserved LICENSE",
+          "url": "https://github.com/natesteele888/apps/commit/25fd10682c4fe1ef072b42512df48ff23a75faea"
         },
-        "version": "1.0.9",
+        "version": "1.1.0",
         "history": [
+          {
+            "v": "1.1.0",
+            "t": "Add a copyright notice and an all-rights-reserved LICENSE"
+          },
           {
             "v": "1.0.9",
             "t": "Photo Blueprint: make the home link in the top bar easy to tap"
@@ -2610,10 +2668,6 @@
           {
             "v": "1.0.6",
             "t": "Every app: a health check on open, a problem log, and a Something wrong? report"
-          },
-          {
-            "v": "1.0.5",
-            "t": "Photo Blueprint: a clean pointer under the photo marker"
           }
         ],
         "caps": [
@@ -2625,7 +2679,8 @@
           "Tap the map to drop the pin, then aim where the lens pointed"
         ],
         "autoShots": []
-      }
+      },
+      "store": true
     },
     {
       "id": "secretary",
@@ -2638,6 +2693,84 @@
       ],
       "private": true,
       "store": false
+    },
+    {
+      "id": "bills",
+      "name": "Bills",
+      "live": "https://natesteele888.github.io/apps/bills/",
+      "repo": "natesteele888/apps",
+      "path": "bills/",
+      "toolboxIds": [],
+      "private": true,
+      "store": false
+    },
+    {
+      "id": "catchlog",
+      "name": "Catch Log",
+      "live": "https://natesteele888.github.io/apps/catchlog/",
+      "repo": "natesteele888/apps",
+      "path": "catchlog/",
+      "toolboxIds": [],
+      "listing": {
+        "sub": "A fishing log for your crew",
+        "cat": "family",
+        "ac": "#3fa36b",
+        "install": true,
+        "access": "Invite code",
+        "desc": "Log every catch with your fishing crew: who caught it, the species, size, bait and rod, a photo, and the spot on the map. Save your favorite spots, keep each angler's rod and reel combos, edit or remove a catch, and check the crew's trophy boards. A crew is private: sign in with Google and join with the crew link.",
+        "feats": [
+          [
+            "📍",
+            "Spots on the map",
+            "Pin where each fish came from and keep a list of favorite spots."
+          ],
+          [
+            "🎣",
+            "Tackle per catch",
+            "Rod, reel and bait saved with every fish, plus each angler's combos."
+          ],
+          [
+            "🏆",
+            "Trophies",
+            "Crew leaderboards for today, all-time and each spot, or just your own records."
+          ]
+        ],
+        "facts": [
+          [
+            "Crew",
+            "Any size",
+            "join by link"
+          ],
+          [
+            "Photos",
+            "Per catch",
+            "kept with the crew"
+          ],
+          [
+            "Access",
+            "Invite",
+            "Google sign-in"
+          ]
+        ],
+        "parts": [
+          "signin",
+          "firebase",
+          "map",
+          "pwa"
+        ],
+        "tie": "The weekend one of the family set: a shared log for days on the water.",
+        "rel": [
+          "getready",
+          "read20"
+        ],
+        "for": [
+          "parent",
+          "player"
+        ],
+        "shots": [
+          "mock"
+        ]
+      }
     }
   ],
   "comingSoon": []

@@ -86,7 +86,8 @@ h3{font-size:24px;margin-bottom:10px}
 .cnt-h em{flex:1;min-width:0;color:var(--mute);font-size:13px;font-style:normal;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .cnt-h .icon{margin-left:auto}
 .cells{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
-.cell{position:relative;min-height:62px;border-radius:var(--r-sm);background:var(--panel2);border:1px solid var(--line);padding:18px 3px 6px;text-align:center;font-size:clamp(11px,3.4vw,14px);font-weight:600;line-height:1.15;display:flex;align-items:center;justify-content:center;overflow:hidden;overflow-wrap:anywhere}
+.cell{position:relative;min-height:62px;border-radius:var(--r-sm);background:var(--panel2);border:1px solid var(--line);padding:18px 3px 6px;text-align:center;font-size:clamp(11px,3.4vw,14px);font-weight:600;line-height:1.15;display:flex;align-items:center;justify-content:center;overflow:hidden;overflow-wrap:break-word;hyphens:none}
+@media(max-width:340px){.cell{font-size:10px;padding-left:1px;padding-right:1px}}
 .cell i{position:absolute;top:3px;left:7px;font-style:normal;font-size:12px;font-weight:700;color:var(--pink2)}
 .cell.empty{color:var(--mute);font-weight:400}
 .cell:nth-child(5) i,.cell:nth-child(1) i{color:var(--gold)}

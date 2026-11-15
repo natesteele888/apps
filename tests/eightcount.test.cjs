@@ -56,6 +56,7 @@ const SPY = () => {
     await page.screenshot({ path: SP + "/shots/ec-routine.png" });
     await page.click('.cell[data-si="0"][data-ci="1"][data-b="5"]');
     await page.waitForSelector("#cf");
+    assert.strictEqual(await page.locator('[data-cat][aria-pressed=true]').textContent(), "Arms");
     await page.click(".chip >> text=Touchdown");
     assert.ok((await page.locator("#sheet h3").textContent()).includes("8-count 2"));
     assert.ok((await page.locator(".dot.on").textContent()) === "7"); // advanced to beat 7
@@ -70,6 +71,24 @@ const SPY = () => {
     assert.strictEqual(txt, "Touchdown"); assert.strictEqual(t7, "Lunge");
     const saved = await page.evaluate(() => JSON.parse(localStorage.getItem("eightcount.routines"))[0].sections[0].counts[1].m);
     assert.strictEqual(saved[5], "Touchdown"); assert.strictEqual(saved[6], "Lunge");
+  });
+
+  await step("the move picker opens on the current move's category; long move names never break mid-word", async () => {
+    const cell = '.cell[data-si="0"][data-ci="1"][data-b="3"]';
+    await page.click(cell); await page.waitForSelector("#cf");
+    await page.click('[data-cat="Dance"]'); await page.click(".chip >> text=Body roll"); // sets beat 4, advances to beat 5
+    await page.goBack(); await page.waitForSelector("#sheetWrap", { state: "hidden" });
+    await page.click(cell); await page.waitForSelector("#cf");
+    assert.strictEqual(await page.locator("[data-cat][aria-pressed=true]").textContent(), "Dance");
+    await page.fill("#cv", "Back handspring"); await page.press("#cv", "Enter"); await page.goBack(); await page.waitForSelector("#sheetWrap", { state: "hidden" });
+    for (const [w, h] of [[390, 844], [320, 640]]) {
+      await page.setViewportSize({ width: w, height: h });
+      const bad = await page.$$eval(".cell span", (els) => els.filter((e) => { const c = e.closest(".cell"); return e.scrollWidth > c.clientWidth || e.scrollHeight > c.clientHeight; }).map((e) => e.textContent));
+      assert.deepStrictEqual(bad, [], "cells clip at " + w);
+      const broken = await page.$$eval(".cell span", (els) => els.filter((e) => { const r = document.createRange(); return e.textContent.trim().split(/\s+/).some((word) => { const t = [...e.childNodes].find((n) => n.nodeType === 3); if (!t) return false; const i = t.data.indexOf(word); r.setStart(t, i); r.setEnd(t, i + word.length); return r.getClientRects().length > 1; }); }).map((e) => e.textContent));
+      assert.deepStrictEqual(broken, [], "a word is split across lines at " + w);
+    }
+    await page.setViewportSize({ width: 390, height: 844 });
   });
 
   await step("type a whole 8-count at once, add an 8-count, change tempo", async () => {

@@ -65,7 +65,7 @@
       return '<div class="or"><span>or</span></div><div class="stack">' +
         U.fileBtn({ text: "Use a voice file", cls: "ghost block", attr: 'data-file="voice-file" data-pid="' + pid + '"', label: "Choose a voice file" }) +
         '<button type="button" class="btn ghost block" data-do="tts"><span>Use the computer voice</span><small>Second choice</small></button></div>' +
-        '<p class="mute small-note">The computer voice is your phone reading "' + esc(C.announceText(pl)) + '". It can\'t be polished with EQ or reverb. A recorded voice sounds much better.</p>';
+        '<p class="mute small-note">The computer voice is your phone reading "' + esc(C.announceText(pl, S.st.settings.tstyle)) + '". It can\'t be polished with EQ or reverb. A recorded voice sounds much better.</p>';
     }
     function polishHTML(v) {
       var p = C.sanitizePolish(v.polish), pre = C.presetOf(p), h = '<section class="card polish" id="vsPolish"><div class="row sp"><h3>Polish</h3><div class="seg ab" role="group" aria-label="Listen to"><button type="button" data-do="ab" data-v="polished" aria-pressed="' + (st.ab === "polished") + '">Polished</button><button type="button" data-do="ab" data-v="original" aria-pressed="' + (st.ab === "original") + '">Original</button></div></div>';
@@ -95,7 +95,7 @@
         '<button type="button" class="btn danger small" data-do="delete">Delete voice</button></div></section>';
     }
     function ttsHTML() {
-      return '<section class="card"><div><b>Computer voice</b> <span class="chip warn">Second choice</span></div><p class="msg">Your phone will say: <b>"' + esc(C.announceText(pl)) + '"</b></p>' +
+      return '<section class="card"><div><b>Computer voice</b> <span class="chip warn">Second choice</span></div><p class="msg">Your phone will say: <b>"' + esc(C.announceText(pl, S.st.settings.tstyle)) + '"</b></p>' +
         '<p class="mute small-note">The computer voice is spoken by your phone. It can\'t use EQ or reverb, and the timeline shows an estimated length. Record a voice for the full sound.</p>' +
         '<div class="row wrap"><button type="button" class="btn ghost small" data-do="tts-test">' + U.I.play + ' Test it</button><button type="button" class="btn ghost small" data-do="rerecord">' + U.I.mic + ' Record a voice instead</button><button type="button" class="btn danger small" data-do="delete">Remove</button></div></section>';
     }
@@ -270,7 +270,7 @@
       if (a === "rec") recToggle();
       else if (a === "tts") { stopPlay(); if (v && v.kind !== "tts") WU.dropAudio("v:" + v.id); pl.voice = C.defaultVoice("tts", {}, null); WU.commit("data"); st.rerecord = false; paint(); }
       else if (a === "tts-test") {
-        E.unlock(); var cancel = E.speech.speak(C.announceText(pl), WU.speechOpts(), function () {});
+        E.unlock(); var cancel = E.speech.speak(C.announceText(pl, S.st.settings.tstyle), WU.speechOpts(), function () {});
         if (!E.speech.supported()) U.toast("This browser can't speak. Record a voice instead.", "error");
         void cancel;
       }

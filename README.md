@@ -2,6 +2,8 @@
 
 Installable phone apps, hosted on GitHub Pages.
 
+© 2026 Nate Steele. All rights reserved. These apps are not open source and are not licensed for copying, hosting or resale (see [LICENSE](LICENSE)).
+
 - [Toolbox](https://natesteele888.github.io/apps/toolbox/) — private tracker + launcher (sign-in required; data lives in Firebase, not here)
 - [Where Do I Go?](https://natesteele888.github.io/apps/situations/) — baseball situations trainer
 - [Eight Count](https://natesteele888.github.io/apps/eightcount/) — cheer and dance counts that lock a team together (click, song, record and review)

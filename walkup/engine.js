@@ -329,11 +329,12 @@
 
   /* Everything a player's mix needs, loaded and rendered, so Play is instant. */
   E.prepare = function (player, st, speechOpts) {
-    var song = player.songId ? C.songById(st.songs, player.songId) : null, tr = song ? C.effectiveTrim(player, song) : null, v = player.voice;
+    /* a song that already says the player's name plays on its own, with no announcer over it */
+    var song = player.songId ? C.songById(st.songs, player.songId) : null, tr = song ? C.effectiveTrim(player, song) : null, v = song && song.intro ? null : player.voice;
     var pm = song ? E.songBuffer(song, tr) : Promise.resolve(null);
     var pv = v && v.kind !== "tts" ? E.renderVoice(v) : Promise.resolve(null);
     return Promise.all([pm, pv]).then(function (r) {
-      var music = r[0], voice = r[1], text = C.announceText(player), tts = v && v.kind === "tts" ? { text: text, opts: speechOpts || {} } : null;
+      var music = r[0], voice = r[1], text = C.announceText(player, st.settings && st.settings.tstyle), tts = v && v.kind === "tts" ? { text: text, opts: speechOpts || {} } : null;
       var plan = C.mixPlan({
         music: song ? { len: tr.len, offset: tr.start, fade: tr.fade } : null,
         voice: !v ? null : tts ? { len: C.estimateSpeech(text), speech: C.estimateSpeech(text), offset: 0, tts: true } : { len: voice.total, speech: voice.speech, offset: 0 },
@@ -344,8 +345,8 @@
   };
   /* the plan alone (no audio needed), for drawing the timeline */
   E.planFor = function (player, st) {
-    var song = player.songId ? C.songById(st.songs, player.songId) : null, tr = song ? C.effectiveTrim(player, song) : null, v = player.voice;
-    var text = C.announceText(player), est = C.estimateSpeech(text), vlen = 0, speech = 0;
+    var song = player.songId ? C.songById(st.songs, player.songId) : null, tr = song ? C.effectiveTrim(player, song) : null, v = song && song.intro ? null : player.voice;
+    var text = C.announceText(player, st.settings && st.settings.tstyle), est = C.estimateSpeech(text), vlen = 0, speech = 0;
     if (v && v.kind === "tts") { vlen = speech = est; }
     else if (v) { speech = Math.max(0.1, (v.te || v.dur) - (v.ts || 0)); vlen = speech + C.reverbTail(v.polish); }
     return C.mixPlan({ music: song ? { len: tr.len, offset: tr.start, fade: tr.fade } : null, voice: v ? { len: vlen, speech: speech, offset: 0, tts: v.kind === "tts" } : null, mix: player.mix });

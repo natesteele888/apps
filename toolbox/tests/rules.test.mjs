@@ -242,6 +242,41 @@ test('read20 shared: the code must be 20 letters/digits, and the document only t
   await assertFails(setDoc(doc(g('dad'), 'r20_shared/' + KEY), { ...r20Data, extra: 1 }));
 });
 
+
+// ---------- Catch Log crews (apps/catchlog) ----------
+const CREW = 'abcdefghjkmnpqrstuv2345k9x';
+const crewData = { data: '{"profiles":[],"gear":{},"sessions":[],"spots":[]}', updated: 1 };
+test('catchlog: two Google accounts that know the crew code can both read and write the crew and its photos', async () => {
+  await assertSucceeds(setDoc(doc(g('dad'), 'cl_crews/' + CREW), crewData));
+  await assertSucceeds(getDoc(doc(g('mom'), 'cl_crews/' + CREW)));
+  await assertSucceeds(setDoc(doc(g('mom'), 'cl_crews/' + CREW), { ...crewData, updated: 2 }));
+  await assertSucceeds(setDoc(doc(g('dad'), 'cl_crews/' + CREW + '/photos/ph_1'), { img: 'data:image/jpeg;base64,AAAA', updated: 1 }));
+  await assertSucceeds(getDoc(doc(g('mom'), 'cl_crews/' + CREW + '/photos/ph_1')));
+  await assertSucceeds(deleteDoc(doc(g('mom'), 'cl_crews/' + CREW + '/photos/ph_1')));
+});
+test('catchlog: no listing crews or photos, no deleting a crew, no signed-out or anonymous access', async () => {
+  await env.withSecurityRulesDisabled(async (ctx) => {
+    await setDoc(doc(ctx.firestore(), 'cl_crews/' + CREW), crewData);
+    await setDoc(doc(ctx.firestore(), 'cl_crews/' + CREW + '/photos/ph_1'), { img: 'x', updated: 1 });
+  });
+  await assertFails(getDocs(collection(g('mom'), 'cl_crews')));
+  await assertFails(getDocs(collection(g('mom'), 'cl_crews/' + CREW + '/photos')));
+  await assertFails(deleteDoc(doc(g('mom'), 'cl_crews/' + CREW)));
+  await assertFails(getDoc(doc(anon(), 'cl_crews/' + CREW)));
+  await assertFails(getDoc(doc(anonUser(), 'cl_crews/' + CREW)));
+  await assertFails(setDoc(doc(anonUser(), 'cl_crews/' + CREW), crewData));
+  await assertFails(getDoc(doc(anonUser(), 'cl_crews/' + CREW + '/photos/ph_1')));
+});
+test('catchlog: the code must be a long lowercase code, and documents only take the expected fields and sizes', async () => {
+  await assertFails(setDoc(doc(g('dad'), 'cl_crews/short'), crewData));
+  await assertFails(setDoc(doc(g('dad'), 'cl_crews/ABCDEFGHJKMNPQRSTUV2345K9X'), crewData));
+  await assertFails(setDoc(doc(g('dad'), 'cl_crews/' + CREW), { data: 5, updated: 1 }));
+  await assertFails(setDoc(doc(g('dad'), 'cl_crews/' + CREW), { data: 'x'.repeat(900001), updated: 1 }));
+  await assertFails(setDoc(doc(g('dad'), 'cl_crews/' + CREW), { ...crewData, extra: 1 }));
+  await assertFails(setDoc(doc(g('dad'), 'cl_crews/' + CREW), { data: '{}', updated: 'now' }));
+  await assertFails(setDoc(doc(g('dad'), 'cl_crews/' + CREW + '/photos/ph_1'), { img: 'x'.repeat(600001), updated: 1 }));
+  await assertFails(setDoc(doc(g('dad'), 'cl_crews/' + CREW + '/photos/ph_1'), { img: 'x', updated: 1, who: 'a' }));
+});
 // ---------- App numbers (install.js) ----------
 const PHONE = 'k3j9x0a8b7c6d5e4';
 const openDoc = { app: 'apps-picks', week: '2026-W46' };
@@ -266,4 +301,15 @@ test('app numbers: the owner can read every count', async () => {
   await env.withSecurityRulesDisabled(async (ctx) => { await setDoc(doc(ctx.firestore(), 'app_installs/apps-picks~' + PHONE), openDoc); });
   await assertSucceeds(getDocs(collection(owner(), 'app_installs')));
   await assertSucceeds(getDocs(collection(owner(), 'app_opens')));
+});
+
+test('app numbers: reads and goals are anonymous once-a-week counts like opens', async () => {
+  await assertSucceeds(setDoc(doc(anon(), 'app_reads/read20~2026-W46~' + PHONE), { app: 'read20', week: '2026-W46' }));
+  await assertSucceeds(setDoc(doc(anon(), 'app_goals/read20~2026-W46~' + PHONE), { app: 'read20', week: '2026-W46' }));
+  await assertFails(setDoc(doc(anon(), 'app_reads/read20~2026-W46~' + PHONE), { app: 'read20', week: '2026-W46' }));
+  await assertFails(setDoc(doc(anon(), 'app_goals/read20~2026-W45~' + PHONE), { app: 'read20', week: '2026-W46' }));
+  await assertFails(setDoc(doc(anon(), 'app_reads/read20~2026-W46~' + PHONE + 'x'), { app: 'read20', week: '2026-W46' }));
+  await assertFails(setDoc(doc(anon(), 'app_goals/read20~2026-W47~' + PHONE), { app: 'read20', week: '2026-W47', name: 'x' }));
+  await assertFails(getDocs(collection(anon(), 'app_reads')));
+  await assertSucceeds(getDocs(collection(owner(), 'app_goals')));
 });

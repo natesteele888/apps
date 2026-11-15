@@ -1,0 +1,587 @@
+<!doctype html>
+<html lang="en">
+<head>
+<!-- Copyright (c) 2026 Nate Steele. All rights reserved. Not licensed for copying, hosting or resale. See LICENSE. -->
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Bills</title>
+<meta name="application-name" content="Bills">
+<meta name="description" content="Every bill due in the next month, with the total to set aside. Private: bills sync only to the owner's Google account, behind a fingerprint lock.">
+<meta name="theme-color" content="#0E1714">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Bills">
+<meta name="referrer" content="no-referrer">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="/apps/icons/bills-192.png">
+<link rel="icon" href="/apps/icons/bills-192.png" sizes="192x192">
+<script>try { if (localStorage.getItem('bills.lock')) document.documentElement.classList.add('locked'); } catch (e) {}</script>
+<script src="https://natesteele888.github.io/apps/install.js" defer></script><script src="https://natesteele888.github.io/apps/health.js" defer></script>
+<style>
+:root{
+  --bg:#0E1714; --panel:#16221E; --panel-2:#1D2C27; --line:rgba(200,220,210,.14);
+  --text:#EEF4F1; --text-2:#A9BDB4; --text-3:#7C9189;
+  --green:#3DDC97; --green-deep:#1F9E68; --amber:#FFC24B; --red:#FF6B6B; --blue:#7FB2FF;
+  --radius:14px; --body:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+}
+*{box-sizing:border-box}
+html,body{margin:0;min-height:100%}
+body{background:var(--bg);color:var(--text);font:15px/1.45 var(--body);-webkit-font-smoothing:antialiased;padding-bottom:calc(90px + env(safe-area-inset-bottom,0px))}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+.hidden{display:none!important}
+.wrap{max-width:560px;margin:0 auto;padding:calc(14px + env(safe-area-inset-top,0px)) 16px 0}
+header{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px}
+h1{font-size:24px;margin:0;letter-spacing:-.01em}
+.iconbtn{background:var(--panel);border:1px solid var(--line);border-radius:999px;width:40px;height:40px;display:grid;place-items:center;font-size:18px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:16px}
+.total{display:flex;flex-direction:column;gap:4px}
+.total .lbl{color:var(--text-2);font-size:13px;text-transform:uppercase;letter-spacing:.06em}
+.total .big{font-size:40px;font-weight:800;letter-spacing:-.02em;line-height:1.1}
+.total .sub{color:var(--text-2);font-size:14px}
+.stats{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:12px}
+.stat{background:var(--panel-2);border-radius:10px;padding:8px 10px}
+.stat b{display:block;font-size:16px}.stat span{color:var(--text-3);font-size:12px}
+.tabs{display:flex;gap:6px;margin:14px 0 10px;overflow-x:auto}
+.tab{flex:none;background:transparent;border:1px solid var(--line);border-radius:999px;padding:7px 14px;color:var(--text-2)}
+.tab.on{background:var(--green);border-color:var(--green);color:#06231A;font-weight:700}
+.group{color:var(--text-3);font-size:12px;text-transform:uppercase;letter-spacing:.08em;margin:16px 4px 6px}
+.list{display:flex;flex-direction:column;gap:6px}
+.row{display:flex;align-items:center;gap:12px;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:10px 12px}
+.row.paid{opacity:.55}
+.row.paid .amt{text-decoration:line-through}
+.row.late{border-color:rgba(255,107,107,.55)}
+.date{width:44px;flex:none;text-align:center;line-height:1.05}
+.date b{display:block;font-size:20px}.date span{font-size:11px;color:var(--text-3);text-transform:uppercase}
+.mid{flex:1;min-width:0;background:none;border:0;text-align:left;padding:0}
+.mid .nm{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mid .meta{font-size:12.5px;color:var(--text-3);display:flex;gap:6px;flex-wrap:wrap;margin-top:2px}
+.tag{border:1px solid var(--line);border-radius:6px;padding:0 5px}
+.tag.auto{color:var(--blue);border-color:rgba(127,178,255,.4)}
+.tag.est{color:var(--amber);border-color:rgba(255,194,75,.4)}
+.tag.late{color:var(--red);border-color:rgba(255,107,107,.5)}
+.amt{font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap}
+.chk{flex:none;width:30px;height:30px;border-radius:999px;border:2px solid var(--text-3);background:transparent;display:grid;place-items:center;font-size:16px;color:#06231A}
+.row.paid .chk{background:var(--green);border-color:var(--green)}
+.empty{color:var(--text-2);text-align:center;padding:26px 10px}
+.fab{position:fixed;right:max(16px,calc(50% - 264px));bottom:calc(18px + env(safe-area-inset-bottom,0px));background:var(--green);color:#06231A;border:0;border-radius:999px;padding:14px 20px;font-weight:800;box-shadow:0 8px 24px rgba(0,0,0,.35);z-index:5}
+.btn{background:var(--green);color:#06231A;border:0;border-radius:999px;padding:12px 18px;font-weight:800}
+.btn.ghost{background:transparent;color:var(--text);border:1px solid var(--line);font-weight:600}
+.btn.danger{background:transparent;color:var(--red);border:1px solid rgba(255,107,107,.5);font-weight:600}
+.btn.sm{padding:8px 14px;font-size:14px}
+.btn.wide{width:100%}
+.note{color:var(--text-2);font-size:13.5px}
+.banner{display:flex;align-items:center;gap:10px;margin-bottom:12px;border-color:rgba(61,220,151,.45)}
+.banner p{margin:0;flex:1;font-size:14px}
+/* full-screen gates: sign-in and lock */
+.gate{position:fixed;inset:0;background:var(--bg);z-index:50;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:24px;text-align:center}
+.gate .logo{width:84px;height:84px;border-radius:22px}
+.gate h2{margin:0;font-size:24px}
+.gate p{margin:0;color:var(--text-2);max-width:340px}
+#lockGate{display:none}
+html.locked #lockGate{display:flex}
+/* sheets */
+.scrim{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:40;display:flex;align-items:flex-end;justify-content:center}
+.sheet{background:var(--panel);width:min(560px,100%);max-height:92vh;overflow:auto;border-radius:18px 18px 0 0;padding:18px 16px calc(18px + env(safe-area-inset-bottom,0px));border:1px solid var(--line)}
+.sheet h3{margin:0 0 12px;font-size:19px}
+.field{display:flex;flex-direction:column;gap:5px;margin-bottom:12px}
+.field label{font-size:13px;color:var(--text-2)}
+.field input,.field select,.field textarea{background:var(--panel-2);border:1px solid var(--line);border-radius:10px;padding:11px 12px;width:100%}
+.field textarea{min-height:70px;resize:vertical}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.checkline{display:flex;align-items:center;gap:10px;margin:4px 0 12px;font-size:14.5px}
+.checkline input{width:20px;height:20px;accent-color:var(--green)}
+.actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:6px}
+.actions .btn{flex:1}
+.setrow{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 0;border-bottom:1px solid var(--line)}
+.setrow:last-child{border-bottom:0}
+.setrow span{flex:1;font-size:14.5px}
+.toast{position:fixed;left:50%;bottom:calc(84px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:#24342E;color:var(--text);padding:10px 16px;border-radius:12px;z-index:60;box-shadow:0 8px 24px rgba(0,0,0,.4);max-width:calc(100% - 32px);font-size:14px}
+.status{font-size:12.5px;color:var(--text-3);text-align:center;margin:18px 0 6px}
+.linkbtn{background:none;border:0;color:var(--text-3);text-decoration:underline;font-size:12.5px;padding:4px}
+</style>
+</head>
+<body>
+
+<!-- Sign-in gate -->
+<div class="gate hidden" id="signGate">
+  <img class="logo" src="/apps/icons/bills-192.png" alt="">
+  <h2>Bills</h2>
+  <p id="signMsg">Sign in with Google to see your bills. They're kept in your own private account, not on this website.</p>
+  <button class="btn" id="signBtn" type="button">Sign in with Google</button>
+</div>
+
+<!-- Fingerprint lock gate -->
+<div class="gate" id="lockGate">
+  <img class="logo" src="/apps/icons/bills-192.png" alt="">
+  <h2>Bills is locked</h2>
+  <p id="lockMsg">Use your fingerprint to open it.</p>
+  <button class="btn" id="lockGo" type="button">Unlock</button>
+  <button class="linkbtn" id="lockGoogle" type="button">Fingerprint not working? Sign in with Google again</button>
+</div>
+
+<div class="wrap" id="app">
+  <header>
+    <h1>Bills</h1>
+    <button class="iconbtn" id="setBtn" type="button" aria-label="Settings">⚙︎</button>
+  </header>
+
+  <div class="card banner hidden" id="lockOffer">
+    <p>Turn on the fingerprint lock so nobody holding your phone can open your bills.</p>
+    <button class="btn sm" id="lockOfferOn" type="button">Turn on</button>
+  </div>
+  <div class="card banner hidden" id="importOffer">
+    <p id="importText"></p>
+    <button class="btn sm" id="importYes" type="button">Add</button>
+    <button class="btn sm ghost" id="importNo" type="button">Skip</button>
+  </div>
+
+  <div class="card total">
+    <span class="lbl" id="totLbl">Set aside</span>
+    <span class="big" id="totBig">$0.00</span>
+    <span class="sub" id="totSub"></span>
+    <div class="stats">
+      <div class="stat"><b id="stWeek">$0</b><span>Due in 7 days</span></div>
+      <div class="stat"><b id="stPaid">$0</b><span>Paid already</span></div>
+      <div class="stat"><b id="stCount">0</b><span>Bills left</span></div>
+    </div>
+  </div>
+
+  <div class="tabs" id="tabs"></div>
+  <div id="listHost"></div>
+  <div class="status" id="syncStatus"></div>
+</div>
+
+<button class="fab" id="addBtn" type="button">+ Add bill</button>
+
+<script>
+'use strict';
+/* =====================================================================
+   BILLS
+   Every bill due in the coming month, the total to set aside, and what's paid.
+   Data: one private document per Google account in the nates-toolbox Firestore
+   (bills_users/{uid}); the project's rules let only the owner's verified Google
+   account read or write it. Nothing about the bills is stored in this file, on
+   this website, or (apart from Firestore's own sign-in) on the phone.
+   The fingerprint lock is a WebAuthn check on this phone. Bills aren't loaded
+   from the database until it passes, and they're cleared from the screen when
+   the app sits in the background for a few minutes.
+   ===================================================================== */
+const $ = s => document.querySelector(s);
+const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
+const uid = () => Math.random().toString(36).slice(2, 10) + Date.now().toString(36).slice(-4);
+const money = n => (n < 0 ? '-' : '') + '$' + Math.abs(n).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const money0 = n => '$' + Math.round(n).toLocaleString('en-US');
+function toast(msg, ms){ const t = document.createElement('div'); t.className = 'toast'; t.textContent = msg; document.body.appendChild(t); setTimeout(() => t.remove(), ms || 2600); }
+
+/* ---------- dates (local, as YYYY-MM-DD strings) ---------- */
+const pad = n => String(n).padStart(2, '0');
+const iso = d => d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
+const parse = s => { const [y, m, d] = s.split('-').map(Number); return new Date(y, m - 1, d); };
+const today = () => { const d = new Date(); d.setHours(0, 0, 0, 0); return d; };
+const addDays = (d, n) => { const x = new Date(d); x.setDate(x.getDate() + n); return x; };
+const dim = (y, m) => new Date(y, m + 1, 0).getDate();
+const MON = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const DOW = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+
+/* A bill:
+   { id, name, amount, estimate, every (months: 1 monthly, 3 quarterly, 12 yearly, 0 one time),
+     start (first due date), end (last due date, optional), autopay, full (card statement balance, optional), note }
+   Occurrences fall on the start date's day of month (moved to the month's last day when it's shorter). */
+function occurrences(b, from, to){
+  const out = [], s = parse(b.start), day = s.getDate(), end = b.end ? parse(b.end) : null;
+  const step = +b.every || 0;
+  for (let i = 0; i < 400; i++) {
+    let d;
+    if (step === 0) { if (i) break; d = s; }
+    else { const m = s.getMonth() + i * step, y = s.getFullYear() + Math.floor(m / 12), mm = ((m % 12) + 12) % 12; d = new Date(y, mm, Math.min(day, dim(y, mm))); }
+    if (d > to || (end && d > end)) break;
+    if (d >= from) out.push(iso(d));
+  }
+  return out;
+}
+
+/* ---------- state ---------- */
+let S = { bills: [], paid: {}, amt: {}, fullCards: false };   // paid/amt keyed "billId@YYYY-MM-DD"
+let range = 'next30';
+const Cloud = { db: null, uid: null, unsub: null, ready: false, state: 'off', updated: 0, lastWrite: 0, saving: null };
+
+function rangeDates(){
+  const t = today();
+  if (range === 'next30') return { from: t, to: addDays(t, 30), label: 'Next 30 days' };
+  const off = range === 'next' ? 1 : 0, y = t.getFullYear(), m = t.getMonth() + off;
+  const first = new Date(y, m, 1), last = new Date(y, m + 1, 0);
+  return { from: first, to: last, label: MON[first.getMonth()] + ' ' + first.getFullYear() };
+}
+function amountOf(b, key){
+  if (key in S.amt) return +S.amt[key];
+  if (S.fullCards && b.full) return +b.full;
+  return +b.amount || 0;
+}
+function build(){
+  const { from, to } = rangeDates(), t = today();
+  const rows = [];
+  // anything unpaid from the past 45 days that's still open counts too
+  const lookback = range === 'next30' ? addDays(t, -45) : from;
+  for (const b of S.bills) for (const d of occurrences(b, lookback, to)) {
+    const key = b.id + '@' + d, paid = !!S.paid[key], dd = parse(d);
+    if (dd < from && paid) continue;
+    rows.push({ b, d, key, paid, late: !paid && dd < t, amount: amountOf(b, key) });
+  }
+  rows.sort((x, y) => x.d < y.d ? -1 : x.d > y.d ? 1 : x.b.name.localeCompare(y.b.name));
+  return rows;
+}
+
+/* ---------- drawing ---------- */
+const TABS = [['next30', 'Next 30 days'], ['this', 'This month'], ['next', 'Next month']];
+function drawTabs(){
+  const t = today(), names = { this: MON[t.getMonth()], next: MON[(t.getMonth() + 1) % 12] };
+  $('#tabs').innerHTML = TABS.map(([k, l]) => `<button class="tab ${k === range ? 'on' : ''}" data-r="${k}" type="button">${k === 'next30' ? l : names[k]}</button>`).join('');
+  $('#tabs').querySelectorAll('.tab').forEach(el => el.onclick = () => { range = el.dataset.r; render(); });
+}
+function render(){
+  drawTabs();
+  if (!Cloud.ready) { $('#listHost').innerHTML = ''; drawTotals([]); return; }
+  const rows = build(), t = today(), week = addDays(t, 7);
+  drawTotals(rows, week);
+  if (!S.bills.length) {
+    $('#listHost').innerHTML = `<div class="empty">No bills yet. Tap <b>+ Add bill</b> for rent, the electric bill, each card's minimum and your subscriptions.</div>`;
+    return;
+  }
+  if (!rows.length) { $('#listHost').innerHTML = `<div class="empty">Nothing due in this stretch.</div>`; return; }
+  const groups = [];
+  for (const r of rows) {
+    const dd = parse(r.d);
+    const g = r.late ? 'Past due' : dd < week ? 'This week' : MON[dd.getMonth()] + ' ' + dd.getFullYear();
+    if (!groups.length || groups[groups.length - 1].g !== g) groups.push({ g, rows: [] });
+    groups[groups.length - 1].rows.push(r);
+  }
+  $('#listHost').innerHTML = groups.map(G => `<div class="group">${G.g}</div><div class="list">${G.rows.map(rowHtml).join('')}</div>`).join('');
+  $('#listHost').querySelectorAll('.chk').forEach(el => el.onclick = () => togglePaid(el.dataset.k));
+  $('#listHost').querySelectorAll('.mid').forEach(el => el.onclick = () => openOccurrence(el.dataset.k));
+}
+function rowHtml(r){
+    const dd = parse(r.d);
+    const tags = [];
+    if (r.late) tags.push('<span class="tag late">Past due</span>');
+    if (r.b.autopay) tags.push('<span class="tag auto">Autopay</span>');
+    if (r.b.estimate && !(r.key in S.amt)) tags.push('<span class="tag est">About</span>');
+    if (r.b.full && !S.fullCards) tags.push(`<span>Balance ${money(+r.b.full)}</span>`);
+    if (r.b.end && +r.b.every) { const left = occurrences(r.b, dd, parse(r.b.end)).length; if (left <= 12) tags.push(`<span>${left === 1 ? 'Last one' : left + ' left'}</span>`); }
+    return `<div class="row ${r.paid ? 'paid' : ''} ${r.late ? 'late' : ''}">
+      <div class="date"><b>${dd.getDate()}</b><span>${DOW[dd.getDay()]}</span></div>
+      <button class="mid" type="button" data-k="${esc(r.key)}"><div class="nm">${esc(r.b.name)}</div><div class="meta">${tags.join('')}</div></button>
+      <span class="amt">${r.b.estimate && !(r.key in S.amt) ? '~' : ''}${money(r.amount)}</span>
+      <button class="chk" type="button" data-k="${esc(r.key)}" aria-label="${r.paid ? 'Mark not paid' : 'Mark paid'}">${r.paid ? '✓' : ''}</button>
+    </div>`;
+}
+function drawTotals(rows, week){
+  const open = rows.filter(r => !r.paid), paid = rows.filter(r => r.paid);
+  const sum = a => a.reduce((s, r) => s + r.amount, 0);
+  const { label } = rangeDates();
+  $('#totLbl').textContent = 'Set aside · ' + label;
+  $('#totBig').textContent = Cloud.ready ? money(sum(open)) : '—';
+  const est = open.some(r => r.b.estimate && !(r.key in S.amt)), late = open.filter(r => r.late).length;
+  $('#totSub').textContent = !Cloud.ready ? '' : [late ? `${late} past due included` : '', est ? 'Some amounts are estimates (~)' : '', S.fullCards ? 'Cards counted at full balance' : (S.bills.some(b => b.full) ? 'Cards counted at their minimum' : '')].filter(Boolean).join(' · ');
+  $('#stWeek').textContent = Cloud.ready ? money0(sum(open.filter(r => parse(r.d) < week))) : '—';
+  $('#stPaid').textContent = Cloud.ready ? money0(sum(paid)) : '—';
+  $('#stCount').textContent = Cloud.ready ? open.length : '—';
+}
+
+/* ---------- edits ---------- */
+function findRow(key){ const [id, d] = key.split('@'); const b = S.bills.find(x => x.id === id); return b ? { b, d, key } : null; }
+function togglePaid(key){
+  if (S.paid[key]) delete S.paid[key]; else S.paid[key] = Date.now();
+  save(); render();
+}
+function sheet(html){
+  const s = document.createElement('div'); s.className = 'scrim';
+  s.innerHTML = `<div class="sheet" role="dialog">${html}</div>`;
+  s.onclick = e => { if (e.target === s) s.remove(); };
+  document.body.appendChild(s); return s;
+}
+function openOccurrence(key){
+  const r = findRow(key); if (!r) return;
+  const dd = parse(r.d), cur = amountOf(r.b, key), paid = !!S.paid[key];
+  const s = sheet(`<h3>${esc(r.b.name)}</h3>
+    <p class="note" style="margin:-6px 0 12px">Due ${DOW[dd.getDay()]} ${MON[dd.getMonth()]} ${dd.getDate()}${r.b.autopay ? ' · Autopay' : ''}${r.b.full ? ' · Statement balance ' + money(+r.b.full) : ''}</p>
+    ${r.b.note ? `<p class="note" style="margin:-4px 0 12px">${esc(r.b.note)}</p>` : ''}
+    <div class="field"><label for="oAmt">Amount this time</label><input id="oAmt" inputmode="decimal" value="${cur.toFixed(2)}"></div>
+    <label class="checkline"><input type="checkbox" id="oPaid" ${paid ? 'checked' : ''}> Paid</label>
+    <div class="actions"><button class="btn" id="oSave" type="button">Save</button><button class="btn ghost" id="oEdit" type="button">Edit bill</button></div>`);
+  s.querySelector('#oSave').onclick = () => {
+    const v = parseFloat(String(s.querySelector('#oAmt').value).replace(/[$,]/g, ''));
+    if (isFinite(v) && Math.abs(v - (+r.b.amount || 0)) > 0.004) S.amt[key] = Math.round(v * 100) / 100; else delete S.amt[key];
+    if (s.querySelector('#oPaid').checked) S.paid[key] = S.paid[key] || Date.now(); else delete S.paid[key];
+    save(); render(); s.remove();
+  };
+  s.querySelector('#oEdit').onclick = () => { s.remove(); openBill(r.b); };
+}
+function openBill(b){
+  const isNew = !b; b = b || { id: uid(), name: '', amount: '', every: 1, start: iso(today()), autopay: false, estimate: false };
+  const s = sheet(`<h3>${isNew ? 'Add a bill' : 'Edit bill'}</h3>
+    <div class="field"><label for="bName">Name</label><input id="bName" value="${esc(b.name)}" placeholder="Electric, rent, a card's minimum…" autocomplete="off"></div>
+    <div class="two">
+      <div class="field"><label for="bAmt">Amount</label><input id="bAmt" inputmode="decimal" value="${b.amount === '' ? '' : (+b.amount).toFixed(2)}" placeholder="0.00"></div>
+      <div class="field"><label for="bEvery">How often</label><select id="bEvery">
+        ${[[1,'Monthly'],[2,'Every 2 months'],[3,'Every 3 months'],[6,'Every 6 months'],[12,'Yearly'],[0,'One time']].map(([v,l]) => `<option value="${v}" ${+b.every === v ? 'selected' : ''}>${l}</option>`).join('')}
+      </select></div>
+    </div>
+    <div class="two">
+      <div class="field"><label for="bStart">Next due date</label><input id="bStart" type="date" value="${esc(b.start)}"></div>
+      <div class="field"><label for="bEnd">Last payment (optional)</label><input id="bEnd" type="date" value="${esc(b.end || '')}"></div>
+    </div>
+    <div class="field"><label for="bFull">Card statement balance (optional)</label><input id="bFull" inputmode="decimal" value="${b.full ? (+b.full).toFixed(2) : ''}" placeholder="For a credit card: the full balance"></div>
+    <label class="checkline"><input type="checkbox" id="bAuto" ${b.autopay ? 'checked' : ''}> Paid automatically</label>
+    <label class="checkline"><input type="checkbox" id="bEst" ${b.estimate ? 'checked' : ''}> The amount changes (show it as an estimate)</label>
+    <div class="field"><label for="bNote">Note (no account numbers)</label><textarea id="bNote">${esc(b.note || '')}</textarea></div>
+    <div class="actions"><button class="btn" id="bSave" type="button">${isNew ? 'Add' : 'Save'}</button>${isNew ? '' : '<button class="btn danger" id="bDel" type="button">Delete</button>'}</div>`);
+  s.querySelector('#bSave').onclick = () => {
+    const name = s.querySelector('#bName').value.trim(), amt = parseFloat(s.querySelector('#bAmt').value.replace(/[$,]/g, ''));
+    const start = s.querySelector('#bStart').value;
+    if (!name) { toast('Give the bill a name.'); return; }
+    if (!isFinite(amt)) { toast('Put in an amount.'); return; }
+    if (!start) { toast('Pick when it’s next due.'); return; }
+    const full = parseFloat(s.querySelector('#bFull').value.replace(/[$,]/g, ''));
+    const nb = { id: b.id, name: name.slice(0, 60), amount: Math.round(amt * 100) / 100, every: +s.querySelector('#bEvery').value, start,
+      end: s.querySelector('#bEnd').value || '', autopay: s.querySelector('#bAuto').checked, estimate: s.querySelector('#bEst').checked,
+      full: isFinite(full) && full > 0 ? Math.round(full * 100) / 100 : 0, note: noNumbers(s.querySelector('#bNote').value).slice(0, 300) };
+    const i = S.bills.findIndex(x => x.id === b.id); if (i >= 0) S.bills[i] = nb; else S.bills.push(nb);
+    save(); render(); s.remove(); toast(isNew ? 'Added.' : 'Saved.');
+  };
+  const del = s.querySelector('#bDel');
+  if (del) del.onclick = () => {
+    if (!confirm('Delete ' + b.name + '? Its paid marks go too.')) return;
+    S.bills = S.bills.filter(x => x.id !== b.id);
+    for (const k of Object.keys(S.paid)) if (k.startsWith(b.id + '@')) delete S.paid[k];
+    for (const k of Object.keys(S.amt)) if (k.startsWith(b.id + '@')) delete S.amt[k];
+    save(); render(); s.remove();
+  };
+}
+/* Long digit runs look like card or account numbers; they're never kept. */
+function noNumbers(t){ return String(t || '').replace(/(?:\d[ -]?){9,}/g, '…'); }
+
+/* ---------- settings ---------- */
+function openSettings(){
+  const s = sheet(`<h3>Settings</h3>
+    <div class="setrow"><span>Count credit cards at the full statement balance instead of the minimum</span><input type="checkbox" id="sFull" ${S.fullCards ? 'checked' : ''} style="width:22px;height:22px;accent-color:var(--green)"></div>
+    <div class="setrow" id="lockRow"></div>
+    <div class="setrow"><span>Add bills from a list or a link</span><button class="btn sm ghost" id="sImport" type="button">Import</button></div>
+    <div class="setrow"><span>${Cloud.email ? 'Signed in as ' + esc(Cloud.email) : 'Signed in'}</span><button class="btn sm ghost" id="sOut" type="button">Sign out</button></div>
+    <div class="setrow"><span>Something wrong with the app?</span><button class="btn sm ghost" id="sHealth" type="button">Report</button></div>
+    <p class="note" style="margin-top:12px">Your bills are saved only in your own Google-protected account and load after your fingerprint. This website holds the app, never your bills.</p>`);
+  s.querySelector('#sFull').onchange = e => { S.fullCards = e.target.checked; save(); render(); };
+  s.querySelector('#sImport').onclick = () => { s.remove(); openImport(); };
+  s.querySelector('#sOut').onclick = async () => { s.remove(); await signOut(); };
+  s.querySelector('#sHealth').onclick = () => { s.remove(); if (window.nateHealth) window.nateHealth.report(); };
+  drawLockRow();
+}
+function openImport(){
+  const s = sheet(`<h3>Import bills</h3>
+    <p class="note" style="margin:-6px 0 12px">Paste a Bills import link or list. Bills with the same name are updated, not doubled.</p>
+    <div class="field"><textarea id="iText" style="min-height:110px" placeholder="Paste here"></textarea></div>
+    <div class="actions"><button class="btn" id="iGo" type="button">Import</button></div>`);
+  s.querySelector('#iGo').onclick = () => {
+    const list = decodeImport(s.querySelector('#iText').value);
+    if (!list) { toast('That isn’t a Bills list.'); return; }
+    const n = mergeBills(list); s.remove(); toast(n + ' bills added or updated.');
+  };
+}
+
+/* ---------- import (link fragment #import=…, never sent to any server) ---------- */
+function decodeImport(text){
+  try {
+    let t = String(text || '').trim();
+    const m = t.match(/import=([A-Za-z0-9_-]+)/); if (m) t = m[1];
+    let json;
+    if (/^[\[{]/.test(t)) json = t;
+    else { const b = atob(t.replace(/-/g, '+').replace(/_/g, '/')); json = new TextDecoder().decode(Uint8Array.from(b, c => c.charCodeAt(0))); }
+    const v = JSON.parse(json), arr = Array.isArray(v) ? v : v.bills;
+    if (!Array.isArray(arr) || !arr.length) return null;
+    return arr.filter(x => x && x.name && isFinite(+x.amount) && /^\d{4}-\d\d-\d\d$/.test(x.start || '')).slice(0, 100).map(x => ({
+      id: uid(), name: String(x.name).slice(0, 60), amount: Math.round(+x.amount * 100) / 100, every: x.every == null ? 1 : +x.every || 0,
+      start: x.start, end: /^\d{4}-\d\d-\d\d$/.test(x.end || '') ? x.end : '', autopay: !!x.autopay, estimate: !!x.estimate,
+      full: +x.full > 0 ? Math.round(+x.full * 100) / 100 : 0, note: noNumbers(x.note || '').slice(0, 300) }));
+  } catch(e){ return null; }
+}
+function mergeBills(list){
+  let n = 0;
+  for (const nb of list) {
+    const i = S.bills.findIndex(b => b.name.toLowerCase() === nb.name.toLowerCase());
+    if (i >= 0) { nb.id = S.bills[i].id; S.bills[i] = nb; } else S.bills.push(nb);
+    n++;
+  }
+  save(); render(); return n;
+}
+let pendingImport = null;
+function takeImportFromLink(){
+  if (!/import=/.test(location.hash)) return;
+  pendingImport = decodeImport(location.hash);
+  history.replaceState(null, '', location.pathname + location.search);   // the list leaves the address bar right away
+}
+function offerImport(){
+  if (!pendingImport || !Cloud.ready) return;
+  $('#importText').textContent = `Add ${pendingImport.length} bills from the link you opened?`;
+  $('#importOffer').classList.remove('hidden');
+  $('#importYes').onclick = () => { const n = mergeBills(pendingImport); pendingImport = null; $('#importOffer').classList.add('hidden'); toast(n + ' bills added. Check the amounts and dates.', 4000); };
+  $('#importNo').onclick = () => { pendingImport = null; $('#importOffer').classList.add('hidden'); };
+}
+
+/* =====================================================================
+   CLOUD: Google sign-in + Firestore (nates-toolbox). The web config is a
+   public identifier, not a secret; the database rules guard the data.
+   ===================================================================== */
+const FB_CONFIG = { apiKey: "AIzaSyDT_wGN93U4oM70orIU8flSAnvXHApqW2A", authDomain: "nates-toolbox.firebaseapp.com", projectId: "nates-toolbox", storageBucket: "nates-toolbox.firebasestorage.app", messagingSenderId: "567737923830", appId: "1:567737923830:web:b597b5d71e7c7a73c4d4d7" };
+function fbLoad(){
+  if (window.firebase && window.firebase.auth && window.firebase.firestore) return Promise.resolve();
+  return ['app', 'auth', 'firestore'].reduce((p, n) => p.then(() => new Promise((res, rej) => { const el = document.createElement('script'); el.src = 'https://www.gstatic.com/firebasejs/11.6.0/firebase-' + n + '-compat.js'; el.onload = res; el.onerror = () => rej(new Error('offline')); document.head.appendChild(el); })), Promise.resolve());
+}
+const docRef = () => Cloud.db.collection('bills_users').doc(Cloud.uid);
+let authUser = null, authKnown = false;
+async function initAuth(){
+  try { await fbLoad(); } catch(e){ setStatus('Can’t reach Google. Check your connection.'); showSign('You’re offline. Your bills open once the phone is back online.'); return; }
+  const fb = window.firebase; if (!fb.apps.length) fb.initializeApp(FB_CONFIG);
+  fb.auth().getRedirectResult().catch(e => { if (e && e.code) toast('Sign-in didn’t finish. Try again.'); });
+  fb.auth().onAuthStateChanged(u => {
+    authUser = u; authKnown = true;
+    if (!u) { stopCloud(); showSign(); return; }
+    hideSign();
+    Cloud.email = u.email || '';
+    if (!isLocked()) startCloud();
+  });
+}
+function showSign(msg){ $('#signGate').classList.remove('hidden'); if (msg) $('#signMsg').textContent = msg; }
+function hideSign(){ $('#signGate').classList.add('hidden'); }
+async function signIn(force){
+  try { await fbLoad(); } catch(e){ toast('Can’t reach Google right now.'); return null; }
+  const fb = window.firebase; if (!fb.apps.length) fb.initializeApp(FB_CONFIG);
+  const p = new fb.auth.GoogleAuthProvider(); p.setCustomParameters({ prompt: force ? 'login' : 'select_account' });
+  try { return await fb.auth().signInWithPopup(p); }
+  catch(e){ if (e && /popup/.test(e.code || '')) { fb.auth().signInWithRedirect(p); return null; } toast('Sign-in didn’t finish. Try again.'); return null; }
+}
+async function signOut(){ stopCloud(); try { await window.firebase.auth().signOut(); } catch(e){} }
+function startCloud(){
+  if (!authUser || Cloud.unsub) return;
+  const fb = window.firebase;
+  Cloud.db = fb.firestore(); Cloud.uid = authUser.uid; setStatus('Loading your bills…');
+  Cloud.unsub = docRef().onSnapshot(snap => {
+    if (snap.metadata.hasPendingWrites) return;
+    const d = snap.exists ? snap.data() : null;
+    if (d && d.updated && d.updated < Cloud.lastWrite) return;   // an older echo while a newer change is on its way
+    if (d && d.data) { try { const v = JSON.parse(d.data); S = Object.assign({ bills: [], paid: {}, amt: {}, fullCards: false }, v); } catch(e){} Cloud.updated = d.updated || 0; }
+    Cloud.ready = true; setStatus('Synced privately to your Google account.');
+    render(); offerImport(); offerLock();
+  }, e => {
+    stopCloud();
+    if (e && e.code === 'permission-denied') { toast('These bills are private to their owner, so this account can’t open them.', 6000); try { window.firebase.auth().signOut(); } catch(x){} return; }
+    setStatus('Couldn’t load your bills. Pull down or reopen to try again.');
+    if (window.nateHealth) try { window.nateHealth.note('sync', (e && e.code) || 'error'); } catch(x){}
+  });
+}
+function stopCloud(){
+  if (Cloud.unsub) { try { Cloud.unsub(); } catch(e){} }
+  Cloud.unsub = null; Cloud.ready = false;
+  S = { bills: [], paid: {}, amt: {}, fullCards: false };   // nothing stays in memory or on screen
+  render(); setStatus('');
+}
+function save(){
+  if (!Cloud.ready) return;
+  // drop paid marks and one-off amounts older than a year so the record stays small
+  const cut = iso(addDays(today(), -400));
+  for (const o of [S.paid, S.amt]) for (const k of Object.keys(o)) if (k.split('@')[1] < cut) delete o[k];
+  const body = { data: JSON.stringify(S), updated: Math.max(Date.now(), Cloud.lastWrite + 1) };
+  Cloud.lastWrite = body.updated;
+  setStatus('Saving…');
+  Cloud.saving = docRef().set(body).then(() => setStatus('Synced privately to your Google account.'), e => {
+    setStatus('That change didn’t save. Check your connection.');
+    if (window.nateHealth) try { window.nateHealth.note('save', (e && e.code) || 'error'); } catch(x){}
+  });
+}
+function setStatus(t){ $('#syncStatus').textContent = t; }
+
+/* =====================================================================
+   FINGERPRINT LOCK (this phone only)
+   A WebAuthn check with the phone's own fingerprint or screen lock. Nothing
+   is sent anywhere. Bills only load after it passes.
+   ===================================================================== */
+const LOCK_KEY = 'bills.lock';
+const lockId = () => { try { return localStorage.getItem(LOCK_KEY) || ''; } catch(e){ return ''; } };
+const isLocked = () => document.documentElement.classList.contains('locked');
+const b64 = buf => btoa(String.fromCharCode(...new Uint8Array(buf)));
+const unb64 = t => Uint8Array.from(atob(t), c => c.charCodeAt(0));
+async function lockSupported(){ try { return !!(window.PublicKeyCredential && await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable()); } catch(e){ return false; } }
+async function lockTurnOn(){
+  try {
+    const cred = await navigator.credentials.create({ publicKey: {
+      rp: { name: 'Bills' }, user: { id: crypto.getRandomValues(new Uint8Array(16)), name: 'bills', displayName: 'Bills' },
+      challenge: crypto.getRandomValues(new Uint8Array(32)), pubKeyCredParams: [{ type: 'public-key', alg: -7 }, { type: 'public-key', alg: -257 }],
+      authenticatorSelection: { authenticatorAttachment: 'platform', userVerification: 'required', residentKey: 'discouraged' }, timeout: 60000, attestation: 'none' } });
+    localStorage.setItem(LOCK_KEY, b64(cred.rawId));
+    toast('Fingerprint lock is on.');
+    $('#lockOffer').classList.add('hidden');
+  } catch(e){ toast('The fingerprint lock wasn’t turned on.'); }
+  drawLockRow();
+}
+async function lockVerify(){
+  await navigator.credentials.get({ publicKey: { challenge: crypto.getRandomValues(new Uint8Array(32)),
+    allowCredentials: [{ type: 'public-key', id: unb64(lockId()) }], userVerification: 'required', timeout: 60000 } });
+}
+function unlock(){ document.documentElement.classList.remove('locked'); $('#lockMsg').textContent = 'Use your fingerprint to open it.'; if (authUser) startCloud(); }
+function lockNow(){ document.documentElement.classList.add('locked'); stopCloud(); }
+let lockBusy = false;
+async function tryUnlock(){
+  if (lockBusy) return; lockBusy = true;
+  try { await lockVerify(); unlock(); }
+  catch(e){ $('#lockMsg').textContent = 'That didn’t unlock it. Tap Unlock to try again.'; }
+  lockBusy = false;
+}
+$('#lockGo').onclick = tryUnlock;
+$('#lockGoogle').onclick = async () => {
+  // Fallback when the fingerprint changed: a fresh Google sign-in (with your password) opens it and turns the lock off,
+  // so you can turn it on again with the new fingerprint.
+  const r = await signIn(true);
+  if (r && r.user) { try { localStorage.removeItem(LOCK_KEY); } catch(e){} unlock(); toast('Opened. Turn the fingerprint lock back on in Settings.', 4500); }
+};
+function offerLock(){
+  if (lockId()) return;
+  lockSupported().then(ok => { if (ok && !lockId()) $('#lockOffer').classList.remove('hidden'); });
+}
+$('#lockOfferOn').onclick = lockTurnOn;
+function drawLockRow(){
+  const el = document.getElementById('lockRow'); if (!el) return;
+  lockSupported().then(ok => {
+    if (!ok) { el.innerHTML = '<span>This phone or browser can’t use a fingerprint lock.</span>'; return; }
+    el.innerHTML = lockId()
+      ? `<span>Fingerprint lock is on</span><button class="btn sm ghost" id="lockOff" type="button">Turn off</button>`
+      : `<span>Ask for your fingerprint each time Bills opens</span><button class="btn sm" id="lockOn" type="button">Turn on</button>`;
+    const on = document.getElementById('lockOn'); if (on) on.onclick = lockTurnOn;
+    const off = document.getElementById('lockOff'); if (off) off.onclick = async () => {
+      try { await lockVerify(); } catch(e){ toast('Fingerprint needed to turn the lock off.'); return; }
+      try { localStorage.removeItem(LOCK_KEY); } catch(e){} drawLockRow(); toast('Fingerprint lock is off.');
+    };
+  });
+}
+// Lock again after 3 minutes in the background, and clear the bills from the screen.
+let hiddenAt = 0;
+document.addEventListener('visibilitychange', () => {
+  if (!lockId()) return;
+  if (document.visibilityState === 'hidden') hiddenAt = Date.now();
+  else if (hiddenAt && Date.now() - hiddenAt > 3 * 60 * 1000) { document.querySelectorAll('.scrim').forEach(s => s.remove()); lockNow(); $('#lockMsg').textContent = 'Locked. Use your fingerprint to open it.'; tryUnlock(); }
+});
+
+/* ---------- start ---------- */
+$('#signBtn').onclick = () => signIn(false);
+$('#setBtn').onclick = openSettings;
+$('#addBtn').onclick = () => { if (!Cloud.ready) { toast('Sign in first.'); return; } openBill(null); };
+if (!lockId()) document.documentElement.classList.remove('locked');
+takeImportFromLink();
+// A link opened while Bills is already open only changes the #hash, so check again then.
+addEventListener('hashchange', () => { takeImportFromLink(); offerImport(); });
+render();
+initAuth();
+if (lockId()) setTimeout(tryUnlock, 300);
+if ('serviceWorker' in navigator && (location.protocol === 'https:' || /^(localhost|127\.0\.0\.1)$/.test(location.hostname))) navigator.serviceWorker.register('sw.js').catch(() => {});
+</script>
+</body>
+</html>
