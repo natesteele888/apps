@@ -79,12 +79,20 @@
         ],
         "autoShots": [],
         "latest": {
-          "d": "Nov 12, 2026",
-          "t": "Add a copyright notice and an all-rights-reserved LICENSE",
-          "url": "https://github.com/natesteele888/apps/commit/25fd10682c4fe1ef072b42512df48ff23a75faea"
+          "d": "Nov 15, 2026",
+          "t": "Load the fonts without holding up six apps",
+          "url": "https://github.com/natesteele888/apps/commit/036fbc3def826df877e2c87aa48c4c7526c7ccb8"
         },
-        "version": "1.3.1",
+        "version": "1.3.3",
         "history": [
+          {
+            "v": "1.3.3",
+            "t": "Load the fonts without holding up six apps"
+          },
+          {
+            "v": "1.3.2",
+            "t": "Add Catch Log: a fishing log for a crew, private behind Google sign-in"
+          },
           {
             "v": "1.3.1",
             "t": "Add a copyright notice and an all-rights-reserved LICENSE"
@@ -96,14 +104,6 @@
           {
             "v": "1.2.9",
             "t": "App Store: choose which apps are listed (default hidden), only Read 20 on"
-          },
-          {
-            "v": "1.2.8",
-            "t": "Read 20: syllables said as they sound in the word, and anonymous use counts"
-          },
-          {
-            "v": "1.2.7",
-            "t": "App numbers: make the Back to Toolbox link easy to tap"
           }
         ]
       }
@@ -190,12 +190,16 @@
         ],
         "autoShots": [],
         "latest": {
-          "d": "Nov 12, 2026",
-          "t": "Add a copyright notice and an all-rights-reserved LICENSE",
-          "url": "https://github.com/natesteele888/apps/commit/25fd10682c4fe1ef072b42512df48ff23a75faea"
+          "d": "Nov 15, 2026",
+          "t": "Load the fonts without holding up six apps",
+          "url": "https://github.com/natesteele888/apps/commit/036fbc3def826df877e2c87aa48c4c7526c7ccb8"
         },
-        "version": "1.5.1",
+        "version": "1.5.2",
         "history": [
+          {
+            "v": "1.5.2",
+            "t": "Load the fonts without holding up six apps"
+          },
           {
             "v": "1.5.1",
             "t": "Add a copyright notice and an all-rights-reserved LICENSE"
@@ -211,10 +215,6 @@
           {
             "v": "1.4.8",
             "t": "Every app: a health check on open, a problem log, and a Something wrong? report"
-          },
-          {
-            "v": "1.4.6",
-            "t": "Where Do I Go: give extra-base hits a realistic roll instead of always reaching the fence"
           }
         ],
         "caps": [
@@ -328,12 +328,16 @@
         ],
         "autoShots": [],
         "latest": {
-          "d": "Nov 12, 2026",
-          "t": "Add a copyright notice and an all-rights-reserved LICENSE",
-          "url": "https://github.com/natesteele888/apps/commit/25fd10682c4fe1ef072b42512df48ff23a75faea"
+          "d": "Nov 15, 2026",
+          "t": "Load the fonts without holding up six apps",
+          "url": "https://github.com/natesteele888/apps/commit/036fbc3def826df877e2c87aa48c4c7526c7ccb8"
         },
-        "version": "1.1.1",
+        "version": "1.1.2",
         "history": [
+          {
+            "v": "1.1.2",
+            "t": "Load the fonts without holding up six apps"
+          },
           {
             "v": "1.1.1",
             "t": "Add a copyright notice and an all-rights-reserved LICENSE"
@@ -349,10 +353,6 @@
           {
             "v": "1.0.8",
             "t": "Gameday Picks: friends without Google can sign up with any email, and any player can share their invite code"
-          },
-          {
-            "v": "1.0.7",
-            "t": "Gameday Picks: open with no signal after a first visit"
           }
         ],
         "caps": [
@@ -765,12 +765,16 @@
         ],
         "autoShots": [],
         "latest": {
-          "d": "Nov 14, 2026",
-          "t": "Copy a game's pitch counts ready for the MAC League site",
-          "url": "https://github.com/natesteele888/lybs-ballclub/commit/2d06c838159830dda11424c485b72d26d8909332"
+          "d": "Nov 15, 2026",
+          "t": "Add one-field division checker for program pages",
+          "url": "https://github.com/natesteele888/lybs-ballclub/commit/a9449b26a6716aea0fb07c1389e1d36c042accdb"
         },
-        "version": "1.25.7",
+        "version": "1.25.8",
         "history": [
+          {
+            "v": "1.25.8",
+            "t": "Add one-field division checker for program pages"
+          },
           {
             "v": "1.25.7",
             "t": "Copy a game's pitch counts ready for the MAC League site"
@@ -786,10 +790,6 @@
           {
             "v": "1.25.4",
             "t": "Public info: don't log a crash when League Events can't load"
-          },
-          {
-            "v": "1.25.3",
-            "t": "Situations: note that the App Store's Where Do I Go? runs this trainer too"
           }
         ],
         "caps": [
@@ -950,12 +950,16 @@
         ],
         "autoShots": [],
         "latest": {
-          "d": "Nov 12, 2026",
-          "t": "Power Program: keep the check-in units on screen on a small phone",
-          "url": "https://github.com/natesteele888/fitness-hub/commit/a99a323fc4d6119294bf7cddf5ff93d221aff7d8"
+          "d": "Nov 14, 2026",
+          "t": "Power Program: keep tab and Prev/Next words inside their buttons on a small phone",
+          "url": "https://github.com/natesteele888/fitness-hub/commit/6c5473b22f21ac21809d35a5b36215e6bcdc12ec"
         },
-        "version": "1.3.8",
+        "version": "1.3.9",
         "history": [
+          {
+            "v": "1.3.9",
+            "t": "Power Program: keep tab and Prev/Next words inside their buttons on a small phone"
+          },
           {
             "v": "1.3.8",
             "t": "Power Program: keep the check-in units on screen on a small phone"
@@ -971,10 +975,6 @@
           {
             "v": "1.3.5",
             "t": "Power Program: the reminder builder runs from any copy of the repo"
-          },
-          {
-            "v": "1.3.4",
-            "t": "Power Program: add the shared problem report and save check"
           }
         ],
         "caps": [
@@ -1303,12 +1303,20 @@
         ],
         "autoShots": [],
         "latest": {
-          "d": "Nov 12, 2026",
-          "t": "Tests: always run the browser run against the real security rules",
-          "url": "https://github.com/natesteele888/events/commit/6971d8f1b46beeaf5fab1ffd27ab2b8e9eef994d"
+          "d": "Nov 15, 2026",
+          "t": "Load the fonts without holding up the Events page",
+          "url": "https://github.com/natesteele888/events/commit/f3370094254756b8852401c60db11e59d4541a94"
         },
-        "version": "1.3.0",
+        "version": "1.3.3",
         "history": [
+          {
+            "v": "1.3.3",
+            "t": "Load the fonts without holding up the Events page"
+          },
+          {
+            "v": "1.3.1",
+            "t": "Load the QR code library without holding up the page"
+          },
           {
             "v": "1.3.0",
             "t": "Tests: always run the browser run against the real security rules"
@@ -1320,14 +1328,6 @@
           {
             "v": "1.2.8",
             "t": "Don't make a second RSVP when a returning guest's signal drops"
-          },
-          {
-            "v": "1.2.7",
-            "t": "Make the Directions link on the invitation easy to tap"
-          },
-          {
-            "v": "1.2.6",
-            "t": "Say check your signal instead of wrong code or event not found"
           }
         ],
         "caps": [
@@ -1418,12 +1418,16 @@
         ],
         "autoShots": [],
         "latest": {
-          "d": "Nov 13, 2026",
-          "t": "Fix phone-width clips in Who's Where, Eight Count and Play Board",
-          "url": "https://github.com/natesteele888/apps/commit/89d1f611742c334e4259a967f447876f71dc11d1"
+          "d": "Nov 15, 2026",
+          "t": "Load the fonts without holding up six apps",
+          "url": "https://github.com/natesteele888/apps/commit/036fbc3def826df877e2c87aa48c4c7526c7ccb8"
         },
-        "version": "1.0.4",
+        "version": "1.0.5",
         "history": [
+          {
+            "v": "1.0.5",
+            "t": "Load the fonts without holding up six apps"
+          },
           {
             "v": "1.0.4",
             "t": "Fix phone-width clips in Who's Where, Eight Count and Play Board"
@@ -2077,12 +2081,20 @@
         ],
         "autoShots": [],
         "latest": {
-          "d": "Nov 14, 2026",
-          "t": "Walk-Up: match song names the way coaches type them",
-          "url": "https://github.com/natesteele888/apps/commit/bc4dcc15c42ad3f5b9736cbb159e7d9af1886c3e"
+          "d": "Nov 15, 2026",
+          "t": "Walk-Up: the Mix sheet and Play leave the announcer out for a clip that says the name",
+          "url": "https://github.com/natesteele888/apps/commit/f689cd3381eabe7150ddae6cc102220b8ec94349"
         },
-        "version": "1.1.1",
+        "version": "1.1.3",
         "history": [
+          {
+            "v": "1.1.3",
+            "t": "Walk-Up: the Mix sheet and Play leave the announcer out for a clip that says the name"
+          },
+          {
+            "v": "1.1.2",
+            "t": "Walk-Up: let a clip that already says the name play on its own"
+          },
           {
             "v": "1.1.1",
             "t": "Walk-Up: match song names the way coaches type them"
@@ -2094,14 +2106,6 @@
           {
             "v": "1.0.9",
             "t": "Walk-Up: get a whole lineup ready in one tap"
-          },
-          {
-            "v": "1.0.8",
-            "t": "Walk-Up and Pitch Count on the Galaxy Watch, with an optional pitch counter on the phone"
-          },
-          {
-            "v": "1.0.7",
-            "t": "Add a copyright notice and an all-rights-reserved LICENSE"
           }
         ],
         "caps": [
@@ -2769,6 +2773,34 @@
         ],
         "shots": [
           "mock"
+        ],
+        "latest": {
+          "d": "Nov 15, 2026",
+          "t": "Catch Log: works at the lake with no signal, clearer save errors, edit tackle",
+          "url": "https://github.com/natesteele888/apps/commit/2073f0aa3dfd7f47ec519d4c6cd3e5c22f5dd12c"
+        },
+        "version": "1.0.5",
+        "history": [
+          {
+            "v": "1.0.5",
+            "t": "Catch Log: works at the lake with no signal, clearer save errors, edit tackle"
+          },
+          {
+            "v": "1.0.4",
+            "t": "Catch Log: every screen fits one phone screen, no page scrolling"
+          },
+          {
+            "v": "1.0.3",
+            "t": "Load the fonts without holding up six apps"
+          },
+          {
+            "v": "1.0.2",
+            "t": "Catch Log: load the map stylesheet only when a map is shown"
+          },
+          {
+            "v": "1.0.1",
+            "t": "Add Catch Log: a fishing log for a crew, private behind Google sign-in"
+          }
         ]
       }
     }
