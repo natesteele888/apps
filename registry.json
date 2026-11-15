@@ -1,6 +1,6 @@
 {
   "about": "The one list of Nathan's apps. Live links, which apps show where, and each app's App Store listing (text, highlights, screenshots) all come from here. Edit listings and icons in the Toolbox; the sync job copies them here. Don't hand-edit text in store/index.html.",
-  "updated": "2026-11-14",
+  "updated": "2026-11-15",
   "toolbox": "https://natesteele888.github.io/apps/toolbox/",
   "store": "https://natesteele888.github.io/apps/store/",
   "apps": [
@@ -2703,6 +2703,74 @@
       "toolboxIds": [],
       "private": true,
       "store": false
+    },
+    {
+      "id": "catchlog",
+      "name": "Catch Log",
+      "live": "https://natesteele888.github.io/apps/catchlog/",
+      "repo": "natesteele888/apps",
+      "path": "catchlog/",
+      "toolboxIds": [],
+      "listing": {
+        "sub": "A fishing log for your crew",
+        "cat": "family",
+        "ac": "#3fa36b",
+        "install": true,
+        "access": "Invite code",
+        "desc": "Log every catch with your fishing crew: who caught it, the species, size, bait and rod, a photo, and the spot on the map. Save your favorite spots, keep each angler's rod and reel combos, edit or remove a catch, and check the crew's trophy boards. A crew is private: sign in with Google and join with the crew link.",
+        "feats": [
+          [
+            "📍",
+            "Spots on the map",
+            "Pin where each fish came from and keep a list of favorite spots."
+          ],
+          [
+            "🎣",
+            "Tackle per catch",
+            "Rod, reel and bait saved with every fish, plus each angler's combos."
+          ],
+          [
+            "🏆",
+            "Trophies",
+            "Crew leaderboards for today, all-time and each spot, or just your own records."
+          ]
+        ],
+        "facts": [
+          [
+            "Crew",
+            "Any size",
+            "join by link"
+          ],
+          [
+            "Photos",
+            "Per catch",
+            "kept with the crew"
+          ],
+          [
+            "Access",
+            "Invite",
+            "Google sign-in"
+          ]
+        ],
+        "parts": [
+          "signin",
+          "firebase",
+          "map",
+          "pwa"
+        ],
+        "tie": "The weekend one of the family set: a shared log for days on the water.",
+        "rel": [
+          "getready",
+          "read20"
+        ],
+        "for": [
+          "parent",
+          "player"
+        ],
+        "shots": [
+          "mock"
+        ]
+      }
     }
   ],
   "comingSoon": []

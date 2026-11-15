@@ -1,0 +1,1223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<!-- Copyright (c) 2026 Nate Steele. All rights reserved. Not licensed for copying, hosting or resale. See LICENSE. -->
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, viewport-fit=cover">
+<title>Catch Log</title>
+<meta name="application-name" content="Catch Log">
+<meta name="description" content="Log catches with your fishing crew: spots, tackle and trophies. Private to your crew behind Google sign-in.">
+<meta name="theme-color" content="#101913">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Catch Log">
+<meta name="referrer" content="no-referrer">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="/apps/icons/catchlog-192.png">
+<link rel="icon" href="/apps/icons/catchlog-192.png" sizes="192x192">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<script src="https://natesteele888.github.io/apps/install.js" defer></script><script src="https://natesteele888.github.io/apps/health.js" defer></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700;800&family=Inter:wght@400;500;600;700;800&display=swap');
+
+  :root{
+    --bg:#101913; --bg2:#0B120E; --panel:#1B2921; --panel2:#233A2E; --border:#33473A;
+    --text:#EFF2EC; --muted:#8EA398; --accent:#E0A83F; --accent-dk:#B4802A; --accent-text:#20150A;
+    --danger:#E1523D; --danger-dk:#B4402F; --success:#6FAE71; --blue:#5C9FD1;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;background:radial-gradient(ellipse at top,#182620,var(--bg2));min-height:100vh;font-family:'Inter',sans-serif;color:var(--text);}
+  h1,h2,h3,.hdr-font{font-family:'Oswald',sans-serif;}
+  #root{min-height:100vh;}
+  .loading-screen{min-height:100vh;display:flex;flex-direction:column;gap:10px;align-items:center;justify-content:center;font-size:34px;}
+  .loading-screen small{font-size:13px;color:var(--muted);font-weight:600;}
+  .note{background:#3A2A1A;border:1.5px solid var(--accent);color:var(--accent);font-size:12px;font-weight:700;padding:9px 14px;border-radius:12px;margin:0 0 12px;}
+  .toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:var(--panel2);border:1.5px solid var(--accent);color:var(--text);padding:10px 16px;border-radius:12px;font-size:13px;font-weight:700;z-index:9999;max-width:90vw;text-align:center;}
+
+  .gate{max-width:420px;margin:0 auto;padding:60px 22px;text-align:center;}
+  .gate .big{font-size:56px;}
+  .gate h1{font-size:30px;margin:8px 0 6px;letter-spacing:1px;}
+  .gate p{color:var(--muted);font-size:14px;line-height:1.5;margin:0 0 22px;}
+
+  .home-wrap{max-width:460px;margin:0 auto;padding:18px 16px 34px;}
+  .home-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;}
+  .brand{display:flex;align-items:center;gap:9px;font-family:'Oswald',sans-serif;font-weight:700;font-size:22px;letter-spacing:.5px;color:var(--text);}
+  .brand .ic{font-size:26px;}
+  .me-pill{display:flex;align-items:center;gap:7px;background:var(--panel);border:1.5px solid var(--border);padding:6px 12px 6px 6px;border-radius:999px;font-weight:700;font-size:13px;color:var(--text);cursor:pointer;font-family:inherit;}
+  .me-pill .av{width:26px;height:26px;border-radius:50%;background:var(--panel2);display:flex;align-items:center;justify-content:center;font-size:15px;overflow:hidden;}
+  .me-pill .av img{width:100%;height:100%;object-fit:cover;}
+
+  .catch-cta{display:block;width:100%;background:linear-gradient(180deg,var(--accent),var(--accent-dk));border:none;border-radius:20px;padding:26px 18px;text-align:center;cursor:pointer;box-shadow:0 6px 0 rgba(0,0,0,.4);margin-bottom:16px;}
+  .catch-cta:active{transform:translateY(4px);box-shadow:0 2px 0 rgba(0,0,0,.4);}
+  .catch-cta .cta-icon{font-size:40px;display:block;margin-bottom:6px;}
+  .catch-cta .cta-label{font-family:'Oswald',sans-serif;font-weight:800;font-size:22px;letter-spacing:1px;color:var(--accent-text);}
+  .catch-cta .cta-sub{font-size:12.5px;font-weight:700;color:rgba(32,21,10,.75);margin-top:2px;}
+
+  .resume-banner{display:flex;align-items:center;gap:10px;background:var(--panel2);border:1.5px dashed var(--accent);border-radius:14px;padding:10px 12px;margin-bottom:14px;font-size:12.5px;font-weight:700;color:var(--accent);}
+
+  .tile-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px;}
+  .tile{background:var(--panel);border:1.5px solid var(--border);border-radius:16px;padding:20px 10px;text-align:center;cursor:pointer;font-family:inherit;color:var(--text);}
+  .tile:active{background:var(--panel2);}
+  .tile .tile-icon{font-size:28px;display:block;margin-bottom:7px;}
+  .tile .tile-label{font-family:'Oswald',sans-serif;font-weight:700;letter-spacing:.6px;font-size:13px;}
+
+  .settings-link{display:flex;align-items:center;justify-content:center;gap:6px;color:var(--muted);font-weight:700;font-size:12.5px;padding:10px;cursor:pointer;}
+
+  .screen{min-height:100vh;display:flex;flex-direction:column;}
+  .screen-header{position:relative;background:var(--panel);padding:16px 52px 14px 16px;border-bottom:2px solid var(--border);display:flex;align-items:center;gap:10px;}
+  .screen-header .s-icon{font-size:22px;}
+  .screen-header .s-title{font-family:'Oswald',sans-serif;font-weight:700;font-size:19px;letter-spacing:1px;color:var(--accent);}
+  .screen-close{position:absolute;right:12px;top:50%;transform:translateY(-50%);width:36px;height:36px;border-radius:50%;background:var(--panel2);border:1.5px solid var(--border);color:var(--text);font-weight:900;font-size:15px;cursor:pointer;}
+  .screen-body{flex:1;padding:16px;max-width:460px;margin:0 auto;width:100%;}
+  .screen-footer{display:flex;gap:10px;padding:12px 16px calc(12px + env(safe-area-inset-bottom,0px));background:var(--panel);border-top:1.5px solid var(--border);}
+
+  .btn{width:100%;padding:14px;border-radius:14px;font-weight:800;font-size:15px;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;font-family:'Oswald',sans-serif;letter-spacing:.4px;}
+  .btn-primary{background:linear-gradient(180deg,var(--accent),var(--accent-dk));color:var(--accent-text);box-shadow:0 4px 0 rgba(0,0,0,.35);}
+  .btn-primary:active{transform:translateY(3px);box-shadow:0 1px 0 rgba(0,0,0,.35);}
+  .btn-primary:disabled{opacity:.4;box-shadow:none;}
+  .btn-secondary{background:var(--panel2);border:1.5px solid var(--border);color:var(--text);}
+  .btn-danger{background:linear-gradient(180deg,var(--danger),var(--danger-dk));color:#fff;box-shadow:0 4px 0 rgba(0,0,0,.35);}
+
+  .card{background:var(--panel);border:1.5px solid var(--border);border-radius:16px;padding:14px;margin-bottom:14px;}
+  .section-title{display:flex;align-items:center;gap:7px;margin:0 0 9px;font-family:'Oswald',sans-serif;font-weight:700;font-size:13px;text-transform:uppercase;letter-spacing:.8px;color:var(--muted);}
+
+  .input{width:100%;padding:12px 13px;border-radius:12px;border:1.5px solid var(--border);background:var(--bg2);color:var(--text);font-weight:600;font-size:15px;font-family:inherit;}
+  .input::placeholder{color:var(--muted);}
+  .input:focus{outline:none;border-color:var(--accent);}
+  .row{display:flex;gap:9px;}
+  label.small{font-size:11px;font-weight:800;color:var(--muted);display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:.5px;}
+
+  .chip{padding:9px 15px;border-radius:999px;border:1.5px solid var(--border);background:var(--panel2);color:var(--text);font-weight:700;font-size:13px;cursor:pointer;font-family:inherit;}
+  .chip.active{background:var(--accent);border-color:var(--accent-dk);color:var(--accent-text);}
+  .chip-wrap{display:flex;flex-wrap:wrap;gap:8px;}
+  .swatch{width:14px;height:14px;border-radius:50%;display:inline-block;margin-right:6px;vertical-align:middle;border:1px solid rgba(0,0,0,.3);}
+
+  .tk-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px;}
+  .tk-card{position:relative;border:1.5px solid var(--border);border-radius:14px;padding:11px 6px;text-align:center;background:var(--panel2);color:var(--text);cursor:pointer;font-family:inherit;}
+  .tk-card.selected{border-color:var(--accent);box-shadow:0 0 0 1.5px var(--accent) inset;}
+  .tk-card .tk-icon{font-size:22px;display:block;margin-bottom:4px;}
+  .tk-card .tk-label{font-weight:700;font-size:12px;}
+
+  .combo-row{display:flex;align-items:center;gap:10px;background:var(--panel2);border:1.5px solid var(--border);border-radius:12px;padding:9px 11px;margin-bottom:8px;}
+  .combo-row .cn{font-weight:700;font-size:13.5px;}
+  .combo-row .cs{font-size:11.5px;color:var(--muted);}
+  .x-btn{margin-left:auto;width:30px;height:30px;border-radius:50%;background:var(--panel);border:1.5px solid var(--border);color:var(--muted);font-weight:900;cursor:pointer;flex-shrink:0;}
+
+  .empty{text-align:center;padding:34px 16px;border-radius:16px;border:1.5px dashed var(--border);color:var(--muted);}
+  .empty .big{font-size:28px;margin-bottom:6px;}
+  .empty p{font-weight:700;margin:2px 0;color:var(--text);}
+  .empty span{font-size:12.5px;}
+
+  .photo-btn{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:800;color:var(--accent);background:var(--panel2);border:1.5px solid var(--border);padding:8px 12px;border-radius:10px;cursor:pointer;font-family:inherit;}
+  .photo-preview{margin-top:10px;width:100%;max-height:170px;object-fit:cover;border-radius:12px;}
+
+  .catch-mini{display:flex;align-items:center;gap:10px;background:var(--panel2);border:1.5px solid var(--border);border-radius:14px;padding:9px;margin-bottom:8px;}
+  .catch-mini .thumb{width:42px;height:42px;border-radius:10px;background:var(--panel);display:flex;align-items:center;justify-content:center;font-size:18px;overflow:hidden;flex-shrink:0;}
+  .catch-mini .thumb img{width:100%;height:100%;object-fit:cover;}
+  .catch-mini .sp{font-weight:700;color:var(--text);font-size:13.5px;}
+  .catch-mini .sub{font-size:11.5px;color:var(--muted);}
+
+  .rank-row{display:flex;align-items:center;gap:10px;background:var(--panel2);border:1.5px solid var(--border);border-radius:14px;padding:9px;margin-bottom:8px;width:100%;font-family:inherit;color:var(--text);text-align:left;}
+  button.rank-row{cursor:pointer;}
+  .rank-badge{width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:12.5px;flex-shrink:0;color:#fff;background:var(--panel);}
+  .rank-badge.gold{background:radial-gradient(circle at 35% 30%,#FFE07A,#C9941A);color:#4a3300;}
+  .rank-badge.silver{background:radial-gradient(circle at 35% 30%,#EDEDED,#A9A9A9);color:#333;}
+  .rank-badge.bronze{background:radial-gradient(circle at 35% 30%,#E3A56C,#A9622A);}
+  .rank-thumb{width:44px;height:44px;border-radius:11px;background:var(--panel);display:flex;align-items:center;justify-content:center;font-size:20px;overflow:hidden;flex-shrink:0;}
+  .rank-thumb img{width:100%;height:100%;object-fit:cover;}
+  .rank-mid{flex:1;min-width:0;}
+  .rank-mid .rank-species{font-weight:700;color:var(--text);font-size:13.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .rank-mid .rank-sub{font-size:11px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .rank-wt{font-weight:800;color:var(--accent);font-size:13.5px;text-align:right;flex-shrink:0;}
+
+  .angler-row{width:100%;display:flex;align-items:center;gap:12px;padding:12px;border-radius:14px;border:1.5px solid var(--border);background:var(--panel2);cursor:pointer;text-align:left;margin-bottom:8px;font-family:inherit;color:var(--text);}
+  .angler-row.active{border-color:var(--accent);}
+  .angler-av{width:44px;height:44px;border-radius:50%;background:var(--panel);display:flex;align-items:center;justify-content:center;font-size:20px;overflow:hidden;flex-shrink:0;}
+  .angler-av img{width:100%;height:100%;object-fit:cover;}
+  .angler-name{font-weight:700;color:var(--text);}
+  .angler-sub{font-size:12px;color:var(--muted);}
+  .angler-badge{margin-left:auto;background:var(--accent);color:var(--accent-text);font-weight:800;font-size:10px;padding:3px 9px;border-radius:999px;flex-shrink:0;}
+
+  .avatar-pick{width:42px;height:42px;border-radius:50%;border:1.5px solid var(--border);font-size:20px;background:var(--panel2);cursor:pointer;display:flex;align-items:center;justify-content:center;}
+  .avatar-pick.active{border-color:var(--accent);background:#3A2E13;}
+  .avatar-circle{width:56px;height:56px;border-radius:50%;background:var(--panel2);border:1.5px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:26px;overflow:hidden;flex-shrink:0;}
+  .avatar-circle img{width:100%;height:100%;object-fit:cover;}
+
+  .spot-card{display:flex;align-items:center;gap:11px;background:var(--panel2);border:1.5px solid var(--border);border-radius:14px;padding:11px;margin-bottom:9px;width:100%;font-family:inherit;color:var(--text);text-align:left;cursor:pointer;}
+  .spot-thumb{width:38px;height:38px;border-radius:10px;background:var(--panel);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;}
+  .spot-name{font-weight:700;color:var(--text);font-size:13.5px;}
+  .spot-coords{font-size:11px;color:var(--muted);}
+  .spot-best{font-size:11px;color:var(--accent);font-weight:700;margin-top:1px;}
+  .map{height:230px;border-radius:14px;border:1.5px solid var(--border);margin-bottom:12px;overflow:hidden;background:var(--panel);}
+  .map.small{height:190px;margin:4px 0 8px;}
+  .map-hint{font-size:11.5px;color:var(--muted);margin:0 0 8px;}
+  .leaflet-container{font-family:'Inter',sans-serif;}
+
+  .confirm-wrap{text-align:center;padding:30px 10px 10px;}
+  .confirm-wrap .big-emoji{font-size:52px;margin-bottom:10px;}
+  .confirm-wrap h2{font-size:20px;margin:0 0 4px;color:var(--text);}
+  .confirm-wrap p{color:var(--muted);font-size:13.5px;margin:0 0 22px;}
+
+  .settings-row{display:flex;align-items:center;gap:12px;background:var(--panel);border:1.5px solid var(--border);border-radius:14px;padding:13px;margin-bottom:10px;cursor:pointer;width:100%;text-align:left;font-family:inherit;color:var(--text);}
+  .settings-row .sr-icon{font-size:20px;width:26px;text-align:center;flex-shrink:0;}
+  .settings-row .sr-label{font-weight:700;font-size:13.5px;flex:1;}
+  .settings-row .sr-arrow{color:var(--muted);}
+  .settings-info{background:var(--panel2);border:1px solid var(--border);border-radius:12px;padding:12px;font-size:11.5px;color:var(--muted);line-height:1.55;margin-bottom:10px;}
+  .settings-credit{text-align:center;color:var(--muted);font-size:11px;margin-top:14px;}
+</style>
+</head>
+<body>
+<div id="root"><div class="loading-screen">🎣</div></div>
+
+<script>
+/* =========================================================
+   CLOUD: Google sign-in + Firestore (nates-toolbox).
+   The web config is a public identifier, not a secret; the
+   database rules guard the data. A crew is one document whose
+   id is a long random code that only people with the crew
+   link know. Photos are separate small documents under it.
+========================================================= */
+const FB_CONFIG = { apiKey: "AIzaSyDT_wGN93U4oM70orIU8flSAnvXHApqW2A", authDomain: "nates-toolbox.firebaseapp.com", projectId: "nates-toolbox", storageBucket: "nates-toolbox.firebasestorage.app", messagingSenderId: "567737923830", appId: "1:567737923830:web:b597b5d71e7c7a73c4d4d7" };
+function fbLoad(){
+  if (window.firebase && window.firebase.auth && window.firebase.firestore) return Promise.resolve();
+  return ['app','auth','firestore'].reduce((p,n)=>p.then(()=>new Promise((res,rej)=>{ const el=document.createElement('script'); el.src='https://www.gstatic.com/firebasejs/11.6.0/firebase-'+n+'-compat.js'; el.onload=res; el.onerror=()=>rej(new Error('offline')); document.head.appendChild(el); })), Promise.resolve());
+}
+const LS = {
+  get(k){ try{ return localStorage.getItem(k); }catch(e){ return null; } },
+  set(k,v){ try{ localStorage.setItem(k,v); }catch(e){} },
+  del(k){ try{ localStorage.removeItem(k); }catch(e){} }
+};
+const Cloud = { db:null, user:null, crew:null, unsub:null };
+const crewRef = () => Cloud.db.collection('cl_crews').doc(Cloud.crew);
+const photoRef = (pid) => crewRef().collection('photos').doc(pid);
+
+function newCode(){
+  const a = new Uint8Array(18); crypto.getRandomValues(a);
+  return Array.from(a, b => 'abcdefghijkmnpqrstuvwxyz23456789'[b % 32]).join('') + Date.now().toString(36).slice(-4);
+}
+function crewFromHash(){
+  const m = (location.hash || '').match(/crew=([a-z0-9]{20,})/i);
+  return m ? m[1] : null;
+}
+function crewLink(){ return location.origin + location.pathname + '#crew=' + Cloud.crew; }
+
+function toast(msg, ms=3200){
+  const t = document.createElement('div'); t.className='toast'; t.textContent=msg; document.body.appendChild(t);
+  setTimeout(()=>t.remove(), ms);
+}
+
+async function initAuth(){
+  try{ await fbLoad(); }
+  catch(e){ phase='offline'; render(); return; }
+  const fb = window.firebase; if(!fb.apps.length) fb.initializeApp(FB_CONFIG);
+  fb.auth().getRedirectResult().catch(e => { if(e && e.code) toast('Sign-in didn’t finish. Try again.'); });
+  fb.auth().onAuthStateChanged(u => {
+    Cloud.user = u;
+    if(!u){ stopCloud(); phase='signin'; render(); return; }
+    Cloud.db = fb.firestore();
+    const fromLink = crewFromHash();
+    if(fromLink){ LS.set('cl_crew', fromLink); history.replaceState(null,'',location.pathname); }
+    const code = LS.get('cl_crew');
+    if(code) startCloud(code); else { phase='crew'; render(); }
+  });
+}
+async function signIn(){
+  try{ await fbLoad(); }catch(e){ toast('Can’t reach Google right now.'); return; }
+  const fb = window.firebase; if(!fb.apps.length) fb.initializeApp(FB_CONFIG);
+  const p = new fb.auth.GoogleAuthProvider(); p.setCustomParameters({ prompt:'select_account' });
+  try{ await fb.auth().signInWithPopup(p); }
+  catch(e){ if(e && /popup/.test(e.code||'')) fb.auth().signInWithRedirect(p); else toast('Sign-in didn’t finish. Try again.'); }
+}
+async function signOut(){ stopCloud(); try{ await window.firebase.auth().signOut(); }catch(e){} }
+function stopCloud(){ if(Cloud.unsub){ Cloud.unsub(); Cloud.unsub=null; } }
+
+function startCloud(code){
+  stopCloud();
+  Cloud.crew = code;
+  phase = 'loading'; render();
+  state.me = LS.get('cl_me_'+code);
+  Cloud.unsub = crewRef().onSnapshot(snap => {
+    let d = {};
+    if(snap.exists){ try{ d = JSON.parse(snap.data().data || '{}'); }catch(e){ d = {}; } }
+    applyData(d);
+    if(phase !== 'ready'){
+      phase = 'ready';
+      if(state.profiles.length === 0) creatingProfile = true;
+      if(state.me && !state.profiles.some(p=>p.id===state.me)) state.me = null;
+      loadDraft();
+      render();
+    } else safeRender();
+  }, err => {
+    if(window.nateHealth) try{ window.nateHealth.note('sync', (err && err.code) || 'error'); }catch(x){}
+    if(err && err.code === 'permission-denied'){ phase='denied'; render(); }
+    else { toast('Can’t reach your crew right now.'); }
+  });
+}
+async function startNewCrew(){
+  const code = newCode();
+  Cloud.crew = code;
+  try{
+    await crewRef().set({ data: JSON.stringify(blankData()), updated: Date.now() });
+    LS.set('cl_crew', code);
+    startCloud(code);
+  }catch(e){ toast('Couldn’t start a crew. Check your connection and try again.'); }
+}
+function joinFromPaste(){
+  const v = (document.getElementById('crewPaste')?.value || '').trim();
+  const m = v.match(/crew=([a-z0-9]{20,})/i) || v.match(/^([a-z0-9]{20,})$/i);
+  if(!m){ toast('That doesn’t look like a crew link.'); return; }
+  LS.set('cl_crew', m[1]); startCloud(m[1]);
+}
+function leaveCrew(){
+  if(!confirm('Leave this crew on this phone? Nothing is deleted. You can rejoin with the crew link.')) return;
+  stopCloud(); LS.del('cl_crew'); Cloud.crew=null; state = freshState(); phase='crew'; render();
+}
+async function shareCrew(){
+  const url = crewLink();
+  try{
+    if(navigator.share){ await navigator.share({ title:'Catch Log', text:'Join our fishing crew on Catch Log', url }); return; }
+  }catch(e){ if(e && e.name==='AbortError') return; }
+  try{ await navigator.clipboard.writeText(url); toast('Crew link copied. Only send it to people in your crew.'); }
+  catch(e){ prompt('Copy your crew link:', url); }
+}
+
+/* ---------- Data: one JSON document, changed only inside a transaction ---------- */
+function blankData(){ return { profiles:[], gear:{}, sessions:[], spots:[] }; }
+function norm(d){
+  d.profiles = Array.isArray(d.profiles)?d.profiles:[]; d.sessions = Array.isArray(d.sessions)?d.sessions:[];
+  d.spots = Array.isArray(d.spots)?d.spots:[]; d.gear = (d.gear && typeof d.gear==='object')?d.gear:{};
+  return d;
+}
+function applyData(d){
+  norm(d);
+  state.profiles = d.profiles; state.gearMap = d.gear; state.sessions = d.sessions; state.spots = d.spots;
+}
+async function mutate(fn){
+  try{
+    await Cloud.db.runTransaction(async t => {
+      const snap = await t.get(crewRef());
+      let d = {};
+      if(snap.exists){ try{ d = JSON.parse(snap.data().data || '{}'); }catch(e){ d = {}; } }
+      norm(d); fn(d);
+      const s = JSON.stringify(d);
+      if(s.length > 880000) throw new Error('full');
+      t.set(crewRef(), { data:s, updated: Date.now() });
+    });
+    return true;
+  }catch(e){
+    console.error('save failed', e);
+    if(window.nateHealth) try{ window.nateHealth.note('save', (e && e.code) || (e && e.message) || 'error'); }catch(x){}
+    toast(e && e.message==='full' ? 'Your crew’s log is full. Ask Nate to make room.' : 'Didn’t save. Check your connection and try again.');
+    return false;
+  }
+}
+
+/* ---------- Photos: each one its own small document, loaded when shown ---------- */
+const photoCache = {}; const photoWanted = {};
+function photoSrc(pid){
+  if(!pid) return null;
+  if(pid.startsWith('data:')) return pid;
+  if(photoCache[pid]) return photoCache[pid];
+  if(!photoWanted[pid] && Cloud.db){
+    photoWanted[pid] = true;
+    photoRef(pid).get().then(s => { if(s.exists){ photoCache[pid] = s.data().img; safeRender(); } }).catch(()=>{});
+  }
+  return null;
+}
+async function uploadPhoto(dataUrl){
+  if(!dataUrl) return null;
+  const pid = 'ph_' + Date.now().toString(36) + Math.random().toString(36).slice(2,7);
+  try{ await photoRef(pid).set({ img:dataUrl, updated:Date.now() }); photoCache[pid] = dataUrl; return pid; }
+  catch(e){ toast('Photo didn’t upload, so it was left off.'); return null; }
+}
+function deletePhoto(pid){ if(pid && !pid.startsWith('data:')) photoRef(pid).delete().catch(()=>{}); }
+
+/* Don't redraw while someone is typing: a crew-mate's save would wipe what they typed. */
+let pendingRender = false;
+function isTyping(){ const a = document.activeElement; return a && (a.tagName==='INPUT' || a.tagName==='TEXTAREA') && a.type!=='file'; }
+function safeRender(){ if(isTyping()){ pendingRender = true; return; } render(); }
+document.addEventListener('focusout', () => setTimeout(() => { if(pendingRender && !isTyping()){ pendingRender=false; render(); } }, 60));
+
+/* =========================================================
+   CONSTANTS
+========================================================= */
+const ROD_BRANDS = ["Ugly Stik","Shimano","Abu Garcia","St. Croix","Daiwa","Berkley","Fenwick","PLUSINNO"];
+const REEL_BRANDS = ["Shimano","Abu Garcia","Daiwa","Penn","Pflueger","Zebco","KastKing","Okuma"];
+const BAIT_STYLES = ["Spinnerbait","Crankbait","Soft Plastic Worm","Jig","Topwater / Popper","Spoon","Swimbait","Buzzbait"];
+const BAIT_ICONS = {"Spinnerbait":"🌀","Crankbait":"🐛","Soft Plastic Worm":"🪱","Jig":"🎯","Topwater / Popper":"💦","Spoon":"🥄","Swimbait":"🐠","Buzzbait":"⚡"};
+const LURE_COLORS = [
+  {name:"Chartreuse",hex:"#C6F135"},{name:"White",hex:"#F5F5F0"},{name:"Black",hex:"#1A1A1A"},
+  {name:"Red/White",hex:"#E1523D"},{name:"Firetiger",hex:"#F4B41A"},{name:"Silver/Blue",hex:"#8FAEC7"},
+  {name:"Watermelon",hex:"#5B8C5A"},{name:"Pink",hex:"#E88AC2"},{name:"Green Pumpkin",hex:"#5C5A3D"},{name:"Orange",hex:"#E8792E"}
+];
+const LIVE_BAIT = ["Nightcrawlers / Worms","Minnows","Crickets","Crawfish","Leeches","Shrimp"];
+const LIVEBAIT_ICONS = {"Nightcrawlers / Worms":"🪱","Minnows":"🐟","Crickets":"🦗","Crawfish":"🦞","Leeches":"🟤","Shrimp":"🦐"};
+const AVATARS = ["🎣","🐟","🐠","🦈","🐡","🎯","😎","🤠","🧢","🐊","🦞","⚓"];
+
+const todayStr = () => { const d=new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); };
+const localDay = (iso) => { if(!iso) return ''; const d=new Date(iso); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); };
+const esc = (s) => (s==null?'':s).toString().replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+const jsq = (s) => esc(s).replace(/\\/g,'\\\\').replace(/&#39;/g,"\\'");
+const fmtShortDate = (iso) => { if(!iso) return ''; return new Date(iso).toLocaleDateString([], {month:'short', day:'numeric'}); };
+const fmtTime = (iso) => { if(!iso) return ''; return new Date(iso).toLocaleTimeString([], {hour:'numeric', minute:'2-digit'}); };
+const imgOr = (pid, fallback) => { const src = photoSrc(pid); return src ? `<img src="${src}" alt="">` : fallback; };
+
+/* =========================================================
+   GLOBAL STATE
+========================================================= */
+let phase = 'boot';   // boot | offline | signin | crew | loading | denied | ready
+function freshState(){ return { profiles:[], gearMap:{}, sessions:[], spots:[], me:null, tab:'home' }; }
+let state = freshState();
+let creatingProfile = false;
+let newProfileDraft = { avatar: AVATARS[0], photo:null };
+let gearDraft = null;
+let newComboName = '';
+
+let catchDraft = null;      // {spotName, lat, lng, startTime, catches:[]}
+let catchJustSaved = false;
+let lastSavedCatch = null;
+let currentCatch = { species:'', weight:'', length:'', photo:null, combo:'', bait:'' };
+let spotMode = 'pick';
+let newSpotDraft = { name:'', lat:null, lng:null };
+let savingTrip = false;
+
+let lbView = 'daily';
+let myRecordsOnly = false;
+let locTab = 'freshwater';
+let addingLocation = false;
+let newLocDraft = null;
+let editRef = null;         // {sid, cid, species, weight, length}
+
+function setMe(id){ state.me = id; if(Cloud.crew){ if(id) LS.set('cl_me_'+Cloud.crew, id); else LS.del('cl_me_'+Cloud.crew); } }
+
+/* A trip in progress is kept on this phone, so closing the app mid-trip doesn't lose it. */
+function saveDraft(){ if(!Cloud.crew) return; if(catchDraft) LS.set('cl_draft_'+Cloud.crew, JSON.stringify(catchDraft)); else LS.del('cl_draft_'+Cloud.crew); }
+function loadDraft(){ try{ const s = LS.get('cl_draft_'+Cloud.crew); catchDraft = s ? JSON.parse(s) : null; }catch(e){ catchDraft = null; } }
+
+/* =========================================================
+   IMAGE COMPRESSION
+========================================================= */
+function compressImage(file, maxDim=480, quality=0.6){
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const img = new Image();
+      img.onload = () => {
+        let {width, height} = img;
+        if(width > height && width > maxDim){ height *= maxDim/width; width = maxDim; }
+        else if(height > maxDim){ width *= maxDim/height; height = maxDim; }
+        const canvas = document.createElement('canvas');
+        canvas.width = width; canvas.height = height;
+        canvas.getContext('2d').drawImage(img, 0, 0, width, height);
+        resolve(canvas.toDataURL('image/jpeg', quality));
+      };
+      img.onerror = reject;
+      img.src = reader.result;
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+/* =========================================================
+   MAPS (Leaflet, loaded only when a map is shown)
+========================================================= */
+let leafletP = null; let maps = [];
+function loadLeaflet(){
+  if(window.L) return Promise.resolve();
+  if(!leafletP) leafletP = new Promise((res, rej) => { const s=document.createElement('script'); s.src='https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'; s.onload=res; s.onerror=rej; document.head.appendChild(s); });
+  return leafletP;
+}
+function teardownMaps(){ maps.forEach(m => { try{ m.remove(); }catch(e){} }); maps = []; }
+function pinIcon(color){
+  return L.divIcon({ className:'', iconSize:[22,22], iconAnchor:[11,22],
+    html:`<div style="width:22px;height:22px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);background:${color};border:2px solid #101913;box-shadow:0 2px 4px rgba(0,0,0,.5)"></div>` });
+}
+function baseMap(el, center, zoom){
+  const m = L.map(el, { zoomControl:true, attributionControl:true }).setView(center, zoom);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom:18, attribution:'&copy; OpenStreetMap' }).addTo(m);
+  maps.push(m); return m;
+}
+async function initSpotsMap(){
+  const el = document.getElementById('spotsMap'); if(!el) return;
+  try{ await loadLeaflet(); }catch(e){ el.innerHTML = '<div class="empty" style="border:none"><span>Map couldn’t load.</span></div>'; return; }
+  if(!document.body.contains(el)) return;
+  const pinned = getAllLocations().filter(l => (l.type||'freshwater')===locTab && l.lat!=null && l.lng!=null);
+  const m = baseMap(el, pinned.length ? [pinned[0].lat, pinned[0].lng] : [42.55,-71.75], pinned.length ? 12 : 8);
+  pinned.forEach(l => {
+    const best = flattenCatches(s=>s.spotName===l.name)[0];
+    L.marker([l.lat,l.lng], { icon: pinIcon(l.type==='saltwater'?'#5C9FD1':'#E0A83F') }).addTo(m)
+      .bindPopup(`<b>${esc(l.name)}</b><br>${best ? '🏆 '+esc(best.catch.species)+' '+(best.catch.weight!=null?best.catch.weight+' lb':best.catch.length!=null?best.catch.length+' in':'') : 'No catches yet'}`);
+  });
+  if(pinned.length > 1) m.fitBounds(pinned.map(l=>[l.lat,l.lng]), { padding:[28,28], maxZoom:14 });
+  setTimeout(()=>m.invalidateSize(), 80);
+}
+async function initLocAddMap(){
+  const el = document.getElementById('locAddMap'); if(!el || !newLocDraft) return;
+  try{ await loadLeaflet(); }catch(e){ el.style.display='none'; return; }
+  if(!document.body.contains(el)) return;
+  const hasPin = newLocDraft.lat!=null;
+  const m = baseMap(el, hasPin ? [newLocDraft.lat,newLocDraft.lng] : [42.55,-71.75], hasPin ? 15 : 9);
+  let mk = hasPin ? L.marker([newLocDraft.lat,newLocDraft.lng], { icon: pinIcon('#E0A83F') }).addTo(m) : null;
+  m.on('click', e => {
+    newLocDraft.lat = e.latlng.lat; newLocDraft.lng = e.latlng.lng;
+    if(mk) mk.setLatLng(e.latlng); else mk = L.marker(e.latlng, { icon: pinIcon('#E0A83F') }).addTo(m);
+    const btn = document.getElementById('locAddBtn'); if(btn) btn.innerHTML = '📍 Pin set ✓';
+  });
+  setTimeout(()=>m.invalidateSize(), 80);
+}
+
+/* =========================================================
+   MASTER RENDER
+========================================================= */
+function setTab(t){
+  state.tab = t;
+  if(t==='gear' && state.me) initGearDraft();
+  if(t==='trophies'){ myRecordsOnly = false; lbView='daily'; }
+  if(t==='spots'){ locTab='freshwater'; addingLocation=false; }
+  render();
+  window.scrollTo(0,0);
+}
+
+function render(){
+  teardownMaps();
+  const root = document.getElementById('root');
+  if(phase === 'boot' || phase === 'loading'){ root.innerHTML = `<div class="loading-screen">🎣<small>${phase==='loading'?'Loading your crew…':''}</small></div>`; return; }
+  if(phase === 'offline'){ root.innerHTML = gate('📡','You’re offline','Catch Log needs a connection to sign in and load your crew. Try again once you have signal.', `<button class="btn btn-primary" onclick="location.reload()">Try again</button>`); return; }
+  if(phase === 'signin'){ root.innerHTML = gate('🎣','Catch Log','Sign in with Google to see your crew’s catches, spots and trophies. Only people with your crew link can see them.', `<button class="btn btn-primary" onclick="signIn()">Sign in with Google</button>`); return; }
+  if(phase === 'denied'){ root.innerHTML = gate('🔒','Can’t open this crew','This crew link didn’t work. Ask whoever runs your crew to send it again.', `<button class="btn btn-primary" onclick="leaveCrew()">Use a different link</button><div style="height:10px"></div><button class="btn btn-secondary" onclick="signOut()">Sign out</button>`); return; }
+  if(phase === 'crew'){ root.innerHTML = gate('👥','Join your crew','Open the crew link someone sent you, or paste it here. Starting fresh? Make a new crew and share its link.',
+      `<input class="input" id="crewPaste" placeholder="Paste crew link" style="margin-bottom:10px;">
+       <button class="btn btn-primary" onclick="joinFromPaste()">Join crew</button>
+       <div style="height:10px"></div>
+       <button class="btn btn-secondary" onclick="startNewCrew()">➕ Start a new crew</button>
+       <div style="height:18px"></div>
+       <div class="settings-link" onclick="signOut()">Sign out</div>`); return; }
+
+  let html = '';
+  if(state.tab === 'home') html = renderHome();
+  else if(state.tab === 'catch') html = renderCatch();
+  else if(state.tab === 'gear') html = renderGear();
+  else if(state.tab === 'trophies') html = renderTrophies();
+  else if(state.tab === 'spots') html = renderSpots();
+  else if(state.tab === 'crew') html = renderCrew();
+  else if(state.tab === 'settings') html = renderSettings();
+  else if(state.tab === 'history') html = renderHistory();
+  else if(state.tab === 'editcatch') html = renderEditCatch();
+  root.innerHTML = html;
+  afterRender();
+}
+function gate(icon, title, text, actions){
+  return `<div class="gate"><div class="big">${icon}</div><h1>${esc(title)}</h1><p>${esc(text)}</p>${actions}</div>`;
+}
+function afterRender(){
+  if(state.tab==='spots'){ if(addingLocation) initLocAddMap(); else initSpotsMap(); }
+}
+function goHome(){ state.tab='home'; render(); window.scrollTo(0,0); }
+
+/* =========================================================
+   HOME
+========================================================= */
+function catchCount(id){
+  return state.sessions.filter(s=>s.profileId===id).reduce((n,s)=>n+(s.catches?.length||0),0);
+}
+function renderHome(){
+  if(state.profiles.length === 0 || creatingProfile) return renderCrew();
+  const me = state.profiles.find(p=>p.id===state.me);
+  if(!me) return renderCrew();
+  const resuming = catchDraft && catchDraft.catches.length > 0;
+  return `
+    <div class="home-wrap">
+      <div class="home-header">
+        <div class="brand"><span class="ic">🎣</span> Catch Log</div>
+        <button class="me-pill" onclick="setTab('settings')">
+          <span class="av">${imgOr(me.photo, me.avatar)}</span>
+          ${esc(me.firstName)} ${esc(me.lastInitial)}.
+        </button>
+      </div>
+      ${resuming ? `<div class="resume-banner">🎣 ${catchDraft.catches.length} catch${catchDraft.catches.length>1?'es':''} logged at ${esc(catchDraft.spotName)}. Keep going!</div>` : ''}
+      <button class="catch-cta" onclick="startCatch()">
+        <span class="cta-icon">🎣</span>
+        <span class="cta-label">${resuming?'LOG ANOTHER CATCH':'LOG A CATCH'}</span>
+        <div class="cta-sub">${resuming?'Continue this trip':'One tap. Species, size, done.'}</div>
+      </button>
+      ${resuming ? `<button class="btn btn-secondary" style="margin:-4px 0 16px;" onclick="finishOuting()">✅ Done fishing, save this trip</button>` : ''}
+      <div class="tile-grid">
+        <button class="tile" onclick="setTab('trophies')"><span class="tile-icon">🏆</span><span class="tile-label">TROPHIES</span></button>
+        <button class="tile" onclick="setTab('gear')"><span class="tile-icon">🎒</span><span class="tile-label">TACKLEBOX</span></button>
+        <button class="tile" onclick="setTab('spots')"><span class="tile-icon">📍</span><span class="tile-label">SPOTS</span></button>
+        <button class="tile" onclick="setTab('history')"><span class="tile-icon">📒</span><span class="tile-label">MY CATCHES</span></button>
+      </div>
+      <div class="settings-link" onclick="setTab('crew')">👥 Crew</div>
+      <div class="settings-link" onclick="setTab('settings')">⚙️ Settings</div>
+    </div>
+  `;
+}
+
+/* =========================================================
+   QUICK CATCH FLOW
+========================================================= */
+function blankCatch(){ return { species:'', weight:'', length:'', photo:null, combo:'', bait:'' }; }
+function startCatch(){
+  if(!state.me){ creatingProfile = state.profiles.length===0; setTab('crew'); return; }
+  if(!catchDraft){
+    catchDraft = { spotName:'', lat:null, lng:null, startTime:new Date().toISOString(), catches:[] };
+    spotMode = getRecentSpotNames().length ? 'pick' : 'new';
+    newSpotDraft = { name:'', lat:null, lng:null };
+  }
+  catchJustSaved = false;
+  currentCatch = blankCatch();
+  state.tab = 'catch';
+  render(); window.scrollTo(0,0);
+  document.getElementById('speciesInput')?.focus();
+}
+function getRecentSpotNames(){
+  const seen = {}; const ordered = [];
+  [...state.sessions].reverse().forEach(s => { if(s.spotName && !seen[s.spotName]){ seen[s.spotName]=true; ordered.push(s.spotName); } });
+  state.spots.forEach(sp => { if(!seen[sp.name]){ seen[sp.name]=true; ordered.push(sp.name); } });
+  return ordered.slice(0,6);
+}
+function pickSpot(name){
+  catchDraft.spotName = name;
+  const sp = state.spots.find(s=>s.name===name);
+  catchDraft.lat = sp ? sp.lat : null; catchDraft.lng = sp ? sp.lng : null;
+  spotMode = 'pick'; saveDraft(); render();
+}
+function toggleNewSpot(){ spotMode = spotMode === 'new' ? 'pick' : 'new'; render(); }
+function useMyLocationForNewSpot(){
+  const btn = document.getElementById('newSpotGpsBtn');
+  if(!navigator.geolocation){ if(btn) btn.innerHTML = 'GPS not available'; return; }
+  if(btn) btn.innerHTML = '📍 Locating...';
+  navigator.geolocation.getCurrentPosition(
+    (pos) => { newSpotDraft.lat = pos.coords.latitude; newSpotDraft.lng = pos.coords.longitude; if(btn) btn.innerHTML = '📍 Location Pinned ✓'; },
+    () => { if(btn) btn.innerHTML = "Couldn't get GPS"; },
+    {enableHighAccuracy:true, timeout:8000}
+  );
+}
+function confirmNewSpot(){
+  const input = document.getElementById('newSpotNameInput');
+  const name = (input ? input.value : newSpotDraft.name).trim();
+  if(!name) return;
+  catchDraft.spotName = name; catchDraft.lat = newSpotDraft.lat; catchDraft.lng = newSpotDraft.lng;
+  spotMode = 'pick'; saveDraft(); render();
+}
+function syncSaveBtn(){
+  const btn = document.getElementById('saveCatchBtn');
+  const species = document.getElementById('speciesInput')?.value.trim();
+  if(btn) btn.disabled = !(species && catchDraft.spotName);
+}
+async function handleCatchPhoto(e){
+  const f = e.target.files[0]; if(!f) return;
+  try{ currentCatch.photo = await compressImage(f); render(); } catch(err){ console.error(err); }
+}
+function pickCatchTackle(field, val){ currentCatch[field] = currentCatch[field]===val ? '' : val; render(); }
+function saveCatch(){
+  const species = document.getElementById('speciesInput').value.trim();
+  if(!species || !catchDraft.spotName) return;
+  const weight = document.getElementById('weightInput').value.trim();
+  const length = document.getElementById('lengthInput').value.trim();
+  const c = {
+    id:`c_${Date.now()}_${Math.random().toString(36).slice(2,5)}`,
+    species, weight: weight?Number(weight):null, length: length?Number(length):null,
+    photo: currentCatch.photo, combo: currentCatch.combo || null, bait: currentCatch.bait || null,
+    time: new Date().toISOString()
+  };
+  catchDraft.catches.push(c);
+  lastSavedCatch = c; catchJustSaved = true;
+  saveDraft(); render();
+}
+function removeDraftCatch(id){
+  if(!confirm('Remove this catch from the trip?')) return;
+  catchDraft.catches = catchDraft.catches.filter(c=>c.id!==id);
+  saveDraft();
+  if(!catchDraft.catches.length){ catchJustSaved = false; currentCatch = blankCatch(); }
+  render();
+}
+function logAnother(){ catchJustSaved = false; currentCatch = blankCatch(); render(); document.getElementById('speciesInput')?.focus(); }
+async function finishOuting(){
+  if(savingTrip) return;
+  if(catchDraft && catchDraft.catches.length > 0){
+    savingTrip = true; render();
+    const catches = [];
+    for(const c of catchDraft.catches){
+      const out = {...c};
+      if(c.photo && c.photo.startsWith('data:')) out.photo = await uploadPhoto(c.photo);
+      catches.push(out);
+    }
+    const me = state.me, d0 = catchDraft;
+    const ok = await mutate(d => {
+      if(d0.spotName && !d.spots.some(s=>s.name===d0.spotName)){
+        d.spots.push({ id:`loc_${Date.now()}`, name:d0.spotName, type:'freshwater', lat:d0.lat, lng:d0.lng, addedBy:me, createdAt:new Date().toISOString() });
+      }
+      const g = d.gear[me] || {};
+      d.sessions.push({
+        id:`s_${Date.now()}`, profileId: me,
+        spotName: d0.spotName, lat: d0.lat, lng: d0.lng,
+        startTime: d0.startTime, endTime: new Date().toISOString(),
+        tackle: {...g, combos: undefined}, combos: g.combos || [], catches, loggedAt: new Date().toISOString()
+      });
+    });
+    savingTrip = false;
+    if(!ok){ render(); return; }
+    toast('Trip saved 🎣');
+  }
+  catchDraft = null; catchJustSaved = false; saveDraft();
+  goHome();
+}
+function cancelCatch(){ goHome(); }
+
+function myCombos(){ return (state.gearMap[state.me]?.combos) || []; }
+function myBaits(){ const g = state.gearMap[state.me] || {}; return [...(g.baits||[]), ...(g.liveBait||[])]; }
+
+function renderCatch(){
+  if(!catchDraft){ state.tab='home'; return renderHome(); }
+
+  if(catchJustSaved){
+    const c = lastSavedCatch || catchDraft.catches[catchDraft.catches.length-1];
+    return `
+      <div class="screen">
+        <div class="screen-header">
+          <span class="s-icon">🎣</span><span class="s-title">CATCH LOGGED</span>
+          <button class="screen-close" onclick="goHome()">✕</button>
+        </div>
+        <div class="screen-body">
+          <div class="confirm-wrap">
+            <div class="big-emoji">✅</div>
+            <h2>Nice ${esc(c.species)}!</h2>
+            <p>${c.weight!=null?c.weight+' lb':''}${c.weight!=null&&c.length!=null?' · ':''}${c.length!=null?c.length+' in':''}${(c.weight==null&&c.length==null)?'Logged at '+esc(catchDraft.spotName):' at '+esc(catchDraft.spotName)}</p>
+          </div>
+          <div class="section-title">🐟 This Trip (${catchDraft.catches.length})</div>
+          ${catchDraft.catches.slice().reverse().map(c=>catchMiniHTML(c, true)).join('')}
+        </div>
+        <div class="screen-footer">
+          <button class="btn btn-secondary" style="flex:1;" onclick="logAnother()">🎣 Log Another</button>
+          <button class="btn btn-primary" style="flex:1;" ${savingTrip?'disabled':''} onclick="finishOuting()">${savingTrip?'Saving…':'✅ Done Fishing'}</button>
+        </div>
+      </div>
+    `;
+  }
+
+  const recentSpots = getRecentSpotNames();
+  const combos = myCombos(); const baits = myBaits();
+  return `
+    <div class="screen">
+      <div class="screen-header">
+        <span class="s-icon">🎣</span><span class="s-title">LOG A CATCH</span>
+        <button class="screen-close" onclick="cancelCatch()">✕</button>
+      </div>
+      <div class="screen-body">
+        <div class="card">
+          <div class="section-title">📍 Where</div>
+          ${recentSpots.length ? `<div class="chip-wrap" style="margin-bottom:${spotMode==='new'?'10px':'0'};">
+            ${recentSpots.map(n=>`<button type="button" class="chip ${catchDraft.spotName===n && spotMode==='pick'?'active':''}" onclick="pickSpot('${jsq(n)}')">${esc(n)}</button>`).join('')}
+            <button type="button" class="chip ${spotMode==='new'?'active':''}" onclick="toggleNewSpot()">➕ New Spot</button>
+          </div>` : ''}
+          ${(spotMode==='new' || !recentSpots.length) ? `
+            <input class="input" id="newSpotNameInput" placeholder="Name this spot (e.g. Miller's Pond)" value="${esc(newSpotDraft.name)}" oninput="newSpotDraft.name=this.value" style="margin-bottom:8px;">
+            <div class="row">
+              <button type="button" class="btn btn-secondary" id="newSpotGpsBtn" style="flex:1;font-size:13px;" onclick="useMyLocationForNewSpot()">${newSpotDraft.lat!=null?'📍 Location Pinned ✓':'📍 Use My Location'}</button>
+              <button type="button" class="btn btn-primary" style="flex:1;font-size:13px;" onclick="confirmNewSpot()">Use This Spot</button>
+            </div>
+          ` : `<p style="font-size:12px;color:var(--muted);margin:8px 0 0;">Fishing at <b style="color:var(--accent);">${esc(catchDraft.spotName)||'—'}</b></p>`}
+        </div>
+
+        <div class="card">
+          <div class="section-title">🐟 This Catch</div>
+          <label class="small">SPECIES</label>
+          <input class="input" id="speciesInput" placeholder="e.g. Largemouth Bass" value="${esc(currentCatch.species)}" oninput="currentCatch.species=this.value;syncSaveBtn()" style="margin-bottom:10px;font-weight:800;">
+          <div class="row">
+            <div style="flex:1;">
+              <label class="small">WEIGHT (LB)</label>
+              <input class="input" id="weightInput" inputmode="decimal" placeholder="—" value="${esc(currentCatch.weight)}" oninput="currentCatch.weight=this.value.replace(/[^0-9.]/g,'');this.value=currentCatch.weight">
+            </div>
+            <div style="flex:1;">
+              <label class="small">LENGTH (IN)</label>
+              <input class="input" id="lengthInput" inputmode="decimal" placeholder="—" value="${esc(currentCatch.length)}" oninput="currentCatch.length=this.value.replace(/[^0-9.]/g,'');this.value=currentCatch.length">
+            </div>
+          </div>
+          <button type="button" class="photo-btn" style="margin-top:10px;" onclick="document.getElementById('catchPhotoInput').click()">📷 ${currentCatch.photo?'Photo Added ✓':'Add Photo (optional)'}</button>
+          <input type="file" id="catchPhotoInput" accept="image/*" style="display:none" onchange="handleCatchPhoto(event)">
+          ${currentCatch.photo?`<img class="photo-preview" src="${currentCatch.photo}" alt="">`:''}
+        </div>
+
+        ${(combos.length || baits.length) ? `
+        <div class="card">
+          <div class="section-title">🪝 Caught On (optional)</div>
+          ${combos.length ? `<label class="small">ROD &amp; REEL</label><div class="chip-wrap" style="margin-bottom:10px;">
+            ${combos.map(c=>`<button type="button" class="chip ${currentCatch.combo===c.name?'active':''}" onclick="pickCatchTackle('combo','${jsq(c.name)}')">${esc(c.name)}</button>`).join('')}
+          </div>` : ''}
+          ${baits.length ? `<label class="small">BAIT</label><div class="chip-wrap">
+            ${baits.map(b=>`<button type="button" class="chip ${currentCatch.bait===b?'active':''}" onclick="pickCatchTackle('bait','${jsq(b)}')">${esc(b)}</button>`).join('')}
+          </div>` : ''}
+        </div>` : ''}
+      </div>
+      <div class="screen-footer">
+        <button class="btn btn-primary" id="saveCatchBtn" ${(currentCatch.species.trim() && catchDraft.spotName)?'':'disabled'} onclick="saveCatch()">✅ Save Catch</button>
+      </div>
+    </div>
+  `;
+}
+function catchMiniHTML(c, removable){
+  const stat = c.weight!=null?c.weight+' lb':c.length!=null?c.length+' in':'—';
+  const tackle = [c.combo, c.bait].filter(Boolean).map(esc).join(' · ');
+  return `<div class="catch-mini">
+    <div class="thumb">${imgOr(c.photo,'🐟')}</div>
+    <div style="flex:1;min-width:0;"><div class="sp">${esc(c.species)}</div><div class="sub">${fmtTime(c.time)}${tackle?' · '+tackle:''}</div></div>
+    <div style="font-weight:800;color:var(--accent);font-size:13px;">${stat}</div>
+    ${removable ? `<button class="x-btn" style="margin-left:6px;" aria-label="Remove catch" onclick="removeDraftCatch('${c.id}')">✕</button>` : ''}
+  </div>`;
+}
+
+/* =========================================================
+   TACKLEBOX (gear, plus rod & reel combos)
+========================================================= */
+function initGearDraft(){
+  const g = state.gearMap[state.me];
+  gearDraft = g ? {rodBrand:g.rodBrand||'', reelBrand:g.reelBrand||'', baits:[...(g.baits||[])], colors:[...(g.colors||[])], liveBait:[...(g.liveBait||[])], combos:[...(g.combos||[])]}
+                : {rodBrand:'', reelBrand:'', baits:[], colors:[], liveBait:[], combos:[]};
+}
+function persistCurrentGear(){
+  const me = state.me, g = JSON.parse(JSON.stringify(gearDraft));
+  state.gearMap[me] = g;
+  mutate(d => { d.gear[me] = g; });
+}
+function pickSingle(field, val){ gearDraft[field] = gearDraft[field] === val ? '' : val; persistCurrentGear(); render(); }
+function toggleMulti(field, val){
+  const arr = gearDraft[field]; const i = arr.indexOf(val);
+  if(i>=0) arr.splice(i,1); else arr.push(val);
+  persistCurrentGear(); render();
+}
+function addCustom(field, inputId){
+  const input = document.getElementById(inputId);
+  const val = input.value.trim(); if(!val) return;
+  if(field==='rodBrand' || field==='reelBrand'){ gearDraft[field] = val; }
+  else if(!gearDraft[field].includes(val)) gearDraft[field].push(val);
+  input.value=''; input.blur();
+  persistCurrentGear(); render();
+}
+function addCombo(){
+  const name = (document.getElementById('comboName')?.value || '').trim();
+  if(!gearDraft.rodBrand || !gearDraft.reelBrand){ toast('Pick a rod and a reel first.'); return; }
+  const label = name || `${gearDraft.rodBrand} + ${gearDraft.reelBrand}`;
+  if(gearDraft.combos.some(c=>c.name===label)){ toast('You already have a combo with that name.'); return; }
+  gearDraft.combos.push({ id:`cb_${Date.now()}`, name:label, rod:gearDraft.rodBrand, reel:gearDraft.reelBrand });
+  newComboName = ''; document.activeElement?.blur();
+  persistCurrentGear(); render();
+}
+function removeCombo(id){
+  if(!confirm('Remove this combo?')) return;
+  gearDraft.combos = gearDraft.combos.filter(c=>c.id!==id);
+  persistCurrentGear(); render();
+}
+function renderGear(){
+  if(!state.me){
+    return simpleScreen('🎒','TACKLEBOX', gmEmpty("Pick an angler first","You'll need a profile before setting up gear."),
+      `<button class="btn btn-primary" onclick="setTab('crew')">👤 CHOOSE ANGLER</button>`);
+  }
+  if(!gearDraft) initGearDraft();
+  const rodCustom = gearDraft.rodBrand && !ROD_BRANDS.includes(gearDraft.rodBrand) ? [gearDraft.rodBrand] : [];
+  const reelCustom = gearDraft.reelBrand && !REEL_BRANDS.includes(gearDraft.reelBrand) ? [gearDraft.reelBrand] : [];
+  const baitCustom = gearDraft.baits.filter(b=>!BAIT_STYLES.includes(b));
+  const colorCustom = gearDraft.colors.filter(c=>!LURE_COLORS.some(lc=>lc.name===c));
+  const liveCustom = gearDraft.liveBait.filter(b=>!LIVE_BAIT.includes(b));
+
+  const body = `
+    <div class="card">
+      <div class="section-title">🎣 Rod</div>
+      <div class="chip-wrap" style="margin-bottom:8px;">
+        ${[...ROD_BRANDS,...rodCustom].map(b=>`<button type="button" class="chip ${gearDraft.rodBrand===b?'active':''}" onclick="pickSingle('rodBrand','${jsq(b)}')">${esc(b)}</button>`).join('')}
+      </div>
+      <div class="row"><input class="input" id="customRod" placeholder="Type your own..." onkeydown="if(event.key==='Enter')addCustom('rodBrand','customRod')"><button class="btn btn-secondary" style="width:48px;flex-shrink:0;" onclick="addCustom('rodBrand','customRod')">+</button></div>
+    </div>
+
+    <div class="card">
+      <div class="section-title">🌀 Reel</div>
+      <div class="chip-wrap" style="margin-bottom:8px;">
+        ${[...REEL_BRANDS,...reelCustom].map(b=>`<button type="button" class="chip ${gearDraft.reelBrand===b?'active':''}" onclick="pickSingle('reelBrand','${jsq(b)}')">${esc(b)}</button>`).join('')}
+      </div>
+      <div class="row"><input class="input" id="customReel" placeholder="Type your own..." onkeydown="if(event.key==='Enter')addCustom('reelBrand','customReel')"><button class="btn btn-secondary" style="width:48px;flex-shrink:0;" onclick="addCustom('reelBrand','customReel')">+</button></div>
+    </div>
+
+    <div class="card">
+      <div class="section-title">🧰 Rod &amp; Reel Combos</div>
+      ${gearDraft.combos.length ? gearDraft.combos.map(c=>`
+        <div class="combo-row"><div><div class="cn">${esc(c.name)}</div><div class="cs">${esc(c.rod)} rod · ${esc(c.reel)} reel</div></div>
+        <button class="x-btn" aria-label="Remove combo" onclick="removeCombo('${c.id}')">✕</button></div>`).join('')
+        : `<p class="map-hint">Save the rod and reel you picked above as a combo, so you can tag which setup caught each fish.</p>`}
+      <div class="row"><input class="input" id="comboName" placeholder="${gearDraft.rodBrand&&gearDraft.reelBrand?esc(gearDraft.rodBrand+' + '+gearDraft.reelBrand):'Combo name (optional)'}" value="${esc(newComboName)}" oninput="newComboName=this.value" onkeydown="if(event.key==='Enter')addCombo()"><button class="btn btn-secondary" style="width:48px;flex-shrink:0;" onclick="addCombo()">+</button></div>
+    </div>
+
+    <div class="card">
+      <div class="section-title">🪝 Bait Styles</div>
+      <div class="tk-grid" style="margin-bottom:8px;">
+        ${[...BAIT_STYLES,...baitCustom].map(b=>`<button type="button" class="tk-card ${gearDraft.baits.includes(b)?'selected':''}" onclick="toggleMulti('baits','${jsq(b)}')"><span class="tk-icon">${BAIT_ICONS[b]||'🪝'}</span><span class="tk-label">${esc(b)}</span></button>`).join('')}
+      </div>
+      <div class="row"><input class="input" id="customBait" placeholder="Type your own..." onkeydown="if(event.key==='Enter')addCustom('baits','customBait')"><button class="btn btn-secondary" style="width:48px;flex-shrink:0;" onclick="addCustom('baits','customBait')">+</button></div>
+    </div>
+
+    <div class="card">
+      <div class="section-title">🎨 Colors</div>
+      <div class="chip-wrap" style="margin-bottom:8px;">
+        ${[...LURE_COLORS.map(c=>c.name),...colorCustom].map(c=>{
+          const preset = LURE_COLORS.find(lc=>lc.name===c);
+          return `<button type="button" class="chip ${gearDraft.colors.includes(c)?'active':''}" onclick="toggleMulti('colors','${jsq(c)}')"><span class="swatch" style="background:${preset?preset.hex:'#B7B09A'}"></span>${esc(c)}</button>`;
+        }).join('')}
+      </div>
+      <div class="row"><input class="input" id="customColor" placeholder="Type a color..." onkeydown="if(event.key==='Enter')addCustom('colors','customColor')"><button class="btn btn-secondary" style="width:48px;flex-shrink:0;" onclick="addCustom('colors','customColor')">+</button></div>
+    </div>
+
+    <div class="card">
+      <div class="section-title">🪱 Live Bait</div>
+      <div class="tk-grid" style="margin-bottom:8px;">
+        ${[...LIVE_BAIT,...liveCustom].map(b=>`<button type="button" class="tk-card ${gearDraft.liveBait.includes(b)?'selected':''}" onclick="toggleMulti('liveBait','${jsq(b)}')"><span class="tk-icon">${LIVEBAIT_ICONS[b]||'🪱'}</span><span class="tk-label">${esc(b)}</span></button>`).join('')}
+      </div>
+      <div class="row"><input class="input" id="customLive" placeholder="Type your own..." onkeydown="if(event.key==='Enter')addCustom('liveBait','customLive')"><button class="btn btn-secondary" style="width:48px;flex-shrink:0;" onclick="addCustom('liveBait','customLive')">+</button></div>
+    </div>
+  `;
+  return simpleScreen('🎒','TACKLEBOX', body, `<button class="btn btn-secondary" style="flex:1;" onclick="goHome()">🏠 Home</button>`);
+}
+
+/* =========================================================
+   TROPHIES (leaderboards)
+========================================================= */
+function flattenCatches(filterFn){
+  const byId = Object.fromEntries(state.profiles.map(p=>[p.id,p]));
+  const out = [];
+  state.sessions.forEach(s => {
+    (s.catches||[]).forEach(c => {
+      if(filterFn && !filterFn(s,c)) return;
+      out.push({ catch:c, session:s, angler: byId[s.profileId] });
+    });
+  });
+  return out.sort((a,b) => {
+    const aw=a.catch.weight, bw=b.catch.weight;
+    if(aw!=null && bw!=null) return bw-aw;
+    if(aw!=null) return -1;
+    if(bw!=null) return 1;
+    return (b.catch.length||0)-(a.catch.length||0);
+  });
+}
+function rankRowHTML(entry, rank){
+  const {catch:c, session, angler} = entry;
+  const badgeClass = rank===0?'gold':rank===1?'silver':rank===2?'bronze':'';
+  const badgeContent = rank===0?'🥇':rank===1?'🥈':rank===2?'🥉':`${rank+1}`;
+  const mine = session.profileId === state.me;
+  const tag = mine ? 'button' : 'div';
+  return `
+    <${tag} class="rank-row" ${mine?`onclick="openEdit('${session.id}','${c.id}')"`:''}>
+      <div class="rank-badge ${badgeClass}">${badgeContent}</div>
+      <div class="rank-thumb">${imgOr(c.photo,'🐟')}</div>
+      <div class="rank-mid">
+        <p class="rank-species" style="margin:0;">${esc(c.species)||'Unknown fish'}</p>
+        <p class="rank-sub" style="margin:0;">${angler?`${esc(angler.firstName)} ${esc(angler.lastInitial)}.`:'Unknown'} · ${esc(session.spotName)}</p>
+      </div>
+      <div class="rank-wt">${c.weight!=null?c.weight+' lb':c.length!=null?c.length+' in':''}</div>
+    </${tag}>`;
+}
+function gmEmpty(text, sub){
+  return `<div class="empty"><div class="big">🌊</div><p>${text}</p>${sub?`<span>${sub}</span>`:''}</div>`;
+}
+function simpleScreen(icon, title, bodyHtml, footerHtml, closeFn){
+  return `
+    <div class="screen">
+      <div class="screen-header">
+        <span class="s-icon">${icon}</span><span class="s-title">${title}</span>
+        <button class="screen-close" onclick="${closeFn||'goHome()'}">✕</button>
+      </div>
+      <div class="screen-body">${bodyHtml}</div>
+      ${footerHtml ? `<div class="screen-footer">${footerHtml}</div>` : ''}
+    </div>
+  `;
+}
+function renderTrophies(){
+  const meFilter = (s) => !myRecordsOnly || s.profileId === state.me;
+  let content = '';
+  if(lbView==='daily'){
+    const daily = flattenCatches((s,c)=> localDay(c.time||s.loggedAt)===todayStr() && meFilter(s));
+    content = daily.length===0?gmEmpty("No catches today yet","Get out there and log one!"):daily.slice(0,10).map((e,i)=>rankRowHTML(e,i)).join('');
+  } else if(lbView==='lifetime'){
+    const all = flattenCatches(meFilter);
+    content = all.length===0?gmEmpty("No catches logged yet","Be the first!"):all.slice(0,10).map((e,i)=>rankRowHTML(e,i)).join('');
+  } else {
+    const spots = [...new Set(state.sessions.filter(meFilter).map(s=>s.spotName))].filter(Boolean);
+    if(!spots.length) content = gmEmpty("No spots fished yet");
+    else content = spots.map(spot => {
+      const top = flattenCatches(s => s.spotName === spot && meFilter(s));
+      if(!top.length) return '';
+      return `<div style="margin-bottom:14px;"><div class="section-title">📍 ${esc(spot)}</div>${top.slice(0,3).map((e,i)=>rankRowHTML(e,i)).join('')}</div>`;
+    }).join('');
+  }
+  const body = `
+    <div class="chip-wrap" style="margin-bottom:14px;">
+      <button class="chip ${lbView==='daily'?'active':''}" onclick="lbView='daily';render()">Today</button>
+      <button class="chip ${lbView==='lifetime'?'active':''}" onclick="lbView='lifetime';render()">All-Time</button>
+      <button class="chip ${lbView==='spots'?'active':''}" onclick="lbView='spots';render()">By Spot</button>
+    </div>
+    ${content}
+  `;
+  return simpleScreen('🏆','TROPHIES', body,
+    `<button class="btn ${myRecordsOnly?'btn-primary':'btn-secondary'}" onclick="myRecordsOnly=!myRecordsOnly;render()">👤 ${myRecordsOnly?'SHOWING MINE':'MY RECORDS ONLY'}</button>`);
+}
+
+/* =========================================================
+   MY CATCHES (history, edit and remove)
+========================================================= */
+function renderHistory(){
+  if(!state.me) return renderCrew();
+  const mine = state.sessions.filter(s=>s.profileId===state.me).slice().reverse();
+  const body = mine.length===0 ? gmEmpty("No trips logged yet","Your saved trips show up here.") :
+    mine.map(s => `
+      <div style="margin-bottom:14px;">
+        <div class="section-title">📍 ${esc(s.spotName)||'Unknown spot'} · ${fmtShortDate(s.startTime||s.loggedAt)}</div>
+        ${(s.catches||[]).map(c => `<button class="rank-row" onclick="openEdit('${s.id}','${c.id}')">
+            <div class="rank-thumb">${imgOr(c.photo,'🐟')}</div>
+            <div class="rank-mid"><p class="rank-species" style="margin:0;">${esc(c.species)}</p>
+            <p class="rank-sub" style="margin:0;">${fmtTime(c.time)}${[c.combo,c.bait].filter(Boolean).length?' · '+[c.combo,c.bait].filter(Boolean).map(esc).join(' · '):''}</p></div>
+            <div class="rank-wt">${c.weight!=null?c.weight+' lb':c.length!=null?c.length+' in':''} ✏️</div>
+          </button>`).join('')}
+      </div>`).join('');
+  return simpleScreen('📒','MY CATCHES', `<p class="map-hint">Tap a catch to fix it or remove it.</p>${body}`, null);
+}
+function openEdit(sid, cid){
+  const s = state.sessions.find(x=>x.id===sid); const c = s && (s.catches||[]).find(x=>x.id===cid);
+  if(!c || s.profileId!==state.me) return;
+  editRef = { sid, cid, species:c.species||'', weight:c.weight!=null?String(c.weight):'', length:c.length!=null?String(c.length):'' };
+  state.tab='editcatch'; render(); window.scrollTo(0,0);
+}
+function renderEditCatch(){
+  if(!editRef){ state.tab='history'; return renderHistory(); }
+  const body = `
+    <div class="card">
+      <label class="small">SPECIES</label>
+      <input class="input" id="edSpecies" value="${esc(editRef.species)}" oninput="editRef.species=this.value" style="margin-bottom:10px;font-weight:800;">
+      <div class="row">
+        <div style="flex:1;"><label class="small">WEIGHT (LB)</label><input class="input" id="edWeight" inputmode="decimal" value="${esc(editRef.weight)}" oninput="editRef.weight=this.value.replace(/[^0-9.]/g,'');this.value=editRef.weight"></div>
+        <div style="flex:1;"><label class="small">LENGTH (IN)</label><input class="input" id="edLength" inputmode="decimal" value="${esc(editRef.length)}" oninput="editRef.length=this.value.replace(/[^0-9.]/g,'');this.value=editRef.length"></div>
+      </div>
+    </div>
+    <button class="btn btn-danger" onclick="deleteCatch()">🗑 Remove this catch</button>
+  `;
+  return simpleScreen('✏️','EDIT CATCH', body,
+    `<button class="btn btn-secondary" style="flex:1;" onclick="editRef=null;setTab('history')">Cancel</button><button class="btn btn-primary" style="flex:1;" onclick="saveEdit()">✅ Save</button>`,
+    "editRef=null;setTab('history')");
+}
+async function saveEdit(){
+  const r = editRef; if(!r || !r.species.trim()){ toast('Species can’t be blank.'); return; }
+  const me = state.me;
+  const ok = await mutate(d => {
+    const s = d.sessions.find(x=>x.id===r.sid); if(!s || s.profileId!==me) return;
+    const c = (s.catches||[]).find(x=>x.id===r.cid); if(!c) return;
+    c.species = r.species.trim(); c.weight = r.weight?Number(r.weight):null; c.length = r.length?Number(r.length):null;
+  });
+  if(ok){ editRef = null; toast('Catch updated'); setTab('history'); }
+}
+async function deleteCatch(){
+  const r = editRef; if(!r) return;
+  if(!confirm('Remove this catch for good?')) return;
+  const me = state.me; let photo = null;
+  const ok = await mutate(d => {
+    const s = d.sessions.find(x=>x.id===r.sid); if(!s || s.profileId!==me) return;
+    const c = (s.catches||[]).find(x=>x.id===r.cid); photo = c ? c.photo : null;
+    s.catches = (s.catches||[]).filter(x=>x.id!==r.cid);
+    if(!s.catches.length) d.sessions = d.sessions.filter(x=>x.id!==r.sid);
+  });
+  if(ok){ deletePhoto(photo); editRef = null; toast('Catch removed'); setTab('history'); }
+}
+
+/* =========================================================
+   SPOTS (locations, with map)
+========================================================= */
+function getAllLocations(){
+  const map = {};
+  state.spots.forEach(sp => { map[sp.name] = {...sp}; });
+  state.sessions.forEach(s => {
+    if(!s.spotName) return;
+    if(!map[s.spotName]) map[s.spotName] = { id:'auto_'+s.spotName, name:s.spotName, type:'freshwater', lat:s.lat, lng:s.lng, auto:true };
+  });
+  return Object.values(map);
+}
+function spotCardHTML(loc){
+  const best = flattenCatches(s=>s.spotName===loc.name)[0];
+  const bestText = best ? `${best.catch.weight!=null?best.catch.weight+' lb':best.catch.length!=null?best.catch.length+' in':'Logged'}, ${esc(best.catch.species||'fish')}` : 'No catches yet';
+  const coordsText = loc.lat!=null ? `${Number(loc.lat).toFixed(3)}°, ${Number(loc.lng).toFixed(3)}°` : 'No GPS pin';
+  return `
+    <button class="spot-card" onclick="viewSpotBoard('${jsq(loc.name)}')">
+      <div class="spot-thumb">${loc.type==='saltwater'?'🌊':'🏞️'}</div>
+      <div style="flex:1;">
+        <div class="spot-name">${esc(loc.name)}</div>
+        <div class="spot-coords">${coordsText}</div>
+        <div class="spot-best">🏆 ${bestText}</div>
+      </div>
+      <span style="color:var(--muted)">›</span>
+    </button>
+  `;
+}
+function viewSpotBoard(){ lbView='spots'; myRecordsOnly=false; state.tab='trophies'; render(); window.scrollTo(0,0); }
+function toggleAddLocation(){
+  addingLocation = !addingLocation;
+  if(addingLocation) newLocDraft = { name:'', type: locTab, lat:null, lng:null };
+  render();
+}
+function useLocationPin(){
+  const btn = document.getElementById('locAddBtn');
+  if(!navigator.geolocation){ if(btn) btn.innerHTML = "GPS not available"; return; }
+  if(btn) btn.innerHTML = '📍 Locating...';
+  navigator.geolocation.getCurrentPosition(
+    (pos) => { newLocDraft.lat = pos.coords.latitude; newLocDraft.lng = pos.coords.longitude; render(); },
+    () => { if(btn) btn.innerHTML = "Couldn't get GPS"; },
+    {enableHighAccuracy:true, timeout:8000}
+  );
+}
+async function saveNewLocation(){
+  const input = document.getElementById('locNameInput');
+  const name = (input ? input.value : newLocDraft.name).trim();
+  if(!name) return;
+  if(getAllLocations().some(l=>l.name.toLowerCase()===name.toLowerCase())){ toast('You already have a spot with that name.'); return; }
+  const spot = { id:`loc_${Date.now()}`, name, type:newLocDraft.type, lat:newLocDraft.lat, lng:newLocDraft.lng, addedBy: state.me, createdAt: new Date().toISOString() };
+  const ok = await mutate(d => { d.spots.push(spot); });
+  if(!ok) return;
+  addingLocation = false; locTab = newLocDraft.type;
+  render();
+}
+function renderSpots(){
+  const locs = getAllLocations().filter(l => (l.type||'freshwater') === locTab);
+  const addForm = addingLocation ? `
+    <div class="card">
+      <input class="input" id="locNameInput" placeholder="Spot name (e.g. Miller's Pond)" value="${esc(newLocDraft.name)}" oninput="newLocDraft.name=this.value" style="margin-bottom:8px;">
+      <div class="chip-wrap" style="margin-bottom:8px;">
+        <button type="button" class="chip ${newLocDraft.type==='freshwater'?'active':''}" onclick="newLocDraft.type='freshwater';render()">🏞️ Freshwater</button>
+        <button type="button" class="chip ${newLocDraft.type==='saltwater'?'active':''}" onclick="newLocDraft.type='saltwater';render()">🌊 Saltwater</button>
+      </div>
+      <p class="map-hint">Tap the map to drop a pin, or use your location. Both are optional.</p>
+      <div class="map small" id="locAddMap"></div>
+      <button type="button" class="btn btn-secondary" id="locAddBtn" style="margin-bottom:8px;" onclick="useLocationPin()">${newLocDraft.lat!=null?'📍 Pin set ✓':'📍 Use My Location'}</button>
+      <button type="button" class="btn btn-primary" onclick="saveNewLocation()">Save Spot</button>
+    </div>
+  ` : '';
+  const pinnedCount = locs.filter(l=>l.lat!=null).length;
+  const body = `
+    <div class="chip-wrap" style="margin-bottom:14px;">
+      <button class="chip ${locTab==='freshwater'?'active':''}" onclick="locTab='freshwater';addingLocation=false;render()">🏞️ Freshwater</button>
+      <button class="chip ${locTab==='saltwater'?'active':''}" onclick="locTab='saltwater';addingLocation=false;render()">🌊 Saltwater</button>
+    </div>
+    ${addForm}
+    ${(!addingLocation && pinnedCount) ? `<div class="map" id="spotsMap"></div>` : ''}
+    ${(locs.length===0 && !addingLocation) ? gmEmpty("No spots here yet","Add one below to get started.") : locs.map(spotCardHTML).join('')}
+  `;
+  return simpleScreen('📍','SPOTS', body,
+    `<button class="btn btn-primary" onclick="toggleAddLocation()">${addingLocation?'✕ CANCEL':'➕ ADD SPOT'}</button>`);
+}
+
+/* =========================================================
+   CREW (anglers)
+========================================================= */
+function startCreate(){ creatingProfile = true; newProfileDraft = { avatar: AVATARS[0], photo:null, first:'', last:'', age:'', home:'' }; render(); }
+function cancelCreate(){ creatingProfile = false; render(); }
+function selectAvatar(a){ newProfileDraft.avatar = a; newProfileDraft.photo = null; render(); }
+async function handleProfilePhoto(e){
+  const f = e.target.files[0]; if(!f) return;
+  try{ newProfileDraft.photo = await compressImage(f, 240, 0.7); render(); }catch(err){ console.error(err); }
+}
+async function submitProfile(){
+  const firstName = (newProfileDraft.first||'').trim();
+  const lastInitial = (newProfileDraft.last||'').trim().slice(0,1).toUpperCase();
+  const age = (newProfileDraft.age||'').trim();
+  const hometown = (newProfileDraft.home||'').trim();
+  if(!firstName || !lastInitial){ toast('Add a first name and last initial.'); return; }
+  const photo = newProfileDraft.photo ? await uploadPhoto(newProfileDraft.photo) : null;
+  const profile = { id:`p_${Date.now()}_${Math.random().toString(36).slice(2,6)}`, firstName, lastInitial, age: age?Number(age):null, hometown, avatar:newProfileDraft.avatar, photo };
+  const ok = await mutate(d => { d.profiles.push(profile); });
+  if(!ok) return;
+  if(!state.profiles.some(p=>p.id===profile.id)) state.profiles.push(profile);
+  creatingProfile = false;
+  setMe(profile.id);
+  setTab('home');
+}
+function selectAngler(id){ setMe(id); setTab('home'); }
+function renderCreateProfileForm(){
+  const d = newProfileDraft;
+  return `
+    <div class="card">
+      <div class="section-title">NEW ANGLER</div>
+      <div class="row" style="margin-bottom:9px;">
+        <input class="input" id="npFirst" placeholder="First name" value="${esc(d.first)}" oninput="newProfileDraft.first=this.value" style="flex:1">
+        <input class="input" id="npLast" placeholder="Last initial" maxlength="1" value="${esc(d.last)}" oninput="newProfileDraft.last=this.value" style="width:90px">
+      </div>
+      <div class="row" style="margin-bottom:9px;">
+        <input class="input" id="npAge" placeholder="Age" inputmode="numeric" value="${esc(d.age)}" oninput="newProfileDraft.age=this.value" style="width:80px">
+        <input class="input" id="npHome" placeholder="Hometown" value="${esc(d.home)}" oninput="newProfileDraft.home=this.value" style="flex:1">
+      </div>
+      <label class="small">PICTURE</label>
+      <div style="display:flex;align-items:center;gap:10px;margin:6px 0 10px;">
+        <div class="avatar-circle">${d.photo ? `<img src="${d.photo}" alt="">` : d.avatar}</div>
+        <button type="button" class="btn btn-secondary" style="flex:none;width:auto;padding:9px 14px;font-size:12.5px;" onclick="document.getElementById('npPhotoInput').click()">📷 Upload photo</button>
+        <input type="file" id="npPhotoInput" accept="image/*" style="display:none" onchange="handleProfilePhoto(event)">
+      </div>
+      <div class="chip-wrap">
+        ${AVATARS.map(a=>`<button type="button" class="avatar-pick ${d.avatar===a && !d.photo?'active':''}" onclick="selectAvatar('${a}')">${a}</button>`).join('')}
+      </div>
+      ${state.profiles.length>0 ? `<button type="button" style="width:100%;margin-top:12px;background:none;border:none;color:var(--muted);font-weight:700;font-size:12.5px;cursor:pointer;" onclick="cancelCreate()">Cancel</button>` : ''}
+    </div>
+  `;
+}
+function renderFriendsList(){
+  if(state.profiles.length === 0) return gmEmpty("No anglers yet", "Add the first one below to get started.");
+  return `<p class="map-hint">Tap your name to fish as you on this phone.</p>` + state.profiles.map(p => `
+      <button class="angler-row ${state.me===p.id?'active':''}" onclick="selectAngler('${p.id}')">
+        <div class="angler-av">${imgOr(p.photo, p.avatar)}</div>
+        <div style="flex:1;">
+          <div class="angler-name">${esc(p.firstName)} ${esc(p.lastInitial)}.</div>
+          <div class="angler-sub">${esc(p.hometown)||'—'}${p.age?` · Age ${p.age}`:''} · ${catchCount(p.id)} catches</div>
+        </div>
+        ${state.me===p.id ? `<span class="angler-badge">YOU</span>` : ''}
+      </button>`).join('');
+}
+function renderCrew(){
+  if(!newProfileDraft.first && newProfileDraft.first!=='') newProfileDraft = { avatar: AVATARS[0], photo:null, first:'', last:'', age:'', home:'' };
+  const body = creatingProfile ? renderCreateProfileForm() : renderFriendsList();
+  const footer = creatingProfile
+    ? `<button class="btn btn-primary" onclick="submitProfile()">✓ CREATE PROFILE</button>`
+    : `<button class="btn btn-primary" onclick="startCreate()">➕ ADD ANGLER</button>`;
+  return simpleScreen('👥','CREW', body, footer, state.me ? 'goHome()' : 'creatingProfile=false;render()');
+}
+
+/* =========================================================
+   SETTINGS
+========================================================= */
+function switchAngler(){ setMe(null); setTab('crew'); }
+function renderSettings(){
+  const me = state.profiles.find(p => p.id === state.me);
+  const who = Cloud.user ? (Cloud.user.displayName || 'your Google account') : '';
+  const body = `
+    ${me ? `
+      <div class="card" style="display:flex;align-items:center;gap:12px;">
+        <div class="avatar-circle">${imgOr(me.photo, me.avatar)}</div>
+        <div>
+          <div style="font-weight:700;font-size:15px;">${esc(me.firstName)} ${esc(me.lastInitial)}.</div>
+          <div style="font-size:11.5px;color:var(--muted);">${esc(me.hometown)||'—'}${me.age?` · Age ${me.age}`:''} · Fishing as this angler on this phone</div>
+        </div>
+      </div>
+    ` : gmEmpty("No angler selected", "Pick or add an angler to get started.")}
+
+    <button class="settings-row" onclick="switchAngler()"><span class="sr-icon">🔄</span><span class="sr-label">Switch Angler</span><span class="sr-arrow">›</span></button>
+    <button class="settings-row" onclick="setTab('crew')"><span class="sr-icon">👥</span><span class="sr-label">Manage Crew</span><span class="sr-arrow">›</span></button>
+    <button class="settings-row" onclick="shareCrew()"><span class="sr-icon">🔗</span><span class="sr-label">Invite to your crew</span><span class="sr-arrow">›</span></button>
+    <button class="settings-row" onclick="leaveCrew()"><span class="sr-icon">🚪</span><span class="sr-label">Leave this crew on this phone</span><span class="sr-arrow">›</span></button>
+    <button class="settings-row" onclick="if(window.nateHealth) window.nateHealth.report()"><span class="sr-icon">🛠️</span><span class="sr-label">Something wrong with the app?</span><span class="sr-arrow">›</span></button>
+    <button class="settings-row" onclick="signOut()"><span class="sr-icon">👋</span><span class="sr-label">Sign out${who?' ('+esc(who)+')':''}</span><span class="sr-arrow">›</span></button>
+
+    <div class="settings-info">🔒 Your crew’s anglers, catches, photos and spots are private. Only people signed in with Google who have your crew link can see them. Only send the invite to people in your crew.</div>
+    <div class="settings-credit">Catch Log · made for the crew 🎣</div>
+  `;
+  return simpleScreen('⚙️','SETTINGS', body, null);
+}
+
+/* =========================================================
+   BOOT
+========================================================= */
+initAuth();
+if('serviceWorker' in navigator && (location.protocol === 'https:' || /^(localhost|127\.0\.0\.1)$/.test(location.hostname))) navigator.serviceWorker.register('sw.js').catch(()=>{});
+</script>
+</body>
+</html>

@@ -1,4 +1,4 @@
-// Firestore rules for the nates-toolbox Firebase project (Toolbox, Gameday Picks, Read 20, Photo Blueprint).
+// Firestore rules for the nates-toolbox Firebase project (Toolbox, Gameday Picks, Read 20, Photo Blueprint, Get Ready, Catch Log).
 // Copy of the live rules from the Firebase console, saved 2026-11-06.
 // OWNER_EMAIL stands in for Nate's sign-in email (this repo is public, so the
 // real address is not committed). Put the real address back before pasting
@@ -126,6 +126,30 @@ service cloud.firestore {
         && key.matches('[a-z2-7]{20}')
         && request.resource.data.keys().hasOnly(['log', 'updated'])
         && request.resource.data.log is string && request.resource.data.log.size() <= 900000;
+    }
+    // ---------- Catch Log (apps/catchlog): one fishing crew per long random code ----------
+    // The document id is a long random code that only people given the crew link know. Any Google sign-in can
+    // get, create or update the one crew it knows the id of; nobody can list crews, and crews can't be deleted.
+    // The crew's anglers, tackle, trips and spots are one JSON string; each photo is its own small document.
+    // Anonymous sessions are excluded, like the Read 20 family link.
+    function clCrew(code) {
+      return request.auth != null && request.auth.token.firebase.sign_in_provider == 'google.com'
+        && code.matches('[a-z0-9]{20,40}');
+    }
+    match /cl_crews/{code} {
+      allow get: if clCrew(code);
+      allow list, delete: if false;
+      allow create, update: if clCrew(code)
+        && request.resource.data.keys().hasOnly(['data', 'updated'])
+        && request.resource.data.data is string && request.resource.data.data.size() <= 900000
+        && request.resource.data.updated is number;
+      match /photos/{pid} {
+        allow get, delete: if clCrew(code);
+        allow list: if false;
+        allow create, update: if clCrew(code)
+          && request.resource.data.keys().hasOnly(['img', 'updated'])
+          && request.resource.data.img is string && request.resource.data.img.size() <= 600000;
+      }
     }
     match /gp_weeks/{key} {
       allow read, write: if gpPlayer();
