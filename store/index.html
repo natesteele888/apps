@@ -290,6 +290,7 @@ const ROLE_E={player:"🏃",parent:"👪",coach:"📋",board:"🏛️"};
 const $=s=>document.querySelector(s);
 const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const byId=id=>APPS.find(a=>a.id===id);
+const stat=(n,label)=>n?`<div class="stat"><b>${n}</b><span>${label}</span></div>`:""; /* a 0 tile reads like nothing exists, so leave it out */
 const icon=(a,cls="ic")=>`<img class="${cls}" src="${a.icon}" alt="" width="62" height="62" loading="lazy">`;
 let toastT;function toast(m){const t=$("#toast");t.textContent=m;t.classList.add("on");clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove("on"),2200)}
 function store(k,v){try{if(v===undefined)return localStorage.getItem(k);localStorage.setItem(k,v)}catch(_){return null}}
@@ -414,10 +415,10 @@ function renderBig(){
   `<section class="bp"><h3>Who it's for</h3><p>Every app is made for someone specific. Tap one to see which apps fit.</p>
     <div class="parts" style="margin-top:12px">${Object.entries(ROLES).filter(([k])=>k!=="curious").map(([k,n])=>{const xs=APPS.filter(a=>a.for.includes(k));if(!xs.length)return"";return `<div class="part"><span class="em">${ROLE_E[k]||"⭐"}</span><span><b>${esc(n)}</b><span>${xs.map(a=>esc(a.name)).join(", ")}</span></span><span class="count">${xs.length}<small>app${xs.length>1?"s":""}</small></span></div>`}).join("")}</div></section>
   <section class="bp"><h3>At a glance</h3><div class="stats">
-    <div class="stat"><b>${live}</b><span>live apps</span></div>
-    <div class="stat"><b>${APPS.filter(a=>a.install).length}</b><span>install on a phone</span></div>
-    <div class="stat"><b>${APPS.filter(a=>a.parts.includes("offline")).length}</b><span>work with no signal</span></div>
-    <div class="stat"><b>${APPS.filter(a=>a.for.includes("parent")).length}</b><span>made for parents</span></div></div></section>
+    ${stat(live,"live apps")}
+    ${stat(APPS.filter(a=>a.install).length,"install on a phone")}
+    ${stat(APPS.filter(a=>a.parts.includes("offline")).length,"work with no signal")}
+    ${stat(APPS.filter(a=>a.for.includes("parent")).length,"made for parents")}</div></section>
   <section class="bp"><h3>What's new</h3><p>Recent changes across the apps, straight from each one's own changelog.</p>
     <div style="margin-top:12px">${newsFeed().map(newsRow).join("")}</div></section>
   <section class="bp"><h3>How an idea becomes an app</h3><p>The same loop, every time, with Claude as the development partner.</p>
@@ -447,9 +448,9 @@ function renderAbout(){
   const cats=Object.keys(CATS).filter(k=>APPS.some(a=>a.cat===k));
   return header("Nathan Steele","Live web apps I've designed and built with AI as my development partner, for youth football and baseball programs, coaches, families and everyday use. Every one runs in the browser, and most install on a phone like a real app.")+
   `<section class="bp"><h3>At a glance</h3><div class="stats">
-    <div class="stat"><b>${APPS.filter(a=>a.url).length}</b><span>live apps</span></div>
-    <div class="stat"><b>${APPS.filter(a=>a.install).length}</b><span>install on a phone</span></div>
-    <div class="stat"><b>${APPS.filter(a=>a.cat==="baseball").length}</b><span>league apps</span></div></div></section>`+
+    ${stat(APPS.filter(a=>a.url).length,"live apps")}
+    ${stat(APPS.filter(a=>a.install).length,"install on a phone")}
+    ${stat(APPS.filter(a=>a.cat==="baseball").length,"league apps")}</div></section>`+
   `<section class="bp"><h3>How I build</h3><p>Three things make this more than the same app shipped ${(NUMW[APPS.length]||APPS.length).toLowerCase()} times.</p>
   <div class="feat">
     <div><span class="e">💻</span><span><b>Dev skills</b><span>Vanilla JS and CSS, no framework. Firebase and Firestore for sign-in and live sync, security rules I write by hand, service workers for offline and install, SVG for every diagram and animation.</span></span></div>
