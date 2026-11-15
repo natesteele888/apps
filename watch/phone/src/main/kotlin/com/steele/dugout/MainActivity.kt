@@ -110,6 +110,7 @@ class MainActivity : ComponentActivity() {
         root.addView(col, FrameLayout.LayoutParams(MATCH_PARENT, MATCH_PARENT))
         pocket = pocketOverlay()
         root.addView(pocket, FrameLayout.LayoutParams(MATCH_PARENT, MATCH_PARENT))
+        fitSystemBars(root, Color.parseColor("#111A2E"))
         setContentView(root)
 
         if ((applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE) != 0) WebView.setWebContentsDebuggingEnabled(true)

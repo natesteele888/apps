@@ -58,7 +58,7 @@ jobs:
         env:
           DUGOUT_VERSION: ${{ github.run_number }}
           DUGOUT_KEY_PASSWORD: ${{ secrets.DUGOUT_KEY_PASSWORD }}
-        run: ./gradlew --no-daemon --continue :shared:test :phone:assembleDebug :wear:assembleDebug
+        run: ./gradlew --no-daemon --continue :shared:test :phone:assembleDebug :wear:assembleDebug :wear:lintDebug
       - name: Name the APKs
         run: |
           mkdir -p out
