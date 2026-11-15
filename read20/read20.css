@@ -290,3 +290,75 @@ html.night{color-scheme:dark;--bg:#1a1626;--ink:#efe6d4;--soft:#a79fbd;--card:#2
 .list .del:active{transform:translateY(1px)}
 .nudge.makeup{background:#fff3c4;border-color:#ffd84d}.night .nudge.makeup{background:#40361a;border-color:#a88420}.teen .nudge.makeup{background:#2b2a14;border-color:#7a6a1c}
 .nudge.makeup .linkbtn{padding:6px 0}
+
+/* ===== bigger screens: a computer or tablet with a mouse and keyboard (a kids' laptop is about 1366 by 768).
+   Phones never reach these sizes, so the phone layout above is untouched. ===== */
+.card:focus{outline:none}
+@media (hover:hover) and (pointer:fine){
+  .cover{transition:transform .12s}.cover:hover{transform:translateY(-3px)}
+  .lv:hover,.rd:hover,.day:hover,.mini:hover,.pgbtn:not(:disabled):hover,.icon:hover{border-color:var(--pur)}
+  .w:not(.hl):hover{background:rgba(108,79,240,.13)}
+  .teen .w:not(.hl):hover{background:rgba(109,123,255,.2)}
+}
+/* a tablet standing up, or a narrow window: a little wider, three books across */
+@media (min-width:700px){
+  #app{max-width:760px}
+  .shelf{grid-template-columns:repeat(3,minmax(0,1fr))}
+}
+@media (min-width:960px) and (min-height:540px){
+  html,body{font-size:18px}
+  #app{max-width:1380px;padding:0 36px 36px 156px}
+  .top{padding:20px 0 12px}.top h1{font-size:2.1rem}
+  .icon{width:54px;height:54px;font-size:1.45rem}
+  /* the Books and My Log buttons move from the bottom to a rail down the left side */
+  .nav{top:0;bottom:0;right:auto;width:124px;flex-direction:column;justify-content:flex-start;gap:14px;padding:28px 12px;border-top:0;border-right:2px solid var(--line)}
+  .nav button{flex:none;width:100%;max-width:none;min-height:100px;font-size:2.2rem;gap:4px}
+  .nav button span{font-size:1rem}
+  .teen .nav{border-top:0;border-right:1px solid var(--line)}
+  /* home: tonight's card on the left, the book shop on the right */
+  .home{display:grid;grid-template-columns:minmax(300px,360px) minmax(0,1fr);grid-template-areas:"side main" "extra main";grid-template-rows:auto 1fr;column-gap:40px;align-items:start}
+  .hside{grid-area:side}.hmain{grid-area:main}.hextra{grid-area:extra}
+  .hmain>.sec:first-child{margin-top:4px}
+  .readers{flex-wrap:wrap;overflow:visible}
+  .levels{flex-wrap:wrap;overflow:visible}
+  .lv{min-height:54px;padding:8px 20px;font-size:1.05rem}
+  .shelf{grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:18px}
+  .ce{font-size:4.8rem}.ct{font-size:1.1rem}
+  .hextra .fine{text-align:left}
+  /* reading: the picture on the left and the words on the right, like an open picture book, all on one screen */
+  #app:has(.reader){max-width:1300px;padding:0 32px}
+  .reader:not(.older){display:grid;grid-template-columns:minmax(0,5fr) minmax(0,6fr);grid-template-rows:auto auto auto minmax(0,1fr) auto auto;
+    grid-template-areas:"top top" "warn warn" "idle idle" "pic text" "pic hint" "tools nav";column-gap:36px;height:100vh;height:100dvh;min-height:0;padding-bottom:14px}
+  .reader:not(.older) .rtop{grid-area:top}
+  .reader:not(.older) .warn{grid-area:warn}
+  .reader:not(.older) #idlebox{grid-area:idle;margin-bottom:6px}
+  .reader:not(.older) .pic{grid-area:pic;min-height:0;margin:6px 0 12px;border-radius:40px;font-size:clamp(7rem,24vh,13rem)}
+  .reader:not(.older) .pic.m2{font-size:clamp(5rem,16vh,9rem)}
+  .reader:not(.older) .pic.m3{font-size:clamp(3.6rem,10vh,6rem)}
+  .reader:not(.older) .text,.reader:not(.older) .the-end{grid-area:text;min-height:0;overflow:auto;margin:6px 0}
+  .reader:not(.older) .the-end .btn{max-width:440px;margin-left:auto;margin-right:auto}
+  .reader:not(.older) .hint{grid-area:hint;font-size:.95rem}
+  .reader:not(.older) .rnav{grid-area:nav}
+  .reader:not(.older) .tools{grid-area:tools;justify-content:flex-start;align-items:center;padding:6px 0}
+  .s0 .text{font-size:clamp(2rem,5.6vh,2.9rem)}.s1 .text{font-size:clamp(2.4rem,7vh,3.6rem)}.s2 .text{font-size:clamp(2.8rem,8.6vh,4.4rem)}
+  .pgbtn{width:120px;height:76px;font-size:2rem}
+  .mini{min-width:62px;height:52px;font-size:1.05rem}
+  .tm{padding:8px 16px 10px}.tmrow b{font-size:1.6rem}.tmrow span{font-size:.9rem}
+  /* older readers: one comfortable column of text, not a full-width line */
+  .reader.older{max-width:860px;margin:0 auto}
+  .reader.older.s0 .text{font-size:1.35rem}.reader.older.s1 .text{font-size:1.6rem}.reader.older.s2 .text{font-size:1.95rem}
+  /* the log: the month on the left, the numbers and the chosen day on the right */
+  .logwrap{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(320px,1fr);grid-template-areas:"cal stats" "cal detail" "cal keep" "cal .";grid-template-rows:auto auto auto 1fr;column-gap:40px;align-items:start}
+  .logwrap>.stats{grid-area:stats;margin-top:4px}.logcal{grid-area:cal}.logwrap>#detail{grid-area:detail}.logwrap>.keep{grid-area:keep;margin-top:0}
+  .logwrap #detail .dcard{margin-top:0}
+  .cal{gap:8px}.day{height:78px;border-radius:16px}.day b{font-size:1.25rem}.day i{font-size:.9rem}.dow{font-size:.95rem}
+  /* pop-ups open in the middle of the screen instead of sliding up from the bottom */
+  .overlay{align-items:center;padding:24px}
+  .card{border-radius:28px;width:min(640px,100%);max-height:calc(100vh - 48px);padding:24px 28px}
+  .card.party{width:min(480px,100%)}
+}
+@media (min-width:960px) and (min-height:540px) and (max-height:700px){
+  .top{padding:12px 0 6px}
+  .reader:not(.older) .rtop{padding:6px 0}
+  .pgbtn{height:66px}
+}
