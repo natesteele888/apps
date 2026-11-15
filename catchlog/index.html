@@ -16,7 +16,6 @@
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="/apps/icons/catchlog-192.png">
 <link rel="icon" href="/apps/icons/catchlog-192.png" sizes="192x192">
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <script src="https://natesteele888.github.io/apps/install.js" defer></script><script src="https://natesteele888.github.io/apps/health.js" defer></script>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700;800&family=Inter:wght@400;500;600;700;800&display=swap');
@@ -426,7 +425,12 @@ function compressImage(file, maxDim=480, quality=0.6){
 let leafletP = null; let maps = [];
 function loadLeaflet(){
   if(window.L) return Promise.resolve();
-  if(!leafletP) leafletP = new Promise((res, rej) => { const s=document.createElement('script'); s.src='https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'; s.onload=res; s.onerror=rej; document.head.appendChild(s); });
+  // The map's stylesheet loads here too, not in the head, so a slow map server never holds up the first screen.
+  const add = (tag, attrs) => new Promise((res, rej) => { const e=document.createElement(tag); Object.assign(e, attrs); e.onload=res; e.onerror=rej; document.head.appendChild(e); });
+  if(!leafletP) leafletP = Promise.all([
+    add('link', { rel:'stylesheet', href:'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css' }),
+    add('script', { src:'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js' })
+  ]).catch(e => { leafletP = null; throw e; });
   return leafletP;
 }
 function teardownMaps(){ maps.forEach(m => { try{ m.remove(); }catch(e){} }); maps = []; }
