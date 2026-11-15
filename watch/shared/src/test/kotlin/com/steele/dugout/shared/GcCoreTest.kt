@@ -52,7 +52,7 @@ class GcCoreTest {
         assertEquals(listOf("Pepperell", "Hawks"), b.recent.map { it.opponent })
         assertEquals(15 * 60_000L, Gc.refreshMs(b))
         // a game that never got a final stops counting as live
-        assertEquals(Gc.Phase.NO_FINAL, Gc.phase(g[2], ms("2026-05-03T12:00:00Z")))
+        assertEquals(Gc.Phase.NO_FINAL, Gc.phase(g.first { it.opponent == "Townsend" }, ms("2026-05-03T12:00:00Z")))
     }
 
     @Test fun readsTheTeamAndLineScore() {
