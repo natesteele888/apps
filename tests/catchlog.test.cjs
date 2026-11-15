@@ -203,6 +203,39 @@ fs.writeFileSync(PHOTO, Buffer.from('iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAIAAACQkWg
     await C.page.waitForSelector('text=Can’t open this crew');
     deny = false;
   });
+  await test('every screen fits one phone screen: no page scroll, main action visible (360x740 and 412x800)', async () => {
+    // A long crew list, so the crew screen has to keep the list scrolling inside itself.
+    await A.page.evaluate(() => mutate(d => { for (let i = 1; i <= 12; i++) d.profiles.push({ id: 'p_t' + i, firstName: 'Angler' + i, lastInitial: 'T', age: null, hometown: '', avatar: '🐟', photo: null }); }));
+    const screens = [
+      ['home', "goHome()", 'button.catch-cta'],
+      ['crew', "setTab('crew')", '.screen-footer button'],
+      ['add angler', "startCreate()", '.screen-footer button'],
+      ['catch form', "cancelCreate(); goHome(); startCatch()", '#saveCatchBtn'],
+      ['trophies', "setTab('trophies')", '.chip'],
+      ['my catches', "setTab('history')", '.screen-header'],
+      ['spots', "setTab('spots')", '.screen-footer button'],
+      ['add spot', "setTab('spots'); toggleAddLocation()", '.screen-footer .btn-primary'],
+      ['tacklebox', "setTab('gear')", '.screen-footer button'],
+      ['settings', "setTab('settings')", '.settings-row'],
+    ];
+    for (const [w, h] of [[360, 740], [412, 800]]) {
+      await A.page.setViewportSize({ width: w, height: h });
+      for (const [name, js, sel] of screens) {
+        await A.page.evaluate(js); await A.page.waitForTimeout(80);
+        const r = await A.page.evaluate(sel => {
+          const el = document.querySelector(sel); const b = el && el.getBoundingClientRect();
+          return { page: document.scrollingElement.scrollHeight, inner: innerHeight, found: !!el, top: b && b.top, bottom: b && b.bottom };
+        }, sel);
+        assert.ok(r.page <= r.inner + 1, `${name} at ${w}x${h}: page scrolls (${r.page} > ${r.inner})`);
+        assert.ok(r.found && r.top >= 0 && r.bottom <= r.inner + 1, `${name} at ${w}x${h}: main action off screen ${JSON.stringify(r)}`);
+      }
+      await A.page.evaluate("setTab('crew')");
+      const inner = await A.page.evaluate(() => { const b = document.querySelector('.screen-body'); return b.scrollHeight > b.clientHeight; });
+      assert.ok(inner, `crew at ${w}x${h}: the long list scrolls inside its own area`);
+    }
+    await A.page.evaluate("cancelCatch()");
+    await A.page.setViewportSize({ width: 390, height: 844 });
+  });
   await test('no console errors on the first phone through the whole run', async () => {
     eq(A.errors.length, 0, A.errors.join(' | '));
   });
