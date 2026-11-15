@@ -1,0 +1,39 @@
+name: App tests
+# Runs each app's browser tests (tests/, see tests/README.md) on every pull request and on pushes to work branches,
+# one job per app so a failure points straight at the app. Nothing is published or deployed.
+# Where Do I Go? (situations) is left out: it needs the lybs-ballclub repo checked out beside this one.
+# Walk-Up's tests also run in watch-build.yml; they are repeated here so every PR shows one complete set of checks.
+on:
+  pull_request: {}
+  push:
+    branches:
+      - "claude/**"
+  workflow_dispatch: {}
+permissions:
+  contents: read
+concurrency:
+  group: app-tests-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        # run.sh matches by name, so "locker" also runs locker-back, "picks" runs picks-stats,
+        # "eightcount" runs all three Eight Count files and "walkup" all three Walk-Up files.
+        app: [health, bills, catchlog, photoblueprint, picks, getready, eightcount, playboard, locker,
+              practiceclock, read20, whoswhere, tournamentpack, walkup, scoreboard, filmlite]
+    name: ${{ matrix.app }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Install Playwright
+        run: |
+          mkdir -p /tmp/pw && cd /tmp/pw && npm init -y >/dev/null && npm install --no-save playwright@1.48.2
+          npx playwright install --with-deps chromium
+      - name: Tests
+        run: NODE_PATH=/tmp/pw/node_modules tests/run.sh ${{ matrix.app }}
