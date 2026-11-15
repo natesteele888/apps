@@ -33,7 +33,23 @@ jobs:
           node-version: "20"
       - name: Install Playwright
         run: |
-          mkdir -p /tmp/pw && cd /tmp/pw && npm init -y >/dev/null && npm install --no-save playwright@1.48.2
+          mkdir -p /tmp/pw && cd /tmp/pw && npm init -y >/dev/null && npm install --no-save playwright@1.63.0
           npx playwright install --with-deps chromium
+      - name: Phone-like fonts
+        # The tests block web fonts, so pages fall back to the system's own. A bare Linux runner only has wide
+        # DejaVu, which no phone uses; Roboto (Android's font) and Liberation (Arial and Arial Narrow sizes) match phones.
+        run: |
+          sudo apt-get install -y -qq fonts-roboto fonts-liberation >/dev/null
+          mkdir -p ~/.config/fontconfig
+          cat > ~/.config/fontconfig/fonts.conf <<'XML'
+          <?xml version="1.0"?>
+          <!DOCTYPE fontconfig SYSTEM "fonts.dtd">
+          <fontconfig>
+            <alias><family>sans-serif</family><prefer><family>Roboto</family></prefer></alias>
+            <alias><family>system-ui</family><prefer><family>Roboto</family></prefer></alias>
+          </fontconfig>
+          XML
+          fc-cache -f >/dev/null
+          fc-match sans-serif; fc-match system-ui; fc-match "Arial Narrow"
       - name: Tests
         run: NODE_PATH=/tmp/pw/node_modules tests/run.sh ${{ matrix.app }}
