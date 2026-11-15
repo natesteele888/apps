@@ -316,13 +316,13 @@ html.night{color-scheme:dark;--bg:#1a1626;--ink:#efe6d4;--soft:#a79fbd;--card:#2
   .nav button span{font-size:1rem}
   .teen .nav{border-top:0;border-right:1px solid var(--line)}
   /* home: tonight's card on the left, the book shop on the right */
-  .home{display:grid;grid-template-columns:minmax(320px,400px) minmax(0,1fr);grid-template-areas:"side main" "extra main";grid-template-rows:auto 1fr;column-gap:40px;align-items:start}
+  .home{display:grid;grid-template-columns:minmax(300px,360px) minmax(0,1fr);grid-template-areas:"side main" "extra main";grid-template-rows:auto 1fr;column-gap:40px;align-items:start}
   .hside{grid-area:side}.hmain{grid-area:main}.hextra{grid-area:extra}
   .hmain>.sec:first-child{margin-top:4px}
   .readers{flex-wrap:wrap;overflow:visible}
   .levels{flex-wrap:wrap;overflow:visible}
   .lv{min-height:54px;padding:8px 20px;font-size:1.05rem}
-  .shelf{grid-template-columns:repeat(auto-fill,minmax(172px,1fr));gap:20px}
+  .shelf{grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:18px}
   .ce{font-size:4.8rem}.ct{font-size:1.1rem}
   .hextra .fine{text-align:left}
   /* reading: the picture on the left and the words on the right, like an open picture book, all on one screen */
