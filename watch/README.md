@@ -97,7 +97,14 @@ If you'd rather not use Android Studio's window, the same install works from a t
 5. Run `adb install dugout-watch.apk`. **Walk-Up** and **Pitch Count** appear in the watch's app list.
 6. Turn **ADB debugging** off again when you're done.
 
-Both apps must come from the same build run, because each run signs them with its own debug key, and the watch only talks to a phone app signed the same way.
+Both apps must be signed with the same key, because the watch only talks to a phone app signed the same way. Builds from the `dugout-v…` releases all share one key, so any phone and watch build from there match.
+
+## Updates
+
+- **Phone:** Dugout checks for a new version when it opens (at most every 6 hours) and asks **Update Dugout?** Tap **Update**, then **Update** on Android's own screen. The first time, Android asks you to allow Dugout to install apps. **Watch › Check for updates** looks right away.
+- **Watch:** the watch app doesn't update itself. When a release changes the watch app, install its `dugout-watch.apk` with step 5 above.
+- Only main-branch builds that change the apps are published, as `dugout-v<number>` releases in this repo. A Walk-Up-only change needs no app update, because Dugout loads the live site.
+- **Switching over once:** a Dugout installed from an older build (signed with a throwaway debug key) can't update itself. Uninstall it, then install `dugout-phone.apk` from the newest `dugout-v…` release. Do the same for the watch.
 
 ## Things to know
 
@@ -113,10 +120,11 @@ Both apps must come from the same build run, because each run signs them with it
 - `wear/` is the watch install, built with Compose for Wear OS. It has two launcher activities, `WalkUpActivity` and `PitchCountActivity`, so the watch shows two apps. They share `PhoneLink` and `PitchStore`, and one application id with the phone app, which the Wear OS link needs.
 - Build: `./gradlew :shared:test :phone:assembleDebug :wear:assembleDebug` (JDK 17, Android SDK 35). GitHub Actions runs this on every push that touches `watch/` or Walk-Up.
 - The phone app loads the live site. Web changes reach Dugout once they're merged to `main` and published.
+- **Signing and releases.** The workflow signs both apps with the key in the `DUGOUT_KEY` secret (a base64 PKCS12 keystore with the alias `dugout`) and its password in `DUGOUT_KEY_PASSWORD`, sets the version code to the run number, and publishes main builds as releases. The key is never committed: `.github/workflows/dugout-key-setup.yml` makes it once, on GitHub's runner, and saves it straight into the secrets. `phone/.../Updater.kt` reads the releases list, and Android only installs an update signed with the same key.
 
 ## Setting up another coach
 
-1. Install `dugout-phone.apk` on their Android phone, and `dugout-watch.apk` on their Galaxy Watch if they have one, both from the same build run.
+1. Install `dugout-phone.apk` on their Android phone, and `dugout-watch.apk` on their Galaxy Watch if they have one, both from the newest `dugout-v…` release in this repo. Dugout keeps itself up to date after that.
 2. Open Dugout on the phone and add their team in Walk-Up: players, songs and voices. Or restore a Walk-Up backup file they made in Chrome.
 3. For pitch counts, tap **Count pitches too**, then add pitchers in the Bullpen and pick the league division in Pitching settings. If they use LYBS Ballclub, they can open their own team once through **Watch › Open LYBS Ballclub here**, then add its pitchers.
 4. On the watch, open Walk-Up or Pitch Count.

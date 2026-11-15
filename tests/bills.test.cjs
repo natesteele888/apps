@@ -126,7 +126,9 @@ const SAMPLE = [
   });
   await test('past due: an unpaid bill from earlier this month stays on top and in the total', async () => {
     await A.page.locator('#addBtn').click();
-    await A.page.fill('#bName', 'Water'); await A.page.fill('#bAmt', '60'); await A.page.fill('#bStart', '2026-11-10'); await A.page.locator('#bSave').click();
+    await A.page.fill('#bName', 'Water'); await A.page.fill('#bAmt', '60'); await A.page.fill('#bStart', '2026-11-10');
+    await A.page.selectOption('#bEvery', '0');   // one time, so its Dec 10 repeat doesn't also land in the next 30 days
+    await A.page.locator('#bSave').click();
     eq(await A.page.locator('.group').first().textContent(), 'Past due');
     eq(await total(A.page), '$1,782.50');
     await A.page.locator('.row:has-text("Water") .mid').click(); await A.page.locator('#oEdit').click();

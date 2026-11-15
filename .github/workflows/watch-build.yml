@@ -1,7 +1,8 @@
 name: Dugout watch and phone apps
 # Builds the Dugout phone app and the Wear OS watch app (watch/), runs their tests, and runs Walk-Up's browser tests.
-# The two APKs are attached to each run as "dugout-apks". Each run signs them with a fresh debug key, so install the
-# phone app and the watch app from the same run.
+# The two APKs are attached to each run as "dugout-apks". With the DUGOUT_KEY and DUGOUT_KEY_PASSWORD secrets set, every
+# build is signed with that same key and, on main, published as a "dugout-v<run number>" release, which Dugout on the
+# phone finds and offers as an update. Without them each run signs with a fresh debug key and nothing is published.
 on:
   push:
     paths:
@@ -20,17 +21,43 @@ concurrency:
 jobs:
   apps:
     runs-on: ubuntu-latest
+    outputs:
+      signed: ${{ steps.key.outputs.signed }}
+      changed: ${{ steps.changed.outputs.changed }}
     defaults:
       run:
         working-directory: watch
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Did the apps change?
+        id: changed
+        env:
+          BEFORE: ${{ github.event.before }}
+        run: |
+          # A Walk-Up-only change reaches Dugout through the live site, so it needs no new app.
+          if [ -z "$BEFORE" ] || [ "$BEFORE" = "0000000000000000000000000000000000000000" ] || ! git cat-file -e "$BEFORE" 2>/dev/null \
+             || ! git diff --quiet "$BEFORE" HEAD -- . ':!README.md'; then echo "changed=1" >> "$GITHUB_OUTPUT"; fi
+      - name: Unpack the Dugout signing key
+        id: key
+        env:
+          KEY: ${{ secrets.DUGOUT_KEY }}
+        run: |
+          if [ -n "$KEY" ]; then
+            echo "$KEY" | base64 -d > "$RUNNER_TEMP/dugout.p12"
+            echo "DUGOUT_KEYSTORE=$RUNNER_TEMP/dugout.p12" >> "$GITHUB_ENV"
+            echo "signed=1" >> "$GITHUB_OUTPUT"
+          fi
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: "17"
       - uses: gradle/actions/setup-gradle@v4
       - name: Build and test
+        env:
+          DUGOUT_VERSION: ${{ github.run_number }}
+          DUGOUT_KEY_PASSWORD: ${{ secrets.DUGOUT_KEY_PASSWORD }}
         run: ./gradlew --no-daemon --continue :shared:test :phone:assembleDebug :wear:assembleDebug
       - name: Name the APKs
         run: |
@@ -62,3 +89,27 @@ jobs:
           npx playwright install --with-deps chromium
       - name: Walk-Up tests
         run: NODE_PATH=/tmp/pw/node_modules tests/run.sh walkup
+
+  release:
+    # Publishes the APKs that Dugout updates itself from: only on main (a push or a manual run), only when the apps changed, only when signed.
+    needs: [apps, walkup-tests]
+    if: (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/main' && needs.apps.outputs.signed == '1' && needs.apps.outputs.changed == '1'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: dugout-apks
+          path: out
+      - name: Publish the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          N: ${{ github.run_number }}
+        run: |
+          gh release create "dugout-v$N" out/dugout-phone.apk out/dugout-watch.apk --repo "$GITHUB_REPOSITORY" \
+            --target "$GITHUB_SHA" --title "Dugout $N" --latest \
+            --notes "Built from ${GITHUB_SHA::7}. Dugout on the phone offers this update by itself. To update the watch app, see watch/README.md."
+          # Keep the five newest Dugout releases.
+          gh release list --repo "$GITHUB_REPOSITORY" --limit 100 --json tagName -q '.[].tagName' | grep '^dugout-v[0-9]*$' \
+            | sort -t v -k2 -n -r | tail -n +6 | while read -r t; do gh release delete "$t" --repo "$GITHUB_REPOSITORY" --yes --cleanup-tag; done

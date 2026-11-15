@@ -7,6 +7,7 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
 
     <application
         android:allowBackup="false"
@@ -26,6 +27,12 @@
             </intent-filter>
         </activity>
         <activity android:name=".LeagueActivity" android:exported="false" android:label="MAC League" />
+        <activity
+            android:name=".UpdateStatusActivity"
+            android:exported="false"
+            android:theme="@android:style/Theme.Translucent.NoTitleBar"
+            android:excludeFromRecents="true"
+            android:noHistory="true" />
         <activity android:name=".WatchActivity" android:exported="false" android:label="@string/watch_title" />
         <service
             android:name=".KeepAliveService"

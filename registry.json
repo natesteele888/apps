@@ -766,11 +766,19 @@
         "autoShots": [],
         "latest": {
           "d": "Nov 14, 2026",
-          "t": "Bring in pitch counts from Walk-Up's Pitch Count with one tap",
-          "url": "https://github.com/natesteele888/lybs-ballclub/commit/03a70469ab86c61521df208f872e9d88527e88dc"
+          "t": "Copy a game's pitch counts ready for the MAC League site",
+          "url": "https://github.com/natesteele888/lybs-ballclub/commit/2d06c838159830dda11424c485b72d26d8909332"
         },
-        "version": "1.25.5",
+        "version": "1.25.7",
         "history": [
+          {
+            "v": "1.25.7",
+            "t": "Copy a game's pitch counts ready for the MAC League site"
+          },
+          {
+            "v": "1.25.6",
+            "t": "Pull every team's roster from the Dashboard with one button"
+          },
           {
             "v": "1.25.5",
             "t": "Bring in pitch counts from Walk-Up's Pitch Count with one tap"
@@ -782,14 +790,6 @@
           {
             "v": "1.25.3",
             "t": "Situations: note that the App Store's Where Do I Go? runs this trainer too"
-          },
-          {
-            "v": "1.25.1",
-            "t": "Add the shared health check and a Something wrong? button"
-          },
-          {
-            "v": "1.25.0",
-            "t": "Public info: keep Back to login on screen on a phone"
           }
         ],
         "caps": [
@@ -1189,12 +1189,24 @@
         ],
         "autoShots": [],
         "latest": {
-          "d": "Nov 13, 2026",
-          "t": "Load the map library without holding up the banner list",
-          "url": "https://github.com/natesteele888/sponsor-banner-inventory/commit/9f61573b213eae6d1c832e850d6af2d472799222"
+          "d": "Nov 14, 2026",
+          "t": "Sponsor info form: catch a mistyped email before it sends",
+          "url": "https://github.com/natesteele888/sponsor-banner-inventory/commit/4fab0f4f5fe936bc35f64c951a92974b508925f2"
         },
-        "version": "1.2.4",
+        "version": "1.2.8",
         "history": [
+          {
+            "v": "1.2.8",
+            "t": "Sponsor info form: catch a mistyped email before it sends"
+          },
+          {
+            "v": "1.2.6",
+            "t": "2027 intake: sponsor emails are drafts only, and nothing happens until payment is in"
+          },
+          {
+            "v": "1.2.5",
+            "t": "Add 2027 sponsor banner intake: hourly sponsor check, info email, reply form, 2027 tab"
+          },
           {
             "v": "1.2.4",
             "t": "Load the map library without holding up the banner list"
@@ -1202,18 +1214,6 @@
           {
             "v": "1.2.3",
             "t": "Let a keyboard or screen reader open a banner from the list"
-          },
-          {
-            "v": "1.2.2",
-            "t": "Keep buttons and headings in a sans font when the web font can't load"
-          },
-          {
-            "v": "1.2.1",
-            "t": "Add the shared health check and a Something wrong? button"
-          },
-          {
-            "v": "1.2.0",
-            "t": "Say why when the map can't load, instead of a blank box"
           }
         ],
         "caps": [
@@ -2078,11 +2078,15 @@
         "autoShots": [],
         "latest": {
           "d": "Nov 14, 2026",
-          "t": "Pitch Count: one tap to the official counts on the MAC League site",
-          "url": "https://github.com/natesteele888/apps/commit/6a1cae3fde5748cce0b63714dcc62006b140b9fb"
+          "t": "Walk-Up: match song names the way coaches type them",
+          "url": "https://github.com/natesteele888/apps/commit/bc4dcc15c42ad3f5b9736cbb159e7d9af1886c3e"
         },
-        "version": "1.1.0",
+        "version": "1.1.1",
         "history": [
+          {
+            "v": "1.1.1",
+            "t": "Walk-Up: match song names the way coaches type them"
+          },
           {
             "v": "1.1.0",
             "t": "Pitch Count: one tap to the official counts on the MAC League site"
@@ -2098,10 +2102,6 @@
           {
             "v": "1.0.7",
             "t": "Add a copyright notice and an all-rights-reserved LICENSE"
-          },
-          {
-            "v": "1.0.6",
-            "t": "Every app: a health check on open, a problem log, and a Something wrong? report"
           }
         ],
         "caps": [
