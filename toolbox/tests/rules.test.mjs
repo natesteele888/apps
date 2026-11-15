@@ -3,7 +3,7 @@
 import { test, before, after, beforeEach } from 'node:test';
 import { readFileSync } from 'node:fs';
 import { initializeTestEnvironment, assertSucceeds, assertFails } from '@firebase/rules-unit-testing';
-import { doc, getDoc, setDoc, getDocs, collection, deleteDoc, query, where, orderBy, updateDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc, getDocs, collection, deleteDoc, query, where, orderBy, updateDoc, writeBatch } from 'firebase/firestore';
 
 const OWNER = 'owner@example.com';
 let env;
@@ -28,8 +28,10 @@ beforeEach(async () => {
     await setDoc(doc(db, 'gp_codes/GOOD'), { active: true });
     await setDoc(doc(db, 'gp_codes/OFF'), { active: false });
     await setDoc(doc(db, 'gp_players/player1'), { name: 'P', code: 'GOOD', joinedAt: 1 });
-    // Photo Blueprint: a public sheet by photographer A, a private one by A, and the pictures for both
-    await setDoc(doc(db, 'sp_public/pubA'), spSheet('pubA', 'photoA', true));
+    // Photo Blueprint: a public sheet by photographer A (its public copy in sp_feed), an old-style shared copy that still holds
+    // the name and exact pin (sp_public), a private one by A, and the pictures
+    await setDoc(doc(db, 'sp_feed/pubA'), spFeed('pubA', 'photoA'));
+    await setDoc(doc(db, 'sp_public/pubA'), spSheet('pubA', 'photoA', true, { lat: 41.123456, lon: -81.512345, author: 'A', place: 'Somewhere exact' }));
     await setDoc(doc(db, 'sp_sheets/pubA'), spSheet('pubA', 'photoA', true));
     await setDoc(doc(db, 'sp_sheets/privA'), spSheet('privA', 'photoA', false));
     await setDoc(doc(db, 'sp_images/pubA'), { uid: 'photoA', public: true, data: 'data:image/jpeg;base64,AAAA', updated: 1 });
@@ -46,6 +48,8 @@ const photoB = () => env.authenticatedContext('photoB', { email: 'b@example.com'
 const spSheet = (id, uid, pub, extra = {}) => ({ id, uid, author: 'A', public: pub, created: 1, updated: 1, title: 'Pier at dawn', story: '', lat: 41.1, lon: -81.5,
   heading: 40, posture: 'kneeling', height: 0.9, camera: 'Body', lens: 'Lens', focal: 35, sensor: 'ff', aperture: 8, shutter: 0.004, iso: 100, ev: 0,
   filters: '', support: '', light: '', taken: '', ig: '', thumb: 'data:image/jpeg;base64,AAAA', w: 10, h: 10, place: '', distance: null, ...extra });
+// The public copy everyone can read: no author or place, the pin rounded to a tenth of a degree.
+const spFeed = (id, uid, extra = {}) => { const { author, place, ...o } = spSheet(id, uid, true, { lat: 41.1, lon: -81.5 }); return { ...o, ...extra }; };
 
 test('owner can read and write projects', async () => {
   await assertSucceeds(getDoc(doc(owner(), 'projects/p1')));
@@ -160,14 +164,43 @@ test('read20: a backup account is not a Gameday Picks player or the owner', asyn
 
 // ---------- Photo Blueprint ----------
 test('Photo Blueprint: anyone can read the public feed, nobody else can read a private sheet', async () => {
-  await assertSucceeds(getDoc(doc(anon(), 'sp_public/pubA')));
-  await assertSucceeds(getDocs(query(collection(anon(), 'sp_public'), orderBy('created', 'desc'))));
-  await assertSucceeds(getDoc(doc(photoB(), 'sp_public/pubA')));
+  await assertSucceeds(getDoc(doc(anon(), 'sp_feed/pubA')));
+  await assertSucceeds(getDocs(query(collection(anon(), 'sp_feed'), orderBy('created', 'desc'))));
+  await assertSucceeds(getDoc(doc(photoB(), 'sp_feed/pubA')));
   await assertFails(getDoc(doc(anon(), 'sp_sheets/privA')));
   await assertFails(getDoc(doc(photoB(), 'sp_sheets/privA')));
   await assertFails(getDocs(collection(photoB(), 'sp_sheets')));
   await assertSucceeds(getDoc(doc(photoA(), 'sp_sheets/privA')));
   await assertSucceeds(getDocs(query(collection(photoA(), 'sp_sheets'), where('uid', '==', 'photoA'))));
+});
+
+test('Photo Blueprint: the old shared copies (name and exact pin) are no longer public; only their owner can read and clear them', async () => {
+  await assertFails(getDoc(doc(anon(), 'sp_public/pubA')), 'signed out');
+  await assertFails(getDocs(query(collection(anon(), 'sp_public'), orderBy('created', 'desc'))), 'signed out list');
+  await assertFails(getDoc(doc(photoB(), 'sp_public/pubA')), 'another photographer');
+  await assertFails(getDocs(collection(photoB(), 'sp_public')));
+  await assertSucceeds(getDoc(doc(photoA(), 'sp_public/pubA')));
+  await assertSucceeds(getDocs(query(collection(photoA(), 'sp_public'), where('uid', '==', 'photoA'))), 'the cleanup query');
+  await assertFails(setDoc(doc(photoB(), 'sp_public/newB'), spSheet('newB', 'photoB', true)), 'nothing new goes there');
+  await assertFails(updateDoc(doc(photoA(), 'sp_public/pubA'), { title: 'Still exact' }), 'not even by its owner');
+  await assertFails(deleteDoc(doc(photoB(), 'sp_public/pubA')));
+  // The cleanup the app runs on sign-in: the public copy into the feed and the old one deleted, in one batch.
+  const db = photoA(), b = writeBatch(db);
+  b.set(doc(db, 'sp_feed/pubA'), spFeed('pubA', 'photoA', { title: 'Moved' }));
+  b.delete(doc(db, 'sp_public/pubA'));
+  await assertSucceeds(b.commit());
+  await assertFails(getDoc(doc(photoA(), 'sp_public/pubA')), 'gone (and a missing doc reads as refused)');
+});
+
+test('Photo Blueprint: the feed refuses the name, the place and an exact pin', async () => {
+  await assertFails(setDoc(doc(photoB(), 'sp_feed/f1'), spFeed('f1', 'photoB', { author: 'Someone' })), 'no name');
+  await assertFails(setDoc(doc(photoB(), 'sp_feed/f2'), spFeed('f2', 'photoB', { place: '12 Some Street' })), 'no place');
+  await assertFails(setDoc(doc(photoB(), 'sp_feed/f3'), spFeed('f3', 'photoB', { lat: 41.123456 })), 'exact latitude');
+  await assertFails(setDoc(doc(photoB(), 'sp_feed/f4'), spFeed('f4', 'photoB', { lon: -81.51 })), 'two decimals is still too exact');
+  await assertFails(setDoc(doc(photoB(), 'sp_feed/f5'), spFeed('f5', 'photoB', { public: false })), 'a feed sheet must be public');
+  await assertSucceeds(setDoc(doc(photoB(), 'sp_feed/ok1'), spFeed('ok1', 'photoB', { lat: -33.9, lon: 151.2 })));
+  await assertSucceeds(setDoc(doc(photoB(), 'sp_feed/ok2'), spFeed('ok2', 'photoB', { lat: 41, lon: -81 })), 'whole degrees');
+  await assertSucceeds(setDoc(doc(photoB(), 'sp_feed/ok3'), spFeed('ok3', 'photoB', { lat: 0.3, lon: -0.7 })));
 });
 
 test('Photo Blueprint: pictures follow the sheet (public for all, private for the owner only)', async () => {
@@ -179,25 +212,45 @@ test('Photo Blueprint: pictures follow the sheet (public for all, private for th
 
 test('Photo Blueprint: a photographer writes their own sheets; strangers and anonymous visitors cannot', async () => {
   await assertSucceeds(setDoc(doc(photoB(), 'sp_sheets/newB'), spSheet('newB', 'photoB', false)));
-  await assertSucceeds(setDoc(doc(photoB(), 'sp_public/newB'), spSheet('newB', 'photoB', true)));
+  await assertSucceeds(setDoc(doc(photoB(), 'sp_feed/newB'), spFeed('newB', 'photoB')));
   await assertSucceeds(setDoc(doc(photoB(), 'sp_images/newB'), { uid: 'photoB', public: true, data: 'data:image/jpeg;base64,CCCC', updated: 2 }));
   await assertFails(setDoc(doc(photoB(), 'sp_sheets/evil'), spSheet('evil', 'photoA', false)), 'uid must be yours');
-  await assertFails(setDoc(doc(photoB(), 'sp_public/pubA'), spSheet('pubA', 'photoB', true)), 'cannot take over another id... (owner check on resource)');
-  await assertFails(setDoc(doc(anon(), 'sp_public/anon1'), spSheet('anon1', 'nobody', true)));
-  await assertFails(deleteDoc(doc(photoB(), 'sp_public/pubA')));
+  await assertFails(setDoc(doc(photoB(), 'sp_feed/pubA'), spFeed('pubA', 'photoB')), 'cannot take over another id (owner check on resource)');
+  await assertFails(setDoc(doc(anon(), 'sp_feed/anon1'), spFeed('anon1', 'nobody')));
+  await assertFails(deleteDoc(doc(photoB(), 'sp_feed/pubA')));
   await assertFails(deleteDoc(doc(photoB(), 'sp_images/pubA')));
-  await assertSucceeds(deleteDoc(doc(photoA(), 'sp_public/pubA')));
+  await assertSucceeds(deleteDoc(doc(photoA(), 'sp_feed/pubA')));
   await assertSucceeds(deleteDoc(doc(photoA(), 'sp_images/pubA')));
 });
 
-test('Photo Blueprint: the shape is checked (keys, title, position, sizes, public flag on the feed)', async () => {
+test('Photo Blueprint: saving and deleting are one batch each, even when some copies were never made', async () => {
+  // Publish: the owner's copy, the public copy, the picture.
+  let db = photoB(), b = writeBatch(db);
+  b.set(doc(db, 'sp_sheets/batchB'), spSheet('batchB', 'photoB', true, { lat: 41.123456, lon: -81.512345, author: 'B', place: 'Exact' }));
+  b.set(doc(db, 'sp_feed/batchB'), spFeed('batchB', 'photoB'));
+  b.set(doc(db, 'sp_images/batchB'), { uid: 'photoB', public: true, data: 'data:image/jpeg;base64,DDDD', updated: 3 });
+  await assertSucceeds(b.commit());
+  // A private sheet clears a public copy that was never there.
+  db = photoB(); b = writeBatch(db);
+  b.set(doc(db, 'sp_sheets/quietB'), spSheet('quietB', 'photoB', false));
+  b.delete(doc(db, 'sp_feed/quietB'));
+  await assertSucceeds(b.commit());
+  // Delete clears every copy, including an old-style one that was never made.
+  db = photoB(); b = writeBatch(db);
+  for (const c of ['sp_sheets', 'sp_feed', 'sp_public', 'sp_images']) b.delete(doc(db, c + '/batchB'));
+  await assertSucceeds(b.commit());
+  await assertFails(deleteDoc(doc(photoB(), 'sp_sheets/privA')), 'still not someone else\'s');
+});
+
+test('Photo Blueprint: the shape is checked (keys, title, position, sizes)', async () => {
   await assertFails(setDoc(doc(photoB(), 'sp_sheets/x1'), spSheet('x1', 'photoB', false, { extra: 'field' })));
   await assertFails(setDoc(doc(photoB(), 'sp_sheets/x2'), spSheet('x2', 'photoB', false, { title: '' })));
   await assertFails(setDoc(doc(photoB(), 'sp_sheets/x3'), spSheet('x3', 'photoB', false, { lat: 91 })));
   await assertFails(setDoc(doc(photoB(), 'sp_sheets/x4'), spSheet('x4', 'photoB', false, { story: 'x'.repeat(6001) })));
   await assertFails(setDoc(doc(photoB(), 'sp_sheets/x5'), spSheet('x5', 'photoB', false, { thumb: 'x'.repeat(70001) })));
   await assertFails(setDoc(doc(photoB(), 'sp_sheets/x6'), spSheet('other', 'photoB', false)), 'id must match the path');
-  await assertFails(setDoc(doc(photoB(), 'sp_public/x7'), spSheet('x7', 'photoB', false)), 'a feed sheet must be public');
+  await assertFails(setDoc(doc(photoB(), 'sp_feed/x7'), spFeed('x7', 'photoB', { extra: 'field' })));
+  await assertFails(setDoc(doc(photoB(), 'sp_feed/x8'), spFeed('x8', 'photoB', { title: '' })));
   await assertFails(setDoc(doc(photoB(), 'sp_images/x8'), { uid: 'photoB', public: true, data: 'x'.repeat(950001), updated: 1 }), 'picture too big');
   await assertFails(setDoc(doc(photoB(), 'sp_images/x9'), { uid: 'photoB', public: true, data: 'ok', updated: 1, extra: 1 }));
   await assertSucceeds(setDoc(doc(photoB(), 'sp_sheets/ok1'), spSheet('ok1', 'photoB', false, { story: 'x'.repeat(6000) })));
@@ -206,7 +259,7 @@ test('Photo Blueprint: the shape is checked (keys, title, position, sizes, publi
 test('Photo Blueprint: the owner can take a sheet private again and update the picture flag', async () => {
   await assertSucceeds(updateDoc(doc(photoA(), 'sp_images/pubA'), { public: false }));
   await assertFails(updateDoc(doc(photoB(), 'sp_images/pubA'), { public: false }));
-  await assertSucceeds(deleteDoc(doc(photoA(), 'sp_public/pubA')));
+  await assertSucceeds(deleteDoc(doc(photoA(), 'sp_feed/pubA')));
   await assertFails(getDoc(doc(anon(), 'sp_images/pubA')));
 });
 

@@ -97,8 +97,23 @@ const GPS = [[0x0001, 2, 'N'], [0x0002, 5, [[41, 1], [6, 1], [36, 1]]], [0x0003,
   await test('core: share links carry the sheet (not the picture) and survive a round trip', () => {
     const s = Object.assign(C.newSheet(), { title: 'Pier at dawn “quotes” ✓', story: 'line one\n\nline two', lat: 41.123456, lon: -81.5, heading: 42, posture: 'kneeling', focal: 35, aperture: 8, shutter: 0.004, iso: 100, thumb: 'data:image/jpeg;base64,AAAA' });
     const code = C.encodeShare(s); assert.ok(/^[A-Za-z0-9_-]+$/.test(code)); assert.ok(!/AAAA/.test(code) && code.length < 400);
-    const d = C.decodeShare(code); eq(d.title, s.title); eq(d.story, s.story); eq(d.lat, 41.123456); eq(d.heading, 42); eq(d.posture, 'kneeling'); eq(d.thumb, ''); eq(d.shutter, 0.004);
+    const d = C.decodeShare(code); eq(d.title, s.title); eq(d.story, s.story); eq(d.lat, 41.1, 'only the general area'); eq(d.heading, 42); eq(d.posture, 'kneeling'); eq(d.thumb, ''); eq(d.shutter, 0.004);
     eq(C.decodeShare('nope!'), null); eq(C.decodeShare(''), null);
+  });
+  await test('core: what everyone sees of a shared sheet: no name, no place, the pin rounded to the town', () => {
+    const s = Object.assign(C.newSheet(), { title: 'Pier', uid: 'u1', author: 'Some Person', place: '12 Some Street', public: true, lat: 41.123456, lon: -81.567891, heading: 42, thumb: 'data:x' });
+    const p = C.publicCopy(s);
+    eq(p.author, undefined); eq(p.place, undefined); eq(p.lat, 41.1); eq(p.lon, -81.6); eq(p.uid, 'u1'); eq(p.public, true); eq(p.heading, 42); eq(p.thumb, 'data:x'); eq(p.title, 'Pier');
+    eq(s.lat, 41.123456, 'the owner\'s own copy is untouched'); eq(s.author, 'Some Person');
+    for (const k of Object.keys(p)) assert.ok(C.KEYS.includes(k) && !C.PRIVATE_KEYS.includes(k), k);
+    eq(C.publicCopy(Object.assign({}, s, { lat: -33.86785, lon: 151.20732 })).lat, -33.9); eq(C.coarse(null), null); eq(C.coarse(41), 41);
+    eq(C.fmtArea(41.1, -81.6), '41.1° N, 81.6° W'); eq(C.fmtArea(-33.9, 151.2), '33.9° S, 151.2° E'); eq(C.fmtArea(null, 3), '');
+    // A new link holds neither the name nor the exact pin.
+    const json = Buffer.from(C.encodeShare(s).replace(/-/g, '+').replace(/_/g, '/'), 'base64').toString('utf8');
+    assert.ok(!/Some Person|Some Street|41\.12|81\.56/.test(json), json); assert.ok(/"lat":41\.1\b/.test(json), json);
+    // A link made before this change (v1, with the name and the exact pin) opens showing neither.
+    const old = Buffer.from(JSON.stringify({ v: 1, title: 'Old', lat: 41.123456, lon: -81.567891, author: 'Some Person', place: '12 Some Street' })).toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+    const o = C.decodeShare(old); eq(o.title, 'Old'); eq(o.author, ''); eq(o.place, ''); eq(o.lat, 41.1); eq(o.lon, -81.6);
   });
   await test('figures: seven stances, each a real drawing file with a camera height', () => {
     eq(F.names.join(','), 'standing,kneeling,prone,crouching,sitting,tripod,monopod');
@@ -345,6 +360,10 @@ const GPS = [[0x0001, 2, 'N'], [0x0002, 5, [[41, 1], [6, 1], [36, 1]]], [0x0003,
     const url = await page.evaluate(() => window.__copied); assert.ok(url.startsWith('https://natesteele888.github.io/apps/photoblueprint/#s='), url);
     await page.goto(server.url + url.slice(url.indexOf('#'))); await page.waitForSelector('.sheet .tb');
     const t = await page.textContent('.sheet'); assert.ok(t.includes('Pier at dawn') && t.includes('picture stays with its photographer') && t.includes('Kneeling'));
+    assert.ok(t.includes('Around 41.1° N, 81.5° W') && t.includes('exact spot stays with the photographer'), 'the link shows only the area: ' + t);
+    assert.ok(!/41\.11/.test(t) && !/41\.11/.test(url), 'no exact pin on the page or in the link');
+    eq(await page.locator('.sheet a[href*="google.com/maps"]').count(), 0, 'no directions to an area');
+    await page.waitForSelector('#mini path.area'); eq(await page.locator('#mini path.fov').count(), 0, 'a circle for the area, no cone');
     eq(await page.locator('#del').count(), 0, 'a shared sheet has no delete');
     await page.click('#copy'); await page.waitForSelector('#ed'); eq(await page.inputValue('[data-k="title"]'), 'Pier at dawn'); eq(await page.inputValue('#shutter'), '1/500');
     eq(errors.length, 0, errors.join(' | ')); await page.close();
@@ -388,6 +407,91 @@ const GPS = [[0x0001, 2, 'N'], [0x0002, 5, [[41, 1], [6, 1], [36, 1]]], [0x0003,
     await page.goto(server.url + '#s/restored0001'); await page.waitForSelector('.empty'); assert.ok(/Not here|No signal/.test(await page.textContent('.empty')));
     eq(errors.length, 0, errors.join(' | ')); await page.close();
   });
+  /* ---------- the cloud, with a stand-in Firebase (no network, no accounts) ---------- */
+  // window.firebase is a tiny in-memory Firestore and Google sign-in, so the store's real code runs: what it writes for
+  // everyone, what it keeps for the owner, and the one-time move of sheets shared the old way. __fs holds every document.
+  // The documents outlive a page load in sessionStorage, like a real database outlives one.
+  function fakeFirebase([seed, user]) {
+    const copy = o => JSON.parse(JSON.stringify(o));
+    let saved = null; try { saved = sessionStorage.getItem('__fs'); } catch (e) {}
+    const data = window.__fs = saved ? JSON.parse(saved) : copy(seed || {});
+    const keep = () => { try { sessionStorage.setItem('__fs', JSON.stringify(data)); } catch (e) {} };
+    const snap = (c, id) => ({ id, exists: !!(data[c] && data[c][id]), data: () => data[c] && data[c][id] ? copy(data[c][id]) : undefined, metadata: { fromCache: false } });
+    const q = (c, filters, order, lim) => ({
+      where: (f, op, v) => q(c, filters.concat([[f, v]]), order, lim), orderBy: f => q(c, filters, f, lim), limit: n => q(c, filters, order, n), startAfter: () => q(c, filters, order, lim),
+      get: async () => {
+        let ids = Object.keys(data[c] || {}).filter(id => filters.every(([f, v]) => data[c][id][f] === v));
+        if (order) ids.sort((a, b) => (data[c][b][order] || 0) - (data[c][a][order] || 0)); if (lim) ids = ids.slice(0, lim);
+        const docs = ids.map(id => snap(c, id)); return { docs, empty: !docs.length, metadata: { fromCache: false } };
+      }
+    });
+    const put = (c, id, o, merge) => { data[c] = data[c] || {}; data[c][id] = copy(merge ? Object.assign({}, data[c][id], o) : o); keep(); };
+    const fs = {
+      collection: c => Object.assign(q(c, [], null, 0), { doc: id => ({ id, c, get: async () => snap(c, id), set: async o => put(c, id, o) }) }),
+      batch: () => { const ops = []; return { set: (r, o, opt) => ops.push(() => put(r.c, r.id, o, opt && opt.merge)), delete: r => ops.push(() => { if (data[r.c]) delete data[r.c][r.id]; keep(); }), commit: async () => ops.forEach(f => f()) }; }
+    };
+    let u = user ? { uid: user.uid, displayName: user.name, email: user.email, photoURL: '' } : null, cb = null;
+    const auth = { onAuthStateChanged: f => { cb = f; setTimeout(() => f(u), 0); }, signOut: async () => { u = null; if (cb) cb(null); } };
+    window.firebase = { apps: [], initializeApp() { this.apps.push({}); }, auth: Object.assign(() => auth, { GoogleAuthProvider: function () { this.setCustomParameters = () => {}; } }), firestore: () => fs };
+    try { localStorage.setItem('sp.cloud', user ? 'true' : 'false'); localStorage.setItem('sp.feed', '"all"'); } catch (e) {}
+  }
+  const ME = { uid: 'owner1', name: 'Test Owner', email: 'owner@example.com' };
+  const oldShare = (id, uid) => ({ id, uid, author: 'Test Owner', public: true, created: 5, updated: 5, title: 'Old share ' + id, story: '', lat: 41.123456, lon: -81.512345, heading: 40, posture: 'standing', height: 1.6,
+    camera: '', lens: '', focal: 35, sensor: 'ff', aperture: 8, shutter: 0.004, iso: 100, ev: null, filters: '', support: '', light: '', taken: '', ig: '', thumb: '', w: 0, h: 0, place: 'Exact Pier, Some Street', distance: null });
+  const hasExif = dataUrl => Buffer.from(String(dataUrl).split(',')[1] || '', 'base64').includes(Buffer.from('Exif\0\0', 'latin1'));
+  await test('cloud: signing in moves sheets shared the old way to the public feed without the name, place or exact pin', async () => {
+    const { page, errors } = await newPage(browser); await block(page);
+    await page.addInitScript(fakeFirebase, [{ sp_public: { old1: oldShare('old1', 'owner1'), old2: oldShare('old2', 'owner1'), theirs: oldShare('theirs', 'someone') } }, ME]);
+    await page.goto(server.url + '#me'); await page.waitForFunction(() => /2 shared sheets now hide your name and exact spot/.test(document.querySelector('#toast').textContent));
+    const fs = await page.evaluate(() => window.__fs);
+    eq(Object.keys(fs.sp_public).join(','), 'theirs', 'only my old copies move; someone else\'s are theirs to move');
+    for (const id of ['old1', 'old2']) {
+      const f = fs.sp_feed[id]; assert.ok(f, id + ' in the feed');
+      eq(f.author, undefined, 'no name'); eq(f.place, undefined, 'no place'); eq(f.lat, 41.1); eq(f.lon, -81.5); eq(f.uid, 'owner1'); eq(f.public, true); eq(f.title, 'Old share ' + id);
+    }
+    assert.ok(/Only you see this/.test(await page.textContent('#who')), 'Me says the name stays private');
+    // Once only: a second sign-in this session finds nothing left to move.
+    eq(await page.evaluate(() => window.SPStore.cloud.movePublicShares()), 0);
+    eq(errors.length, 0, errors.join(' | ')); await page.context().close();
+  });
+  await test('cloud: sharing a sheet keeps the exact pin and name in my account and gives everyone only the area; the picture has no camera notes', async () => {
+    const { page, errors } = await newPage(browser); await block(page);
+    await page.addInitScript(fakeFirebase, [{}, ME]);
+    await page.goto(server.url + '#new'); await page.waitForSelector('#ed');
+    await page.setInputFiles('#file', await photo(page)); await page.waitForSelector('#drop img');
+    await page.fill('[data-k="title"]', 'Shared pier'); await page.fill('[data-k="place"]', 'Exact Pier, Some Street');
+    await page.waitForFunction(() => window.SPStore.cloud.user);
+    await page.click('#pub'); assert.ok(/general area/.test(await page.textContent('#pubhint')), await page.textContent('#pubhint'));
+    await page.click('#save'); await page.waitForURL(/#s\/[a-z0-9]+$/); const id = page.url().split('#s/')[1];
+    await page.waitForFunction(() => /Published to the map/.test(document.querySelector('#toast').textContent));
+    const fs = await page.evaluate(() => window.__fs);
+    const mine = fs.sp_sheets[id], pub = fs.sp_feed[id];
+    eq(mine.lat, 41.11); eq(mine.lon, -81.5); eq(mine.author, 'Test Owner'); eq(mine.place, 'Exact Pier, Some Street');
+    eq(pub.author, undefined); eq(pub.place, undefined); eq(pub.lat, 41.1); eq(pub.lon, -81.5); eq(pub.uid, 'owner1'); eq(pub.public, true);
+    eq((fs.sp_public || {})[id], undefined, 'nothing written the old way');
+    assert.ok(!hasExif(fs.sp_images[id].data) && !hasExif(pub.thumb), 'the picture and thumbnail are redrawn, so no GPS rides along in them');
+    // My own sheet still shows me the exact spot.
+    await page.waitForSelector('.sheet .coords'); assert.ok(/41\.11000° N/.test(await page.textContent('.sheet .coords')));
+    eq(await page.locator('.sheet a[href*="google.com/maps"]').count(), 1);
+    // Taking it private again takes the public copy away.
+    await page.goto(server.url + '#edit/' + id); await page.waitForSelector('#pub'); await page.click('#pub'); await page.click('#save'); await page.waitForURL(/#s\//);
+    await page.waitForFunction(i => !(window.__fs.sp_feed || {})[i], id);
+    eq(errors.length, 0, errors.join(' | ')); await page.context().close();
+  });
+  await test('cloud: signed out, a shared sheet shows no name and only the general area', async () => {
+    const { page, errors } = await newPage(browser); await block(page);
+    const feed = Object.assign(oldShare('feed1', 'owner1'), { lat: 41.1, lon: -81.5, title: 'Feed pier' }); delete feed.author; delete feed.place;
+    await page.addInitScript(fakeFirebase, [{ sp_feed: { feed1: feed }, sp_sheets: { feed1: oldShare('feed1', 'owner1') } }, null]);
+    await page.goto(server.url + '#s/feed1'); await page.waitForSelector('.sheet .tb');
+    const t = await page.textContent('.sheet');
+    assert.ok(t.includes('Feed pier') && t.includes('Around 41.1° N, 81.5° W'), t);
+    assert.ok(!/Test Owner|Exact Pier|41\.12/.test(t), 'no name, place or exact pin: ' + t);
+    eq(await page.locator('.sheet a[href*="google.com/maps"]').count(), 0, 'no directions');
+    await page.waitForSelector('#mini path.area');
+    await page.goto(server.url + '#map'); await page.waitForSelector('.leaflet-marker-icon'); eq(await page.locator('.leaflet-marker-icon').count(), 1, 'on everyone\'s map');
+    eq(errors.length, 0, errors.join(' | ')); await page.context().close();
+  });
+
   await test('app: small phone (320×640): every screen fits with no sideways scroll', async () => {
     const { page, errors } = await open(); await page.setViewportSize({ width: 320, height: 640 });
     for (const h of ['#map', '#sheets', '#s/' + sheetId, '#new', '#me']) {

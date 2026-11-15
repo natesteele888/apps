@@ -217,14 +217,37 @@
     const bytes = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
     return typeof TextDecoder !== "undefined" ? new TextDecoder().decode(bytes) : Buffer.from(bytes).toString("utf8");
   }
-  const SHARE_KEYS = ["title", "story", "lat", "lon", "heading", "posture", "height", "camera", "lens", "focal", "sensor", "aperture", "shutter", "iso", "ev", "filters", "support", "light", "taken", "ig", "author", "place", "distance"];
+  // What a shared sheet shows anyone who isn't its owner: no name and no exact spot. The pin is rounded to the general area
+  // (AREA_DECIMALS of a degree: 0.1° is about 11 km north-south, town level) and the typed place is left off, since it can be an
+  // address. The owner's own copy (on the phone and in sp_sheets) keeps the exact pin, the place and the name.
+  const AREA_DECIMALS = 1;
+  const PRIVATE_KEYS = ["author", "place"];
+  const coarse = v => v == null || !Number.isFinite(+v) ? null : round(+v, AREA_DECIMALS);
+  // How far the real spot can be from the rounded one: half a grid cell corner to corner, about 8 km. The sheet's map draws this circle.
+  const AREA_RADIUS = 8000;
+  // "41.1° N, 81.5° W": the general area, to the same tenth of a degree the public copy keeps.
+  function fmtArea(lat, lon) {
+    if (!isLatLon(lat, lon)) return "";
+    return Math.abs(+lat).toFixed(AREA_DECIMALS) + "° " + (+lat >= 0 ? "N" : "S") + ", " + Math.abs(+lon).toFixed(AREA_DECIMALS) + "° " + (+lon >= 0 ? "E" : "W");
+  }
+  function publicCopy(s) {
+    const o = clean(s);
+    for (const k of PRIVATE_KEYS) delete o[k];
+    o.lat = coarse(o.lat); o.lon = coarse(o.lon);
+    return o;
+  }
+  const SHARE_KEYS = ["title", "story", "lat", "lon", "heading", "posture", "height", "camera", "lens", "focal", "sensor", "aperture", "shutter", "iso", "ev", "filters", "support", "light", "taken", "ig", "distance"];
   function encodeShare(s) {
-    const o = { v: 1 };
-    for (const k of SHARE_KEYS) if (s[k] != null && s[k] !== "") o[k] = s[k];
+    const o = { v: 2 }, p = publicCopy(s);
+    for (const k of SHARE_KEYS) if (p[k] != null && p[k] !== "") o[k] = p[k];
     return b64url(JSON.stringify(o));
   }
+  // Older links (v1) carried the name and the exact pin; they still open, shown the same way as a new one.
   function decodeShare(str) {
-    try { const o = JSON.parse(unb64url(String(str || ""))); if (!o || o.v !== 1) return null; delete o.v; return clean(Object.assign(newSheet(), o)); }
+    try {
+      const o = JSON.parse(unb64url(String(str || ""))); if (!o || (o.v !== 1 && o.v !== 2)) return null; delete o.v;
+      const s = publicCopy(Object.assign(newSheet(), o)); s.author = ""; s.place = ""; return s;
+    }
     catch (e) { return null; }
   }
 
@@ -244,5 +267,5 @@
 
   return { SENSORS, POSTURES, LIGHTS, SUPPORTS, KEYS, sensor, posture, fov, equivFocal, round, fmtShutter, parseShutter, fmtAperture, parseAperture, fmtFocal, fmtEV,
     apexToShutter, apexToAperture, headingName, normDeg, fmtCoord, isLatLon, destination, wedge, bearing, distance, fmtHeight, fmtDistance,
-    newId, newSheet, sheetNo, validate, clean, applyExif, gpsToLatLon, encodeShare, decodeShare, fitImage, fmtDate, exposureLine };
+    newId, newSheet, sheetNo, validate, clean, applyExif, gpsToLatLon, AREA_DECIMALS, AREA_RADIUS, PRIVATE_KEYS, coarse, fmtArea, publicCopy, encodeShare, decodeShare, fitImage, fmtDate, exposureLine };
 });

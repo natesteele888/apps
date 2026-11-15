@@ -1,7 +1,10 @@
 /* Photo Blueprint store: where sheets live.
    - On this phone (IndexedDB): every sheet you make, picture included. Works offline, needs no account.
    - In the cloud (Firebase project nates-toolbox, Firestore): sign in with Google to keep your sheets across phones
-     (sp_sheets, owner only), share them with everyone (sp_public) and let others see the picture (sp_images).
+     (sp_sheets, owner only: exact pin, place and your name), share them with everyone (sp_feed: the public copy, with
+     no name and the pin rounded to the general area, see SPCore.publicCopy) and let others see the picture (sp_images).
+     sp_public is the old shared copy that held the name and exact pin. The rules now let only its owner read it, and
+     movePublicShares() moves each one to sp_feed the next time its owner signs in.
    The Firebase scripts load only when needed, so the app starts instantly with no signal. */
 (function () {
   "use strict";
@@ -85,14 +88,18 @@
   const noSignal = snap => snap.metadata && snap.metadata.fromCache && (snap.empty || (snap.exists === false));
   function sheetDoc(s) { const o = C.clean(s); o.uid = cloud.user.uid; o.author = cloud.user.name || o.author || ""; o.updated = Date.now(); o.created = o.created || o.updated; return o; }
 
+  const FEED = "sp_feed", OLD_FEED = "sp_public";
+  // A sheet from everyone's feed: its pin is only the general area (see SPCore.publicCopy).
+  const fromFeed = d => Object.assign(fromDoc(d), { _approx: true });
+
   /* Everyone's public sheets, newest first. `after` is the last sheet of the previous page. Throws "signal" with no signal. */
   cloud.publicSheets = async function (limit, after) {
     if (!cloud.ready()) { if (!(await cloud.start())) throw new Error("signal"); }
-    let q = db().collection("sp_public").orderBy("created", "desc").limit(limit || 60);
+    let q = db().collection(FEED).orderBy("created", "desc").limit(limit || 60);
     if (after && after.created) q = q.startAfter(after.created);
     const snap = await q.get();
     if (noSignal(snap)) throw new Error("signal");
-    return snap.docs.map(fromDoc);
+    return snap.docs.map(fromFeed);
   };
   /* My own cloud copies (needs sign-in). */
   cloud.mySheets = async function () {
@@ -101,15 +108,15 @@
     if (noSignal(snap)) throw new Error("signal");
     return snap.docs.map(fromDoc);
   };
-  /* One sheet by id: the public copy first, then my own. Null when it is gone; throws "signal" offline. */
+  /* One sheet by id: my own copy first (the exact pin), then the public one. Null when it is gone; throws "signal" offline. */
   cloud.getSheet = async function (id) {
     if (!cloud.ready()) { if (!(await cloud.start())) throw new Error("signal"); }
-    try {
-      const pub = await db().collection("sp_public").doc(id).get();
-      if (pub.exists) return fromDoc(pub);
-      if (cloud.user) { const mine = await db().collection("sp_sheets").doc(id).get(); if (mine.exists) return fromDoc(mine); }
-      return null;
-    } catch (e) { if (e && e.code === "permission-denied") return null; throw new Error("signal"); }
+    const read = async (c, map) => {
+      try { const d = await db().collection(c).doc(id).get(); return d.exists ? map(d) : null; }
+      catch (e) { if (e && e.code === "permission-denied") return null; throw new Error("signal"); }
+    };
+    if (cloud.user) { const mine = await read("sp_sheets", fromDoc); if (mine) return mine; }
+    return read(FEED, fromFeed);
   };
   /* The full picture for a sheet (a data URL), or "" when it can't be read. */
   cloud.getImage = async function (id) {
@@ -121,7 +128,8 @@
     if (!cloud.user) throw new Error("signin");
     const o = sheetDoc(sheet), d = db(), b = d.batch();
     b.set(d.collection("sp_sheets").doc(o.id), o);
-    if (o.public) b.set(d.collection("sp_public").doc(o.id), o); else b.delete(d.collection("sp_public").doc(o.id));
+    // Everyone gets the public copy only: no name, no place, the pin rounded to the general area.
+    if (o.public) b.set(d.collection(FEED).doc(o.id), Object.assign(C.publicCopy(o), { uid: o.uid })); else b.delete(d.collection(FEED).doc(o.id));
     if (image) b.set(d.collection("sp_images").doc(o.id), { uid: o.uid, public: !!o.public, data: image, updated: o.updated });
     else b.set(d.collection("sp_images").doc(o.id), { public: !!o.public, updated: o.updated, uid: o.uid }, { merge: true });
     await b.commit();
@@ -130,8 +138,26 @@
   cloud.remove = async function (id) {
     if (!cloud.user) return;
     const d = db(), b = d.batch();
-    for (const c of ["sp_sheets", "sp_public", "sp_images"]) b.delete(d.collection(c).doc(id));
+    for (const c of ["sp_sheets", FEED, OLD_FEED, "sp_images"]) b.delete(d.collection(c).doc(id));
     await b.commit();
+  };
+  /* One-time cleanup, run when the owner signs in: every sheet I shared the old way (sp_public, with my name and the exact
+     pin) moves to the public feed as its public copy, and the old document is deleted. Returns how many moved. */
+  cloud.movePublicShares = async function () {
+    if (!cloud.user) return 0;
+    const snap = await db().collection(OLD_FEED).where("uid", "==", cloud.user.uid).get();
+    if (noSignal(snap) || snap.empty) return 0;
+    const docs = snap.docs.slice();
+    for (let i = 0; i < docs.length; i += 200) {
+      const d = db(), b = d.batch();
+      for (const doc of docs.slice(i, i + 200)) {
+        const o = C.clean(Object.assign(doc.data() || {}, { id: doc.id }));
+        b.set(d.collection(FEED).doc(doc.id), Object.assign(C.publicCopy(o), { uid: cloud.user.uid, public: true }));
+        b.delete(d.collection(OLD_FEED).doc(doc.id));
+      }
+      await b.commit();
+    }
+    return docs.length;
   };
 
   window.SPStore = { settings, local, cloud };
