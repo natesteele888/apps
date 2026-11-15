@@ -1,20 +1,24 @@
 package com.steele.dugout
 
-import android.graphics.Color
 import android.view.View
 import androidx.activity.ComponentActivity
-import androidx.activity.SystemBarStyle
-import androidx.activity.enableEdgeToEdge
 import androidx.core.view.ViewCompat
+import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 
 /**
- * Android 15 draws every app edge to edge, under the status bar and the navigation bar. This keeps Dugout's screens
- * clear of them (and of a camera cutout and the keyboard) by padding [root], whose background shows behind the bars.
+ * Keeps Dugout's screens below the status bar and above the navigation bar.
+ *
+ * Android 15 draws apps edge to edge, under the bars. The Dugout theme opts out of that on Android 15 (values-v35),
+ * so the system itself lays each screen out between the bars, painted [barColor]. As a safety net, any bar, cutout
+ * or keyboard space the system still hands the screen is padded off [root], so nothing ends up under a bar either way.
  * Call it in onCreate, before setContentView.
  */
+@Suppress("DEPRECATION") // bar colors still apply on Android 15 while the theme opts out of edge to edge
 fun ComponentActivity.fitSystemBars(root: View, barColor: Int) {
-    enableEdgeToEdge(SystemBarStyle.dark(Color.TRANSPARENT), SystemBarStyle.dark(Color.TRANSPARENT)) // light icons on our dark bars
+    WindowCompat.setDecorFitsSystemWindows(window, true)
+    window.statusBarColor = barColor
+    window.navigationBarColor = barColor
     root.setBackgroundColor(barColor)
     val types = WindowInsetsCompat.Type.systemBars() or WindowInsetsCompat.Type.displayCutout() or WindowInsetsCompat.Type.ime()
     ViewCompat.setOnApplyWindowInsetsListener(root) { v, insets ->
