@@ -14,7 +14,11 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.Color
 import androidx.wear.compose.material.MaterialTheme
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 /** what both watch apps share: keep the screen on during a game, load the pitch log, and talk to the phone */
 abstract class GameActivity : ComponentActivity() {
@@ -40,6 +44,21 @@ class PitchCountActivity : GameActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent { MaterialTheme { PitchCountApp() } }
+    }
+}
+
+/** Scores on the watch: today's MAC League scores, the same ones LYBS Select shows. Works without the other two apps. */
+class ScoresActivity : ComponentActivity() {
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        ScoresStore.load(this)
+        setContent { MaterialTheme { ScoresScreen() } }
+        // While Scores is on screen, look for new scores every minute; stop when it's put away.
+        lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                while (true) { ScoresStore.refresh(); delay(60_000) }
+            }
+        }
     }
 }
 
