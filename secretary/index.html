@@ -1642,6 +1642,9 @@ function renderEditor(){
           <p class="notehint" style="margin:8px 0 0">Saves the minutes as a Google Doc and a PDF, with the audio, in ${esc(DRIVE_ROOT_NAME)} › ${esc(driveMeetingName())}. Then it drafts the email to the board in Gmail for you to send.</p>
           ${M.drivePdfId ? `<button class="btn" id="eMail" style="width:100%;justify-content:center;margin-top:10px">${M.boardEmailDraftedAt ? 'Draft the board email again' : 'Draft the board email'}</button>` : ''}`
           : '<button class="btn primary big" id="eCreate" style="width:100%;justify-content:center">Create minutes</button>'}
+          ${driveShown() && actions.length ? `<div class="stepl" style="margin-top:14px">4. Board action items page</div>
+          <button class="btn" id="eBoard" style="width:100%;justify-content:center">${M.boardPageSentAt ? 'Send the action items again' : 'Send action items to the board page'}</button>
+          <p class="notehint" style="margin:8px 0 0">Puts this meeting's ${actions.length} action item${actions.length === 1 ? '' : 's'} on the board-only page, grouped by person with due dates. You check them and tap Save there.</p>` : ''}
           <details class="more" style="margin-top:14px"><summary style="cursor:pointer;color:var(--text-2);font-weight:600">More options</summary>
             <div class="exports" style="margin-top:10px">
               ${driveShown() ? '<button class="btn" id="eCreate">Email me a review copy first</button>' : ''}
@@ -1672,6 +1675,7 @@ function renderEditor(){
   $('#eCreate').onclick = createMinutes;
   if ($('#eFinish')) $('#eFinish').onclick = finishToDrive;
   if ($('#eMail')) $('#eMail').onclick = () => openBoardEmail();
+  if ($('#eBoard')) $('#eBoard').onclick = sendToBoardPage;
   if ($('#ePhoneAudio')) $('#ePhoneAudio').onchange = async e => {
     const f = e.target.files[0]; if (!f) return;
     toast('Adding the phone recording…', 4000);
@@ -1687,6 +1691,43 @@ function renderEditor(){
   $('#eReopen').onclick = () => { M.status = 'live'; scheduleSave(); go('live'); toast('Press Resume to continue recording.'); };
 }
 function fileBase(){ return `lybs-${slug(M.type)}-${M.date}`; }
+/* ---------- BOARD ACTION ITEMS PAGE ----------
+   Hands this meeting's action items to the board's page on the LYBS Dashboard, which keeps
+   them behind the Dashboard's own sign-in and board roles (and is what the members-only
+   Crossbar page shows in its iframe). Nothing goes in a URL: the page opens in a new window,
+   asks for the items, and they go by postMessage to that one origin only. A board or admin
+   account looks them over there and saves. Sending again replaces this meeting's items and
+   keeps whatever the board already ticked off. */
+const BOARD_PAGE_ORIGIN = 'https://lybs-dashboard.web.app';
+const BOARD_PAGE_URL = BOARD_PAGE_ORIGIN + '/board-actions.html#import';
+function boardActionsPayload(){
+  const acts = M.items.filter(i => i.kind === 'action' && String(i.text || '').trim());
+  return { type: 'lybs-board-actions', v: 1,
+    meeting: { id: M.id, date: M.date, title: `${M.type || 'Board Meeting'}` },
+    items: acts.map(a => {
+      const d = String(a.due || '').trim(), iso = /^\d{4}-\d{2}-\d{2}$/.test(d), ag = agendaById(a.agendaId);
+      return { id: a.id, text: String(a.text).trim(), owner: String(a.owner || '').trim(),
+               dueDate: iso ? d : '', dueText: iso ? '' : d, topic: ag ? ag.title : '' };
+    }) };
+}
+function sendToBoardPage(){
+  const payload = boardActionsPayload();
+  if (!payload.items.length) { toast('This meeting has no action items to send yet.'); return; }
+  const w = window.open(BOARD_PAGE_URL, 'lybs-board-actions');
+  if (!w) { toast('Allow pop-ups for this page, then try again.', 5000); return; }
+  let done = false; const mtg = M;
+  const onMsg = e => {
+    if (e.origin !== BOARD_PAGE_ORIGIN || e.source !== w || !e.data) return;
+    if (e.data.type === 'lybs-board-actions-ready' && !done) w.postMessage(payload, BOARD_PAGE_ORIGIN);
+    if (e.data.type === 'lybs-board-actions-saved') {
+      done = true; window.removeEventListener('message', onMsg);
+      toast(`${e.data.count || payload.items.length} action items are on the board page.`, 4000);
+      if (M === mtg) { M.boardPageSentAt = new Date().toISOString(); scheduleSave(); if (view === 'review') renderReview(); }
+    }
+  };
+  window.addEventListener('message', onMsg);
+  setTimeout(() => window.removeEventListener('message', onMsg), 60 * 60 * 1000);
+}
 /* ---------- SAVE TO DRIVE ----------
    Uses the Google sign-in he already has, with the drive.file permission: the app can only see and change
    the folders and files it made itself. Nothing is public; everything lands in his own Drive. */
@@ -2885,6 +2926,7 @@ function renderApproved(){
             <div class="exports" style="margin-top:10px">
               <button class="btn" id="dEdit">Make more changes</button>
               ${driveShown() ? '<button class="btn" id="dDrive">Save to Drive (minutes + audio)</button>' : ''}
+              ${driveShown() && M.items.some(i => i.kind === 'action') ? '<button class="btn" id="dBoard">Send action items to the board page</button>' : ''}
               <button class="btn" id="dBackup">Save a backup${M.audio.bytes ? ' (with audio)' : ''}</button>
               ${M.audio.bytes ? '<button class="btn" id="dAudio">Download audio (' + (M.audio.bytes/1048576).toFixed(1) + ' MB)</button>' : ''}
               <button class="btn" id="dPdf">Save as PDF (local copy)</button>
@@ -2897,6 +2939,7 @@ function renderApproved(){
   $('#dEdit').onclick = () => { M.minutesStage = 'editing'; scheduleSave(); renderReview(); window.scrollTo(0,0); };
   $('#dBackup').onclick = saveBackup;
   if ($('#dDrive')) $('#dDrive').onclick = driveClick;
+  if ($('#dBoard')) $('#dBoard').onclick = sendToBoardPage;
   if ($('#dAudio')) $('#dAudio').onclick = downloadAudio;
   $('#dPdf').onclick = printMinutes;
 }
