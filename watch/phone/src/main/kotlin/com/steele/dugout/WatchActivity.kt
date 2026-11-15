@@ -64,7 +64,9 @@ class WatchActivity : ComponentActivity() {
         col.addView(text("\nDugout version ${BuildConfig.VERSION_CODE}. Dugout checks for a new version when it opens.", 14f, Color.parseColor("#94A3B8")))
         col.addView(button("Check for updates") { done("update") })
         col.addView(button("Back to Walk-Up") { done("walkup") })
-        setContentView(ScrollView(this).apply { setBackgroundColor(Color.parseColor("#0B1220")); addView(col) })
+        val scroll = ScrollView(this).apply { addView(col) }
+        fitSystemBars(scroll, Color.parseColor("#0B1220"))
+        setContentView(scroll)
         refresh()
     }
 

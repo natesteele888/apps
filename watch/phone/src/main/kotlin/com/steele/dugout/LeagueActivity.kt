@@ -48,6 +48,7 @@ class LeagueActivity : ComponentActivity() {
         col.addView(bar, LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT))
         web = WebView(this)
         col.addView(web, LinearLayout.LayoutParams(MATCH_PARENT, 0, 1f))
+        fitSystemBars(col, Color.parseColor("#0B1220"))
         setContentView(col)
 
         web.settings.apply { javaScriptEnabled = true; domStorageEnabled = true; allowFileAccess = false; setSupportMultipleWindows(false) }
