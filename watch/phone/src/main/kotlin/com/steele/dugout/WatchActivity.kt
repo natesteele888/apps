@@ -11,6 +11,7 @@ import android.view.Gravity
 import android.view.ViewGroup.LayoutParams.MATCH_PARENT
 import android.view.ViewGroup.LayoutParams.WRAP_CONTENT
 import android.widget.Button
+import android.widget.EditText
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.ScrollView
@@ -19,6 +20,7 @@ import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.lifecycle.lifecycleScope
+import com.steele.dugout.shared.Gc
 import com.steele.dugout.shared.Paths
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -26,15 +28,20 @@ import kotlinx.coroutines.withContext
 import org.json.JSONObject
 import java.io.ByteArrayOutputStream
 import java.io.File
+import java.net.HttpURLConnection
+import java.net.URL
 
 /**
  * Watch and pitching settings on the phone: is the watch connected, a background photo for each batter (kept on this phone
- * and the watch only), and a way to open LYBS Ballclub inside Dugout so Walk-Up can read your pitchers and pitch counts.
+ * and the watch only), the GameChanger team for GC Scores on the watch, and a way to open LYBS Ballclub inside Dugout so Walk-Up
+ * can read your pitchers and pitch counts.
  */
 class WatchActivity : ComponentActivity() {
     private lateinit var list: LinearLayout
     private lateinit var watchText: TextView
     private var photoFor: String? = null
+    private lateinit var gcText: TextView
+    private lateinit var gcInput: EditText
 
     private val pick = registerForActivityResult(ActivityResultContracts.GetContent()) { uri ->
         val id = photoFor ?: return@registerForActivityResult
@@ -56,6 +63,16 @@ class WatchActivity : ComponentActivity() {
         col.addView(text("A photo shows behind the batter's name on the watch. Photos stay on this phone and the watch.", 14f, Color.parseColor("#94A3B8")))
         list = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
         col.addView(list)
+        col.addView(text("\nGameChanger team", 18f))
+        col.addView(text("GC Scores on the watch shows this team's GameChanger scoreboard: the live score, the next game and recent finals. Open the team on web.gc.com, copy the page link, and paste it here.", 14f, Color.parseColor("#94A3B8")))
+        gcText = text("", 15f)
+        col.addView(gcText)
+        gcInput = EditText(this).apply { hint = "web.gc.com/teams/… link"; setSingleLine(); setTextColor(Color.WHITE); setHintTextColor(Color.parseColor("#64748B")) }
+        col.addView(gcInput, LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT))
+        val gcRow = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
+        gcRow.addView(button("Send to watch") { saveGc(gcInput.text.toString()) })
+        gcRow.addView(button("Remove") { saveGc(null) })
+        col.addView(gcRow)
         col.addView(text("\nPitching", 18f))
         col.addView(text("Walk-Up reads your pitchers and logged pitch counts from LYBS Ballclub on this phone. Inside Dugout, open your team in Ballclub once, then come back to Walk-Up.", 14f, Color.parseColor("#94A3B8")))
         col.addView(button("Open LYBS Ballclub here") { done("ballclub") })
@@ -68,6 +85,45 @@ class WatchActivity : ComponentActivity() {
         fitSystemBars(scroll, Color.parseColor("#0B1220"))
         setContentView(scroll)
         refresh()
+        showGc()
+    }
+
+    private fun gcPrefs() = getSharedPreferences("gc", MODE_PRIVATE)
+
+    private fun showGc() {
+        val id = gcPrefs().getString("team", "") ?: ""
+        val name = gcPrefs().getString("name", "") ?: ""
+        gcText.text = if (id.isEmpty()) "No team picked yet." else "On the watch: " + name.ifBlank { "team $id" }
+    }
+
+    /** checks the link with GameChanger (so a typo doesn't reach the watch), then sends the team id to the watch */
+    private fun saveGc(input: String?) {
+        if (input == null) {
+            gcPrefs().edit().putString("team", "").putString("name", "").apply()
+            lifecycleScope.launch { try { WearLink.putGcTeam(this@WatchActivity, "") } catch (e: Exception) { /* sent when the watch connects */ } }
+            showGc(); return
+        }
+        val id = Gc.teamId(input)
+        if (id == null) { Toast.makeText(this, "Paste the team's web.gc.com/teams/… link.", Toast.LENGTH_LONG).show(); return }
+        gcText.text = "Checking with GameChanger…"
+        lifecycleScope.launch {
+            val team = withContext(Dispatchers.IO) {
+                try {
+                    val c = URL(Gc.teamUrl(id)).openConnection() as HttpURLConnection
+                    try {
+                        c.connectTimeout = 15_000; c.readTimeout = 15_000
+                        c.setRequestProperty("Accept", "application/json")
+                        if (c.responseCode == 404) null else Gc.parseTeam(c.inputStream.use { String(it.readBytes(), Charsets.UTF_8) })
+                    } finally { c.disconnect() }
+                } catch (e: Exception) { Gc.Team("", "", "") /* no signal: send it anyway */ }
+            }
+            if (team == null) { showGc(); Toast.makeText(this@WatchActivity, "GameChanger doesn't know that team. Check the link.", Toast.LENGTH_LONG).show(); return@launch }
+            gcPrefs().edit().putString("team", id).putString("name", team.name).apply()
+            gcInput.setText("")
+            try { WearLink.putGcTeam(this@WatchActivity, id) } catch (e: Exception) { /* sent when the watch connects */ }
+            showGc()
+            Toast.makeText(this@WatchActivity, "Sent. Open GC Scores on the watch.", Toast.LENGTH_SHORT).show()
+        }
     }
 
     private fun done(open: String) { setResult(RESULT_OK, Intent().putExtra(MainActivity.EXTRA_OPEN, open)); finish() }

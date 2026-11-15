@@ -3,8 +3,11 @@
     <uses-feature android:name="android.hardware.type.watch" />
     <uses-permission android:name="android.permission.VIBRATE" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <!-- GC Scores reads the team's public GameChanger scores (through the phone's connection, or the watch's own Wi-Fi) -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 
-    <!-- One install, two apps in the watch's app list: Walk-Up and Pitch Count. Each works without the other. -->
+    <!-- One install, three apps in the watch's app list: Walk-Up, Pitch Count and GC Scores. Each works without the others. -->
     <application
         android:allowBackup="false"
         android:icon="@mipmap/ic_launcher"
@@ -35,6 +38,19 @@
             android:label="@string/pitch_name"
             android:launchMode="singleTask"
             android:taskAffinity="com.steele.dugout.pitch">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+        <activity
+            android:name=".GameChangerActivity"
+            android:exported="true"
+            android:icon="@mipmap/ic_gc"
+            android:roundIcon="@mipmap/ic_gc"
+            android:label="@string/gc_name"
+            android:launchMode="singleTask"
+            android:taskAffinity="com.steele.dugout.gc">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />

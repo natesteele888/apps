@@ -59,6 +59,14 @@ Nothing goes through the internet or a server. Player names and photos stay on t
 - The limit is the smallest of three numbers: the MAC League daily max for your division (Majors 85, Minors 75, Juniors 95, Seniors 105), your team max, and that pitcher's own limit. These are the same rules as LYBS Ballclub.
 - Pitches count on the watch even if the phone is out of reach. They sync when the two are together again, and each pitch counts once.
 
+**GC Scores** (the red scoreboard icon)
+- Your team's GameChanger scoreboard on your wrist, the same games and scores as the GameChanger scoreboard widget in Ballclub.
+- During a game: a big **LIVE** score, the opponent and the inning. It reads GameChanger again every 30 seconds while the screen is open. Tap it for the line score (runs by inning, then R H E).
+- Between games: **Next** game and time, then **Recent** finals (green win, red loss) and **Coming up**. Tap a final for its line score.
+- Pick the team once on the phone: **Watch › GameChanger team**, paste the team's web.gc.com/teams/… link, tap **Send to watch**.
+- It reads GameChanger's public team page data, so no sign-in. It needs the phone nearby (or the watch's own Wi-Fi). With no signal it shows the last scores it read and when.
+- Only teams scored in GameChanger show up, and the score is only as live as the scorekeeper.
+
 ## What the phone does
 
 - The **Game** screen is the walk-up player. The pitch counter is off at first. To add it, tap **Count pitches too** on the Game screen, or turn on **Settings › Game mode › Pitch counter on the Game screen**. It then sits at the top of Game (+1, Undo, and the Bullpen), with the walk-up player below. Coaches without a watch use it the same way. Turn it off the same way in Settings, or in Bullpen › Pitching settings.
@@ -129,10 +137,22 @@ Both apps must be signed with the same key, because the watch only talks to a ph
 
 - `shared/` holds the message format (`Protocol.kt`) and the pitch math (`PitchCore.kt`). The pitch math is a Kotlin copy of `walkup/pitch-core.js`, and its unit tests match `tests/walkup-pitch.test.cjs`.
 - `phone/` is the Dugout phone app. It's a WebView of the live Walk-Up site (`https://natesteele888.github.io/apps/walkup/`) with a JavaScript bridge (`walkup/bridge.js` on the page side, `Bridge.kt` here). The bridge adds Android text-to-speech, file picking, the microphone and saving to Downloads.
-- `wear/` is the watch install, built with Compose for Wear OS. It has two launcher activities, `WalkUpActivity` and `PitchCountActivity`, so the watch shows two apps. They share `PhoneLink` and `PitchStore`, and one application id with the phone app, which the Wear OS link needs. Its minSdk is 25 (Android Wear 2.0), with java.time desugared, and CI runs lint's NewApi check so it stays that way. An old watch pairs with the phone through Google's Wear OS app, not Galaxy Wearable.
+- `wear/` is the watch install, built with Compose for Wear OS. It has three launcher activities, `WalkUpActivity`, `PitchCountActivity` and `GameChangerActivity` (GC Scores), so the watch shows three apps. They share `PhoneLink` and `PitchStore`, and one application id with the phone app, which the Wear OS link needs. Its minSdk is 25 (Android Wear 2.0), with java.time desugared, and CI runs lint's NewApi check so it stays that way. An old watch pairs with the phone through Google's Wear OS app, not Galaxy Wearable.
 - Build: `./gradlew :shared:test :phone:assembleDebug :wear:assembleDebug` (JDK 17, Android SDK 35). GitHub Actions runs this on every push that touches `watch/` or Walk-Up.
 - The phone app loads the live site. Web changes reach Dugout once they're merged to `main` and published.
 - **Signing and releases.** The workflow signs both apps with the key in the `DUGOUT_KEY` secret (a base64 PKCS12 keystore with the alias `dugout`) and its password in `DUGOUT_KEY_PASSWORD`, sets the version code to the run number, and publishes main builds as releases. The key is never committed: `.github/workflows/dugout-key-setup.yml` makes it once, on GitHub's runner, and saves it straight into the secrets. `phone/.../Updater.kt` reads the releases list, and Android only installs an update signed with the same key.
+
+### GC Scores data (and an Apple Watch version later)
+
+GC Scores reads three public GameChanger URLs straight from the watch, with no key or sign-in. A browser can't call them (CORS), but an app can. LYBS Ballclub's schedule mirror (`lybs-ballclub/scripts/scrape-gamechanger-schedule.mjs`) reads the same feed.
+
+| What | URL | Fields used |
+| --- | --- | --- |
+| Team | `https://api.team-manager.gc.com/public/teams/{teamId}` | `name`, `team_season.season/year/record` |
+| Games | `https://api.team-manager.gc.com/public/teams/{teamId}/games` | `id`, `opponent_team.name`, `start_ts`, `end_ts`, `home_away`, `score.team/opponent_team`, `game_status`, `has_live_stream` |
+| Line score | `https://api.team-manager.gc.com/public/game-stream-processing/{gameId}/details?include=line_scores` | `line_score.team/opponent_team.scores` (runs by inning), `.totals` (R, H, E) |
+
+`teamId` is the short id in the team's web.gc.com/teams/… link. The parsing and the live/final/upcoming rules are in `shared/.../GcCore.kt` with tests. It's plain JSON over HTTPS and nothing in it is Android-only, so a SwiftUI watchOS app could read the same URLs with `URLSession` and copy those rules. The feed has team names, times and scores only. GC Scores doesn't read the team's staff list, and no player names or stats.
 
 ## Setting up another coach
 
