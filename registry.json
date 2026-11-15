@@ -80,11 +80,15 @@
         "autoShots": [],
         "latest": {
           "d": "Nov 15, 2026",
-          "t": "Load the fonts without holding up six apps",
-          "url": "https://github.com/natesteele888/apps/commit/036fbc3def826df877e2c87aa48c4c7526c7ccb8"
+          "t": "Toolbox: show the Loading screen before the Firebase code arrives",
+          "url": "https://github.com/natesteele888/apps/commit/6b97540f0b07172927241b81aaffdd00987fa818"
         },
-        "version": "1.3.3",
+        "version": "1.3.4",
         "history": [
+          {
+            "v": "1.3.4",
+            "t": "Toolbox: show the Loading screen before the Firebase code arrives"
+          },
           {
             "v": "1.3.3",
             "t": "Load the fonts without holding up six apps"
@@ -100,10 +104,6 @@
           {
             "v": "1.3.0",
             "t": "Toolbox: keep the App Store Show box ticked after saving a listing"
-          },
-          {
-            "v": "1.2.9",
-            "t": "App Store: choose which apps are listed (default hidden), only Read 20 on"
           }
         ]
       }
@@ -329,11 +329,15 @@
         "autoShots": [],
         "latest": {
           "d": "Nov 15, 2026",
-          "t": "Load the fonts without holding up six apps",
-          "url": "https://github.com/natesteele888/apps/commit/036fbc3def826df877e2c87aa48c4c7526c7ccb8"
+          "t": "Gameday Picks: paint the page before the Firebase code arrives",
+          "url": "https://github.com/natesteele888/apps/commit/67ebcfa3185eb68095e4da71db6f57fbe69a124b"
         },
-        "version": "1.1.2",
+        "version": "1.1.3",
         "history": [
+          {
+            "v": "1.1.3",
+            "t": "Gameday Picks: paint the page before the Firebase code arrives"
+          },
           {
             "v": "1.1.2",
             "t": "Load the fonts without holding up six apps"
@@ -349,10 +353,6 @@
           {
             "v": "1.0.9",
             "t": "Gameday Picks: scout a team before you pick, and a Standings tab with the playoff picture and team pages"
-          },
-          {
-            "v": "1.0.8",
-            "t": "Gameday Picks: friends without Google can sign up with any email, and any player can share their invite code"
           }
         ],
         "caps": [
@@ -443,12 +443,16 @@
         ],
         "autoShots": [],
         "latest": {
-          "d": "Nov 12, 2026",
-          "t": "Load the PDF and GIF libraries without holding up the page",
-          "url": "https://github.com/natesteele888/ASL-Bengals/commit/88e012c1e73ab6f75befb38f644d34bcf51c4d1a"
+          "d": "Nov 15, 2026",
+          "t": "Play edits: save only what changed, so coaches' saves stop undoing each other",
+          "url": "https://github.com/natesteele888/ASL-Bengals/commit/a730f607abf70e6bc5abcf00bcf63aa01de22850"
         },
-        "version": "1.50.3",
+        "version": "1.50.4",
         "history": [
+          {
+            "v": "1.50.4",
+            "t": "Play edits: save only what changed, so coaches' saves stop undoing each other"
+          },
           {
             "v": "1.50.3",
             "t": "Load the PDF and GIF libraries without holding up the page"
@@ -464,10 +468,6 @@
           {
             "v": "1.50.0",
             "t": "Banner: Proud of you, Bengals (2026 D1 Super Bowl Runner-Up)"
-          },
-          {
-            "v": "1.49.9",
-            "t": "Stat Keeper: make the small buttons easy to tap on the sideline"
           }
         ],
         "caps": [
@@ -766,11 +766,19 @@
         "autoShots": [],
         "latest": {
           "d": "Nov 15, 2026",
-          "t": "Load fonts without holding up the app, division checker and age page",
-          "url": "https://github.com/natesteele888/lybs-ballclub/commit/ef7ed1c707047ad339ce47e8a9e1ede110bc2eb1"
+          "t": "Give the division checker more inner padding on desktop",
+          "url": "https://github.com/natesteele888/lybs-ballclub/commit/d49886832bd03338ca616e965f0447707cc0bb8c"
         },
-        "version": "1.25.9",
+        "version": "1.26.2",
         "history": [
+          {
+            "v": "1.26.1",
+            "t": "Give the division checker more inner padding on desktop"
+          },
+          {
+            "v": "1.26.0",
+            "t": "Let the division checker fill its program page's full width"
+          },
           {
             "v": "1.25.9",
             "t": "Load fonts without holding up the app, division checker and age page"
@@ -782,14 +790,6 @@
           {
             "v": "1.25.7",
             "t": "Copy a game's pitch counts ready for the MAC League site"
-          },
-          {
-            "v": "1.25.6",
-            "t": "Pull every team's roster from the Dashboard with one button"
-          },
-          {
-            "v": "1.25.5",
-            "t": "Bring in pitch counts from Walk-Up's Pitch Count with one tap"
           }
         ],
         "caps": [
@@ -950,12 +950,16 @@
         ],
         "autoShots": [],
         "latest": {
-          "d": "Nov 14, 2026",
-          "t": "Power Program: keep tab and Prev/Next words inside their buttons on a small phone",
-          "url": "https://github.com/natesteele888/fitness-hub/commit/6c5473b22f21ac21809d35a5b36215e6bcdc12ec"
+          "d": "Nov 15, 2026",
+          "t": "Power Program: load the fonts without holding up the first screen",
+          "url": "https://github.com/natesteele888/fitness-hub/commit/66f05976eb4a862454f098387117845aeeca7e63"
         },
-        "version": "1.3.9",
+        "version": "1.4.0",
         "history": [
+          {
+            "v": "1.4.0",
+            "t": "Power Program: load the fonts without holding up the first screen"
+          },
           {
             "v": "1.3.9",
             "t": "Power Program: keep tab and Prev/Next words inside their buttons on a small phone"
@@ -971,10 +975,6 @@
           {
             "v": "1.3.6",
             "t": "Power Program: save progress under a name-free key, copying old progress forward"
-          },
-          {
-            "v": "1.3.5",
-            "t": "Power Program: the reminder builder runs from any copy of the repo"
           }
         ],
         "caps": [
@@ -1189,12 +1189,16 @@
         ],
         "autoShots": [],
         "latest": {
-          "d": "Nov 14, 2026",
-          "t": "Sponsor info form: catch a mistyped email before it sends",
-          "url": "https://github.com/natesteele888/sponsor-banner-inventory/commit/4fab0f4f5fe936bc35f64c951a92974b508925f2"
+          "d": "Nov 15, 2026",
+          "t": "Load the fonts without holding up the sponsor form and banner list",
+          "url": "https://github.com/natesteele888/sponsor-banner-inventory/commit/2ae46b31978c0b4e3b35e4c3acbe2b7368fc367a"
         },
-        "version": "1.2.8",
+        "version": "1.2.9",
         "history": [
+          {
+            "v": "1.2.9",
+            "t": "Load the fonts without holding up the sponsor form and banner list"
+          },
           {
             "v": "1.2.8",
             "t": "Sponsor info form: catch a mistyped email before it sends"
@@ -1210,10 +1214,6 @@
           {
             "v": "1.2.4",
             "t": "Load the map library without holding up the banner list"
-          },
-          {
-            "v": "1.2.3",
-            "t": "Let a keyboard or screen reader open a banner from the list"
           }
         ],
         "caps": [
@@ -1853,12 +1853,16 @@
         ],
         "autoShots": [],
         "latest": {
-          "d": "Nov 13, 2026",
-          "t": "Fix phone-width clips in Who's Where, Eight Count and Play Board",
-          "url": "https://github.com/natesteele888/apps/commit/89d1f611742c334e4259a967f447876f71dc11d1"
+          "d": "Nov 15, 2026",
+          "t": "Who's Where: move focus into a sheet the moment it opens",
+          "url": "https://github.com/natesteele888/apps/commit/0dc22eb7733b0c6f48fb36a581d6ba6454cf3050"
         },
-        "version": "1.0.4",
+        "version": "1.0.5",
         "history": [
+          {
+            "v": "1.0.5",
+            "t": "Who's Where: move focus into a sheet the moment it opens"
+          },
           {
             "v": "1.0.4",
             "t": "Fix phone-width clips in Who's Where, Eight Count and Play Board"
