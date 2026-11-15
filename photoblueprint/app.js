@@ -263,8 +263,9 @@
     if (where) {
       const map = makeMap($("#mini"), { scrollWheelZoom: false, zoomControl: true });
       if (approx) {
-        const area = L.circle([s.lat, s.lon], { radius: C.AREA_RADIUS, color: accent(), weight: 1.2, opacity: .8, fillOpacity: .12, interactive: false, className: "area" }).addTo(map);
-        map.fitBounds(area.getBounds(), { animate: false });
+        // Frame the area first: a circle only joins the map once the map has a view.
+        map.fitBounds(L.latLng(s.lat, s.lon).toBounds(C.AREA_RADIUS * 2), { animate: false });
+        L.circle([s.lat, s.lon], { radius: C.AREA_RADIUS, color: accent(), weight: 1.2, opacity: .8, fillOpacity: .12, interactive: false, className: "area" }).addTo(map);
       } else {
         map.setView([s.lat, s.lon], 15);
         L.marker([s.lat, s.lon], { icon: pinIcon(mine ? "me" : ""), interactive: false }).addTo(map); addWedge(map, s, null, { stroke: true, fillOpacity: .22, length: 70 });
