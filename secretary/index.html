@@ -2986,7 +2986,7 @@ function renderSettings(){
   if (interrupted) { M = interrupted; go('live'); toast('This meeting was interrupted. Everything up to the last few seconds is saved — press Resume.', 6000); }
   else go('home');
   initCloud();
-  if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(() => {});
+  if ('serviceWorker' in navigator && (location.protocol === 'https:' || /^(localhost|127\.0\.0\.1)$/.test(location.hostname))) navigator.serviceWorker.register('sw.js').catch(() => {});
   if (lockId()) tryUnlock();
 })();
 </script>
