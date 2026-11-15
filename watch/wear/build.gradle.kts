@@ -12,7 +12,7 @@ android {
     compileSdk = 35
     defaultConfig {
         applicationId = "com.steele.dugout" // the same as the phone app, so the two can talk
-        minSdk = 30
+        minSdk = 25 // Android Wear 2.0 (older watches) and up; the Galaxy Watch 7 and 8 run Wear OS 5+
         targetSdk = 34
         versionCode = dugoutVersion
         versionName = "1.$dugoutVersion"
@@ -32,13 +32,21 @@ android {
         debug { if (dugoutKey != null) signingConfig = signingConfigs.getByName("dugout") }
     }
     buildFeatures { compose = true }
+    lint {
+        // CI runs lint for calls newer than minSdk, so the app keeps working on older watches.
+        checkOnly += "NewApi"
+        abortOnError = true
+        checkDependencies = true
+    }
     compileOptions {
+        isCoreLibraryDesugaringEnabled = true // java.time (used by the pitch math) on Android 7
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
 }
 kotlin { jvmToolchain(17) }
 dependencies {
+    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.3")
     implementation(project(":shared"))
     implementation(platform("androidx.compose:compose-bom:2024.12.01"))
     implementation("androidx.compose.ui:ui")

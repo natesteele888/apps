@@ -3,7 +3,7 @@
 Dugout is two small Android apps that work together:
 
 - **Dugout for the phone.** This app is the Walk-Up web app full screen, with a thin bar on top showing the speaker, plus **Pocket** and **Watch** buttons. The music still plays on the phone, through your Bluetooth adapter on the Bose L1.
-- **Two watch apps** (Wear OS, Galaxy Watch 7 or 8), from one install:
+- **Two watch apps** (Wear OS, built for the Galaxy Watch 7 or 8, and installable on watches back to Android Wear 2.0), from one install:
   - **Walk-Up**, a remote for the walk-up songs on the phone.
   - **Pitch Count**, a pitch counter.
 
@@ -117,7 +117,7 @@ Both apps must be signed with the same key, because the watch only talks to a ph
 
 - `shared/` holds the message format (`Protocol.kt`) and the pitch math (`PitchCore.kt`). The pitch math is a Kotlin copy of `walkup/pitch-core.js`, and its unit tests match `tests/walkup-pitch.test.cjs`.
 - `phone/` is the Dugout phone app. It's a WebView of the live Walk-Up site (`https://natesteele888.github.io/apps/walkup/`) with a JavaScript bridge (`walkup/bridge.js` on the page side, `Bridge.kt` here). The bridge adds Android text-to-speech, file picking, the microphone and saving to Downloads.
-- `wear/` is the watch install, built with Compose for Wear OS. It has two launcher activities, `WalkUpActivity` and `PitchCountActivity`, so the watch shows two apps. They share `PhoneLink` and `PitchStore`, and one application id with the phone app, which the Wear OS link needs.
+- `wear/` is the watch install, built with Compose for Wear OS. It has two launcher activities, `WalkUpActivity` and `PitchCountActivity`, so the watch shows two apps. They share `PhoneLink` and `PitchStore`, and one application id with the phone app, which the Wear OS link needs. Its minSdk is 25 (Android Wear 2.0), with java.time desugared, and CI runs lint's NewApi check so it stays that way. An old watch pairs with the phone through Google's Wear OS app, not Galaxy Wearable.
 - Build: `./gradlew :shared:test :phone:assembleDebug :wear:assembleDebug` (JDK 17, Android SDK 35). GitHub Actions runs this on every push that touches `watch/` or Walk-Up.
 - The phone app loads the live site. Web changes reach Dugout once they're merged to `main` and published.
 - **Signing and releases.** The workflow signs both apps with the key in the `DUGOUT_KEY` secret (a base64 PKCS12 keystore with the alias `dugout`) and its password in `DUGOUT_KEY_PASSWORD`, sets the version code to the run number, and publishes main builds as releases. The key is never committed: `.github/workflows/dugout-key-setup.yml` makes it once, on GitHub's runner, and saves it straight into the secrets. `phone/.../Updater.kt` reads the releases list, and Android only installs an update signed with the same key.

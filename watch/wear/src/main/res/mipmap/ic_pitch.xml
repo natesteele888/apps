@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- For watches before Android 8 (Android Wear 2.0), which don't have adaptive icons: the same art on a round tile. -->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item>
+        <shape android:shape="oval"><solid android:color="@color/pitch_bg" /></shape>
+    </item>
+    <item android:drawable="@drawable/ic_pitch_fg" />
+</layer-list>

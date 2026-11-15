@@ -15,7 +15,10 @@ object Buzz {
     fun pattern(ctx: Context, vararg ms: Long) {
         val v = vib(ctx) ?: return
         val timings = longArrayOf(0) + ms
-        try { v.vibrate(VibrationEffect.createWaveform(timings, -1)) } catch (e: Exception) { /* no vibration */ }
+        try {
+            if (Build.VERSION.SDK_INT >= 26) v.vibrate(VibrationEffect.createWaveform(timings, -1))
+            else @Suppress("DEPRECATION") v.vibrate(timings, -1) // Android Wear 2.0 watches
+        } catch (e: Exception) { /* no vibration */ }
     }
 
     fun tick(ctx: Context) = pattern(ctx, 25)
