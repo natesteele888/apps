@@ -11,12 +11,6 @@
 <title>Gameday Picks</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Teko:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" media="print" onload="this.media='all'"><noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Teko:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap"></noscript>
-<script src="https://www.gstatic.com/firebasejs/11.6.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/11.6.0/firebase-auth-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/11.6.0/firebase-firestore-compat.js"></script>
-<script src="core.js"></script>
-<script src="stats.js"></script>
-<script src="league.js"></script>
 <style>
 :root{--bg:#16231c;--panel:#1f2e24;--panel-2:#26382b;--line:rgba(245,243,236,.14);--line-soft:rgba(245,243,236,.07);
   --ink:#f5f3ec;--ink-dim:#b9c2b7;--gold:#d6a94c;--teal:#4fa8a0;--win:#5a9c68;--loss:#d06a62;--r:10px}
@@ -189,6 +183,13 @@ body.x-noscroll{overflow:hidden}
 <body>
 <div class="wrap" id="app"><div class="gate"><div class="box"><img src="/apps/icons/picks-192.png" alt=""><h1>Gameday Picks</h1><p style="color:var(--ink-dim)">Loading…</p></div></div></div>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
+<!-- Firebase and the app code load after the page so it paints first on a slow signal -->
+<script src="https://www.gstatic.com/firebasejs/11.6.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/11.6.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/11.6.0/firebase-firestore-compat.js"></script>
+<script src="core.js"></script>
+<script src="stats.js"></script>
+<script src="league.js"></script>
 <script>
 "use strict";
 /* Gameday Picks: NFL, MLB, NBA and NHL picks for invited players (NFL by the week, the others by the day).
