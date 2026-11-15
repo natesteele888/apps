@@ -1,7 +1,7 @@
 // Network first, so updates show up right away; falls back to the last saved copy when offline.
 // The trainer itself lives in LYBS Ballclub (/lybs-ballclub/ on this same site), so its
 // engine, look and rule files are saved here too, under this app's own cache.
-const CACHE = "situations-v19";
+const CACHE = "situations-v20";
 const SHELL = ["./", "manifest.json", "/apps/icons/situations-192.png", "/apps/icons/situations-512.png",
   "/lybs-ballclub/js/situations.js", "/lybs-ballclub/css/situations.css",
   "/lybs-ballclub/data/situations.csv", "/lybs-ballclub/data/responsibilities.csv"];
