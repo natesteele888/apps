@@ -39,7 +39,7 @@ jobs:
         # The tests block web fonts, so pages fall back to the system's own. A bare Linux runner only has wide
         # DejaVu, which no phone uses; Roboto (Android's font) and Liberation (Arial and Arial Narrow sizes) match phones.
         run: |
-          sudo apt-get install -y -qq fonts-roboto fonts-liberation >/dev/null
+          sudo apt-get install -y -qq fonts-roboto fonts-liberation fonts-liberation-sans-narrow >/dev/null
           mkdir -p ~/.config/fontconfig
           cat > ~/.config/fontconfig/fonts.conf <<'XML'
           <?xml version="1.0"?>
@@ -51,5 +51,10 @@ jobs:
           XML
           fc-cache -f >/dev/null
           fc-match sans-serif; fc-match system-ui; fc-match "Arial Narrow"
+      - name: Keep outside sites out
+        # The tests swap the site's own install.js and health.js for empty scripts and block web fonts, but an app's
+        # service worker fetches those straight from the internet, past the test's block: the live install bar then
+        # covers buttons and web fonts change text sizes. Pointing those hosts at nowhere keeps the tests as written.
+        run: printf '127.0.0.1 %s\n' natesteele888.github.io fonts.googleapis.com fonts.gstatic.com | sudo tee -a /etc/hosts
       - name: Tests
         run: NODE_PATH=/tmp/pw/node_modules tests/run.sh ${{ matrix.app }}
