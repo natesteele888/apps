@@ -278,6 +278,37 @@ const TODAY = '2026-11-08';
       await page.goto(srv.url); await page.waitForSelector('.cover'); eq(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth), true, w + ' shelf');
     }
   });
+  await test('computer: at laptop size the home, reader and log use the wide screen, keys turn pages, and the words say computer', async () => {
+    const o = await newPage(br, { today: TODAY, ctx: { viewport: { width: 1366, height: 700 }, deviceScaleFactor: 1 } }); const { page, errors } = o;
+    await page.clock.install({ time: new Date('2026-11-08T19:00:00') }); await page.goto(srv.url); await page.waitForSelector('.cover');
+    const h = await page.evaluate(() => { const r = s => document.querySelector(s).getBoundingClientRect(), tops = [...document.querySelectorAll('.cover')].map(e => Math.round(e.getBoundingClientRect().top));
+      return { sw: document.documentElement.scrollWidth, cw: document.documentElement.clientWidth, today: r('.today'), shelf: r('.shelf'), nav: r('#nav'), perRow: tops.filter(t => t === tops[0]).length }; });
+    assert.ok(h.sw <= h.cw, 'no sideways scroll'); assert.ok(h.shelf.left > h.today.right, "the book shop sits beside tonight's card"); assert.ok(h.perRow >= 4, h.perRow + ' books in a row');
+    assert.ok(h.nav.height > 600 && h.nav.width < 160 && h.nav.left === 0, 'Books and My Log are a rail down the left'); assert.ok(h.today.left >= h.nav.right, 'the rail covers nothing');
+    assert.ok(/this computer/.test(await page.locator('.hextra .fine').innerText()), 'says computer, not phone');
+    await page.screenshot({ path: SHOTS + '/read20-desktop-shelf.png' });
+    await page.locator('#gear').click(); await page.locator('#sd').waitFor(); const card = await page.locator('.card.sheet').boundingBox(); assert.ok(card.y > 10 && card.y + card.height < 690, 'settings open in the middle');
+    eq(await page.evaluate(() => document.getElementById('app').inert), true, 'the screen under the pop-up cannot be clicked or tabbed to');
+    await page.keyboard.press('Escape'); eq(await page.locator('.overlay').count(), 0, 'Escape closes it'); eq(await page.evaluate(() => document.getElementById('app').inert), false);
+    await page.locator('.cover').first().click(); await page.waitForSelector('.reader');
+    const r = await page.evaluate(() => { const g = s => document.querySelector(s).getBoundingClientRect(); return { pic: g('.pic'), text: g('.text'), nav: g('.rnav'), tools: g('.tools'), vh: innerHeight, sh: document.documentElement.scrollHeight }; });
+    assert.ok(r.text.left >= r.pic.right, 'the words sit beside the picture'); assert.ok(r.nav.bottom <= r.vh + 1 && r.tools.bottom <= r.vh + 1, 'page buttons on screen'); assert.ok(r.sh <= r.vh + 1, 'no scrolling to reach them');
+    await page.screenshot({ path: SHOTS + '/read20-desktop-reader.png' });
+    const total = +(await page.locator('.pgnum').innerText()).match(/of (\d+)/)[1], pg = async () => page.locator('.pgnum').innerText();
+    await page.keyboard.press('Space'); eq(await pg(), 'Page 2 of ' + total, 'Space'); await page.keyboard.press('ArrowRight'); eq(await pg(), 'Page 3 of ' + total, 'Right arrow');
+    await page.keyboard.press('Shift+Space'); eq(await pg(), 'Page 2 of ' + total, 'Shift+Space'); await page.keyboard.press('PageUp'); eq(await pg(), 'Page 1 of ' + total, 'Page Up');
+    await page.keyboard.down('ArrowRight'); await page.keyboard.down('ArrowRight'); await page.keyboard.down('ArrowRight'); await page.keyboard.up('ArrowRight'); eq(await pg(), 'Page 2 of ' + total, 'a held key turns one page');
+    await page.locator('.w').first().focus(); await page.keyboard.press('Space'); eq(await page.locator('.w.hl').count(), 1, 'Space on a word lights it up'); eq(await pg(), 'Page 2 of ' + total, 'and does not turn the page');
+    for (let i = 2; i <= total; i++) await page.keyboard.press('PageDown');
+    await page.locator('.the-end').waitFor(); const first = await page.locator('.the-end p').first().innerText();
+    await page.keyboard.press('Enter'); await page.waitForFunction(t => !document.querySelector('.the-end') && document.querySelector('.pgnum') && /^Page 1 /.test(document.querySelector('.pgnum').innerText), first);
+    assert.ok(/^#b\//.test(await page.evaluate(() => location.hash)), 'Enter on The End opened the next story');
+    await page.goto(srv.url + '#log'); await page.waitForSelector('.cal');
+    const g = await page.evaluate(() => { const b = s => document.querySelector(s).getBoundingClientRect(); return { cal: b('.logcal'), stats: b('.stats'), sw: document.documentElement.scrollWidth, cw: document.documentElement.clientWidth }; });
+    assert.ok(g.stats.left >= g.cal.right, 'the numbers sit beside the month'); assert.ok(g.sw <= g.cw);
+    await page.screenshot({ path: SHOTS + '/read20-desktop-log.png' });
+    eq(errors.length, 0, errors.join('|'));
+  });
   await test('log screen: tonight can be saved from right there (file and cloud buttons), and the total is in minutes not hours', async () => {
     const { page } = await mk(); await page.locator('#manual').click(); await page.fill('#mm', '30'); await page.locator('#ms').click(); await page.waitForSelector('.cover');
     await page.locator('#nav button[data-go="log"]').click(); await page.waitForSelector('.keep');
@@ -310,7 +341,7 @@ const TODAY = '2026-11-08';
     await page.locator('.syl').nth(1).click(); assert.ok(await page.locator('.syl.on').count() === 1); await page.clock.runFor(5000); assert.ok((await sec(page)) >= before + 5, 'timer kept going while the pop-up was open');
     await page.locator('#wpdone').click(); await page.locator('#nextp').click(); const the = page.locator('.w', { hasText: /^The$/ }).first(); await press(the, 600); await page.locator('.wordpop').waitFor();
     assert.ok(/tricky/i.test(await page.locator('.wp-sub').innerText())); eq(await page.locator('.snd').count(), 0, 'no sound chips for a tricky word');
-    await page.keyboard.press('Escape'); await page.locator('#wpdone').click(); eq(await page.locator('.pgnum').innerText(), 'Page 2 of 5', 'pressing did not turn the page');
+    await page.keyboard.press('Escape'); await page.locator('.wordpop').waitFor({ state: 'detached' }); eq(await page.locator('.pgnum').innerText(), 'Page 2 of 5', 'pressing did not turn the page, and Escape closed the pop-up');
   });
   await test('log from home + settings: minutes count, goal changes, name shows; survives reload', async () => {
     const { page, ctx } = await mk(); await page.locator('#manual').click();
