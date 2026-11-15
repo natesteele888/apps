@@ -210,6 +210,11 @@ details.howto li{margin-bottom:6px}
 .noteadd{display:flex;gap:6px;align-items:flex-end}
 .noteadd textarea{flex:1;min-height:44px}
 .notehint{font-size:11.5px;color:var(--text-3);margin:4px 0 0}
+.between{border:1px solid rgba(255,194,75,.45);border-left:4px solid var(--amber);background:rgba(255,194,75,.08);border-radius:10px;padding:12px 14px;margin:16px 0 0}
+.between h3{margin:0 0 4px;font:600 13px var(--label);letter-spacing:.8px;text-transform:uppercase;color:var(--amber)}
+.between ul{margin:6px 0 0;padding-left:18px;font-size:13.5px}
+.between li{margin:3px 0}
+.between .bw{color:var(--text-3);font-size:12px}
 
 /* ---------- modal ---------- */
 .modal-back{position:fixed;inset:0;background:rgba(4,6,24,.72);display:grid;place-items:center;z-index:50;padding:16px}
@@ -887,6 +892,7 @@ function renderSetup(){
         <h2 style="margin-top:22px">Agenda</h2>
         <div class="agenda-edit" id="agEdit"></div>
         <div class="row"><button class="btn sm" id="agAdd">+ Add item</button><button class="btn sm ghost" id="agReset">Reset to standard agenda</button></div>
+        <div id="betweenBox"></div>
       </div>
       <div class="card">
         <h2>Attendance <span style="color:var(--text-3);font-family:var(--body);letter-spacing:0;text-transform:none;font-size:13px">— tap to mark absent</span></h2>
@@ -906,6 +912,7 @@ function renderSetup(){
     </div>`;
 
   const bind = (id, key, ev='input') => $(id).addEventListener(ev, e => { M[key] = e.target.value; scheduleSave(); });
+  drawBetween();
   bind('#fType','type','change'); bind('#fDate','date','change'); bind('#fLoc','location'); bind('#fPres','presiding','change'); bind('#fRec','recorder','change'); bind('#fGuests','guests'); bind('#fPlan','plannedMin');
 
   const openDetail = new Set();   // items whose text box stays open even while it is empty
@@ -1163,6 +1170,7 @@ function renderLive(){
         <h2 style="padding:2px 6px 0">Agenda</h2>
         <div class="agenda-live" id="agLive"></div>
         <button class="btn sm ghost" id="agAddLive" style="margin:8px 6px 4px">+ Add topic</button>
+        <div id="betweenLive" style="padding:0 6px">${betweenLiveHTML()}</div>
         <h2 style="padding:14px 6px 0;margin-bottom:6px">Attendance</h2>
         <div style="padding:0 6px;font-size:13px;color:var(--text-2)" id="attMini"></div>
       </div>
@@ -1642,9 +1650,9 @@ function renderEditor(){
           <p class="notehint" style="margin:8px 0 0">Saves the minutes as a Google Doc and a PDF, with the audio, in ${esc(DRIVE_ROOT_NAME)} › ${esc(driveMeetingName())}. Then it drafts the email to the board in Gmail for you to send.</p>
           ${M.drivePdfId ? `<button class="btn" id="eMail" style="width:100%;justify-content:center;margin-top:10px">${M.boardEmailDraftedAt ? 'Draft the board email again' : 'Draft the board email'}</button>` : ''}`
           : '<button class="btn primary big" id="eCreate" style="width:100%;justify-content:center">Create minutes</button>'}
-          ${driveShown() && actions.length ? `<div class="stepl" style="margin-top:14px">4. Board action items page</div>
+          ${driveShown() && (actions.length || betweenItems().length) ? `<div class="stepl" style="margin-top:14px">4. Board action items page</div>
           <button class="btn" id="eBoard" style="width:100%;justify-content:center">${M.boardPageSentAt ? 'Send the action items again' : 'Send action items to the board page'}</button>
-          <p class="notehint" style="margin:8px 0 0">Puts this meeting's ${actions.length} action item${actions.length === 1 ? '' : 's'} on the board-only page, grouped by person with due dates. You check them and tap Save there.</p>` : ''}
+          <p class="notehint" style="margin:8px 0 0">${M.boardPageSentAt ? `Sent ${esc(fmtSentAt(M.boardPageSentAt))}. ` : ''}Saving the minutes to Drive sends this meeting's ${actions.length} action item${actions.length === 1 ? '' : 's'} to the board-only page on its own, grouped by person with due dates${betweenItems().length ? `, and marks the ${betweenItems().length} added between meetings as read into these minutes` : ''}. Use this button if that didn't go through.</p>` : ''}
           <details class="more" style="margin-top:14px"><summary style="cursor:pointer;color:var(--text-2);font-weight:600">More options</summary>
             <div class="exports" style="margin-top:10px">
               ${driveShown() ? '<button class="btn" id="eCreate">Email me a review copy first</button>' : ''}
@@ -1675,7 +1683,7 @@ function renderEditor(){
   $('#eCreate').onclick = createMinutes;
   if ($('#eFinish')) $('#eFinish').onclick = finishToDrive;
   if ($('#eMail')) $('#eMail').onclick = () => openBoardEmail();
-  if ($('#eBoard')) $('#eBoard').onclick = sendToBoardPage;
+  if ($('#eBoard')) $('#eBoard').onclick = () => sendToBoardPage();
   if ($('#ePhoneAudio')) $('#ePhoneAudio').onchange = async e => {
     const f = e.target.files[0]; if (!f) return;
     toast('Adding the phone recording…', 4000);
@@ -1708,26 +1716,97 @@ function boardActionsPayload(){
       const d = String(a.due || '').trim(), iso = /^\d{4}-\d{2}-\d{2}$/.test(d), ag = agendaById(a.agendaId);
       return { id: a.id, text: String(a.text).trim(), owner: String(a.owner || '').trim(),
                dueDate: iso ? d : '', dueText: iso ? '' : d, topic: ag ? ag.title : '' };
-    }) };
+    }),
+    // Items added on the board page between meetings that these minutes read in.
+    reported: betweenItems().map(b => b.id) };
 }
-function sendToBoardPage(){
-  const payload = boardActionsPayload();
-  if (!payload.items.length) { toast('This meeting has no action items to send yet.'); return; }
+// What was sent last, so saving the minutes again doesn't reopen the board page for nothing.
+const boardSendKey = p => JSON.stringify([p.meeting, p.items, p.reported]);
+const fmtSentAt = t => { const d = new Date(t); return isNaN(d) ? '' : d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + ' at ' + d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }); };
+// opts.auto: sent on its own after the minutes are saved. The board page then saves without a tap once the
+// secretary's admin account is signed in there. Returns 'sent', 'same' (already sent as is), 'none' or 'blocked'.
+function sendToBoardPage(opts = {}){
+  const payload = boardActionsPayload(), key = boardSendKey(payload);
+  if (!payload.items.length && !payload.reported.length) { if (!opts.auto) toast('This meeting has no action items to send yet.'); return 'none'; }
+  if (opts.auto && M.boardPageSentKey === key) return 'same';
+  if (opts.auto) payload.auto = true;
   const w = window.open(BOARD_PAGE_URL, 'lybs-board-actions');
+  if (!w) { if (!opts.auto) toast('Allow pop-ups for this page, then try again.', 5000); return 'blocked'; }
+  let done = false; const mtg = M;
+  const onMsg = e => {
+    if (e.origin !== BOARD_PAGE_ORIGIN || e.source !== w || !e.data) return;
+    if (e.data.type === 'lybs-board-actions-ready' && e.data.want !== 'between' && !done) w.postMessage(payload, BOARD_PAGE_ORIGIN);
+    if (e.data.type === 'lybs-board-actions-saved' && (!e.data.meetingId || e.data.meetingId === payload.meeting.id)) {
+      done = true; window.removeEventListener('message', onMsg);
+      const n = e.data.count != null ? e.data.count : payload.items.length;
+      toast(`${n} action item${n === 1 ? '' : 's'} ${n === 1 ? 'is' : 'are'} on the board page.`, 4000);
+      if (M === mtg) {
+        M.boardPageSentAt = new Date().toISOString(); M.boardPageSentKey = key;
+        M.betweenReported = [...new Set([...(M.betweenReported || []), ...payload.reported])];
+        scheduleSave(); if (view === 'review') renderReview();
+      }
+    }
+  };
+  window.addEventListener('message', onMsg);
+  setTimeout(() => window.removeEventListener('message', onMsg), 60 * 60 * 1000);
+  return 'sent';
+}
+/* ---------- ACTION ITEMS ADDED BETWEEN MEETINGS ----------
+   The secretary can add an item on the board page between meetings. Before the next meeting,
+   "Check the board page" asks the page (same window handoff, same one origin) for the ones added
+   since the last meeting. They show as a callout on the setup and live screens and get their own
+   section in the minutes, so they're read into the record. Sending this meeting's items then marks
+   them as read in, and the board page shows them with this meeting. */
+const BETWEEN_URL = BOARD_PAGE_ORIGIN + '/board-actions.html#between';
+const BETWEEN_STATUS = { not_started: 'Not started', in_progress: 'In progress', blocked: 'Blocked', done: 'Complete' };
+const betweenItems = () => (M && Array.isArray(M.betweenItems)) ? M.betweenItems : [];
+function cleanBetween(list){
+  const clip = (v, n) => String(v ?? '').replace(/\s+/g, ' ').trim().slice(0, n), iso = v => /^\d{4}-\d{2}-\d{2}$/.test(String(v || '')) ? String(v) : '';
+  return (Array.isArray(list) ? list : []).slice(0, 50).map(x => ({
+    id: clip(x && x.id, 80), text: clip(x && x.text, 600), owner: clip(x && x.owner, 120),
+    dueDate: iso(x && x.dueDate), dueText: clip(x && x.dueText, 80), topic: clip(x && x.topic, 160),
+    addedOn: iso(x && x.addedOn), status: BETWEEN_STATUS[x && x.status] ? x.status : 'not_started',
+  })).filter(x => /^between__[A-Za-z0-9_-]+$/.test(x.id) && x.text);
+}
+// A fresh list replaces the old one, except items this meeting already read in (the board page no longer lists those).
+function mergeBetween(fresh){
+  const kept = betweenItems().filter(b => (M.betweenReported || []).includes(b.id) && !fresh.some(f => f.id === b.id));
+  return kept.concat(fresh);
+}
+function checkBetween(){
+  const w = window.open(BETWEEN_URL, 'lybs-board-actions');
   if (!w) { toast('Allow pop-ups for this page, then try again.', 5000); return; }
   let done = false; const mtg = M;
   const onMsg = e => {
     if (e.origin !== BOARD_PAGE_ORIGIN || e.source !== w || !e.data) return;
-    if (e.data.type === 'lybs-board-actions-ready' && !done) w.postMessage(payload, BOARD_PAGE_ORIGIN);
-    if (e.data.type === 'lybs-board-actions-saved') {
+    if (e.data.type === 'lybs-board-actions-ready' && e.data.want === 'between' && !done) w.postMessage({ type: 'lybs-board-between-request' }, BOARD_PAGE_ORIGIN);
+    if (e.data.type === 'lybs-board-between' && e.data.v === 1) {
       done = true; window.removeEventListener('message', onMsg);
-      toast(`${e.data.count || payload.items.length} action items are on the board page.`, 4000);
-      if (M === mtg) { M.boardPageSentAt = new Date().toISOString(); scheduleSave(); if (view === 'review') renderReview(); }
+      const list = cleanBetween(e.data.items);
+      if (M === mtg) { M.betweenItems = mergeBetween(list); M.betweenCheckedAt = new Date().toISOString(); scheduleSave(); refreshBetween(); }
+      toast(list.length ? `${list.length} action item${list.length === 1 ? ' was' : 's were'} added since the last meeting.` : 'Nothing was added on the board page since the last meeting.', 4000);
     }
   };
   window.addEventListener('message', onMsg);
   setTimeout(() => window.removeEventListener('message', onMsg), 60 * 60 * 1000);
 }
+const betweenDue = b => b.dueText || (b.dueDate ? fmtDateShort(b.dueDate) : '');
+const betweenLine = b => `${esc(b.text)}${b.owner ? ' — <b>' + esc(b.owner) + '</b>' : ''}${betweenDue(b) ? ', by ' + esc(betweenDue(b)) : ''} <span class="bw">· added ${esc(b.addedOn ? fmtDateShort(b.addedOn) : 'between meetings')} · ${esc(BETWEEN_STATUS[b.status])}</span>`;
+function betweenLiveHTML(){
+  const list = betweenItems(); if (!list.length) return '';
+  return `<div class="between"><h3>Read into the minutes</h3><div style="font-size:13px;color:var(--text-2)">${list.length} action item${list.length === 1 ? ' was' : 's were'} added between meetings:</div><ul>${list.map(b => `<li>${betweenLine(b)}</li>`).join('')}</ul></div>`;
+}
+function drawBetween(){
+  const box = $('#betweenBox'); if (!box) return;
+  const list = betweenItems(), checked = M.betweenCheckedAt ? fmtSentAt(M.betweenCheckedAt) : '';
+  if (!driveShown() && !list.length) { box.innerHTML = ''; return; }
+  box.innerHTML = `<div class="between"><h3>Added since the last meeting</h3>
+    ${list.length ? `<div style="font-size:13px;color:var(--text-2)">Action items added on the board page between meetings. They show during the meeting and go in the minutes.</div><ul>${list.map(b => `<li>${betweenLine(b)}</li>`).join('')}</ul>`
+      : `<div style="font-size:13px;color:var(--text-2)">${checked ? 'Nothing was added on the board page since the last meeting.' : 'Check the board page for action items added between meetings, so they get read into the minutes.'}</div>`}
+    ${driveShown() ? `<div class="row" style="margin-top:8px"><button class="btn sm" id="betweenCheck">${checked ? 'Check again' : 'Check the board page'}</button>${checked ? `<span class="notehint" style="margin:0">Checked ${esc(checked)}</span>` : ''}</div>` : ''}</div>`;
+  const b = $('#betweenCheck'); if (b) b.onclick = checkBetween;
+}
+function refreshBetween(){ drawBetween(); const l = $('#betweenLive'); if (l) l.innerHTML = betweenLiveHTML(); }
 /* ---------- SAVE TO DRIVE ----------
    Uses the Google sign-in he already has, with the drive.file permission: the app can only see and change
    the folders and files it made itself. Nothing is public; everything lands in his own Drive. */
@@ -1848,10 +1927,17 @@ function finishToDrive(){
   if (driveBusy) { toast('Already saving to Drive…'); return; }
   let tp; try { tp = driveToken(); } catch(e){ tp = Promise.reject(e); }
   saveToDrive(tp, { after: r => {
-    openModal(`<h3>Minutes saved to Drive</h3><p>In <b>${esc(DRIVE_ROOT_NAME)} › ${esc(driveMeetingName())}</b>:</p><ul>${r.done.map(d => `<li>${esc(d)}</li>`).join('')}</ul>${r.notes.map(n => `<p class="notehint">${esc(n)}</p>`).join('')}
+    // The minutes are final: their action items go to the board page on their own.
+    const sent = sendToBoardPage({ auto: true });
+    const n = boardActionsPayload().items.length;
+    const boardLine = sent === 'sent' ? `<p class="notehint">The ${n} action item${n === 1 ? '' : 's'} went to the board page in a new tab. It saves them once you're signed in there.</p>`
+      : sent === 'blocked' ? `<p class="notehint" style="color:var(--amber)">The board page couldn't open on its own because Chrome blocked the pop-up. Tap Send action items below, and allow pop-ups for this page (the icon at the right end of the address bar) so it goes on its own next time.</p>`
+      : sent === 'same' ? `<p class="notehint">The action items are already on the board page as they are.</p>` : '';
+    openModal(`<h3>Minutes saved to Drive</h3><p>In <b>${esc(DRIVE_ROOT_NAME)} › ${esc(driveMeetingName())}</b>:</p><ul>${r.done.map(d => `<li>${esc(d)}</li>`).join('')}</ul>${r.notes.map(n => `<p class="notehint">${esc(n)}</p>`).join('')}${boardLine}
       <p style="margin-top:12px">Last step: the email to the board${boardList().length ? ' (' + boardList().length + ' addresses)' : ''}, with a link to the PDF. It opens in Gmail for you to check and send.</p>
-      <div class="foot"><a class="btn ghost" href="https://drive.google.com/drive/folders/${esc(r.folder)}" target="_blank" rel="noopener">Open the folder</a><button class="btn primary" id="drvMail">Draft the board email</button></div>`);
+      <div class="foot"><a class="btn ghost" href="https://drive.google.com/drive/folders/${esc(r.folder)}" target="_blank" rel="noopener">Open the folder</a>${sent === 'blocked' ? '<button class="btn" id="drvBoard">Send action items</button>' : ''}<button class="btn primary" id="drvMail">Draft the board email</button></div>`);
     $('#drvMail').onclick = () => { openBoardEmail(r.pdfId); closeModal(); renderReview(); };
+    if ($('#drvBoard')) $('#drvBoard').onclick = () => { if (sendToBoardPage() === 'sent') $('#drvBoard').remove(); };
   } });
 }
 function driveClick(){
@@ -2648,6 +2734,12 @@ function buildHandoff(){
     });
     L.push('');
   });
+  if (betweenItems().length) {
+    L.push(`## Action items added between meetings (authoritative)`);
+    L.push(`Added on the board's action items page after the last meeting. Give them their own short section, "Action Items Added Between Meetings", before the Action Items, listing each with its owner, the date it was added and its status, so they are read into the record. Don't repeat them in the Action Items.`);
+    betweenItems().forEach(b => L.push(`- ADDED ${b.addedOn ? fmtDateShort(b.addedOn) : '(date not given)'} · ${b.text} · Owner: ${b.owner || 'unassigned'} · Due: ${betweenDue(b) || 'none given'} · Status: ${BETWEEN_STATUS[b.status]}`));
+    L.push('');
+  }
   L.push(`## Transcript by agenda topic (raw speech-to-text)`);
   M.agenda.forEach((a, i) => {
     const segs = M.segments.filter(s => s.agendaId === a.id && s.src !== 'phone'), ps = M.segments.filter(s => s.agendaId === a.id && s.src === 'phone');
@@ -2719,6 +2811,9 @@ function minutesHTML(){
     ${sections || '<p class="ph">Nothing captured yet.</p>'}
     <p style="margin-top:22px">${M.adjourned ? `The meeting was adjourned at ${esc(to12(M.adjourned))}.` : ''}</p>
     ${allDates.length ? `<h4><span class="no">◷</span>Important Dates</h4><table><thead><tr><th style="width:30%">Date</th><th>What</th></tr></thead><tbody>${allDates.map(d => `<tr><td>${esc(d.when ? fmtDateShort(d.when) : '—')}</td><td>${esc(d.text)}</td></tr>`).join('')}</tbody></table>` : ''}
+    ${betweenItems().length ? `<h4><span class="no">+</span>Action Items Added Between Meetings</h4>
+    <p>These were added to the board's action items after the last meeting and read into the record at this one:</p>
+    <table><thead><tr><th>Action item</th><th style="width:22%">Owner</th><th style="width:16%">Added</th><th style="width:16%">Status</th></tr></thead><tbody>${betweenItems().map(b => `<tr><td>${esc(b.text)}${betweenDue(b) ? `<div style="font-size:10.5px;color:#7E8284;margin-top:1px">Due ${esc(betweenDue(b))}</div>` : ''}</td><td>${esc(b.owner || 'To be decided')}</td><td>${esc(b.addedOn ? fmtDateShort(b.addedOn) : '—')}</td><td>${esc(BETWEEN_STATUS[b.status])}</td></tr>`).join('')}</tbody></table>` : ''}
     <h4><span class="no">▸</span>Open Items</h4>
     <p><span class="lbl">Action items</span>${allActions.length ? '' : 'None.'}</p>
     ${allActions.length ? actionGroupsHTML(allActions) : ''}
@@ -2939,7 +3034,7 @@ function renderApproved(){
   $('#dEdit').onclick = () => { M.minutesStage = 'editing'; scheduleSave(); renderReview(); window.scrollTo(0,0); };
   $('#dBackup').onclick = saveBackup;
   if ($('#dDrive')) $('#dDrive').onclick = driveClick;
-  if ($('#dBoard')) $('#dBoard').onclick = sendToBoardPage;
+  if ($('#dBoard')) $('#dBoard').onclick = () => sendToBoardPage();
   if ($('#dAudio')) $('#dAudio').onclick = downloadAudio;
   $('#dPdf').onclick = printMinutes;
 }
