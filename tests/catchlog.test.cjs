@@ -50,7 +50,8 @@ fs.writeFileSync(PHOTO, Buffer.from('iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAIAAACQkWg
   const pages = [];
   const leaflet = process.env.LEAFLET && fs.existsSync(path.join(process.env.LEAFLET, 'leaflet.js')) ? process.env.LEAFLET : null;
   const mkPhone = async () => {
-    const ctx = await br.newContext({ viewport: { width: 390, height: 844 }, serviceWorkers: 'block' });
+    const ctx = await br.newContext({ viewport: { width: 390, height: 844 }, serviceWorkers: 'block',
+      geolocation: { latitude: 42.55, longitude: -71.75 }, permissions: ['geolocation'] });
     await ctx.exposeFunction('__fsGet', async p => deny ? { __deny: true } : (cloud.has(p) ? JSON.parse(JSON.stringify(cloud.get(p))) : null));
     await ctx.exposeFunction('__fsSet', async (p, d) => { if (deny) return 'deny'; cloud.set(p, JSON.parse(JSON.stringify(d))); return 'ok'; });
     await ctx.exposeFunction('__fsDel', async p => { cloud.delete(p); });
@@ -123,7 +124,10 @@ fs.writeFileSync(PHOTO, Buffer.from('iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAIAAACQkWg
     await click(A.page, 'LOG A CATCH');
     await A.page.waitForSelector('#speciesInput');
     assert.ok(await A.page.locator('#saveCatchBtn').isDisabled(), 'needs a spot and species first');
-    await A.page.fill('#newSpotNameInput', 'Test Pond'); await click(A.page, 'Use This Spot');
+    await A.page.fill('#newSpotNameInput', 'Test Pond');
+    // A GPS pin, so the Spots tab has something to put on its map.
+    await click(A.page, 'Use My Location'); await A.page.waitForSelector('text=Location Pinned');
+    await click(A.page, 'Use This Spot');
     await A.page.fill('#speciesInput', 'Largemouth Bass'); await A.page.fill('#weightInput', '3.5');
     await A.page.setInputFiles('#catchPhotoInput', PHOTO);
     await A.page.waitForSelector('text=Photo Added');
