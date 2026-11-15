@@ -383,6 +383,12 @@
 
   /* Ready / No song / No voice / needs a file. `have(key)` says whether a saved audio file is on this phone. */
   var STATUS_TEXT = { ready: "Ready", "no-song": "No song", "no-voice": "No voice", empty: "Nothing set up", "needs-song": "Needs song file", "needs-voice": "Needs voice file" };
+  /* The announcer that actually plays for a player: none when their song is a clip that already says the name. */
+  function activeVoice(p, songs) {
+    var song = p && p.songId ? songById(songs, p.songId) : null;
+    return song && song.intro ? null : (p && p.voice) || null;
+  }
+  function saysName(p, songs) { var song = p && p.songId ? songById(songs, p.songId) : null; return !!(song && song.intro); }
   function statusOf(p, songs, have) {
     var song = p.songId ? songById(songs, p.songId) : null, said = !!(song && song.intro), v = said ? null : p.voice;
     var songOk = song && (song.kind === "synth" || have("s:" + song.id)), voiceOk = said || (v && (v.kind === "tts" || have("v:" + v.id)));
@@ -807,9 +813,6 @@
     var m = /^\s*([A-Za-zÀ-ɏ][A-Za-zÀ-ɏ'.]*(?:\s+[A-Za-zÀ-ɏ][A-Za-zÀ-ɏ'.]*)?)(?:\s+[-–—]\s*|\s*[-–—]\s+)\S/.exec(String(song.title || ""));
     return m ? normName(m[1]) : "";
   }
-  /* Does this file already say the player's name? Last season's clips were made that way: "Number 7 Jordan" or "#7 Jordan" (any length),
-     or a short clip (45 s or less) named for a player, like "7 Jordan Lee". A full-length song named for a player is just their song. */
-  /* the name inside a last-season clip title: "Number 7 Jordan_01" -> "jordan", "#12 Jordan Lee" -> "jordan lee" */
   /* The player a clip is named for: "Number 7 Jordan Lee", "#7 Jordan", "7 Jordan Lee" or just "Jordan Lee" (a bare name, which only
      counts when it fits someone on the team). "" when the title isn't shaped like a name. */
   function clipOwner(title) {
@@ -991,7 +994,7 @@
     libraryTitle: libraryTitle, startRequest: startRequest, playerByToken: playerByToken, hasSongFile: hasSongFile, requestCode: requestCode, requestProgress: requestProgress, findDuplicateSong: findDuplicateSong,
     sanitizeSettings: sanitizeSettings, sanitizeSong: sanitizeSong, sanitizeVoice: sanitizeVoice, sanitizeState: sanitizeState, emptyState: emptyState,
     audioKeys: audioKeys, counts: counts, makeBackup: makeBackup, validateBackup: validateBackup, sampleState: sampleState,
-    voiceScore: voiceScore, pickVoice: pickVoice, normName: normName, songOwner: songOwner, introGuess: introGuess, clipOwner: clipOwner, fillLineup: fillLineup, loudStart: loudStart, clubRows: clubRows, applyRows: applyRows
+    voiceScore: voiceScore, pickVoice: pickVoice, normName: normName, songOwner: songOwner, introGuess: introGuess, clipOwner: clipOwner, activeVoice: activeVoice, saysName: saysName, fillLineup: fillLineup, loudStart: loudStart, clubRows: clubRows, applyRows: applyRows
   };
   root.WalkupCore = api;
   if (typeof module !== "undefined" && module.exports) module.exports = api;

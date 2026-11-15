@@ -322,6 +322,9 @@ const dbKeys = page => page.evaluate(() => window.WalkupApp.WU.db.keys());
     deep(s4.roster.map(p => p.songId), ['songjjj1', 'songlll1', 'songlll1'], 'Romeo\'s clip is nobody else\'s, even with no Romeo on the team');
     eq(s4.roster[0].voice, null, 'no announcer over a clip that already says the name');
     eq(C.statusOf(s4.roster[0], s4.songs, () => true).code, 'ready', 'a clip that says the name needs no voice');
+    eq(C.activeVoice(s4.roster[0], s4.songs), null, 'the mix and Play leave the announcer out'); eq(C.saysName(s4.roster[0], s4.songs), true);
+    s4.roster[0].voice = C.defaultVoice('tts', {}, null); eq(C.activeVoice(s4.roster[0], s4.songs), null, 'even with a voice still set');
+    eq(C.activeVoice(s4.roster[1], s4.songs).kind, 'tts', 'a regular song keeps its announcer'); eq(C.saysName(s4.roster[1], s4.songs), false); eq(C.activeVoice({}, s4.songs), null);
     eq(C.sanitizeState(s4).songs[0].intro, true, 'the setting survives saving'); eq(C.sanitizeState(s4).songs[2].intro, false);
   });
 

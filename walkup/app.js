@@ -138,7 +138,7 @@
       S.play = { state: "playing", id: p.id };
       A.lastPlay = { id: p.id, ms: Math.round(performance.now() - t0), plan: r[0].plan };
       paintTransport();
-      if (p.voice && p.voice.kind === "tts" && !E.speech.supported()) U.toast("This browser can't speak, so only the song plays.", "warn", 5000);
+      var av = C.activeVoice(p, S.st.songs); if (av && av.kind === "tts" && !E.speech.supported()) U.toast("This browser can't speak, so only the song plays.", "warn", 5000);
       if (S.st.settings.master === 0) U.toast("The master volume is at 0%. Turn it up to hear anything.", "warn", 5000);
       setTimeout(function () { if (my === token && S.play.state === "playing" && E.state() !== "running") U.toast("The sound is still asleep. Tap Play again, and check the volume and the ringer or silent switch.", "error", 8000); }, 900);
     }, function (e) {
