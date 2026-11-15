@@ -4,6 +4,9 @@ plugins {
     id("org.jetbrains.kotlin.android")
     id("org.jetbrains.kotlin.plugin.compose")
 }
+// The version code is the CI run number, so each build is newer than the last; the app compares it with the releases.
+val dugoutVersion = (System.getenv("DUGOUT_VERSION") ?: "1").toInt()
+val dugoutKey = System.getenv("DUGOUT_KEYSTORE")?.let { file(it) }?.takeIf { it.exists() }
 android {
     namespace = "com.steele.dugout.wear"
     compileSdk = 35
@@ -11,10 +14,23 @@ android {
         applicationId = "com.steele.dugout" // the same as the phone app, so the two can talk
         minSdk = 30
         targetSdk = 34
-        versionCode = 1
-        versionName = "0.1"
+        versionCode = dugoutVersion
+        versionName = "1.$dugoutVersion"
     }
-    buildTypes { release { isMinifyEnabled = false } }
+    signingConfigs {
+        // CI signs every build with the same Dugout key (see the workflow), so a new build installs over the old one.
+        // Without the key (a local build, or a fork) the build uses the usual debug key.
+        if (dugoutKey != null) create("dugout") {
+            storeFile = dugoutKey
+            storePassword = System.getenv("DUGOUT_KEY_PASSWORD")
+            keyAlias = "dugout"
+            keyPassword = System.getenv("DUGOUT_KEY_PASSWORD")
+        }
+    }
+    buildTypes {
+        release { isMinifyEnabled = false }
+        debug { if (dugoutKey != null) signingConfig = signingConfigs.getByName("dugout") }
+    }
     buildFeatures { compose = true }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
