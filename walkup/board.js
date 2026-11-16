@@ -213,11 +213,13 @@
       onClose: function () { if (off) off(); if (B.playingId() === id) WU.act.stop(0.05); }
     });
     var el = api.el, shown = null;
+    function songOpts(tt) {
+      return '<option value="">No sound yet</option>' + S.st.songs.map(function (x) { return '<option value="' + x.id + '"' + (x.id === tt.songId ? " selected" : "") + ">" + esc(x.title) + "</option>"; }).join("");
+    }
     function paint() {
       var tt = B.tile(id); if (!tt) { api.close(); return; }
       var s = B.song(tt), r = s ? C.tileRegion(tt, s) : null, playing = B.playingId() === id;
-      var opts = '<option value="">No sound yet</option>' + S.st.songs.map(function (x) { return '<option value="' + x.id + '"' + (x.id === tt.songId ? " selected" : "") + ">" + esc(x.title) + "</option>"; }).join("");
-      var h = '<label class="field"><span class="label">Sound</span><select id="btSong">' + opts + "</select></label>" +
+      var h = '<label class="field"><span class="label">Sound</span><select id="btSong">' + songOpts(tt) + "</select></label>" +
         U.fileBtn({ text: "Add a new song file", cls: "ghost block", attr: 'data-file="board-add" data-tid="' + id + '"', label: "Add a new song file for " + tt.label });
       if (tt.id === "anthem" || /anthem/i.test(tt.label)) h += '<button type="button" class="btn ghost block top" data-do="anthem">Get the national anthem</button><p class="mute small-note">' + esc(ANTHEM.credit) + " Or choose your own file above.</p>";
       if (s && r) {
@@ -257,9 +259,16 @@
     });
     off = WU.on(function (what) {
       if (api.closed) return;
-      /* the body never holds the name box, so typing a name is never cut off; a stepper in use is left alone unless the sound itself changed */
-      var tt = B.tile(id), a = document.activeElement, inStep = !!(a && a.closest && a.closest("#btBody .stepper"));
-      if (what === "data" && (!inStep || !tt || (tt.songId || null) !== shown)) paint();
+      /* a new sound redraws the body (the name box isn't in it, so typing a name is never cut off);
+         the same sound only updates the numbers in place, so a tap on a stepper is never lost to a redraw */
+      if (what === "data") {
+        var tt = B.tile(id), s = tt && B.song(tt);
+        if (!tt || (tt.songId || null) !== shown || !s || !$('[data-key="start"]', el)) { paint(); return; }
+        var nr = C.tileRegion(tt, s), sel = $("#btSong", el);
+        U.setCtl(el, "start", nr.start); U.setCtl(el, "end", Math.round((nr.start + nr.len) * 10) / 10);
+        var l = $("#btLen", el); if (l) l.textContent = "Plays for " + C.fmtClock(nr.len) + ".";
+        if (sel && document.activeElement !== sel) sel.innerHTML = songOpts(tt);
+      }
       else if (what === "audio") { var p = $('[data-do="preview"]', el); if (p) p.textContent = B.playingId() === id ? "Stop" : "Play it"; }
     });
   };
