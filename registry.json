@@ -1,6 +1,6 @@
 {
   "about": "The one list of Nathan's apps. Live links, which apps show where, and each app's App Store listing (text, highlights, screenshots) all come from here. Edit listings and icons in the Toolbox; the sync job copies them here. Don't hand-edit text in store/index.html.",
-  "updated": "2026-11-15",
+  "updated": "2026-11-16",
   "toolbox": "https://natesteele888.github.io/apps/toolbox/",
   "store": "https://natesteele888.github.io/apps/store/",
   "apps": [
@@ -79,31 +79,31 @@
         ],
         "autoShots": [],
         "latest": {
-          "d": "Nov 15, 2026",
-          "t": "Toolbox: show the Loading screen before the Firebase code arrives",
-          "url": "https://github.com/natesteele888/apps/commit/6b97540f0b07172927241b81aaffdd00987fa818"
+          "d": "Nov 16, 2026",
+          "t": "Toolbox rules: note that the app_me change is published",
+          "url": "https://github.com/natesteele888/apps/commit/4bb87f99f8704612a4420ace13c0147096dd45b9"
         },
-        "version": "1.3.4",
+        "version": "1.3.8",
         "history": [
           {
-            "v": "1.3.4",
+            "v": "1.3.8",
+            "t": "Toolbox rules: note that the app_me change is published"
+          },
+          {
+            "v": "1.3.7",
+            "t": "App numbers: \"This is me\" link, and a new-phone badge for the LYBS Dashboard and Ballclub"
+          },
+          {
+            "v": "1.3.5",
             "t": "Toolbox: show the Loading screen before the Firebase code arrives"
+          },
+          {
+            "v": "1.3.4",
+            "t": "Photo Blueprint: shared sheets no longer show the owner's name or exact spot"
           },
           {
             "v": "1.3.3",
             "t": "Load the fonts without holding up six apps"
-          },
-          {
-            "v": "1.3.2",
-            "t": "Add Catch Log: a fishing log for a crew, private behind Google sign-in"
-          },
-          {
-            "v": "1.3.1",
-            "t": "Add a copyright notice and an all-rights-reserved LICENSE"
-          },
-          {
-            "v": "1.3.0",
-            "t": "Toolbox: keep the App Store Show box ticked after saving a listing"
           }
         ]
       }
@@ -443,12 +443,16 @@
         ],
         "autoShots": [],
         "latest": {
-          "d": "Nov 15, 2026",
-          "t": "Play edits: save only what changed, so coaches' saves stop undoing each other",
-          "url": "https://github.com/natesteele888/ASL-Bengals/commit/a730f607abf70e6bc5abcf00bcf63aa01de22850"
+          "d": "Nov 16, 2026",
+          "t": "Show the logo and background on the sign-in and loading screens with no signal",
+          "url": "https://github.com/natesteele888/ASL-Bengals/commit/45c7bf8a8384c4d8b27ff1b4cc454bb9e7104f0a"
         },
-        "version": "1.50.4",
+        "version": "1.50.5",
         "history": [
+          {
+            "v": "1.50.5",
+            "t": "Show the logo and background on the sign-in and loading screens with no signal"
+          },
           {
             "v": "1.50.4",
             "t": "Play edits: save only what changed, so coaches' saves stop undoing each other"
@@ -464,10 +468,6 @@
           {
             "v": "1.50.1",
             "t": "Banner: end with 'All of us coaches are proud of you.'"
-          },
-          {
-            "v": "1.50.0",
-            "t": "Banner: Proud of you, Bengals (2026 D1 Super Bowl Runner-Up)"
           }
         ],
         "caps": [
@@ -765,12 +765,16 @@
         ],
         "autoShots": [],
         "latest": {
-          "d": "Nov 15, 2026",
-          "t": "Give the division checker more inner padding on desktop",
-          "url": "https://github.com/natesteele888/lybs-ballclub/commit/d49886832bd03338ca616e965f0447707cc0bb8c"
+          "d": "Nov 16, 2026",
+          "t": "Age page: make the year buttons big enough to tap on a phone",
+          "url": "https://github.com/natesteele888/lybs-ballclub/commit/8d34fa0a5dba4650f1e3a5ac6eb7d304438fd0a7"
         },
-        "version": "1.26.2",
+        "version": "1.26.3",
         "history": [
+          {
+            "v": "1.26.3",
+            "t": "Age page: make the year buttons big enough to tap on a phone"
+          },
           {
             "v": "1.26.1",
             "t": "Give the division checker more inner padding on desktop"
@@ -786,10 +790,6 @@
           {
             "v": "1.25.8",
             "t": "Add one-field division checker for program pages"
-          },
-          {
-            "v": "1.25.7",
-            "t": "Copy a game's pitch counts ready for the MAC League site"
           }
         ],
         "caps": [
@@ -1304,11 +1304,15 @@
         "autoShots": [],
         "latest": {
           "d": "Nov 15, 2026",
-          "t": "Events: add the shared health check and a Something wrong? button",
-          "url": "https://github.com/natesteele888/events/commit/06f4c36691f9a900a22c68eda4056a17d028a319"
+          "t": "QR shows up on a slow signal; cap RSVP answers and questions; longer codes; guest-isolation rules tests",
+          "url": "https://github.com/natesteele888/events/commit/99df626d1c6abdece83691161f8285730baa31f4"
         },
-        "version": "1.3.4",
+        "version": "1.3.6",
         "history": [
+          {
+            "v": "1.3.5",
+            "t": "QR shows up on a slow signal; cap RSVP answers and questions; longer codes; guest-isolation rules tests"
+          },
           {
             "v": "1.3.4",
             "t": "Events: add the shared health check and a Something wrong? button"
@@ -1324,10 +1328,6 @@
           {
             "v": "1.3.0",
             "t": "Tests: always run the browser run against the real security rules"
-          },
-          {
-            "v": "1.2.9",
-            "t": "Tell hosts when the signal drops on Save, password reset and the guest list"
           }
         ],
         "caps": [
@@ -2085,12 +2085,20 @@
         ],
         "autoShots": [],
         "latest": {
-          "d": "Nov 15, 2026",
-          "t": "Walk-Up: the Mix sheet and Play leave the announcer out for a clip that says the name",
-          "url": "https://github.com/natesteele888/apps/commit/f689cd3381eabe7150ddae6cc102220b8ec94349"
+          "d": "Nov 16, 2026",
+          "t": "Dugout watch: a way back from every screen, and a countdown before a song",
+          "url": "https://github.com/natesteele888/apps/commit/c5342fa0318f429febbf7579e803201e7ef24535"
         },
-        "version": "1.1.3",
+        "version": "1.1.5",
         "history": [
+          {
+            "v": "1.1.5",
+            "t": "Dugout watch: a way back from every screen, and a countdown before a song"
+          },
+          {
+            "v": "1.1.4",
+            "t": "Dugout watch: whole face is Play, the order goes round, swap in bench players"
+          },
           {
             "v": "1.1.3",
             "t": "Walk-Up: the Mix sheet and Play leave the announcer out for a clip that says the name"
@@ -2102,14 +2110,6 @@
           {
             "v": "1.1.1",
             "t": "Walk-Up: match song names the way coaches type them"
-          },
-          {
-            "v": "1.1.0",
-            "t": "Pitch Count: one tap to the official counts on the MAC League site"
-          },
-          {
-            "v": "1.0.9",
-            "t": "Walk-Up: get a whole lineup ready in one tap"
           }
         ],
         "caps": [
@@ -2424,8 +2424,16 @@
           "store/shots/read20-5.webp",
           "store/shots/read20-6.webp"
         ],
-        "version": "1.3.7",
+        "version": "1.3.9",
         "history": [
+          {
+            "v": "1.3.9",
+            "t": "Read 20 desktop: four books across on a 1366-wide laptop"
+          },
+          {
+            "v": "1.3.8",
+            "t": "Read 20: a real desktop layout, keyboard controls and a desktop install"
+          },
           {
             "v": "1.3.7",
             "t": "Read 20: a morning second chance to finish last night's reading"
@@ -2437,20 +2445,12 @@
           {
             "v": "1.3.5",
             "t": "Read 20: fix the slow, cut-off first Storytime page"
-          },
-          {
-            "v": "1.3.4",
-            "t": "Read 20: the speed set in Settings carries into the story"
-          },
-          {
-            "v": "1.3.3",
-            "t": "Read 20: slower Storytime and a highlight that keeps pace with the voice"
           }
         ],
         "latest": {
-          "d": "Nov 13, 2026",
-          "t": "Read 20: a morning second chance to finish last night's reading",
-          "url": "https://github.com/natesteele888/apps/commit/4484b4ddbf3950c833663571e473ab207b969172"
+          "d": "Nov 15, 2026",
+          "t": "Read 20 desktop: four books across on a 1366-wide laptop",
+          "url": "https://github.com/natesteele888/apps/commit/8d2309c97bc17161490ad92dff751a26548e082b"
         },
         "caps": [
           "Every child gets their own profile, streak and shelf",
@@ -2651,12 +2651,20 @@
           "store/shots/photoblueprint-6.webp"
         ],
         "latest": {
-          "d": "Nov 12, 2026",
-          "t": "Add a copyright notice and an all-rights-reserved LICENSE",
-          "url": "https://github.com/natesteele888/apps/commit/25fd10682c4fe1ef072b42512df48ff23a75faea"
+          "d": "Nov 15, 2026",
+          "t": "Photo Blueprint: frame the area before drawing its circle",
+          "url": "https://github.com/natesteele888/apps/commit/4bf47d789c44d11a5499b38fed0e75b07ce9aedc"
         },
-        "version": "1.1.0",
+        "version": "1.1.2",
         "history": [
+          {
+            "v": "1.1.2",
+            "t": "Photo Blueprint: frame the area before drawing its circle"
+          },
+          {
+            "v": "1.1.1",
+            "t": "Photo Blueprint: shared sheets no longer show the owner's name or exact spot"
+          },
           {
             "v": "1.1.0",
             "t": "Add a copyright notice and an all-rights-reserved LICENSE"
@@ -2668,14 +2676,6 @@
           {
             "v": "1.0.8",
             "t": "Photo Blueprint: the direction cone stays on the sheet, off the main map"
-          },
-          {
-            "v": "1.0.7",
-            "t": "Photo Blueprint: a clean photo marker on the map"
-          },
-          {
-            "v": "1.0.6",
-            "t": "Every app: a health check on open, a problem log, and a Something wrong? report"
           }
         ],
         "caps": [
