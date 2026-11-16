@@ -225,14 +225,15 @@ const INFO = { facilities: [{ name: 'Fitzgerald Field', town: 'Lunenburg', home:
     assert.ok(/#8/.test(await page.textContent('.fm-orow >> nth=0')) && /#9/.test(await page.textContent('.fm-orow >> nth=1')));
     await page.click('.fm-orow >> nth=2 >> [data-a=o-out]');
     assert.ok(/not here/.test(await page.textContent('.fm-orow >> nth=8')), 'the missing player moves to the bottom');
-    // drag the last one in the order to the top by its handle
-    const h = await page.locator('.fm-orow >> nth=7 >> .fm-handle').boundingBox(), top = await page.locator('.fm-orow >> nth=0').boundingBox();
+    // drag the 5th one (#4) to the top by its handle (rows lower down sit under the footer at this size)
+    await page.evaluate(() => scrollTo(0, 0));
+    const h = await page.locator('.fm-orow >> nth=4 >> .fm-handle').boundingBox(), top = await page.locator('.fm-orow >> nth=0').boundingBox();
     await page.mouse.move(h.x + h.width / 2, h.y + h.height / 2); await page.mouse.down();
     await page.mouse.move(h.x + h.width / 2, top.y + top.height / 2, { steps: 12 }); await page.mouse.up();
-    assert.ok(/#1\b/.test(await page.textContent('.fm-orow >> nth=0')), 'dragged to the top');
+    assert.ok(/#4\b/.test(await page.textContent('.fm-orow >> nth=0')), 'dragged to the top');
     await page.click('.fm-foot [data-a=order-done]'); await page.waitForSelector('.fm-tile');
     eq(await page.locator('.fm-tile').count(), 8);
-    eq(await page.textContent('.fm-tile >> nth=0 >> .fm-num'), '#1'); eq(await page.textContent('.fm-tile >> nth=1 >> .fm-num'), '#8');
+    eq(await page.textContent('.fm-tile >> nth=0 >> .fm-num'), '#4'); eq(await page.textContent('.fm-tile >> nth=1 >> .fm-num'), '#8');
     assert.ok(/Order set at this tablet/.test(await page.textContent('.fm-bar')));
     await page.reload(); await page.waitForSelector('.fm-game'); await page.click('.fm-game'); await page.waitForSelector('.fm-tile');
     await page.click('[data-a=bat][data-k="1"]');
