@@ -180,7 +180,7 @@
       footer: '<button type="button" class="btn ghost" data-do="add">Add a sound</button><button type="button" class="btn" data-close>Done</button>',
       onClose: function () { if (off) off(); }
     });
-    var el = api.el, shown = null;
+    var el = api.el;
     function paint() {
       var b = B.tiles();
       $("#beList", el).innerHTML = b.length ? b.map(function (t, i) {
@@ -212,7 +212,7 @@
       footer: '<button type="button" class="btn danger" data-do="delete">Delete</button><button type="button" class="btn" data-close>Done</button>',
       onClose: function () { if (off) off(); if (B.playingId() === id) WU.act.stop(0.05); }
     });
-    var el = api.el;
+    var el = api.el, shown = null;
     function paint() {
       var tt = B.tile(id); if (!tt) { api.close(); return; }
       var s = B.song(tt), r = s ? C.tileRegion(tt, s) : null, playing = B.playingId() === id;
