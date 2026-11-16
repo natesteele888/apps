@@ -15,6 +15,7 @@ android {
         targetSdk = 35
         versionCode = dugoutVersion
         versionName = "1.$dugoutVersion"
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
     signingConfigs {
         // CI signs every build with the same Dugout key (see the workflow), so a new build installs over the old one.
@@ -45,4 +46,9 @@ dependencies {
     implementation("com.google.android.gms:play-services-wearable:19.0.0")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.9.0")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.9.0")
+    // On-screen checks run on an Android emulator by .github/workflows/dugout-screen.yml
+    androidTestImplementation("androidx.test:core:1.6.1")
+    androidTestImplementation("androidx.test:runner:1.6.2")
+    androidTestImplementation("androidx.test:rules:1.6.1")
+    androidTestImplementation("androidx.test.ext:junit:1.2.1")
 }

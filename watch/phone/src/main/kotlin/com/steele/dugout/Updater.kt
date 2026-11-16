@@ -20,14 +20,14 @@ import java.net.HttpURLConnection
 import java.net.URL
 
 /**
- * Keeps Dugout up to date: when the app opens (at most every few hours) it asks GitHub for the newest Dugout release,
+ * Keeps Dugout up to date: when the app opens (at most every half hour) it asks GitHub for the newest Dugout release,
  * offers it in a pop-up, downloads it and hands it to Android's installer, which shows its own "Update this app?" screen.
  * Android only installs it over this copy if it is signed with the same key, so nothing else can slip in this way.
  */
 class Updater(private val a: MainActivity) {
     companion object {
         private const val PREFS = "updates"
-        private const val EVERY_MS = 6L * 60 * 60 * 1000
+        private const val EVERY_MS = 30L * 60 * 1000 // a new build shows up within half an hour of opening the app
         private const val MAX_BYTES = 200L * 1024 * 1024
 
         /** the result of an install, from [UpdateStatusActivity] */
