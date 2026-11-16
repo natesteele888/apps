@@ -172,15 +172,18 @@
     });
   };
   SG.askDelete = function (song) {
-    var users = WU.songUsers(song.id);
+    var users = WU.songUsers(song.id), tiles = (S.st.board || []).filter(function (t) { return t.songId === song.id; });
+    var more = [users.length ? "These players use it and will have no song: " + users.map(C.playerLabel).join(", ") + "." : "No player uses it."];
+    if (tiles.length) more.push("These game sounds use it and will be empty: " + tiles.map(function (t) { return t.label; }).join(", ") + ".");
     U.confirm({
       title: "Delete this song?", message: "\"" + song.title + "\" will be removed from this phone.",
-      more: users.length ? ["These players use it and will have no song: " + users.map(C.playerLabel).join(", ") + "."] : ["No player uses it."],
+      more: more,
       confirmText: "Delete song", danger: true,
       onConfirm: function () {
         var p = E.playing(); if (p && p.key === "sp:" + song.id) E.stop(0.05);
         S.st.songs = S.st.songs.filter(function (x) { return x.id !== song.id; });
         users.forEach(function (u) { u.songId = null; u.trim = null; });
+        tiles.forEach(function (t) { t.songId = null; t.start = 0; t.end = 0; });
         WU.dropAudio("s:" + song.id);
         WU.commit("data"); U.toast("Song deleted.", "ok");
       }

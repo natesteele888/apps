@@ -4,7 +4,7 @@
   "use strict";
   var WU = window.WU = window.WU || {};
   var C = window.WalkupCore, U = WU.U;
-  var S = WU.S = { st: C.emptyState(), meta: { lastBackup: null, tips: {} }, mem: false, have: new Set(), tab: "game", play: { state: "idle", id: null } };
+  var S = WU.S = { st: C.emptyState(), meta: { lastBackup: null, tips: {} }, mem: false, have: new Set(), tab: "game", play: { state: "idle", id: null }, queue: [] };
   WU.act = {};
 
   /* ---------- storage that never throws ---------- */

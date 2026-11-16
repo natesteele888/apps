@@ -430,3 +430,22 @@ input[type="range"].rng.rel { width: calc(80% + 30px); margin: 0 calc(10% - 15px
 .pt-h { margin: 18px 0 6px; font: 700 18px/1.2 "Barlow Condensed", "Barlow", system-ui, sans-serif; }
 .pt-prow { flex-wrap: wrap; }
 .pt-lim input { width: 84px; }
+
+/* ---------- game sounds ---------- */
+.board .tiles { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin-top: 10px; }
+.tile { display: flex; min-width: 0; border-radius: 14px; background: var(--panel2); border: 1.5px solid var(--line2); overflow: hidden; }
+.tile.on { border-color: var(--ok); background: rgba(74, 222, 128, 0.12); }
+.tile.empty { border-style: dashed; }
+.tile .tplay { flex: 1 1 auto; min-width: 0; min-height: 64px; padding: 8px 10px; text-align: left; background: transparent; border: 0; color: var(--text); cursor: pointer; display: flex; flex-direction: column; justify-content: center; }
+.tile .tplay b { font-size: 15px; line-height: 1.2; overflow-wrap: anywhere; }
+.tile .tplay small { font-size: 12px; color: var(--mute); margin-top: 2px; }
+.tile.on .tplay small { color: var(--ok); }
+.tile .tnext { flex: 0 0 auto; min-width: 52px; padding: 0 8px; background: transparent; border: 0; border-left: 1.5px solid var(--line2); color: var(--accent2); font-size: 13px; font-weight: 700; cursor: pointer; }
+.tile .tnext:disabled { opacity: 0.4; cursor: default; }
+.upnext { margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--line); }
+.upnext ol { margin: 8px 0 0; padding: 0; list-style: none; counter-reset: up; }
+.upnext li { counter-increment: up; display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 44px; padding: 0 4px 0 10px; border-radius: 12px; background: var(--panel2); margin-top: 6px; }
+.upnext li span::before { content: counter(up) ". "; color: var(--mute); }
+.upnext li .x { width: 44px; height: 44px; display: grid; place-items: center; background: transparent; border: 0; color: var(--mute); cursor: pointer; }
+.upnext li .x svg { width: 18px; height: 18px; }
+@media (max-width: 340px) { .board .tiles { grid-template-columns: minmax(0, 1fr); } }

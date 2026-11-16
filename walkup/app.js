@@ -52,7 +52,7 @@
   function gameHTML() {
     var st = S.st, n = st.lineup.length;
     if (!st.roster.length) return pitchHTML() + emptyGame();
-    if (!n) return pitchHTML() + noLineup();
+    if (!n) return pitchHTML() + noLineup() + (WU.board ? WU.board.cardHTML() : "");
     var p = WU.cur(), r = C.roles(n, st.batter), s = WU.status(p), h = pitchHTML();
     h += '<section class="card now" aria-label="Now batting"><div class="kick"><span>Now batting</span><span class="idx">' + (st.batter + 1) + " of " + n + "</span></div>" +
       '<div class="bigline">' + (p.num ? '<b class="bignum">#' + esc(p.num) + "</b>" : "") + '<h2 class="bigname">' + (p.name ? esc(p.name) : '<i class="mute">No name</i>') + "</h2></div>" +
@@ -70,6 +70,7 @@
     h += '<section class="card tools">' + U.range({ key: "master", label: "Master volume", min: 0, max: 100, step: 1, value: st.settings.master, text: st.settings.master + "%" }) +
       '<div class="row wrap"><button type="button" class="btn ghost small" data-act="sound-check">Sound check</button><button type="button" class="btn ghost small" data-act="bt-help">Using a Bluetooth speaker</button>' +
       (WU.pitch && !WU.pitch.shown() ? '<button type="button" class="btn ghost small" data-act="pt-show">Count pitches too</button>' : "") + "</div></section>";
+    if (WU.board) h += WU.board.cardHTML();
     h += '<div class="sec-title"><h2>Batting order</h2><span class="sub">tap to jump</span></div><div class="llist">';
     st.lineup.forEach(function (id, i) {
       var q = WU.player(id); if (!q) return;
@@ -126,6 +127,7 @@
     var s = WU.status(p);
     if (MSG[s.code]) { U.toast(MSG[s.code], "error", 6000); return; }
     if (!E.supported()) { U.toast("This browser can't play audio.", "error"); return; }
+    if (WU.board) WU.board.cancel();
     var my = ++token, t0 = performance.now();
     S.play = { state: "loading", id: p.id };
     paintTransport();
@@ -149,15 +151,17 @@
     });
   };
   /* fade: seconds to fade out (0.5 by default); the watch's Stop asks for a near-instant cut */
-  WU.act.stop = function (fade) { token++; E.stop(typeof fade === "number" ? fade : C.LIM.stopFade); S.play = { state: "idle", id: null }; paintTransport(); U.live("Stopped"); };
+  WU.act.stop = function (fade) { token++; if (WU.board) WU.board.stopAll(); E.stop(typeof fade === "number" ? fade : C.LIM.stopFade); S.play = { state: "idle", id: null }; paintTransport(); U.live("Stopped"); };
   /* keep the song going past its clip (asked for from the watch, by holding while it plays) */
   WU.act.extend = function () { if (E.extend()) U.live("Keep playing"); };
   function setBatter(i, quiet) {
     var n = S.st.lineup.length; if (!n) return;
     i = ((i % n) + n) % n;
     var changed = i !== S.st.batter;
-    if (E.playing()) E.stop(C.LIM.stopFade);
-    token++; S.play = { state: "idle", id: null };
+    // a walk-up stops when the batter changes; a game sound (the anthem, music between innings) plays on
+    var pl = E.playing();
+    if (pl && pl.key.indexOf("b:") !== 0) E.stop(C.LIM.stopFade);
+    token++; if (!S.play.board) S.play = { state: "idle", id: null };
     S.st.batter = i;
     WU.commit("data");
     var p = WU.cur();
@@ -288,7 +292,8 @@
     E.setMaster(S.st.settings.master);
     E.onchange = function () { WU.emit("audio"); };
     WU.on(function (what) {
-      if (what === "audio") { paintTransport(); return; }
+      if (what === "audio") { paintTransport(); if (WU.board && S.tab === "game") WU.board.paint(); return; }
+      if (what === "board") { if (WU.board && S.tab === "game") WU.board.paint(); return; }
       if (what === "data" || what === "meta") { A.render(); syncWake(); if (what === "data") WU.warm(); }
       if (what === "wake") syncWake();
     });

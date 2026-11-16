@@ -2,7 +2,7 @@
    Inside the Dugout app, window.WalkupNative exists, and this file:
    - sends the batting order, who is up and what is playing to the app (and from there to the watch) whenever they change,
    - sends the pitch log the same way, and merges the watch's pitch log back in (every pitch is counted once),
-   - runs the watch's commands (pick a batter, play, stop, keep playing, swap in a bench player),
+   - runs the watch's commands (pick a batter, play, stop, keep playing, swap in a bench player, game sounds and Up next),
    - fills in two things Android's web view lacks: the computer voice (Android's own text-to-speech) and saving backup files.
    Nothing here goes to the internet. */
 (function () {
@@ -32,7 +32,7 @@
     };
   }
 
-  function ready() { return !!(WU.act && WU.act.play && WU.S && WU.on && WU.eng && WU.U && WU.pitch); }
+  function ready() { return !!(WU.act && WU.act.play && WU.S && WU.on && WU.eng && WU.U && WU.pitch && WU.board); }
   var lastErr = null;
 
   /* ---------- what the watch needs to know ---------- */
@@ -44,12 +44,16 @@
       return { id: p.id, name: p.name || "", num: p.num || "", pos: p.pos || "", ready: !(code === "empty" || code === "needs-song" || code === "needs-voice"), code: code };
     }
     var lineup = st.lineup.map(row).filter(Boolean), bench = C.benchIds(st.roster, st.lineup).map(row).filter(Boolean);
-    var playing = null;
+    var playing = null, B = WU.board;
     if (pl) {
       var gid = pl.key && pl.key.indexOf("g:") === 0 ? pl.key.slice(2) : null, gp = gid ? WU.player(gid) : null;
-      playing = { id: gid, label: gp ? (gp.num ? "#" + gp.num + " " : "") + (gp.name || "") : "Preview", elapsed: Math.round(pl.elapsed * 100) / 100, total: Math.round(pl.total * 100) / 100, ext: pl.ext || 0, extended: !!pl.extended };
+      var bid = pl.key && pl.key.indexOf("b:") === 0 ? pl.key.slice(2) : null, bt = bid && B ? B.tile(bid) : null;
+      playing = { id: gid, board: bt ? bt.id : null, label: gp ? (gp.num ? "#" + gp.num + " " : "") + (gp.name || "") : bt ? bt.label : "Preview", elapsed: Math.round(pl.elapsed * 100) / 100, total: Math.round(pl.total * 100) / 100, ext: pl.ext || 0, extended: !!pl.extended };
     }
-    return { v: 1, ready: true, batter: st.batter, lineup: lineup, bench: bench, playing: playing, loading: S.play && S.play.state === "loading" ? S.play.id : null, error: lastErr, team: st.settings.team || "" };
+    /* game sounds, and what waits in Up next */
+    var board = B ? B.tiles().map(function (t) { return { id: t.id, label: t.label, ready: B.ready(t) }; }) : [];
+    var queue = B ? B.queue().map(function (id) { var t = B.tile(id); return { id: id, label: t.label }; }) : [];
+    return { v: 1, ready: true, batter: st.batter, lineup: lineup, bench: bench, playing: playing, loading: S.play && S.play.state === "loading" ? S.play.id : null, error: lastErr, team: st.settings.team || "", board: board, queue: queue };
   }
   var tState = 0, tPitch = 0;
   function sendState() { clearTimeout(tState); tState = setTimeout(function () { try { N.postState(JSON.stringify(snapshot())); } catch (e) { console.error(e); } }, 60); }
@@ -96,6 +100,12 @@
     }
     else if (c.cmd === "stop") WU.act.stop(c.now === true ? 0.05 : undefined);
     else if (c.cmd === "extend") WU.act.extend();
+    /* game sounds: play one now (only when nothing plays), put one in Up next, take one out, or play what's up next (that one also
+       ends what is playing: the coach asked for it by name) */
+    else if (c.cmd === "sound" && typeof c.id === "string") { if (idle()) WU.board.play(c.id); }
+    else if (c.cmd === "queue" && typeof c.id === "string") WU.board.add(c.id);
+    else if (c.cmd === "unqueue" && typeof c.id === "string") WU.board.remove(c.id);
+    else if (c.cmd === "upnext") WU.board.next();
     else if (c.cmd === "swap" && typeof c.out === "string" && typeof c["in"] === "string") swapIn(c.out, c["in"]);
     else if (c.cmd === "pitchlog" && c.log) WU.pitch.merge(c.log);
     sendState();

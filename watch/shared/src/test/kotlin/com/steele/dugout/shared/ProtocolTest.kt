@@ -63,4 +63,26 @@ class ProtocolTest {
         assertEquals(true, kept.extended); assertEquals(40.0, kept.total)
         assertEquals("extend", JSONObject(Proto.cmd("extend")).getString("cmd"))
     }
+
+    @Test fun gameSoundsAndUpNextComeFromThePhone() {
+        val base = JSONObject().put("ready", true).put("lineup", JSONArray().put(b("a1", "Player 1")))
+        val none = assertNotNull(Proto.parseState(base.toString(), 1))
+        assertEquals(0, none.board.size, "an older phone sends no game sounds"); assertEquals(0, none.queue.size)
+        val board = JSONArray()
+            .put(JSONObject().put("id", "anthem").put("label", "National anthem").put("ready", true))
+            .put(JSONObject().put("id", "innings").put("label", "Between innings").put("ready", false))
+            .put(JSONObject().put("id", "anthem").put("label", "twice"))
+            .put(JSONObject().put("id", "bad id!").put("label", "x"))
+            .put(JSONObject().put("id", "blank1").put("label", ""))
+        val st = assertNotNull(Proto.parseState(JSONObject(base.toString()).put("board", board)
+            .put("queue", JSONArray().put(JSONObject().put("id", "anthem").put("label", "National anthem")))
+            .put("playing", JSONObject().put("id", JSONObject.NULL).put("board", "innings").put("label", "Between innings").put("total", 90.0)).toString(), 1))
+        assertEquals(listOf("anthem", "innings", "blank1"), st.board.map { it.id }, "the same button once, and no bad ids")
+        assertEquals(listOf(true, false, true), st.board.map { it.ready })
+        assertEquals("Sound", st.board[2].label)
+        assertEquals(listOf("anthem"), st.queue.map { it.id })
+        val p = assertNotNull(st.playing)
+        assertEquals(null, p.id); assertEquals("innings", p.board); assertEquals(true, st.busy)
+        assertEquals("anthem", JSONObject(Proto.cmd("sound", "id" to "anthem")).getString("id"))
+    }
 }

@@ -13,7 +13,9 @@
     minLen: 1, maxLen: 30, maxFade: 3, defLen: 10, defFade: 1, maxDelay: 20,
     maxSongBytes: 60 * 1024 * 1024, maxBundleBytes: 80 * 1024 * 1024, maxVoiceSec: 30, stopFade: 0.5,
     // "keep playing": how far past the clip a song may run when the coach holds on the watch, and its fade at the end
-    defExt: 30, maxExt: 60, extFade: 2
+    defExt: 30, maxExt: 60, extFade: 2,
+    // game sounds: how many buttons, how long a button's name, how many can wait in Up next
+    board: 12, boardLabel: 30, queue: 10
   };
   var BUNDLE_CHUNK = 196608; // bytes per base64 chunk in a "back up everything" file (a multiple of 3)
   var ATTACK = 0.008, END_RAMP = 0.01, VOICE_RAMP = 0.02;
@@ -738,7 +740,37 @@
     var songId = typeof r.songId === "string" && songById(songs, r.songId) ? r.songId : null, song = songId ? songById(songs, songId) : null;
     return { id: id, name: str(r.name, LIM.name), num: str(r.num, LIM.num), pos: str(r.pos, LIM.pos), songId: songId, trim: song && isObj(r.trim) ? clampTrim(song.dur, r.trim) : null, voice: sanitizeVoice(r.voice, seenVoice), mix: sanitizeMix(r.mix), req: sanitizeReq(r.req, seenTok), want: sanitizeWant(r.want) };
   }
-  function emptyState() { return { v: 1, roster: [], lineup: [], batter: 0, songs: [], announcer: factoryAnnouncer(), settings: sanitizeSettings({}) }; }
+  /* ---------- game sounds: buttons for the moments between batters (the anthem, music between innings, the coach's own clips) ---------- */
+  /* Each button plays one song from the library, from its start to its end (end 0 = the end of the file). Two come ready to fill in. */
+  var BOARD_IDS_RE = /^[A-Za-z0-9_-]{3,40}$/;
+  function defaultBoard() {
+    return [{ id: "innings", label: "Between innings", songId: null, start: 0, end: 0 }, { id: "anthem", label: "National anthem", songId: null, start: 0, end: 0 }];
+  }
+  function sanitizeTile(t, seen, songs) {
+    if (!isObj(t)) return null;
+    var id = typeof t.id === "string" && BOARD_IDS_RE.test(t.id) && !seen[t.id] ? t.id : uid();
+    seen[id] = 1;
+    var song = typeof t.songId === "string" ? songById(songs, t.songId) : null, dur = song ? song.dur : 0;
+    var start = song ? clamp(Math.round(num(t.start, 0) * 100) / 100, 0, Math.max(0, dur - 0.5)) : 0, end = song ? Math.round(num(t.end, 0) * 100) / 100 : 0;
+    if (!(end >= start + 0.5) || end >= dur) end = 0;
+    return { id: id, label: cleanLabel(t.label, LIM.boardLabel) || "Sound", songId: song ? song.id : null, start: start, end: end };
+  }
+  function sanitizeBoard(raw, songs) {
+    if (!Array.isArray(raw)) return defaultBoard();
+    var seen = Object.create(null);
+    return raw.slice(0, LIM.board).map(function (t) { return sanitizeTile(t, seen, songs); }).filter(Boolean);
+  }
+  /* what a button plays: { start, len } in song time, or null when it has no song */
+  function tileRegion(tile, song) {
+    if (!tile || !song || song.kind !== "file" || tile.songId !== song.id) return null;
+    var dur = song.dur || 0, start = clamp(num(tile.start, 0), 0, Math.max(0, dur - 0.1)), end = tile.end > start ? Math.min(tile.end, dur) : dur;
+    return { start: start, len: Math.max(0.1, end - start) };
+  }
+  /* Up next: add a button once (a second tap does nothing), at most LIM.queue; take one out by its place */
+  function queueAdd(q, id) { q = Array.isArray(q) ? q.slice() : []; if (typeof id === "string" && q.indexOf(id) < 0 && q.length < LIM.queue) q.push(id); return q; }
+  function queueDrop(q, i) { q = Array.isArray(q) ? q.slice() : []; if (i >= 0 && i < q.length) q.splice(i, 1); return q; }
+
+  function emptyState() { return { v: 1, roster: [], lineup: [], batter: 0, songs: [], board: defaultBoard(), announcer: factoryAnnouncer(), settings: sanitizeSettings({}) }; }
   function sanitizeState(raw) {
     var r = isObj(raw) ? raw : {}, st = emptyState();
     var seenS = Object.create(null), seenP = Object.create(null), seenV = Object.create(null), seenT = Object.create(null);
@@ -751,6 +783,7 @@
     st.batter = int(r.batter, 0, Math.max(0, lu.length - 1), 0);
     st.announcer = isObj(r.announcer) ? sanitizePolish(r.announcer) : factoryAnnouncer();
     st.settings = sanitizeSettings(r.settings);
+    st.board = sanitizeBoard(r.board, st.songs);
     return st;
   }
   /* every saved audio file the state points at, as keys like "s:abc123" and "v:def456" */
@@ -1000,6 +1033,7 @@
     buildSongFileName: buildSongFileName, parseSongFileName: parseSongFileName, parseReplyText: parseReplyText, sanitizeWant: sanitizeWant, sanitizeReq: sanitizeReq,
     libraryTitle: libraryTitle, startRequest: startRequest, playerByToken: playerByToken, hasSongFile: hasSongFile, requestCode: requestCode, requestProgress: requestProgress, findDuplicateSong: findDuplicateSong,
     sanitizeSettings: sanitizeSettings, sanitizeSong: sanitizeSong, sanitizeVoice: sanitizeVoice, sanitizeState: sanitizeState, emptyState: emptyState,
+    defaultBoard: defaultBoard, sanitizeBoard: sanitizeBoard, tileRegion: tileRegion, queueAdd: queueAdd, queueDrop: queueDrop,
     audioKeys: audioKeys, counts: counts, makeBackup: makeBackup, validateBackup: validateBackup, sampleState: sampleState,
     voiceScore: voiceScore, pickVoice: pickVoice, normName: normName, songOwner: songOwner, introGuess: introGuess, clipOwner: clipOwner, activeVoice: activeVoice, saysName: saysName, fillLineup: fillLineup, loudStart: loudStart, clubRows: clubRows, applyRows: applyRows
   };
