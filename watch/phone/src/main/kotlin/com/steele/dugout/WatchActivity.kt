@@ -42,6 +42,7 @@ class WatchActivity : ComponentActivity() {
     private var photoFor: String? = null
     private lateinit var gcText: TextView
     private lateinit var gcInput: EditText
+    private lateinit var delayRow: LinearLayout
 
     private val pick = registerForActivityResult(ActivityResultContracts.GetContent()) { uri ->
         val id = photoFor ?: return@registerForActivityResult
@@ -59,6 +60,11 @@ class WatchActivity : ComponentActivity() {
         col.addView(text("Watch and pitching", 22f))
         watchText = text("Looking for your watch…", 15f, Color.parseColor("#94A3B8"))
         col.addView(watchText)
+        col.addView(text("\nSong countdown", 18f))
+        col.addView(text("After the green ring closes on the watch, it counts down before the song starts. Tap the watch anywhere during the countdown to cancel, so nothing plays by mistake.", 14f, Color.parseColor("#94A3B8")))
+        delayRow = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
+        col.addView(delayRow)
+        showDelay()
         col.addView(text("\nBatter photos", 18f))
         col.addView(text("A photo shows behind the batter's name on the watch. Photos stay on this phone and the watch.", 14f, Color.parseColor("#94A3B8")))
         list = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
@@ -86,6 +92,17 @@ class WatchActivity : ComponentActivity() {
         setContentView(scroll)
         refresh()
         showGc()
+    }
+
+    /** 0 to 5 seconds; the one in use is marked */
+    private fun showDelay() {
+        delayRow.removeAllViews()
+        val cur = MainActivity.songDelay(this)
+        for (sec in 0..com.steele.dugout.shared.Proto.MAX_DELAY) {
+            val b = button(if (sec == cur) "[ ${sec}s ]" else "${sec}s") { MainActivity.setSongDelay(this, sec); showDelay() }
+            b.contentDescription = (if (sec == 0) "No countdown" else "$sec second countdown") + (if (sec == cur) ", chosen" else "")
+            delayRow.addView(b, LinearLayout.LayoutParams(0, WRAP_CONTENT, 1f))
+        }
     }
 
     private fun gcPrefs() = getSharedPreferences("gc", MODE_PRIVATE)

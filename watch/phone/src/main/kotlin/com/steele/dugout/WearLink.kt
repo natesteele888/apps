@@ -74,11 +74,11 @@ class WearLink(private val a: MainActivity) : MessageClient.OnMessageReceivedLis
         }
     }
 
-    /** the speaker changed: tell the watch with the same page state */
+    /** the speaker or the song countdown changed: tell the watch with the same page state */
     fun resendState() {
         val s = lastState ?: return
         val o = try { JSONObject(s) } catch (e: Exception) { return }
-        o.put("speaker", a.speakerJson())
+        o.put("speaker", a.speakerJson()).put("delay", a.songDelay())
         MainActivity.lastState = o.toString()
         sendState(o.toString())
     }

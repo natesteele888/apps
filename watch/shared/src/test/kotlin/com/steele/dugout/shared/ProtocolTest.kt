@@ -36,4 +36,18 @@ class ProtocolTest {
         val o = JSONObject(Proto.swap("a2", "a3"))
         assertEquals("swap", o.getString("cmd")); assertEquals("a2", o.getString("out")); assertEquals("a3", o.getString("in"))
     }
+
+    @Test fun theSongCountdownComesFromThePhone() {
+        val base = JSONObject().put("ready", true).put("lineup", JSONArray().put(b("a1", "Player 1")))
+        assertEquals(2, assertNotNull(Proto.parseState(base.toString(), 5)).delay, "an older phone sends none: 2 seconds")
+        assertEquals(0, assertNotNull(Proto.parseState(JSONObject(base.toString()).put("delay", 0).toString(), 5)).delay, "0 means play right away")
+        assertEquals(4, assertNotNull(Proto.parseState(JSONObject(base.toString()).put("delay", 4).toString(), 5)).delay)
+        assertEquals(5, assertNotNull(Proto.parseState(JSONObject(base.toString()).put("delay", 99).toString(), 5)).delay, "never more than 5")
+        assertEquals(0, assertNotNull(Proto.parseState(JSONObject(base.toString()).put("delay", -3).toString(), 5)).delay)
+    }
+
+    @Test fun stopRightAway() {
+        val o = JSONObject(Proto.cmd("stop", "now" to true))
+        assertEquals("stop", o.getString("cmd")); assertEquals(true, o.getBoolean("now"))
+    }
 }

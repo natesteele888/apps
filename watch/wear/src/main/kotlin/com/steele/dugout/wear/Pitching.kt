@@ -146,7 +146,7 @@ fun BullpenScreen(onDone: () -> Unit) {
     val list = rememberScalingLazyListState()
     ScalingLazyColumn(state = list, modifier = Modifier.fillMaxSize()) {
         item { ListHeader { Text("Bullpen") } }
-        if (rows.isEmpty()) item { Text("Go back and tap the middle to count. Add pitcher names in Dugout on your phone.", color = Muted, fontSize = 13.sp, textAlign = TextAlign.Center) }
+        if (rows.isEmpty()) item { Text("No pitchers yet. Go back and tap the middle to count, or add pitcher names in Dugout on your phone.", color = Muted, fontSize = 13.sp, textAlign = TextAlign.Center) }
         items(rows) { r ->
             val sub = when {
                 !r.eligible -> "Resting until " + day(r.eligibleOn)
@@ -168,6 +168,7 @@ fun BullpenScreen(onDone: () -> Unit) {
                 Text(if (ok) "Synced with your phone" else "Counts sync when the phone is near", color = Muted, fontSize = 11.sp, textAlign = TextAlign.Center)
             }
         }
+        item { BackChip("Back to pitching", onClick = onDone) }
     }
 }
 
