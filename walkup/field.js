@@ -17,7 +17,7 @@
     leagueInfo: "/lybs-ballclub/data/league-info.json",
     refreshMs: 5 * 60 * 1000
   };
-  var K = { auth: "walkup.field.auth", set: "walkup.field.settings", day: "walkup.field.day", game: "walkup.field.game" };
+  var K = { auth: "walkup.field.auth", set: "walkup.field.settings", day: "walkup.field.day", game: "walkup.field.game", order: "walkup.field.order" };
   var root = document.getElementById("field");
 
   /* ---------- the computer voice inside the Dugout app (Android's web view has none) ---------- */
@@ -177,26 +177,80 @@
       .then(function () { S.loading = false; if (S.game) buildGame(S.game.key); render(); });
   }
 
+  /* ---------- the order set at this tablet (today only): a team's {order, out}, or the other town's numbers ---------- */
+  function ords() { var o = lsGet(K.order); return o && o.date === S.day.date && o.games && typeof o.games === "object" ? o : { date: S.day.date, games: {} }; }
+  function getOrd(k) { var g = S.game && ords().games[S.game.key]; return g ? g[k] || null : null; }
+  function setOrd(k, v) {
+    var o = ords(), g = o.games[S.game.key] = o.games[S.game.key] || {};
+    if (v == null) delete g[k]; else g[k] = v;
+    lsSet(K.order, o);
+  }
+
   /* ---------- one game's two batting orders ---------- */
-  function buildSide(side, which) {
-    if (side.visitor) return { side: side, st: null, note: "No lineup for the other town." };
+  function buildSide(side, which, k) {
+    var settings = Object.assign({}, S.lib.settings, { tstyle: "pa" }), b;
+    if (side.visitor) {
+      var vrows = F.visitorRows(getOrd(k));
+      if (!vrows.length) return { side: side, st: null, visitor: true, note: "No lineup for the other town. Type their numbers to announce them." };
+      b = F.buildSide(C, { side: which, rows: vrows, picks: {}, songs: S.lib.songs, settings: settings });
+      return { side: side, st: b.st, visitor: true, note: "The other town, announced by number." };
+    }
     var c = S.day.teams[side.teamId] || {}, pick = F.pickLineup(c.lineups, S.day.date);
-    var rows = F.orderRows(c.roster, pick && pick.lineup);
-    var settings = Object.assign({}, S.lib.settings, { tstyle: "pa" });
-    var b = F.buildSide(C, { side: which, rows: rows, picks: c.picks, songs: S.lib.songs, settings: settings });
-    var note = !c.at ? "Not loaded yet." : !rows.length ? "No players on this team's roster yet." :
+    var base = F.orderRows(c.roster, pick && pick.lineup), saved = getOrd(k), rows = F.applyOrder(base, saved);
+    b = F.buildSide(C, { side: which, rows: rows, picks: c.picks, songs: S.lib.songs, settings: settings });
+    var note = !c.at ? "Not loaded yet." : !base.length ? "No players on this team's roster yet." :
+      saved ? "Order set at this tablet." :
       pick && pick.exact ? "Coach's lineup for today." :
       pick ? "Coach's last saved lineup" + (pick.lineup.date ? " (" + niceDate(pick.lineup.date) + ")" : "") + ". Check the order." : "No lineup saved, so this is roster order.";
-    return { side: side, st: b.st, note: note, picked: b.picked, unmatched: b.unmatched, loadedAt: c.at };
+    return { side: side, st: b.st, base: base, note: note, picked: b.picked, unmatched: b.unmatched, loadedAt: c.at };
   }
   function buildGame(key) {
     var g = games().filter(function (x) { return x.key === key; })[0];
     if (!g) { S.game = null; S.view = "today"; return; }
     S.game = g;
-    S.sides = [buildSide(g.sides[0], "a"), buildSide(g.sides[1], "b")];
+    S.sides = [buildSide(g.sides[0], "a", 0), buildSide(g.sides[1], "b", 1)];
     var saved = lsGet(K.game);
     if (saved && saved.key === key) { S.bat = saved.bat === 1 ? 1 : 0; S.next = [+saved.next[0] || 0, +saved.next[1] || 0]; }
     else { S.bat = S.sides[0].st ? 0 : 1; S.next = [0, 0]; }
+    S.next = S.next.map(function (n, i) { var len = S.sides[i].st ? S.sides[i].st.roster.length : 0; return len && n < len ? n : 0; });
+  }
+
+  /* ---------- changing the order at the tablet ---------- */
+  function startEdit() {
+    var sd = S.sides[S.bat]; stop(true);
+    if (sd.visitor) S.edit = { which: S.bat, visitor: true, list: F.arr(getOrd(S.bat)).map(function (n) { return { num: String(n) }; }) };
+    else {
+      var saved = getOrd(S.bat) || {}, out = {};
+      F.arr(saved.out).forEach(function (x) { out[x] = 1; });
+      var ins = F.applyOrder(sd.base || [], saved).map(function (r) { return { row: r, out: false }; });
+      var outs = (sd.base || []).filter(function (r) { return out[F.rowKey(r)]; }).map(function (r) { return { row: r, out: true }; });
+      S.edit = { which: S.bat, visitor: false, list: ins.concat(outs) };
+    }
+    S.view = "order"; render();
+  }
+  function endEdit() {
+    var e = S.edit; if (!e) return;
+    if (e.visitor) setOrd(e.which, e.list.length ? e.list.map(function (x) { return x.num; }) : null);
+    else setOrd(e.which, { order: e.list.map(function (x) { return F.rowKey(x.row); }), out: e.list.filter(function (x) { return x.out; }).map(function (x) { return F.rowKey(x.row); }) });
+    S.edit = null; buildGame(S.game.key); S.view = "game"; saveGame(); render();
+  }
+  function resetEdit() {
+    var e = S.edit; if (!e) return;
+    if (e.visitor) e.list = [];
+    else { setOrd(e.which, null); e.list = (S.sides[e.which].base || []).map(function (r) { return { row: r, out: false }; }); }
+    render();
+  }
+  function moveEdit(i, j) {
+    var l = S.edit && S.edit.list; if (!l || i === j || j < 0 || j >= l.length) return false;
+    var x = l.splice(i, 1)[0]; l.splice(j, 0, x); return true;
+  }
+  function addNums() {
+    var el = document.getElementById("fmNums"), nums = F.parseNums(el ? el.value : "");
+    if (!nums.length) { U.toast("Type a jersey number first.", "warn", 3000); return; }
+    nums.forEach(function (n) { if (S.edit.list.length < 40) S.edit.list.push({ num: n }); });
+    if (el) el.value = "";
+    render();
+    var again = document.getElementById("fmNums"); if (again) again.focus();
   }
   function saveGame() { if (S.game) lsSet(K.game, { key: S.game.key, bat: S.bat, next: S.next }); }
   function niceDate(d) { try { return new Date(d + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" }); } catch (e) { return d; } }
@@ -281,10 +335,11 @@
     });
     return h + '</main>';
   }
+  function who(p) { return p.name ? (p.num ? "#" + p.num + " " : "") + p.name : p.num ? "Number " + p.num : "Player"; }
   function tile(sd, p, i) {
     var song = p.songId ? C.songById(sd.st.songs, p.songId) : null, isNext = S.next[S.bat] === i, on = S.playing && S.playing.bat === S.bat && S.playing.i === i;
     return '<button type="button" class="fm-tile' + (isNext ? " next" : "") + (on ? " on" : "") + '" data-a="tap" data-i="' + i + '">' +
-      '<span class="fm-num">' + esc(p.num ? "#" + p.num : "") + '</span><span class="fm-name">' + esc(p.name || "Player") + '</span>' +
+      '<span class="fm-num">' + esc(p.num && p.name ? "#" + p.num : "") + '</span><span class="fm-name">' + esc(p.name || (p.num ? "#" + p.num : "Player")) + '</span>' +
       '<span class="fm-song">' + esc(song ? song.title : "No song") + '</span>' + (isNext ? '<span class="fm-tag">Up next</span>' : "") + (on ? '<span class="fm-tag live">' + (S.playing.state === "loading" ? "Getting ready" : "Playing") + '</span>' : "") + '</button>';
   }
   function viewGame() {
@@ -293,23 +348,46 @@
     S.sides.forEach(function (sd, k) { h += '<button type="button" role="tab" aria-selected="' + (S.bat === k) + '" class="fm-team' + (S.bat === k ? " on" : "") + '" data-a="bat" data-k="' + k + '">' + esc(sd.side.name) + '<span class="small mute">' + (k ? "Bottom" : "Top") + '</span></button>'; });
     h += '</div>';
     var sd = S.sides[S.bat];
-    h += '<div class="fm-bar"><span class="mute">' + esc(sd.note) + (sd.loadedAt ? " Loaded " + esc(clock(sd.loadedAt)) + "." : "") + '</span>' + (sd.st ? '<button type="button" class="btn ghost small" data-a="reload"' + (S.loading ? " disabled" : "") + '>' + (S.loading ? "Loading…" : "Reload lineups") + '</button>' : "") + '</div>';
+    h += '<div class="fm-bar"><span class="mute">' + esc(sd.note) + (sd.loadedAt ? " Loaded " + esc(clock(sd.loadedAt)) + "." : "") + '</span>' + (sd.visitor ? '<button type="button" class="btn small" data-a="order">' + (sd.st ? "Change numbers" : "Type their numbers") + '</button>' :
+      '<span class="stack-h">' + (sd.base && sd.base.length ? '<button type="button" class="btn ghost small" data-a="order">Change order</button>' : "") +
+      '<button type="button" class="btn ghost small" data-a="reload"' + (S.loading ? " disabled" : "") + '>' + (S.loading ? "Loading…" : "Reload lineups") + '</button></span>') + '</div>';
     if (sd.unmatched && sd.unmatched.length) h += '<p class="msg warn">Not on this tablet: ' + sd.unmatched.map(function (u) { return esc(C.firstWord(u.name) + " (" + u.song + ")"); }).join(", ") + '. They get another song for now.</p>';
-    if (!sd.st) h += '<div class="card"><p class="mute">' + esc(sd.note) + '</p></div>';
+    if (!sd.st && sd.visitor) h += '<div class="card"><p class="mute">Type the other town\'s jersey numbers in batting order, and each batter is announced "Now batting, number 7" with a song from this tablet.</p><button type="button" class="btn block big" data-a="order">Type their numbers</button></div>';
+    else if (!sd.st) h += '<div class="card"><p class="mute">' + esc(sd.note) + '</p></div>';
     else if (!sd.st.roster.length) h += '<div class="card"><p class="mute">' + esc(sd.note) + '</p></div>';
     else { h += '<div class="fm-grid">'; sd.st.roster.forEach(function (p, i) { h += tile(sd, p, i); }); h += '</div>'; }
     var nx = sd.st && sd.st.roster[S.next[S.bat]];
-    h += '</main><footer class="fm-foot">' + (nx ? '<button type="button" class="btn big fm-play" data-a="tap" data-i="' + S.next[S.bat] + '">' + U.I.play + ' Play ' + esc((nx.num ? "#" + nx.num + " " : "") + nx.name) + '</button>' : "<span></span>") +
+    h += '</main><footer class="fm-foot">' + (nx ? '<button type="button" class="btn big fm-play" data-a="tap" data-i="' + S.next[S.bat] + '">' + U.I.play + ' Play ' + esc(who(nx)) + '</button>' : "<span></span>") +
       '<button type="button" class="btn big fm-stop" data-a="stop">' + U.I.stop + ' Stop</button></footer>';
-    if (S.count) { var cp = sd.st.roster[S.count.i]; h += '<div class="fm-count" data-a="cancel" role="alertdialog" aria-label="Countdown, tap to cancel"><div class="fm-count-n">' + S.count.left + '</div><div class="fm-count-who">' + esc((cp.num ? "#" + cp.num + " " : "") + cp.name) + '</div><div class="mute">Tap to cancel</div></div>'; }
+    if (S.count) { var cp = sd.st.roster[S.count.i]; h += '<div class="fm-count" data-a="cancel" role="alertdialog" aria-label="Countdown, tap to cancel"><div class="fm-count-n">' + S.count.left + '</div><div class="fm-count-who">' + esc(who(cp)) + '</div><div class="mute">Tap to cancel</div></div>'; }
+    return h;
+  }
+  function viewOrder() {
+    var e = S.edit, sd = S.sides[e.which], ins = 0;
+    var h = header(sd.side.name + (e.visitor ? ": numbers" : ": batting order"), "order-done") + '<main class="fm-main fm-order">';
+    if (e.visitor) h += '<div class="card"><p class="lead">Their jersey numbers, in batting order</p><div class="fm-addnum"><input id="fmNums" inputmode="numeric" autocomplete="off" placeholder="7, 12, 3" aria-label="Jersey numbers"><button type="button" class="btn" data-a="nums-add">Add</button></div></div>';
+    else h += '<p class="mute">Drag a player by the handle, or use the arrows. Tap Not here for anyone missing today.</p>';
+    if (!e.list.length) h += '<p class="mute">' + (e.visitor ? "No numbers yet." : "No players.") + '</p>';
+    h += '<ol class="fm-olist" id="fmOList">';
+    e.list.forEach(function (x, i) {
+      var label = e.visitor ? "Number " + x.num : (x.row.num ? "#" + x.row.num + " " : "") + x.row.name;
+      if (!x.out) ins++;
+      h += '<li class="fm-orow' + (x.out ? " out" : "") + '" data-i="' + i + '"><span class="fm-handle" data-drag="' + i + '" aria-hidden="true">&#8801;</span>' +
+        '<span class="fm-opos">' + (x.out ? "" : ins) + '</span><span class="fm-oname">' + esc(label) + (x.out ? ' <span class="mute small">not here</span>' : "") + '</span>' +
+        '<button type="button" class="btn ghost small" data-a="o-up" data-i="' + i + '" aria-label="Move ' + esc(label) + ' up"' + (i ? "" : " disabled") + '>&#9650;</button>' +
+        '<button type="button" class="btn ghost small" data-a="o-down" data-i="' + i + '" aria-label="Move ' + esc(label) + ' down"' + (i < e.list.length - 1 ? "" : " disabled") + '>&#9660;</button>' +
+        (e.visitor ? '<button type="button" class="btn ghost small" data-a="o-del" data-i="' + i + '">Remove</button>' : '<button type="button" class="btn ghost small" data-a="o-out" data-i="' + i + '">' + (x.out ? "Here" : "Not here") + '</button>') + '</li>';
+    });
+    h += '</ol></main><footer class="fm-foot"><button type="button" class="btn big" data-a="order-done">Done</button>' +
+      '<button type="button" class="btn big ghost" data-a="o-reset">' + (e.visitor ? "Clear" : "Coach's order") + '</button></footer>';
     return h;
   }
   function render() {
     var h = S.view === "boot" ? header("Field mode") + '<main class="fm-main"><p class="mute">Getting ready…</p></main>' :
-      S.view === "gate" ? viewGate() : S.view === "settings" ? viewSettings() : S.view === "game" && S.game ? viewGame() : viewToday();
-    var keep = document.getElementById("fmLabel"), lbl = keep ? keep.value : null;
+      S.view === "gate" ? viewGate() : S.view === "settings" ? viewSettings() : S.view === "game" && S.game ? viewGame() : S.view === "order" && S.edit && S.game ? viewOrder() : viewToday();
+    var kept = ["fmLabel", "fmNums"].map(function (id) { var el = document.getElementById(id); return el ? el.value : null; });
     root.querySelector("#fmView").innerHTML = h;
-    if (lbl != null) { var nl = document.getElementById("fmLabel"); if (nl) nl.value = lbl; }
+    ["fmLabel", "fmNums"].forEach(function (id, i) { var el = document.getElementById(id); if (el && kept[i] != null) el.value = kept[i]; });
   }
 
   /* ---------- taps ---------- */
@@ -330,7 +408,34 @@
     else if (a === "tap") tap(+el.dataset.i);
     else if (a === "stop") stop(false);
     else if (a === "cancel") cancelCount();
+    else if (a === "order") startEdit();
+    else if (a === "order-done") endEdit();
+    else if (a === "o-reset") resetEdit();
+    else if (a === "o-up" || a === "o-down") { var i = +el.dataset.i; if (moveEdit(i, a === "o-up" ? i - 1 : i + 1)) render(); }
+    else if (a === "o-out") { var x = S.edit.list[+el.dataset.i]; if (x) { x.out = !x.out; var l = S.edit.list; l.splice(l.indexOf(x), 1); if (x.out) l.push(x); else l.splice(l.filter(function (y) { return !y.out; }).length, 0, x); render(); } }
+    else if (a === "o-del") { S.edit.list.splice(+el.dataset.i, 1); render(); }
+    else if (a === "nums-add") addNums();
   });
+
+  root.addEventListener("keydown", function (ev) { if (ev.key === "Enter" && ev.target && ev.target.id === "fmNums") { ev.preventDefault(); addNums(); } });
+
+  /* dragging a player by the handle: the list reorders under the finger */
+  var drag = null;
+  root.addEventListener("pointerdown", function (ev) {
+    var hd = ev.target.closest && ev.target.closest("[data-drag]"); if (!hd || !S.edit) return;
+    ev.preventDefault(); drag = { i: +hd.dataset.drag, id: ev.pointerId };
+    var li = hd.closest(".fm-orow"); if (li) li.classList.add("drag");
+  });
+  document.addEventListener("pointermove", function (ev) {
+    if (!drag || ev.pointerId !== drag.id) return;
+    var over = document.elementFromPoint(ev.clientX, ev.clientY), li = over && over.closest && over.closest(".fm-orow");
+    if (!li) return;
+    var j = +li.dataset.i;
+    if (moveEdit(drag.i, j)) { drag.i = j; render(); var nl = root.querySelector('.fm-orow[data-i="' + j + '"]'); if (nl) nl.classList.add("drag"); }
+  });
+  function endDrag(ev) { if (drag && ev.pointerId === drag.id) { drag = null; var d = root.querySelector(".fm-orow.drag"); if (d) d.classList.remove("drag"); } }
+  document.addEventListener("pointerup", endDrag);
+  document.addEventListener("pointercancel", endDrag);
 
   /* keep the screen on during a game where the browser allows it (the Dugout app does it for the whole of Field mode) */
   var lock = null;
