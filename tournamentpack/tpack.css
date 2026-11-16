@@ -230,7 +230,8 @@ input:focus-visible, textarea:focus-visible, select:focus-visible { outline: 3px
 .scen > li small { display: block; color: var(--mute); font-size: 13px; font-weight: 500; }
 .scen > li span { font-family: var(--num); font-weight: 700; font-size: 26px; color: var(--accent); white-space: nowrap; }
 .scen { margin-top: 6px; }
-.scen > li span .tag { font-family: var(--font, inherit); font-size: 12px; vertical-align: middle; margin-left: 4px; }
+.scen > li span .tag { font-family: var(--font, inherit); font-size: 12px; vertical-align: middle; margin-left: 4px; color: var(--accent-ink); }
+.scen > li span .tag.warn { color: var(--warn); } .scen > li span .tag.info { color: var(--info); }
 .cutline { margin: 6px 0 2px; padding: 8px 12px; border-radius: 12px; font-weight: 700; background: var(--accent-soft); }
 .cutline.out { background: rgba(255, 120, 90, .14); }
 .wi-games { list-style: none; margin: 8px 0 0; padding: 0; }
@@ -242,9 +243,6 @@ input:focus-visible, textarea:focus-visible, select:focus-visible { outline: 3px
 .wi-team input { flex: none; width: 64px; min-height: 44px; text-align: center; }
 .wi-v { flex: none; color: var(--mute); font-size: 13px; }
 .wi-out { margin-top: 12px; }
-.tag.ok { background: var(--accent); }
-.tag.warn { background: #ff8a6a; color: #1a0904; }
-.tag.info { background: var(--line2); color: var(--text); }
 .wi-head { font-weight: 700; }
 .wi-table { list-style: none; margin: 6px 0 0; padding: 0; }
 .wi-table li { display: flex; align-items: baseline; gap: 10px; padding: 6px 0; border-bottom: 1px solid var(--line); }
