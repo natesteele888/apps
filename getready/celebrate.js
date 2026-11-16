@@ -124,7 +124,7 @@
     } else mountCanvas(opts.style || X.STYLES[Math.floor(rnd() * X.STYLES.length)]);
     el.querySelector(".cel-go").onclick = () => opts.close && opts.close();
     if (opts.sound) X.fanfare();
-    try { if (navigator.vibrate) navigator.vibrate([60, 40, 60, 40, 120]); } catch (e) {}
+    try { if (navigator.vibrate && !(navigator.userActivation && !navigator.userActivation.hasBeenActive)) navigator.vibrate([60, 40, 60, 40, 120]); } catch (e) {}
     return { el, stop: () => { stopped = true; cancelAnimationFrame(raf); if (el._cleanup) el._cleanup(); } };
   };
 
