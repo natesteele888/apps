@@ -673,29 +673,45 @@ drill:["Take any JSON file from your projects and ask Claude: “Show this JSON 
 q:{q:"Why does Where Do I Go use wildcard rules instead of a full table?",o:["Browsers can't load big tables","Fewer rows to maintain, and one edit covers many situations","CSV doesn't support more than 1,000 rows"],a:1,w:"A rule with * covers every matching situation, so fixing one rule fixes all of them."}},
 
 {phase:"Build the page",title:"Where data lives",
-idea:`Data has four homes. <b>Memory</b> (variables) disappears on refresh. <b>Browser storage</b> (localStorage, IndexedDB) survives a refresh but only on that device. <b>Shared cloud storage</b> (artifact storage, Firebase) reaches every device. <b>Outside systems</b> like a Google Sheet hold data your page sends them. Most “it didn't save” bugs mean the data went to a different home, or a different <b>key</b>, than the reader checks.`,
-fig:()=>svg(400,id=>
-  B(20,20,165,80,"Memory",["gone on refresh"],"d-box")+B(205,20,165,80,"Browser storage",["this device only"],"d-blue")+
-  B(390,20,165,80,"Shared cloud",["every device"],"d-good")+B(575,20,165,80,"Outside system",["Sheet, CRM, etc."],"d-mark")+
-  T(102,126,"variables","d-m","middle")+T(287,126,"localStorage","d-m","middle")+T(287,144,"IndexedDB","d-m","middle")+
-  T(472,126,"artifact storage","d-m","middle")+T(472,144,"Firebase","d-m","middle")+T(657,126,"Apps Script","d-m","middle")+T(657,144,"→ Google Sheet","d-m","middle")+
+idea:`Every piece of data has a home, and <b>the home decides how long it lasts and who can see it</b>. <b>Memory</b> is gone on refresh. <b>This device</b> (localStorage, IndexedDB) survives a refresh but stays on one phone. A <b>cloud database</b> (Firestore, Realtime Database) reaches every signed-in device, filed at a <b>path</b> like <code>progress/course</code>. <b>Outside systems</b> like a Google Sheet or a Drive folder hold what your page sends them. Two rules catch most “it didn't save” bugs: the writer and the reader must use the <b>same path and field names</b>, and when two copies exist, you need a <b>merge rule</b> that never throws work away.`,
+fig:()=>svg(420,id=>
+  B(20,20,165,80,"Memory",["gone on refresh"],"d-box")+B(205,20,165,80,"This device",["one phone only"],"d-blue")+
+  B(390,20,165,80,"Cloud database",["every signed-in device"],"d-good")+B(575,20,165,80,"Outside system",["Sheet, Drive folder"],"d-mark")+
+  T(102,126,"Read 20's timer","d-m","middle")+T(102,144,"while it runs","d-m","middle")+
+  T(287,126,"Read 20 log","d-m","middle")+T(287,144,"Toolbox phone copy","d-m","middle")+
+  T(472,126,"Ballclub, Dashboard","d-m","middle")+T(472,144,"Toolbox progress","d-m","middle")+
+  T(657,126,"card photos","d-m","middle")+T(657,144,"→ Drive + Sheet","d-m","middle")+
   A(id,30,176,730,176,"lasts longer, reaches more people","blue")+
-  T(380,200,"THE PLAY DIAGRAMS SUSPECT: SAME STORE, DIFFERENT KEY","d-lab","middle")+
-  B(20,250,190,62,"Master play editor",["writes"],"d-box")+A(id,212,281,290,281)+T(251,232,"save('playsMaster')","d-m","middle")+
-  B(292,240,176,86,"Shared store",["playsMaster: ✓","masterPlays: (empty)"],"d-good")+
-  A(id,548,281,470,281,"","bad")+T(509,232,"load('masterPlays')","d-m","middle")+B(550,250,190,62,"Play Calls cards",["read nothing"],"d-bad")+
-  T(380,360,"Key names here are an illustration. Compare the real save and load keys in your file.","d-lab","middle")
+  T(380,212,"WALK-UP: SAME PATH, DIFFERENT FIELD NAME","d-lab","middle")+
+  B(20,250,190,62,"Ballclub",["coach approves a song"],"d-box")+A(id,212,281,290,281)+T(251,232,"writes title","d-m","middle")+
+  B(292,240,176,86,"walkupSongs/player",["title: “…” ✓","song: (nothing)"],"d-good")+
+  A(id,548,281,470,281,"","bad")+T(509,232,"reads song","d-m","middle")+B(550,250,190,62,"Field tablet",["finds nothing to play"],"d-bad")+
+  A(id,645,314,645,348,"","good")+B(550,350,190,56,"The fix",["read title, then song"],"d-good")+
+  T(20,372,"No error anywhere: the song was saved fine,","d-lab")+T(20,390,"under a name the tablet never asked for.","d-lab")
 ),
-cap:"Top: the four homes for data, from shortest-lived to most shared. Bottom: one of the likely causes Claude named for the play diagrams cloud save bug.",
+cap:"Top: the four homes, with the apps of yours that use each one. Bottom: the Walk-Up field tablet bug fixed on Nov 16. Ballclub and the tablet agreed on the path but not on the field name.",
+fig2:()=>svg(300,id=>
+  T(380,24,"READ 20: TWO PHONES, ONE LOG","d-lab","middle")+
+  B(20,44,180,70,"Phone A",["Tuesday: 12 min"],"d-blue")+B(20,154,180,70,"Phone B",["Tuesday: 9 min"],"d-blue")+
+  A(id,202,79,288,118)+A(id,202,189,288,152)+
+  B(290,96,190,80,"Shared copy",["one Firestore","document"],"d-box")+
+  A(id,482,120,558,80,"","good")+A(id,482,152,558,212,"","bad")+
+  B(560,40,180,80,"Merge",["keep each phone's time","Tuesday = 21 ✓"],"d-good")+
+  B(560,172,180,80,"Last save wins",["Tuesday = 9","12 minutes lost"],"d-bad")+
+  T(650,270,"what a plain overwrite would do","d-lab","middle")+
+  T(20,262,"On each phone: every tick goes to localStorage,","d-lab")+T(20,280,"and a second copy goes to IndexedDB every few seconds.","d-lab")
+),
+cap2:"Why two phones can share one reading log without erasing each other. Read 20's merge keeps each phone's biggest time for the day, so the log only ever grows.",
 builds:[
- {p:"Gameday Picks",t:"Started with localStorage, so picks lived only on your device. To let his friends pick from their own phones, it moved to shared storage that syncs every 15 seconds.",l:"“Who needs to see this data?” decides where it lives.",u:CH("dc06ac23-68ec-4e74-be48-cc87315b5914")},
- {p:"Meeting Secretary",t:"Notes are written to IndexedDB as you go, so a browser crash mid-meeting can resume without losing anything.",l:"Browser storage is great for “don't lose my work on this laptop.”",u:CH("1324f676-7ca3-4b8e-bba7-9a014ee6b964")},
- {p:"Party RSVP",t:"RSVPs went from the page to a Google Sheet through a Google Apps Script web app, with duplicate names updating the existing row.",l:"A spreadsheet can be a perfectly good backend for small jobs.",u:CH("2366e2c0-38c5-4b4e-b4fc-09b1199df12f")},
- {p:"Play diagrams cloud save",t:"Edits to master plays didn't reach the Play Calls cards. Likely causes: saving without the shared flag (private to you), or writing and reading under different keys.",l:"This one is still open on your Build Board.",u:CH("5af22197-a4b7-427a-b056-a234967084eb")}
+ {p:"Read 20",t:"Every tick of the timer is saved to localStorage, and a second copy goes to IndexedDB every few seconds. If a parent turns on backup, the log is also merged with a Firestore document for their Google account, so a new or reset phone gets everything back.",l:"Data you can't lose gets two homes and a merge rule that only adds."},
+ {p:"Walk-Up and Ballclub",t:"A coach approves a walk-up song in Ballclub, which saves it under the field <code>title</code>. The field tablet looked for <code>song</code>, an older name, so the approved song never played. The fix reads <code>title</code> and still accepts <code>song</code> for older records.",l:"Writer and reader must agree on every name: the path and the field. When you rename one, read both names for a while."},
+ {p:"LYBS Dashboard",t:"Registration rows used to ship as <code>data.js</code>, a plain file on the website. The sign-in screen hid the screens, but anyone could download the file. Now the rows live in Firestore at <code>lybs_bins/lybs-data</code> and load only after sign-in.",l:"A file on GitHub Pages is public, whatever the page shows. Private data belongs in a database behind rules."},
+ {p:"Steele Cards photos",t:"A card photo goes from Ballclub's Roster tab to Apps Script, which files it in a private Drive folder and adds a row to a sheet. When the board approves it on the Dashboard, it's written to Ballclub's database at <code>cardPhotos/{team}/{player}</code>, where only that team can read it.",l:"Data can travel through several homes. Each stop decides who can see it."},
+ {p:"Toolbox",t:"The Mark stage done button below writes one Firestore document, <code>progress/course</code>, so every device you sign in on shows the same stages done. The phone copy you can save keeps everything under one localStorage key instead.",l:"Same app, two homes: the cloud for sharing, the device for working offline."}
 ],
-terms:[["variable","A named value in memory while the page is open."],["persistence","Data surviving a refresh, a restart, or a new device."],["localStorage","Simple key/value storage in one browser on one device."],["IndexedDB","Bigger, sturdier browser storage. Still one device."],["key","The name data is saved under. Reader and writer must match."],["shared vs private","Whether everyone with the link sees it, or only you."],["Firestore / RTDB","Google's Firebase databases used by your football apps."],["backend","Anything that stores or processes data off the page."]],
-drill:["Open the play diagrams HTML and search for every save and load call.","Write each key name in two columns: “written as” and “read as.” Any mismatch is your bug.","Paste both columns to Claude and ask it to confirm."],
-q:{q:"Picks show up on your phone but not on your son's. Most likely?",o:["They're saved in localStorage on your phone","His phone's screen is too small","The ESPN API is down"],a:0,w:"localStorage is per device. Shared storage is what makes one person's data visible to another."}},
+terms:[["localStorage","Small key/value storage in one browser on one phone."],["IndexedDB","Bigger, sturdier browser storage. Still one phone."],["Firestore","Firebase's database of collections and documents. Toolbox, Dashboard and Read 20 backup use it."],["Realtime Database","Firebase's other database: one big tree of paths. Ballclub uses it."],["path","The address of a piece of data, like progress/course or cardPhotos/{team}/{player}."],["field","One named value inside a record, like title or start."],["merge","Combining two copies by a rule, like “keep the bigger time.”"],["last write wins","A plain overwrite: whichever save lands last replaces the other. Easy way to lose work."]],
+drill:["Open Read 20, let the timer run for a minute, close the app and reopen it. The minute is still there: that's localStorage doing its job.","Ask Claude: “In Ballclub, list every path walk-up songs are written to and every place that reads them, as a two-column diagram.”","Pick the next app you want to build. Write each piece of data it holds and choose its home: memory, this phone, the cloud or a Sheet. The question that decides it: who needs to see this?"],
+q:{q:"Ballclub saves an approved song as title. The field tablet reads song. What happens?",o:["The tablet plays the song anyway","The tablet finds nothing, and there's no error","Firebase renames the field to match"],a:1,w:"The data saved fine, under a name the reader never asks for. No error, just nothing. That was the Walk-Up bug. Like the Gear guard in Stage 1: no error doesn't mean no problem."}},
 
 {phase:"Ship it",title:"Version control",
 idea:`<b>Git</b> takes snapshots of a folder called <b>commits</b>. A <b>repository</b> is the folder plus its history. <b>Push</b> sends your commits to GitHub; <b>GitHub Pages</b> turns a repo into a live website. Every commit is a point you can return to. That's why each waypoint on your Build Board should end with one.`,
@@ -1198,6 +1214,7 @@ function renderLearn(n){
   $("#main").innerHTML=`<div class="learn"><div class="lrail"><div class="bigbar"><i style="width:${d.size/STAGES.length*100}%"></i></div><div class="prog" style="margin-bottom:8px">${d.size} of ${STAGES.length} stages</div><ol class="steps">${rail}</ol></div>
   <article class="stage"><div class="eyebrow">Stage ${n} of ${STAGES.length} · ${s.phase}</div><h2>${s.title}</h2><p class="idea">${s.idea}</p>
   <figure class="fig"><div class="scroll">${s.fig()}</div><figcaption>${s.cap}</figcaption></figure>
+  ${s.fig2?`<figure class="fig"><div class="scroll">${s.fig2()}</div><figcaption>${s.cap2}</figcaption></figure>`:""}
   <h3 class="sec">In your builds</h3><div class="builds">${s.builds.map(b=>`<div class="build"><div class="proj">${b.p}</div><p>${b.t}</p><p class="lesson"><b>Takeaway:</b> ${b.l}</p>${b.u?`<a href="${b.u}" target="_blank" rel="noopener">Open the chat ↗</a>`:""}</div>`).join("")}</div>
   <h3 class="sec">Words to know</h3><dl class="terms">${s.terms.map(([t,dd])=>`<div class="term"><dt>${t}</dt><dd>${dd}</dd></div>`).join("")}</dl>
   <h3 class="sec">Drill</h3><div class="drill"><ol>${s.drill.map(x=>`<li>${x}</li>`).join("")}</ol></div>
