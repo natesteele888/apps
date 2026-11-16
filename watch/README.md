@@ -49,8 +49,12 @@ Nothing goes through the internet or a server. Player names and photos stay on t
 - One screen per batter shows the jersey number big, the name, and the batter's photo behind them if you set one.
 - Swipe left or right, or turn the bezel, to move between batters. Swiping never starts or stops music. The order goes round: after the last batter comes the leadoff batter again.
 - Swipe up for the batting order. Tap a name to jump there. Press and hold a name to swap in a bench player: pick who comes in, and they take that batting spot while the other player goes to the bench. Swaps wait while a song plays.
-- To play, press and hold anywhere on the face. A green ring fills around the edge, and the song starts when it closes, about one second. Letting go early, or starting a swipe, does nothing.
-- While a song plays, the whole screen pulses blue with **PLAYING**, a ring showing the song's progress, and a big red **STOP**. One tap stops it. You can't swipe to another batter while a song plays.
+- To play, press and hold anywhere on the face. A green ring fills around the edge in about one second. Letting go early, or starting a swipe, does nothing.
+- When the ring closes, a short countdown shows (**STARTING IN 2**, set in the phone's **Watch › Song countdown**, 0 to 5 seconds) with a light buzz. A tap anywhere cancels it before any sound plays.
+- While a song plays, the whole screen pulses blue with **PLAYING**, a ring showing the song's progress, and a big red **STOP**. One tap stops it right away. You can't swipe to another batter while a song plays.
+- **Keep playing:** while a song plays, press and hold (anywhere, Stop too). The watch buzzes, the ring turns gold, and the song runs on past its clip for that song's extra seconds (30 unless changed, set per song in Walk-Up's Trim sheet), then fades out over 2 seconds. Stop still ends it at once.
+- **Game sounds:** swipe down on the batter. Tap a sound (the anthem, music between innings, your own clips) to play it after the same countdown. Press and hold one to put it in **Up next**, which plays by itself when the sound before it ends; tap one in Up next to take it out. While a game sound plays, **Next: …** under Stop skips to what's up next. Stop ends everything, Up next too.
+- Every screen past the batter goes back the same three ways: swipe right, the watch's back button, or the **Back** chip at the bottom of the list.
 - The top line shows the speaker: green when the phone is on a Bluetooth speaker, yellow for "No speaker", and red for "Open Dugout on your phone" when the watch can't reach the phone.
 
 **Pitch Count** (the green baseball icon)
@@ -79,7 +83,9 @@ Nothing goes through the internet or a server. Player names and photos stay on t
 
 ## What the phone does
 
-- The **Game** screen is the walk-up player. The pitch counter is off at first. To add it, tap **Count pitches too** on the Game screen, or turn on **Settings › Game mode › Pitch counter on the Game screen**. It then sits at the top of Game (+1, Undo, and the Bullpen), with the walk-up player below. Coaches without a watch use it the same way. Turn it off the same way in Settings, or in Bullpen › Pitching settings.
+- The **Game** screen is the walk-up player. Under it is **Game sounds**: buttons for the anthem, music between innings and your own clips. Tap one to play it, tap **Next** to put it in Up next. **Edit** adds, names, orders and deletes them, and picks each one's song from your song library with where it starts and ends (it skips the quiet at either end by itself). The anthem button can fetch the U.S. Navy Band's public-domain recording with one tap, or use your own file.
+- The phone keeps playing a game sound when you move to the next batter, and stops a walk-up as before.
+- The pitch counter is off at first. To add it, tap **Count pitches too** on the Game screen, or turn on **Settings › Game mode › Pitch counter on the Game screen**. It then sits at the top of Game (+1, Undo, and the Bullpen), with the walk-up player below. Coaches without a watch use it the same way. Turn it off the same way in Settings, or in Bullpen › Pitching settings.
 - Pitch Count on the watch works whether or not the phone shows the pitch counter. Its pitches still sync to the phone.
 - **Watch** in the top bar opens a screen where you set a photo for each batter and open LYBS Ballclub inside Dugout.
 - **Pocket** turns the screen black and ignores touches, so the phone can't play or stop anything in your pocket. Music and the watch keep working. Hold the screen for 1.5 seconds to unlock it.
@@ -138,6 +144,7 @@ Both apps must be signed with the same key, because the watch only talks to a ph
 
 ## Things to know
 
+- **Android and Wear OS only.** There's no Apple Watch app. One watch app covers Wear OS 2 (like the Huawei Watch 2) through Wear OS 5 (Pixel Watch, Galaxy Watch 4 and newer); anything that needs a newer watch is switched on only on watches that have it. iPhone users can use Walk-Up on the web, everything but the watch.
 - **Your team data.** Dugout has its own storage, separate from Chrome. To move your team in, open Walk-Up in Chrome and tap Settings › Back up everything with audio. Then in Dugout, tap Settings › Restore from a backup file and pick that file.
 - **Ballclub pitchers and pitch counts.** In Dugout, tap **Watch › Open LYBS Ballclub here**, sign in and open your team once, then go back to Walk-Up. Pitching settings then offers **Add pitchers from Ballclub**, and pitchers resting from earlier games show "Resting" in the Bullpen.
 - **Screen off.** Keep Dugout open and use **Pocket** during games. Dugout also keeps a "Dugout is ready" notification so Android doesn't close it. Music with the phone's screen fully off depends on the phone, so test it once before a game.

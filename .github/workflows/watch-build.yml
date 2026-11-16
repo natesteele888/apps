@@ -89,6 +89,16 @@ jobs:
           npx playwright install --with-deps chromium
       - name: Walk-Up tests
         run: NODE_PATH=/tmp/pw/node_modules tests/run.sh walkup
+      - name: Check the anthem download still works (a warning only)
+        # Walk-Up's "Get the national anthem" downloads a public-domain recording from Wikimedia Commons on the coach's phone.
+        # This only checks that the link still answers with audio the page is allowed to read; it never fails the build.
+        continue-on-error: true
+        run: |
+          url=$(node -e 'const s=require("fs").readFileSync("walkup/board.js","utf8");console.log(/url: "([^"]+)"/.exec(s)[1])')
+          h=$(curl -sSIL --max-time 30 -H "Origin: https://natesteele888.github.io" "$url")
+          echo "$h" | grep -iE '^(HTTP/|content-type|content-length|access-control-allow-origin)'
+          echo "$h" | grep -qiE '^HTTP/[0-9.]+ 200' && echo "$h" | grep -qiE '^content-type: audio/' && echo "$h" | grep -qi '^access-control-allow-origin' \
+            || { echo "::warning::The anthem link in walkup/board.js no longer works. Coaches can still add their own file."; exit 1; }
 
   release:
     # Publishes the APKs that Dugout updates itself from: only on main (a push or a manual run), only when the apps changed, only when signed.
@@ -109,7 +119,7 @@ jobs:
         run: |
           gh release create "dugout-v$N" out/dugout-phone.apk out/dugout-watch.apk --repo "$GITHUB_REPOSITORY" \
             --target "$GITHUB_SHA" --title "Dugout $N" --latest \
-            --notes "Built from ${GITHUB_SHA::7}. Dugout on the phone offers this update by itself. To update the watch app, see watch/README.md."
+            --notes "Built from ${GITHUB_SHA::7}. Android phones and Wear OS watches only (no Apple Watch). One watch app runs on Wear OS 2 (like the Huawei Watch 2) through Wear OS 5 (Pixel Watch, Galaxy Watch 4 and newer); anything that needs a newer watch is switched on only where the watch has it. iPhone users can use Walk-Up on the web, without the watch. Dugout on the phone offers this update by itself. To update the watch app, see watch/README.md."
           # Keep the five newest Dugout releases.
           gh release list --repo "$GITHUB_REPOSITORY" --limit 100 --json tagName -q '.[].tagName' | grep '^dugout-v[0-9]*$' \
             | sort -t v -k2 -n -r | tail -n +6 | while read -r t; do gh release delete "$t" --repo "$GITHUB_REPOSITORY" --yes --cleanup-tag; done

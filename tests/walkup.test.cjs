@@ -61,6 +61,8 @@ fs.writeFileSync(fx('mic.wav'), VOICE);
 fs.writeFileSync(fx('voice.wav'), VOICE);
 fs.writeFileSync(fx('Slow Jam.wav'), SONG);
 fs.writeFileSync(fx('Fast Jam.wav'), SONG2);
+/* 5.4 s: 0.8 s of silence, a 4 s tone, 0.6 s of silence (a game sound with quiet either side) */
+fs.writeFileSync(fx('Board Clip.wav'), wavFile((() => { const sr = 22050, a = new Float32Array(Math.round(sr * 5.4)); for (let i = 0; i < a.length; i++) { const t = i / sr; a[i] = t >= 0.8 && t < 4.8 ? 0.5 * Math.sin(2 * Math.PI * 440 * t) : 0; } return a; })(), 22050));
 fs.writeFileSync(fx('broken.mp3'), Buffer.from('this is not audio at all, just some text pretending to be an mp3 '.repeat(20)));
 const VOICE_B64 = VOICE.toString('base64'), SONG_B64 = SONG.toString('base64');
 /* 24 s: a quiet 8 s intro, then the song kicks in */
@@ -1422,6 +1424,107 @@ const dbKeys = page => page.evaluate(() => window.WalkupApp.WU.db.keys());
     await page.click('#gPlay'); await page.waitForFunction(() => !window.WalkupApp.eng.playing());
     // a built-in sound can't keep playing
     eq(await page.evaluate(() => window.WalkupApp.core.extOf(window.WalkupApp.core.builtinSong('b:horn'))), 0);
+    deep(errors, []); await ctx.close();
+  });
+
+  await test('core: game sounds are cleaned (two to start, ids once, songs that exist, start and end inside the song) and Up next adds once', async () => {
+    deep(C.emptyState().board.map(t => t.id), ['innings', 'anthem']);
+    deep(C.sanitizeState({}).board.map(t => t.label), ['Between innings', 'National anthem']);
+    eq(C.sanitizeState({ board: [] }).board.length, 0, 'a coach who deleted them all keeps none');
+    const songs = [{ id: 'song1abc', kind: 'file', dur: 90 }];
+    const b = C.sanitizeState({ songs, board: [{ id: 'anthem', label: '  Anthem\u200b ', songId: 'song1abc', start: 1.234, end: 80 }, { id: 'anthem', label: 'twice' }, { label: '', songId: 'gone123', start: 5 }, { id: 'xx1', songId: 'song1abc', start: 500, end: 2 }] }).board;
+    eq(b.length, 4); eq(b[0].label, 'Anthem'); eq(b[0].start, 1.23); eq(b[0].end, 80);
+    assert.ok(b[1].id !== 'anthem', 'the same id only once'); eq(b[2].songId, null); eq(b[2].label, 'Sound'); eq(b[2].start, 0);
+    eq(b[3].start, 89.5, 'a start past the end comes back inside the song'); eq(b[3].end, 0, 'an end before the start means the end of the song');
+    deep(C.tileRegion(b[0], songs[0]), { start: 1.23, len: 78.77 });
+    deep(C.tileRegion({ songId: 'song1abc', start: 10, end: 0 }, songs[0]), { start: 10, len: 80 }, 'end 0 plays to the end');
+    eq(C.tileRegion(b[2], songs[0]), null);
+    eq(C.sanitizeState({ board: Array.from({ length: 20 }, (_, i) => ({ label: 'S' + i })) }).board.length, C.LIM.board);
+    let q = C.queueAdd([], 'a'); q = C.queueAdd(q, 'b'); q = C.queueAdd(q, 'a'); deep(q, ['a', 'b'], 'once each');
+    deep(C.queueDrop(q, 0), ['b']); deep(C.queueDrop(q, 5), ['a', 'b']);
+    for (let i = 0; i < 20; i++) q = C.queueAdd(q, 'x' + i);
+    eq(q.length, C.LIM.queue);
+  });
+
+  await test('Game sounds: set one up from a file (it skips the quiet), get the anthem, play, Up next plays by itself, Stop ends everything', async () => {
+    const { page, errors, ctx } = await open();
+    await sample(page);
+    await page.waitForSelector('#gBoard .tile');
+    deep(await page.$$eval('#gBoard .tile b', e => e.map(x => x.textContent)), ['Between innings', 'National anthem']);
+    assert.ok(/get the anthem/i.test(await page.textContent('#gBoard')), 'the empty anthem button says what to do');
+    const tiles = () => page.evaluate(() => JSON.parse(JSON.stringify(window.WalkupApp.S.st.board)));
+    const queue = () => page.evaluate(() => window.WalkupApp.S.queue.slice());
+    const playingKey = () => page.evaluate(() => { const p = window.WalkupApp.eng.playing(); return p ? p.key : null; });
+    // set up "Between innings" from a file: it starts where the sound starts and ends where it ends
+    await page.click('#gBoard .tile:nth-child(1) .tplay'); await page.waitForSelector(sheetSel + ' #btName');
+    await page.fill('#btName', 'Warm up'); await page.dispatchEvent('#btName', 'change');
+    eq((await tiles())[0].label, 'Warm up');
+    await page.setInputFiles('[data-file="board-add"]', [fx('Board Clip.wav')]);
+    await page.waitForFunction(() => { const t = window.WalkupApp.S.st.board[0]; return t.songId && t.start > 0.5; }, null, { timeout: 8000 });
+    let t0 = (await tiles())[0];
+    approx(t0.start, 0.78, 0.02, 'skips the 0.8 s of quiet at the start'); approx(t0.end, 5.1, 0.02, 'and the quiet at the end, with a moment to ring out');
+    await page.waitForSelector(sheetSel + ' [data-key=start]');
+    await page.click(sheetSel + ' [data-key=start][data-step="0.5"]'); approx((await tiles())[0].start, 1.3, 1e-9);
+    await page.click(sheetSel + ' [data-key=start][data-step="-0.5"]'); approx((await tiles())[0].start, 0.8, 1e-9);
+    await page.click(sheetSel + ' [data-close].btn'); await noSheets(page);
+    // the anthem: one tap downloads it (the test answers for the internet); a failed download says so and changes nothing
+    const ANTHEM = await page.evaluate(() => window.WalkupApp.WU.board.ANTHEM.url);
+    eq(ANTHEM, 'https://upload.wikimedia.org/wikipedia/commons/2/25/%22The_Star-Spangled_Banner%22_performed_by_the_United_States_Navy_Band.mp3');
+    await page.route(/upload\.wikimedia\.org/, r => r.abort());
+    await page.click('#gBoard .tile:nth-child(2) .tplay'); await page.waitForSelector(sheetSel + ' [data-do=anthem]');
+    assert.ok(/Navy Band, public domain/.test(await page.textContent(sheetSel)), 'says whose recording it is');
+    await page.click(sheetSel + ' [data-do=anthem]'); await waitToast(page, /Couldn't download the anthem/);
+    eq((await tiles())[1].songId, null);
+    await page.unroute(/upload\.wikimedia\.org/);
+    const asked = [];
+    await page.route(/upload\.wikimedia\.org/, r => { asked.push(r.request().url()); r.fulfill({ status: 200, contentType: 'audio/mpeg', headers: { 'access-control-allow-origin': '*' }, body: fs.readFileSync(fx('Board Clip.wav')) }); });
+    await page.click(sheetSel + ' [data-do=anthem]');
+    await page.waitForFunction(() => { const t = window.WalkupApp.S.st.board[1]; return t.songId && t.start > 0.5; }, null, { timeout: 8000 });
+    deep(asked, [ANTHEM]);
+    const st = await state(page), anthemSong = st.songs.find(x => x.id === st.board[1].songId);
+    eq(anthemSong.title, 'National anthem (U.S. Navy Band)');
+    await page.click(sheetSel + ' [data-close].btn'); await noSheets(page);
+    // play "Warm up": it plays its part of the song, from where the sound starts
+    await resetSpies(page);
+    await page.click('#gBoard .tile:nth-child(1) .tplay');
+    await page.waitForFunction(() => window.__starts.length >= 1, null, { timeout: 8000 });
+    eq(await playingKey(), 'b:' + st.board[0].id);
+    const s1 = (await spies(page)).starts[0]; approx(s1.offset, 0.8, 1e-6); approx(s1.duration, 4.3, 0.02);
+    await page.waitForSelector('#gBoard .tile.on');
+    // Next on the anthem while it plays; changing batter doesn't cut a game sound off
+    await page.click('#gBoard .tile:nth-child(2) .tnext');
+    deep(await queue(), ['anthem']); assert.ok(/Up next/.test(await page.textContent('#gBoard .upnext')) && /National anthem/.test(await page.textContent('#gBoard .upnext')));
+    await page.click('#gNext'); eq(await playingKey(), 'b:' + st.board[0].id, 'a new batter leaves the game sound playing');
+    // when it ends, the anthem plays by itself
+    await page.waitForFunction(() => { const p = window.WalkupApp.eng.playing(); return p && p.key === 'b:anthem'; }, null, { timeout: 8000 });
+    deep(await queue(), []);
+    // Stop ends everything, Up next too
+    await page.click('#gBoard .tile:nth-child(1) .tnext'); eq((await queue()).length, 1);
+    await page.click('#gBoard .tile.on .tplay');
+    await page.waitForFunction(() => !window.WalkupApp.eng.playing());
+    deep(await queue(), []);
+    // a walk-up still plays as before, and the game sounds stay after a reload (Up next doesn't)
+    await page.click('#gPlay'); await page.waitForFunction(() => { const p = window.WalkupApp.eng.playing(); return p && /^g:/.test(p.key); }, null, { timeout: 8000 });
+    await page.click('#gPlay'); await page.waitForFunction(() => !window.WalkupApp.eng.playing());
+    await page.reload(); await page.waitForSelector('#gBoard .tile');
+    deep((await tiles()).map(t => t.label), ['Warm up', 'National anthem']);
+    // reorder and delete from Edit
+    await page.click('[data-act=b-edit]'); await page.waitForSelector(sheetSel + ' #beList');
+    await page.click(sheetSel + ' [data-do=down][data-id="' + st.board[0].id + '"]');
+    deep((await tiles()).map(t => t.label), ['National anthem', 'Warm up']);
+    await page.click(sheetSel + ' [data-do=add]'); await page.waitForSelector('.sheet.board-tile #btName');
+    eq((await tiles()).length, 3);
+    await page.click('.sheet.board-tile [data-do=delete]'); await page.waitForSelector('.sheet.confirm'); await page.click('.sheet.confirm [data-ok]');
+    await page.waitForFunction(() => window.WalkupApp.S.st.board.length === 2);
+    await page.keyboard.press('Escape'); await noSheets(page);
+    // deleting a song empties the buttons that used it
+    await tab(page, 'songs'); await page.click('[data-act=song-delete][data-id="' + st.board[0].songId + '"]');
+    await page.waitForSelector('.sheet.confirm'); assert.ok(/game sounds use it/.test(await page.textContent('.sheet.confirm')));
+    await page.click('.sheet.confirm [data-ok]'); await noSheets(page);
+    eq((await tiles()).find(t => t.label === 'Warm up').songId, null);
+    await tab(page, 'game'); await page.setViewportSize({ width: 320, height: 640 }); await settle(page);
+    eq(await overflow(page) <= 0, true, 'no sideways scroll at 320 px');
+    await shot(page, 'game-sounds-320', { fullPage: true });
     deep(errors, []); await ctx.close();
   });
 

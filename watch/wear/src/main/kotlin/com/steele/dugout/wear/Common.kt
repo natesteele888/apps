@@ -82,12 +82,14 @@ val Muted = Color(0xFF94A3B8)
 @Composable
 fun WalkUpApp() {
     var order by rememberSaveable { mutableStateOf(false) }
+    var sounds by rememberSaveable { mutableStateOf(false) }
     var swapFor by rememberSaveable { mutableStateOf<String?>(null) }
     val out = swapFor
     when {
         out != null -> BackScreen(onBack = { swapFor = null }) { BenchScreen(out, onDone = { swapFor = null }) }
         order -> BackScreen(onBack = { order = false }) { OrderScreen(onDone = { order = false }, onSwap = { swapFor = it }) }
-        else -> BattingScreen(onOrder = { order = true })
+        sounds -> BackScreen(onBack = { sounds = false }) { SoundsScreen(onDone = { sounds = false }) }
+        else -> BattingScreen(onOrder = { order = true }, onSounds = { sounds = true })
     }
 }
 

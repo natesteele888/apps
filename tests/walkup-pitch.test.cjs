@@ -106,6 +106,50 @@ const FAKE_NATIVE = () => {
     assert.deepStrictEqual(errors, []); await ctx.close();
   });
 
+  await test('Bridge: game sounds go to the watch, and the watch plays one, fills Up next, skips to it and stops everything', async () => {
+    const { page, errors, ctx } = await open(true);
+    await page.click('text=Add a sample lineup'); await page.waitForSelector('#gPlay');
+    const last = () => page.evaluate(() => window.__sent.state[window.__sent.state.length - 1]);
+    const cmd = c => page.evaluate(x => window.__wuCmd(JSON.stringify(x)), c);
+    /* the page sends its state a moment after a change; wait for the one that says so */
+    const until = (src, ms) => page.waitForFunction(new Function('const s = window.__sent.state[window.__sent.state.length - 1]; return !!s && (' + src + ');'), null, { timeout: ms || 5000 });
+    const sent = () => page.waitForTimeout(250);
+    await page.waitForFunction(() => window.__sent.state.some(s => s.board && s.board.length === 2));
+    let st = await last();
+    assert.deepStrictEqual(st.board, [{ id: 'innings', label: 'Between innings', ready: false }, { id: 'anthem', label: 'National anthem', ready: false }]);
+    assert.deepStrictEqual(st.queue, []);
+    await cmd({ cmd: 'queue', id: 'anthem' }); await sent(); eq((await last()).queue.length, 0, 'a button with no sound cannot wait in Up next');
+    await cmd({ cmd: 'sound', id: 'anthem' }); await sent(); eq(await page.evaluate(() => !!window.WalkupApp.eng.playing()), false, 'nor play');
+    // give both buttons a 3 s sound, made here (no files from anyone)
+    await page.evaluate(async () => {
+      const sr = 8000, n = sr * 3, b = new ArrayBuffer(44 + n * 2), v = new DataView(b), w = (o, t) => { for (let i = 0; i < t.length; i++) v.setUint8(o + i, t.charCodeAt(i)); };
+      w(0, 'RIFF'); v.setUint32(4, 36 + n * 2, true); w(8, 'WAVE'); w(12, 'fmt '); v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, 1, true); v.setUint32(24, sr, true); v.setUint32(28, sr * 2, true); v.setUint16(32, 2, true); v.setUint16(34, 16, true); w(36, 'data'); v.setUint32(40, n * 2, true);
+      for (let i = 0; i < n; i++) v.setInt16(44 + i * 2, Math.round(12000 * Math.sin(2 * Math.PI * 440 * i / sr)), true);
+      const WU = window.WalkupApp.WU, r = await WU.songs.addFiles([new File([b], 'Tone.wav', { type: 'audio/wav' })]);
+      await WU.board.assign(WU.board.tile('innings'), r.added[0].id);
+      await WU.board.assign(WU.board.tile('anthem'), r.added[0].id);
+    });
+    await page.waitForFunction(() => { const s = window.__sent.state[window.__sent.state.length - 1]; return s.board.every(t => t.ready); });
+    // the watch plays the anthem: the watch is told what plays (a game sound, not a batter)
+    await cmd({ cmd: 'sound', id: 'anthem' });
+    await page.waitForFunction(() => { const s = window.__sent.state[window.__sent.state.length - 1]; return s.playing && s.playing.board === 'anthem'; }, null, { timeout: 8000 });
+    st = await last(); eq(st.playing.id, null); eq(st.playing.label, 'National anthem'); eq(st.playing.ext, 0);
+    // a second play while one plays does nothing; Up next does
+    await cmd({ cmd: 'sound', id: 'innings' }); await sent(); eq((await last()).playing.board, 'anthem');
+    await cmd({ cmd: 'queue', id: 'innings' }); await until("s.queue.length === 1");
+    assert.deepStrictEqual((await last()).queue, [{ id: 'innings', label: 'Between innings' }]);
+    await cmd({ cmd: 'unqueue', id: 'innings' }); await until("s.queue.length === 0");
+    await cmd({ cmd: 'queue', id: 'innings' }); await until("s.queue.length === 1");
+    // skip to it: it plays now
+    await cmd({ cmd: 'upnext' });
+    await page.waitForFunction(() => { const s = window.__sent.state[window.__sent.state.length - 1]; return s.playing && s.playing.board === 'innings' && s.queue.length === 0; }, null, { timeout: 8000 });
+    // Stop ends everything
+    await cmd({ cmd: 'queue', id: 'anthem' }); await until("s.queue.length === 1");
+    await cmd({ cmd: 'stop', now: true });
+    await page.waitForFunction(() => { const s = window.__sent.state[window.__sent.state.length - 1]; return !s.playing && s.queue.length === 0; });
+    assert.deepStrictEqual(errors, []); await ctx.close();
+  });
+
   await test('Bridge: in the Dugout app the page sends the lineup and pitches, and runs the watch\'s commands', async () => {
     const { page, errors, ctx } = await open(true);
     await page.click('text=Add a sample lineup'); await page.waitForSelector('#gPlay');

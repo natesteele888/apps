@@ -71,6 +71,8 @@ import androidx.wear.compose.foundation.lazy.ScalingLazyColumn
 import androidx.wear.compose.foundation.lazy.itemsIndexed
 import androidx.wear.compose.foundation.lazy.rememberScalingLazyListState
 import androidx.wear.compose.material.CircularProgressIndicator
+import androidx.wear.compose.material.Chip
+import androidx.wear.compose.material.ChipDefaults
 import androidx.wear.compose.material.ListHeader
 import androidx.wear.compose.material.Text
 import com.steele.dugout.shared.BatState
@@ -84,10 +86,10 @@ import kotlin.math.abs
  * The order goes round: after the last batter comes the leadoff batter again.
  * Press and hold anywhere on the face: a green ring fills around the edge. When it closes, a short countdown (set on the
  * phone, 2 seconds unless changed) gives a moment to change your mind: a tap anywhere cancels before any sound plays.
- * While it plays, the screen turns blue with a big Stop, and swiping is off. Swipe up for the batting order.
+ * While it plays, the screen turns blue with a big Stop, and swiping is off. Swipe up for the batting order, down for game sounds.
  */
 @Composable
-fun BattingScreen(onOrder: () -> Unit) {
+fun BattingScreen(onOrder: () -> Unit, onSounds: () -> Unit = {}) {
     val st = PhoneLink.state.collectAsState().value
     val (line, color) = linkLine()
     val t = now()
@@ -99,12 +101,17 @@ fun BattingScreen(onOrder: () -> Unit) {
                 if (st != null && st.ready && PhoneLink.phoneOk(t)) "Set up the batting order in Walk-Up on your phone." else line,
                 color = if (st != null && st.ready) Muted else color, textAlign = TextAlign.Center, fontSize = 14.sp,
             )
+            // game sounds still work before there's a batting order (the anthem comes first)
+            if (st != null && st.ready && st.board.isNotEmpty() && PhoneLink.phoneOk(t)) {
+                Spacer(Modifier.height(8.dp))
+                Chip(onClick = onSounds, label = { Text("Game sounds", maxLines = 1) }, colors = ChipDefaults.secondaryChipColors())
+            }
         }
         return
     }
     if (st.busy) { PlayingScreen(st); return }
     // a new pager when the order gets longer or shorter, so the pages still line up with the batters
-    key(st.lineup.size) { BatterPager(st, line, color, onOrder) }
+    key(st.lineup.size) { BatterPager(st, line, color, onOrder, onSounds) }
 }
 
 /** how many times round the order the pager can go each way before it runs out (far more than any game) */
@@ -114,7 +121,7 @@ private const val LAPS = 2000
 private const val HOLD_MS = 1000
 
 @Composable
-private fun BatterPager(st: BatState, line: String, color: Color, onOrder: () -> Unit) {
+private fun BatterPager(st: BatState, line: String, color: Color, onOrder: () -> Unit, onSounds: () -> Unit) {
     val ctx = LocalContext.current
     val lineup = st.lineup
     val n = lineup.size
@@ -182,7 +189,7 @@ private fun BatterPager(st: BatState, line: String, color: Color, onOrder: () ->
             }
             .focusRequester(focus).focusable()
             .pointerInput(Unit) {
-                detectVerticalDragGestures(onDragEnd = { if (drag.floatValue < -50f && countdown == null) onOrder(); drag.floatValue = 0f }, onDragCancel = { drag.floatValue = 0f }) { _, dy -> drag.floatValue += dy }
+                detectVerticalDragGestures(onDragEnd = { if (countdown == null) { if (drag.floatValue < -50f) onOrder() else if (drag.floatValue > 50f) onSounds() }; drag.floatValue = 0f }, onDragCancel = { drag.floatValue = 0f }) { _, dy -> drag.floatValue += dy }
             }
             // The whole face is the Play button. Letting go early, or starting a swipe, does nothing, so a brush can't start a song.
             .pointerInput(Unit) {
@@ -205,6 +212,7 @@ private fun BatterPager(st: BatState, line: String, color: Color, onOrder: () ->
             line, color = color, fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis,
             modifier = Modifier.align(Alignment.TopCenter).padding(top = 14.dp, start = 40.dp, end = 40.dp),
         )
+        if (st.board.isNotEmpty()) Text("﹀ Sounds", color = Muted, fontSize = 11.sp, modifier = Modifier.align(Alignment.TopCenter).padding(top = 30.dp))
         Column(Modifier.align(Alignment.BottomCenter).padding(bottom = 12.dp), horizontalAlignment = Alignment.CenterHorizontally) {
             Text(if (b != null && !b.ready) "No song to play" else "Hold to play", color = Muted, fontSize = 11.sp)
             Text("︿ Lineup", color = Muted, fontSize = 11.sp)
@@ -219,7 +227,7 @@ private fun BatterPager(st: BatState, line: String, color: Color, onOrder: () ->
  * the ring is still down when this shows; letting it go does nothing, only a new tap cancels.
  */
 @Composable
-private fun CountdownScreen(left: Int, who: String, onCancel: () -> Unit) {
+internal fun CountdownScreen(left: Int, who: String, onCancel: () -> Unit) {
     val stop by rememberUpdatedState(onCancel)
     Box(
         Modifier.fillMaxSize().background(Color(0xF2111827)).pointerInput(Unit) { detectTapGestures(onPress = { stop() }) },
@@ -293,12 +301,13 @@ private fun BatterPage(b: Batter, i: Int, n: Int) {
  */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun PlayingScreen(st: BatState) {
+internal fun PlayingScreen(st: BatState) {
     val ctx = LocalContext.current
     val t = now(250)
     val pulse by rememberInfiniteTransition(label = "playing").animateFloat(0.75f, 1f, infiniteRepeatable(tween(700), RepeatMode.Reverse), label = "pulse")
     val p = st.playing
-    LaunchedEffect(p?.id) { if (p != null) Buzz.started(ctx) }
+    LaunchedEffect(p?.id, p?.board) { if (p != null) Buzz.started(ctx) }
+    val next = st.queue.firstOrNull()
     val canKeep = p != null && p.ext > 0 && !p.extended
     val keep by rememberUpdatedState(canKeep)
     fun keepPlaying() { if (keep) { Buzz.pattern(ctx, 60, 80, 60); PhoneLink.send(Proto.cmd("extend")) } }
@@ -325,7 +334,13 @@ private fun PlayingScreen(st: BatState) {
                 contentAlignment = Alignment.Center,
             ) { Text("STOP", fontSize = 22.sp, fontWeight = FontWeight.Black, color = Color.White) }
             Spacer(Modifier.height(4.dp))
-            Text(
+            if (next != null && !canKeep && !kept) {
+                // a game sound waits in Up next: one tap ends this one and plays it now (Stop ends both)
+                Box(
+                    Modifier.clip(RoundedCornerShape(16.dp)).background(Color(0x33FFFFFF))
+                        .clickable { Buzz.tick(ctx); PhoneLink.send(Proto.cmd("upnext")) }.padding(horizontal = 12.dp, vertical = 4.dp),
+                ) { Text("Next: ${next.label} ›", fontSize = 12.sp, color = Color.White, maxLines = 1, overflow = TextOverflow.Ellipsis) }
+            } else Text(
                 when { kept -> "Tap Stop to end"; canKeep -> "Hold to keep playing"; else -> "" },
                 fontSize = 11.sp, color = Color(0xCCFFFFFF),
             )
