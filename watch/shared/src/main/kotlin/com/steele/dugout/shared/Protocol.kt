@@ -19,7 +19,8 @@ object Paths {
 
 data class Batter(val id: String, val name: String, val num: String, val pos: String, val ready: Boolean, val code: String)
 
-data class Playing(val id: String?, val label: String, val elapsed: Double, val total: Double)
+/** [ext]: seconds the song can keep playing past its clip if the coach holds (0: it can't); [extended]: it already is */
+data class Playing(val id: String?, val label: String, val elapsed: Double, val total: Double, val ext: Int = 0, val extended: Boolean = false)
 
 /** What the watch shows in Batting mode. [receivedAt] is set by the watch when it arrives. */
 data class BatState(
@@ -59,7 +60,8 @@ object Proto {
         val p = o.optJSONObject("playing")
         val playing = if (p == null) null else Playing(
             p.str("id").takeIf { Paths.safeId(it) }, p.str("label").take(80),
-            p.optDouble("elapsed", 0.0).let { if (it.isFinite()) it else 0.0 }, p.optDouble("total", 0.0).let { if (it.isFinite()) it else 0.0 })
+            p.optDouble("elapsed", 0.0).let { if (it.isFinite()) it else 0.0 }, p.optDouble("total", 0.0).let { if (it.isFinite()) it else 0.0 },
+            p.optInt("ext", 0).coerceIn(0, 60), p.optBoolean("extended", false))
         val err = o.optJSONObject("error")
         val sp = o.optJSONObject("speaker")
         BatState(

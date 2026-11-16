@@ -150,6 +150,8 @@
   };
   /* fade: seconds to fade out (0.5 by default); the watch's Stop asks for a near-instant cut */
   WU.act.stop = function (fade) { token++; E.stop(typeof fade === "number" ? fade : C.LIM.stopFade); S.play = { state: "idle", id: null }; paintTransport(); U.live("Stopped"); };
+  /* keep the song going past its clip (asked for from the watch, by holding while it plays) */
+  WU.act.extend = function () { if (E.extend()) U.live("Keep playing"); };
   function setBatter(i, quiet) {
     var n = S.st.lineup.length; if (!n) return;
     i = ((i % n) + n) % n;

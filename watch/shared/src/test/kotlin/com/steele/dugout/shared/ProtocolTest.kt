@@ -50,4 +50,17 @@ class ProtocolTest {
         val o = JSONObject(Proto.cmd("stop", "now" to true))
         assertEquals("stop", o.getString("cmd")); assertEquals(true, o.getBoolean("now"))
     }
+
+    @Test fun keepPlayingComesWithWhatIsPlaying() {
+        val base = JSONObject().put("ready", true).put("lineup", JSONArray().put(b("a1", "Player 1")))
+        val p1 = JSONObject().put("id", "a1").put("label", "#1 Player 1").put("elapsed", 2.0).put("total", 10.0)
+        val old = assertNotNull(assertNotNull(Proto.parseState(JSONObject(base.toString()).put("playing", p1).toString(), 5)).playing)
+        assertEquals(0, old.ext, "an older phone says nothing: no hold to keep playing"); assertEquals(false, old.extended)
+        val p2 = JSONObject(p1.toString()).put("ext", 30).put("extended", false)
+        assertEquals(30, assertNotNull(assertNotNull(Proto.parseState(JSONObject(base.toString()).put("playing", p2).toString(), 5)).playing).ext)
+        val p3 = JSONObject(p1.toString()).put("ext", 0).put("extended", true).put("total", 40.0)
+        val kept = assertNotNull(assertNotNull(Proto.parseState(JSONObject(base.toString()).put("playing", p3).toString(), 5)).playing)
+        assertEquals(true, kept.extended); assertEquals(40.0, kept.total)
+        assertEquals("extend", JSONObject(Proto.cmd("extend")).getString("cmd"))
+    }
 }
