@@ -366,3 +366,20 @@ test('app numbers: reads and goals are anonymous once-a-week counts like opens',
   await assertFails(getDocs(collection(anon(), 'app_reads')));
   await assertSucceeds(getDocs(collection(owner(), 'app_goals')));
 });
+
+test('this is me (app_me): anyone can mark a random phone code once; only the owner reads them', async () => {
+  await assertSucceeds(setDoc(doc(anon(), 'app_me/abcdefghij012345'), { app: 'lybs-dashboard' }));
+  await assertFails(setDoc(doc(anon(), 'app_me/abcdefghij012345'), { app: 'apps-toolbox' }), 'no changing it later');
+  await assertFails(setDoc(doc(anon(), 'app_me/short'), { app: 'lybs-dashboard' }), 'code must be 16 letters or digits');
+  await assertFails(setDoc(doc(anon(), 'app_me/ABCDEFGHIJ012345'), { app: 'lybs-dashboard' }), 'lower case only');
+  await assertFails(setDoc(doc(anon(), 'app_me/zzzzzzzzzz012345'), { app: 'lybs-dashboard', name: 'Someone' }), 'nothing but the app');
+  await assertFails(setDoc(doc(anon(), 'app_me/yyyyyyyyyy012345'), { app: 'not ok!' }), 'app must look like a folder key');
+  await assertFails(getDoc(doc(anon(), 'app_me/abcdefghij012345')), 'signed out cannot read');
+  await assertFails(getDocs(collection(stranger(), 'app_me')), 'another account cannot list');
+  await assertSucceeds(getDocs(collection(owner(), 'app_me')));
+  await assertFails(deleteDoc(doc(anon(), 'app_me/abcdefghij012345')), 'signed out cannot delete');
+  await assertSucceeds(deleteDoc(doc(owner(), 'app_me/abcdefghij012345')), 'the owner can clear one');
+  // The owner's own "seen" list for the new-phone badge rides on the owner-only rule at the top.
+  await assertSucceeds(setDoc(doc(owner(), 'app_seen/watch'), { codes: ['abcdefghij012345'], updated: 1 }));
+  await assertFails(getDoc(doc(stranger(), 'app_seen/watch')));
+});

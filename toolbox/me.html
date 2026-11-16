@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://natesteele888.github.io; connect-src 'self' https://firestore.googleapis.com; img-src 'self' data:; style-src 'self' 'unsafe-inline'; base-uri 'none'; form-action 'none'; object-src 'none'">
+<meta name="robots" content="noindex">
+<title>This is me</title>
+<style>
+:root{--bg:#f6f7f5;--card:#fff;--ink:#14201b;--dim:#5d6b65;--line:#dde4e0;--acc:#1f7a52}
+@media(prefers-color-scheme:dark){:root{--bg:#0f1513;--card:#17211d;--ink:#eef3f0;--dim:#9aaaa3;--line:#2c3b35;--acc:#5fd39a}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;padding:16px 16px calc(24px + env(safe-area-inset-bottom))}
+main{max-width:560px;margin:0 auto}
+h1{font-size:26px;margin:4px 0 6px}
+.sub{color:var(--dim);margin:0 0 16px}
+a{color:var(--acc)}
+.back{display:inline-flex;align-items:center;min-height:44px;padding:0 12px;margin:-12px 0 -12px -12px;text-decoration:none;font-weight:600}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:12px}
+.card p{margin:0}
+.ok{font-weight:700;color:var(--acc)}
+.site{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 0;border-top:1px solid var(--line)}
+.site:first-of-type{border-top:0}
+.site span{font-weight:600}
+.site small{display:block;color:var(--dim);font-weight:400}
+.btn{display:inline-flex;align-items:center;justify-content:center;min-height:44px;padding:0 16px;border-radius:12px;background:var(--acc);color:#fff;font:600 15px system-ui,sans-serif;text-decoration:none;white-space:nowrap}
+</style>
+</head>
+<body>
+<main>
+  <p class="sub" style="margin:0"><a class="back" href="numbers.html">&larr; App numbers</a></p>
+  <h1>This is me</h1>
+  <p class="sub">Open this page once on each phone and computer you use, in each browser. It marks that browser as yours, so it stops counting in App numbers, and what it already counted is left out.</p>
+  <div class="card"><p id="here">Marking this browser…</p></div>
+  <div class="card" id="others" hidden>
+    <p style="margin-bottom:6px">Some apps live on their own site, which needs its own tap. Open each one you use here:</p>
+    <div id="sites"></div>
+  </div>
+</main>
+<script>
+// install.js marks a browser when the page address has ?nateme, so give this page that address before it runs.
+if (!/(^|[?&#])nateme\b/.test(location.search + location.hash)) history.replaceState(null, "", location.pathname + "?nateme" + location.hash);
+const esc = s => String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+function showHere() {
+  let ok = false; try { ok = localStorage.getItem("nate.me") === "1"; } catch (_) {}
+  document.getElementById("here").innerHTML = ok
+    ? '<span class="ok">Done: this browser is marked as yours</span> for every app at natesteele888.github.io.'
+    : "This browser couldn't be marked (private browsing or blocked storage). Open this page in a normal tab.";
+}
+addEventListener("load", () => setTimeout(showHere, 50));
+// Apps on a site of their own (not natesteele888.github.io) keep a separate mark, one tap each. LYBS Dashboard first.
+fetch("../registry.json", { cache: "no-store" }).then(r => r.json()).then(r => {
+  const by = {};
+  (r.apps || []).forEach(a => { try { const u = new URL(a.live || ""); if (u.protocol !== "https:" || u.hostname === location.hostname || u.hostname === "natesteele888.github.io") return; (by[u.origin] = by[u.origin] || []).push(a.name); } catch (_) {} });
+  const origins = Object.keys(by).sort((a, b) => (/lybs-dashboard/.test(b) - /lybs-dashboard/.test(a)) || by[a][0].localeCompare(by[b][0]));
+  if (!origins.length) return;
+  document.getElementById("sites").innerHTML = origins.map(o => `<div class="site"><span>${esc(by[o].join(", "))}<small>${esc(new URL(o).hostname)}</small></span><a class="btn" href="${esc(o)}/?nateme" target="_blank" rel="noopener">Mark</a></div>`).join("");
+  document.getElementById("others").hidden = false;
+}).catch(() => {});
+</script>
+<script src="https://natesteele888.github.io/apps/install.js" defer></script>
+</body>
+</html>

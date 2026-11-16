@@ -30,6 +30,10 @@ tr:last-child td{border-bottom:0}
 .btn{display:inline-block;min-height:44px;padding:11px 18px;border-radius:12px;border:0;background:var(--acc);color:#fff;font:600 15px system-ui,sans-serif;cursor:pointer}
 .note{color:var(--dim);font-size:13px;margin-top:12px}
 .msg{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px}
+.newbox{background:var(--card);border:2px solid var(--acc);border-radius:12px;padding:12px 14px;margin-bottom:14px;display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+.newbox p{margin:0;font-weight:600}
+.quiet{color:var(--dim);font-size:13.5px;margin:0 0 14px}
+.new{display:inline-block;margin-left:6px;padding:1px 7px;border-radius:999px;background:var(--acc);color:#fff;font-size:12px;font-weight:700;vertical-align:1px}
 @media(max-width:420px){.hide-s{display:none}}
 </style>
 </head>
@@ -39,7 +43,7 @@ tr:last-child td{border-bottom:0}
   <h1>App numbers</h1>
   <p class="sub">Phones that opened each app, and home-screen installs. Anonymous: a random code per phone, no names.</p>
   <div id="out"><div class="msg">Loading…</div></div>
-  <p class="note">An <b>open</b> counts each phone once per app per week. An <b>install</b> counts a phone the first time it opens the app from its home screen. <b>Read</b> and <b>Goal</b> (this week only) count phones that logged reading time or met a goal, so far only in Read 20. Counting started Nov 10, 2026, so earlier installs show up the next time those phones open the app.</p>
+  <p class="note">An <b>open</b> counts each phone once per app per week. An <b>install</b> counts a phone the first time it opens the app from its home screen. <b>Read</b> and <b>Goal</b> (this week only) count phones that logged reading time or met a goal, so far only in Read 20. Counting started Nov 10, 2026, so earlier installs show up the next time those phones open the app. Phones and browsers marked with <a href="me.html">This is me</a> are left out.</p>
 </main>
 <script src="https://www.gstatic.com/firebasejs/11.6.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/11.6.0/firebase-auth-compat.js"></script>
@@ -52,6 +56,8 @@ const esc=s=>String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"
 function keyOf(url){try{const u=new URL(url),segs=u.pathname.replace(/[^/]*\.[a-z0-9]+$/i,"").split("/").filter(Boolean);
   return (/\.github\.io$/.test(u.hostname)?segs.slice(0,2):[u.hostname.split(".")[0]]).join("-").replace(/[^A-Za-z0-9-]/g,"-").slice(0,60)||u.hostname.split(".")[0];}catch(_){return "";}}
 function isoWeek(t){const d=new Date(t);d.setHours(0,0,0,0);d.setDate(d.getDate()+3-(d.getDay()+6)%7);const y=d.getFullYear(),w=1+Math.round(((d-new Date(y,0,4))/864e5-3+(new Date(y,0,4).getDay()+6)%7)/7);return y+"-W"+(w<10?"0":"")+w;}
+// Apps that get a "new phone" badge: anyone not marked as you who opens or installs one shows up once, until "Got it".
+const WATCH={"lybs-dashboard":"LYBS Dashboard","lybs-ballclub":"LYBS Ballclub"};
 const WEEKS=[0,1,2,3,4,5,6,7].map(i=>isoWeek(Date.now()-i*7*864e5)).reverse(); // oldest → this week
 function signInView(why){out.innerHTML=`<div class="msg"><p style="margin-top:0">${esc(why)}</p><button class="btn" id="go">Sign in with Google</button></div>`;
   document.getElementById("go").onclick=()=>{const p=new firebase.auth.GoogleAuthProvider();p.setCustomParameters({prompt:"select_account"});
@@ -61,22 +67,37 @@ async function load(){
   const db=firebase.firestore();
   let names={};
   try{const r=await fetch("../registry.json",{cache:"no-store"}).then(r=>r.json());(r.apps||[]).forEach(a=>{const k=keyOf(a.live||"");if(k)names[k]=a.name;});}catch(_){}
-  let ins,ops,rds,gls;
+  let ins,ops,rds,gls,mine=new Set(),seen=null;
   try{[ins,ops,rds,gls]=await Promise.all([db.collection("app_installs").get(),db.collection("app_opens").where("week","in",WEEKS).get(),db.collection("app_reads").where("week","in",WEEKS).get(),db.collection("app_goals").where("week","in",WEEKS).get()]);}
   catch(e){out.innerHTML=`<div class="msg">${/permission/i.test(e&&e.code||"")?"This account can't read the numbers. Sign in with the Toolbox owner's Google account.":"Couldn't load the numbers. Check your signal and reload."}</div>`;return;}
+  // Phones and browsers marked "This is me" (me.html → install.js → app_me) are left out of every number below.
+  try{(await db.collection("app_me").get()).forEach(d=>mine.add(d.id));}catch(_){}
+  // The new-phone badge: codes for the watched apps that weren't there the last time "Got it" was pressed (app_seen/watch).
+  try{const sd=await db.collection("app_seen").doc("watch").get();seen=new Set(sd.exists?(sd.data().codes||[]):[]);}catch(_){}
   const A={},row=k=>A[k]||(A[k]={installs:0,reads:0,goals:0,weeks:Object.fromEntries(WEEKS.map(w=>[w,0]))});
-  const phones=new Set(),phonesNow=new Set();
-  ins.forEach(d=>{const x=d.data();row(x.app).installs++;});
-  ops.forEach(d=>{const x=d.data(),pid=d.id.split("~")[2];row(x.app).weeks[x.week]++;phones.add(pid);if(x.week===WEEKS[7])phonesNow.add(pid);});
-  rds.forEach(d=>{const x=d.data();if(x.week===WEEKS[7])row(x.app).reads++;});gls.forEach(d=>{const x=d.data();if(x.week===WEEKS[7])row(x.app).goals++;});
+  const phones=new Set(),phonesNow=new Set(),watched={};Object.keys(WATCH).forEach(k=>watched[k]=new Set());
+  const pidOf=(d,i)=>d.id.split("~")[i];
+  ins.forEach(d=>{const x=d.data(),pid=pidOf(d,1);if(mine.has(pid))return;row(x.app).installs++;if(watched[x.app])watched[x.app].add(pid);});
+  ops.forEach(d=>{const x=d.data(),pid=pidOf(d,2);if(mine.has(pid))return;row(x.app).weeks[x.week]++;phones.add(pid);if(x.week===WEEKS[7])phonesNow.add(pid);if(watched[x.app])watched[x.app].add(pid);});
+  rds.forEach(d=>{const x=d.data();if(mine.has(pidOf(d,2)))return;if(x.week===WEEKS[7])row(x.app).reads++;});gls.forEach(d=>{const x=d.data();if(mine.has(pidOf(d,2)))return;if(x.week===WEEKS[7])row(x.app).goals++;});
+  const fresh={};Object.keys(WATCH).forEach(k=>{fresh[k]=seen?[...watched[k]].filter(p=>!seen.has(p)):[];});
+  const freshTotal=Object.values(fresh).reduce((s,a)=>s+a.length,0);
+  const newBox=!seen?"":freshTotal?`<div class="newbox" id="newbox"><p>${Object.keys(WATCH).filter(k=>fresh[k].length).map(k=>`${fresh[k].length} new ${fresh[k].length===1?"phone":"phones"} on ${esc(names[k]||WATCH[k])}`).join(", ")} since you last looked.</p><button class="btn" id="gotit">Got it</button></div>`
+    :`<p class="quiet" id="nonew">No new phones on ${Object.keys(WATCH).map(k=>esc(names[k]||WATCH[k])).join(" or ")} since you last looked.</p>`;
+  const mineLine=`<p class="quiet" id="mineline">${mine.size?`${mine.size} of your own ${mine.size===1?"phone or browser is":"phones and browsers are"} left out.`:"Your own phones and browsers count too until you mark them."} <a href="me.html">This is me</a></p>`;
   const keys=Object.keys(A).sort((a,b)=>A[b].weeks[WEEKS[7]]-A[a].weeks[WEEKS[7]]||A[b].installs-A[a].installs||a.localeCompare(b));
   const totalInstalls=keys.reduce((s,k)=>s+A[k].installs,0);
-  if(!keys.length){out.innerHTML=`<div class="msg">No counts yet. They start arriving as soon as a phone opens one of the apps.</div>`;return;}
-  out.innerHTML=`<div class="tiles"><div class="tile"><b>${phonesNow.size}</b><span>phones this week</span></div><div class="tile"><b>${phones.size}</b><span>phones in 8 weeks</span></div><div class="tile"><b>${totalInstalls}</b><span>installs</span></div></div>
+  if(!keys.length){out.innerHTML=`${mineLine}<div class="msg">No counts yet. They start arriving as soon as a phone opens one of the apps.</div>`;return;}
+  out.innerHTML=`${newBox}${mineLine}<div class="tiles"><div class="tile"><b>${phonesNow.size}</b><span>phones this week</span></div><div class="tile"><b>${phones.size}</b><span>phones in 8 weeks</span></div><div class="tile"><b>${totalInstalls}</b><span>installs</span></div></div>
   <table><thead><tr><th>App</th><th>This week</th><th class="hide-s">Last week</th><th>8 weeks</th><th>Installs</th><th>Read</th><th>Goal</th></tr></thead><tbody>
   ${keys.map(k=>{const w=A[k].weeks,max=Math.max(1,...WEEKS.map(x=>w[x]));
-    return `<tr><td>${esc(names[k]||k)}</td><td>${w[WEEKS[7]]}</td><td class="hide-s">${w[WEEKS[6]]}</td><td><span class="spark" title="${WEEKS.map(x=>x+": "+w[x]).join(", ")}">${WEEKS.map(x=>`<i style="height:${Math.max(2,Math.round(18*w[x]/max))}px"></i>`).join("")}</span></td><td>${A[k].installs}</td><td>${A[k].reads}</td><td>${A[k].goals}</td></tr>`;}).join("")}
+    return `<tr><td>${esc(names[k]||k)}${fresh[k]&&fresh[k].length?`<span class="new">${fresh[k].length} new</span>`:""}</td><td>${w[WEEKS[7]]}</td><td class="hide-s">${w[WEEKS[6]]}</td><td><span class="spark" title="${WEEKS.map(x=>x+": "+w[x]).join(", ")}">${WEEKS.map(x=>`<i style="height:${Math.max(2,Math.round(18*w[x]/max))}px"></i>`).join("")}</span></td><td>${A[k].installs}</td><td>${A[k].reads}</td><td>${A[k].goals}</td></tr>`;}).join("")}
   </tbody></table>`;
+  const got=document.getElementById("gotit");
+  if(got)got.onclick=async()=>{got.disabled=true;
+    const all=new Set(seen);Object.values(watched).forEach(set=>set.forEach(p=>all.add(p)));
+    try{await db.collection("app_seen").doc("watch").set({codes:[...all].slice(-2000),updated:Date.now()});load();}
+    catch(_){got.disabled=false;got.textContent="Try again";}};
 }
 try{firebase.initializeApp(FIREBASE_CONFIG);
   firebase.auth().onAuthStateChanged(u=>{if(u)load();else signInView("Sign in to see how many phones use your apps.");});}
