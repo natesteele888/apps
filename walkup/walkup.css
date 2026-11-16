@@ -449,3 +449,8 @@ input[type="range"].rng.rel { width: calc(80% + 30px); margin: 0 calc(10% - 15px
 .upnext li .x { width: 44px; height: 44px; display: grid; place-items: center; background: transparent; border: 0; color: var(--mute); cursor: pointer; }
 .upnext li .x svg { width: 18px; height: 18px; }
 @media (max-width: 340px) { .board .tiles { grid-template-columns: minmax(0, 1fr); } }
+
+/* ---------- Ballclub song requests (club.js) ---------- */
+.badge { display: inline-block; min-width: 1.4em; padding: 0 .4em; margin-left: .3em; border-radius: 999px; background: #d93b30; color: #fff; font-size: .8em; line-height: 1.4em; text-align: center; }
+.clrow { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: space-between; padding: 10px 0; border-top: 1px solid var(--line, rgba(127,127,127,.25)); }
+.clrow > div:first-child { flex: 1 1 180px; min-width: 0; overflow-wrap: anywhere; }

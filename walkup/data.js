@@ -14,7 +14,8 @@
     if (WU.db.memOnly) h += '<div class="banner bad" role="alert"><p><b>This browser will not keep songs or voices.</b> They work until you close the app. Make a backup with audio before you leave.</p></div>';
     h += '<section class="card"><h3>Sound</h3>' + U.range({ key: "master", label: "Master volume", min: 0, max: 100, step: 1, value: s.master, text: s.master + "%" }) +
       '<div class="row wrap top"><button type="button" class="btn" data-act="sound-check">Sound check</button><button type="button" class="btn ghost" data-act="bt-help">Using a Bluetooth speaker</button></div>' +
-      '<p class="mute small-note">Phones keep audio asleep until you tap. If you hear nothing, check the phone\'s volume and the ringer or silent switch (an iPhone in silent mode mutes web audio).</p></section>';
+      '<p class="mute small-note">Phones keep audio asleep until you tap. If you hear nothing, check the phone\'s volume and the ringer or silent switch (on an older iPhone, silent mode mutes web audio).</p></section>';
+    h += '<section class="card"><h3>Watch</h3><p class="msg"><b>Watch control: Android and Wear OS only.</b></p><p class="mute small-note">The Dugout watch app runs on Wear OS watches with an Android phone. On an iPhone, everything else in Walk-Up works right here in the browser, or from the Home Screen (tap Share, then Add to Home Screen).</p></section>';
     h += '<section class="card"><h3>Computer voice</h3>';
     if (sp) {
       h += '<p class="mute small-note">Used when a player has the computer voice instead of a recording, and for the sound check.</p>' +

@@ -1535,6 +1535,70 @@ const dbKeys = page => page.evaluate(() => window.WalkupApp.WU.db.keys());
     deep(errors, []); await ctx.close();
   });
 
+  await test('Ballclub requests: a waiting song shows a badge, Approve puts it on the player from the family\'s start, Decline sends a note', async () => {
+    const SONG2_B64 = fs.readFileSync(fx('Fast Jam.wav')).toString('base64');
+    const db = { requests: {
+      r1: { pid: 'p1', kind: 'upload', file: 'sf1', title: 'Fast Jam', start: 3, st: 'pending', at: '2026-11-07T10:00:00Z', by: 'A family' },
+      r2: { pid: 'p2', kind: 'link', link: 'https://music.example.test/x', title: 'Loud One', start: 0, st: 'pending', at: '2026-11-07T11:00:00Z', by: 'A family' } },
+      songs: {}, patches: [], tokens: 0 };
+    const { page, errors } = await open({ init: () => {
+      localStorage.setItem('lybsGateSession', JSON.stringify({ refreshToken: 'rt-fake', teamId: 't1', role: 'coach' }));
+    } });
+    await sample(page);
+    const names = await page.evaluate(() => window.WalkupApp.S.st.roster.map(p => p.name));
+    const roster = [{ id: 'p1', name: names[0], number: '7' }, { id: 'p2', name: names[1], number: '8' }];
+    await page.route(/securetoken\.googleapis\.com/, r => { db.tokens++; r.fulfill({ contentType: 'application/json', body: JSON.stringify({ id_token: 'idt', expires_in: '3600', refresh_token: 'rt-fake' }) }); });
+    await page.route(/lybs-ballclub-default-rtdb\.firebaseio\.com/, async r => {
+      const u = new URL(r.request().url()); assert.strictEqual(u.searchParams.get('auth'), 'idt', 'every call is signed in');
+      const at = u.pathname.replace(/^\/|\.json$/g, '');
+      if (r.request().method() === 'PATCH') {
+        const b = JSON.parse(r.request().postData()); db.patches.push(b);
+        Object.keys(b).forEach(k => { const m = /^teams\/t1\/songRequests\/(\w+)\/(\w+)$/.exec(k); if (m) db.requests[m[1]][m[2]] = b[k]; const w = /^teams\/t1\/walkupSongs\/(\w+)$/.exec(k); if (w) db.songs[w[1]] = b[k]; });
+        return r.fulfill({ contentType: 'application/json', body: '{}' });
+      }
+      const body = { 'teams/t1/songRequests': db.requests, 'teams/t1/walkupSongs': db.songs, 'teams/t1/roster': roster,
+        'songFiles/t1/sf1': { type: 'audio/wav', name: 'Fast Jam.wav', size: 1, data: SONG2_B64 } }[at];
+      r.fulfill({ contentType: 'application/json', body: JSON.stringify(body === undefined ? null : body) });
+    });
+    await page.evaluate(() => window.WalkupApp.WU.club.start());
+    await waitToast(page, /2 walk-up songs from Ballclub are waiting/);
+    await tab(page, 'team');
+    await page.waitForSelector('[data-act="club-songs"] .badge');
+    eq(await page.textContent('[data-act="club-songs"] .badge'), '2');
+    await page.click('[data-act="club-songs"]');
+    await page.waitForSelector(sheetSel + ' .clrow[data-rid=r1]');
+    assert.ok(/#7 .*Fast Jam from 0:03/.test(await page.textContent(sheetSel + ' .clrow[data-rid=r1]')), 'who, what and from where');
+    await page.click(sheetSel + ' .clrow[data-rid=r1] [data-do=ok]');
+    await page.waitForFunction(n => { const p = window.WalkupApp.S.st.roster.find(x => x.name === n); return p && p.songId && p.trim; }, names[0], { timeout: 10000 });
+    const pp = await page.evaluate(n => { const S = window.WalkupApp.S, p = S.st.roster.find(x => x.name === n); return { title: S.st.songs.find(s => s.id === p.songId).title, start: p.trim.start }; }, names[0]);
+    eq(pp.title, 'Fast Jam'); approx(pp.start, 3, 0.11, 'starts where the family set it');
+    const ok = db.patches[0];
+    eq(ok['teams/t1/songRequests/r1/st'], 'approved');
+    eq(ok['teams/t1/walkupSongs/p1'].file, 'sf1'); eq(ok['teams/t1/walkupSongs/p1'].start, 3);
+    // decline the link with a note: the old song stays, the family sees the note
+    await page.waitForSelector(sheetSel + ' .clrow[data-rid=r2] [data-do=no]');
+    await page.click(sheetSel + ' .clrow[data-rid=r2] [data-do=no]');
+    await page.waitForSelector('#clNote'); await page.fill('#clNote', 'Pick a clean version');
+    await page.click('.sheet-wrap.open .sheet.confirm [data-ok]');
+    await page.waitForFunction(() => !document.querySelector('.clrow[data-rid=r2]'), null, { timeout: 8000 });
+    eq(db.requests.r2.st, 'declined'); eq(db.requests.r2.note, 'Pick a clean version');
+    assert.ok(/Nothing waiting/.test(await page.textContent(sheetSel)), 'nothing left');
+    assert.ok(db.tokens >= 1);
+    // without a Ballclub coach sign-in there is no button at all
+    await page.evaluate(() => localStorage.removeItem('lybsGateSession'));
+    await page.click(sheetSel + ' [data-close].btn'); await noSheets(page);
+    await tab(page, 'game'); await tab(page, 'team');
+    eq(await page.$('[data-act="club-songs"]'), null);
+    deep(errors, []);
+  });
+
+  await test('Settings say watch control is Android and Wear OS only', async () => {
+    const { page, errors } = await open();
+    await tab(page, 'settings');
+    assert.ok(/Watch control: Android and Wear OS only/.test(await page.textContent('#walkup')));
+    deep(errors, []);
+  });
+
   await test('Screens at 768 and 320 wide: songs, settings, mix, voice (pictures) with no sideways scrolling', async () => {
     const { page, errors, ctx } = await open();
     await sample(page); await rich(page);

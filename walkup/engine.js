@@ -31,6 +31,8 @@
     if (ctx) return ctx;
     var AC = window.AudioContext || window.webkitAudioContext;
     if (!AC) return null;
+    /* iPhone: "playback" keeps Walk-Up sounding with the silent switch on and with the screen locked (Safari 16.4 and newer) */
+    try { if (navigator.audioSession) navigator.audioSession.type = "playback"; } catch (e) { /* older phones */ }
     try { ctx = new AC({ latencyHint: "interactive" }); } catch (e) { try { ctx = new AC(); } catch (e2) { return null; } }
     master = ctx.createGain(); master.gain.value = masterVol; master.connect(ctx.destination);
     try { ctx.onstatechange = function () { if (E.onchange) E.onchange(); }; } catch (e) { /* ignore */ }
