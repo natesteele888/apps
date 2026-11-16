@@ -148,7 +148,8 @@
       U.toast(k === "missing" ? "A file for this player isn't on this phone. Open Edit to fix it." : k === "decode" ? "This phone couldn't read one of this player's files. Open Edit to replace it." : k === "noaudio" ? "This browser can't play audio." : "Couldn't get that walk-up ready. Try again.", "error", 7000);
     });
   };
-  WU.act.stop = function () { token++; E.stop(C.LIM.stopFade); S.play = { state: "idle", id: null }; paintTransport(); U.live("Stopped"); };
+  /* fade: seconds to fade out (0.5 by default); the watch's Stop asks for a near-instant cut */
+  WU.act.stop = function (fade) { token++; E.stop(typeof fade === "number" ? fade : C.LIM.stopFade); S.play = { state: "idle", id: null }; paintTransport(); U.live("Stopped"); };
   function setBatter(i, quiet) {
     var n = S.st.lineup.length; if (!n) return;
     i = ((i % n) + n) % n;

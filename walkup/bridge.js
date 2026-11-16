@@ -94,7 +94,7 @@
       selectIndex(i);
       WU.act.play();
     }
-    else if (c.cmd === "stop") WU.act.stop();
+    else if (c.cmd === "stop") WU.act.stop(c.now === true ? 0.05 : undefined);
     else if (c.cmd === "swap" && typeof c.out === "string" && typeof c["in"] === "string") swapIn(c.out, c["in"]);
     else if (c.cmd === "pitchlog" && c.log) WU.pitch.merge(c.log);
     sendState();

@@ -35,6 +35,8 @@ data class BatState(
     val speakerOn: Boolean,
     val speakerName: String,
     val receivedAt: Long = 0,
+    /** seconds the watch counts down after the hold-to-play ring closes, so a tap can cancel before any sound (set on the phone) */
+    val delay: Int = Proto.DEFAULT_DELAY,
 ) {
     val busy: Boolean get() = playing != null || loading != null
 }
@@ -43,6 +45,13 @@ data class BatState(
 fun JSONObject.str(key: String): String = if (isNull(key)) "" else optString(key, "")
 
 object Proto {
+    /** the countdown before a song, in seconds: 2 unless the coach changes it, never more than [MAX_DELAY] */
+    const val DEFAULT_DELAY = 2
+    const val MAX_DELAY = 5
+
+    /** the phone's countdown setting; a phone app from before the setting sends none, which means the default */
+    fun delay(o: JSONObject): Int = if (!o.has("delay") || o.isNull("delay")) DEFAULT_DELAY else o.optInt("delay", DEFAULT_DELAY).coerceIn(0, MAX_DELAY)
+
     fun parseState(json: String, now: Long): BatState? = try {
         val o = JSONObject(json)
         val lineup = batters(o, "lineup")
@@ -65,6 +74,7 @@ object Proto {
             speakerOn = sp?.optBoolean("on") ?: false,
             speakerName = sp?.str("name")?.take(40) ?: "",
             receivedAt = now,
+            delay = delay(o),
         )
     } catch (e: Exception) { null }
 

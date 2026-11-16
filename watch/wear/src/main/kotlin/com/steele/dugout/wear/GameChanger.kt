@@ -4,7 +4,6 @@ import android.content.Context
 import android.net.Uri
 import android.os.Bundle
 import androidx.activity.ComponentActivity
-import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -207,8 +206,8 @@ fun GcApp() {
         while (true) { delay(Gc.refreshMs(board)); GcStore.refresh(ctx) }
     }
     val game = open?.let { id -> s.games.firstOrNull { it.id == id } }
-    if (game != null) GameScreen(game) else Scoreboard(s, board, t, onOpen = { open = it })
-    BackHandler(enabled = open != null) { open = null }
+    if (game != null) BackScreen(onBack = { open = null }) { GameScreen(game, onBack = { open = null }) }
+    else Scoreboard(s, board, t, onOpen = { open = it })
 }
 
 @Composable
@@ -294,7 +293,7 @@ private fun LiveCard(g: Gc.Game, onClick: () -> Unit) {
 
 /** one game: the score, and the line score (runs by inning, then R H E) when GameChanger has it */
 @Composable
-private fun GameScreen(g: Gc.Game) {
+private fun GameScreen(g: Gc.Game, onBack: () -> Unit) {
     LaunchedEffect(g.id) { GcStore.line(g.id, force = Gc.phase(g, System.currentTimeMillis()) == Gc.Phase.LIVE) }
     val line = GcStore.lines.collectAsState().value[g.id]
     val t = now(30_000)
@@ -313,6 +312,7 @@ private fun GameScreen(g: Gc.Game) {
             if (line == null) Text("Line score loading…", fontSize = 11.sp, color = Muted)
             else LineScore(line)
         }
+        item { BackChip("All games", onClick = onBack) }
     }
 }
 

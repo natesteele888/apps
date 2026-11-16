@@ -5,7 +5,19 @@ import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
+import androidx.wear.compose.material.Chip
+import androidx.wear.compose.material.ChipDefaults
+import androidx.wear.compose.material.SwipeToDismissBox
+import androidx.wear.compose.material.Text
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -73,18 +85,41 @@ fun WalkUpApp() {
     var swapFor by rememberSaveable { mutableStateOf<String?>(null) }
     val out = swapFor
     when {
-        out != null -> BenchScreen(out, onDone = { swapFor = null })
-        order -> OrderScreen(onDone = { order = false }, onSwap = { swapFor = it })
+        out != null -> BackScreen(onBack = { swapFor = null }) { BenchScreen(out, onDone = { swapFor = null }) }
+        order -> BackScreen(onBack = { order = false }) { OrderScreen(onDone = { order = false }, onSwap = { swapFor = it }) }
         else -> BattingScreen(onOrder = { order = true })
     }
-    BackHandler(enabled = order || out != null) { if (out != null) swapFor = null else order = false }
 }
 
 @Composable
 fun PitchCountApp() {
     var pen by rememberSaveable { mutableStateOf(false) }
-    if (pen) BullpenScreen(onDone = { pen = false }) else PitchingScreen(onBullpen = { pen = true })
-    BackHandler(enabled = pen) { pen = false }
+    if (pen) BackScreen(onBack = { pen = false }) { BullpenScreen(onDone = { pen = false }) } else PitchingScreen(onBullpen = { pen = true })
+}
+
+/**
+ * Every screen past an app's first one goes back the same three ways: swipe right, the watch's back button, or the
+ * Back chip at the end of its list. (The theme turns off the watch's own swipe-to-close, so a swipe between batters can
+ * never close Walk-Up; this puts swipe-back on the inner screens, where nothing else uses a sideways swipe.)
+ */
+@Composable
+fun BackScreen(onBack: () -> Unit, content: @Composable () -> Unit) {
+    val back by rememberUpdatedState(onBack)
+    BackHandler { back() }
+    SwipeToDismissBox(onDismissed = { back() }) { isBackground ->
+        if (isBackground) Box(Modifier.fillMaxSize().background(Color.Black)) else content()
+    }
+}
+
+/** the always-there way out at the bottom of an inner screen, for watches with no back button */
+@Composable
+fun BackChip(label: String = "Back", onClick: () -> Unit) {
+    Chip(
+        onClick = onClick,
+        label = { Text("‹ $label", maxLines = 1) },
+        colors = ChipDefaults.secondaryChipColors(),
+        modifier = Modifier.fillMaxWidth().padding(top = 6.dp),
+    )
 }
 
 /** the clock, ticking every [ms] */

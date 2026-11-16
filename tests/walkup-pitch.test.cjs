@@ -123,6 +123,13 @@ const FAKE_NATIVE = () => {
     eq(await page.evaluate(() => !!window.WalkupApp.eng.playing()), true, 'still playing');
     await page.evaluate(() => window.__wuCmd(JSON.stringify({ cmd: 'stop' })));
     await page.waitForFunction(() => !window.WalkupApp.eng.playing());
+    eq(await page.evaluate(() => window.WalkupApp.eng.last.stopped.fade), 0.5, 'a plain stop fades out as before');
+    // the watch's Stop button asks for a cut right away (no half-second fade)
+    await page.evaluate(i => window.__wuCmd(JSON.stringify({ cmd: 'play', id: i })), id);
+    await page.waitForFunction(() => !!window.WalkupApp.eng.playing());
+    await page.evaluate(() => window.__wuCmd(JSON.stringify({ cmd: 'stop', now: true })));
+    await page.waitForFunction(() => !window.WalkupApp.eng.playing());
+    eq(await page.evaluate(() => window.WalkupApp.eng.last.stopped.fade), 0.05, 'the watch Stop cuts right away');
     // the bench goes to the watch, and the watch can swap a bench player into a batting spot
     await page.evaluate(() => { const S = window.WalkupApp.S; S.st.lineup = S.st.lineup.slice(0, 8); window.WU.commit('data'); });
     await page.waitForFunction(() => { const s = window.__sent.state[window.__sent.state.length - 1]; return s.lineup.length === 8 && s.bench && s.bench.length === 1; });

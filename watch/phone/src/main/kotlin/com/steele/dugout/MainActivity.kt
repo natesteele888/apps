@@ -53,6 +53,14 @@ class MainActivity : ComponentActivity() {
 
         /** the newest state the page sent, for the Watch settings screen */
         @Volatile var lastState: String? = null
+
+        /** seconds the watch counts down after the hold-to-play ring, before the song starts (0 to 5, 2 to begin with) */
+        fun songDelay(ctx: android.content.Context): Int =
+            ctx.getSharedPreferences("watch", android.content.Context.MODE_PRIVATE).getInt("delay", com.steele.dugout.shared.Proto.DEFAULT_DELAY)
+                .coerceIn(0, com.steele.dugout.shared.Proto.MAX_DELAY)
+
+        fun setSongDelay(ctx: android.content.Context, s: Int) =
+            ctx.getSharedPreferences("watch", android.content.Context.MODE_PRIVATE).edit().putInt("delay", s.coerceIn(0, com.steele.dugout.shared.Proto.MAX_DELAY)).apply()
     }
 
     lateinit var web: WebView
@@ -183,7 +191,8 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    override fun onResume() { super.onResume(); updater.check() }
+    // back from Watch settings, the song countdown may have changed: tell the watch
+    override fun onResume() { super.onResume(); updater.check(); link.resendState() }
 
     override fun onSaveInstanceState(out: Bundle) { super.onSaveInstanceState(out); web.saveState(out) }
 
@@ -221,6 +230,9 @@ class MainActivity : ComponentActivity() {
 
     fun speakerJson(): JSONObject = JSONObject().put("on", speaker.on).put("name", speaker.name)
 
+    /** the watch's countdown before a song, set in Watch settings */
+    fun songDelay(): Int = songDelay(this)
+
     /* ---------- Pocket mode: a black screen that ignores touches; hold 1.5 seconds to unlock ---------- */
     @SuppressLint("ClickableViewAccessibility")
     private fun pocketOverlay(): View {
@@ -256,7 +268,7 @@ class MainActivity : ComponentActivity() {
     fun onPageState(json: String) {
         val o = try { JSONObject(json) } catch (e: Exception) { return }
         main.post {
-            o.put("speaker", speakerJson())
+            o.put("speaker", speakerJson()).put("delay", songDelay())
             val s = o.toString()
             lastState = s
             link.sendState(s)
@@ -271,7 +283,7 @@ class MainActivity : ComponentActivity() {
         val o = try { JSONObject(json) } catch (e: Exception) { return }
         if (o.optString("cmd") == "hello") {
             val s = lastState
-            if (s != null && pageReady) link.sendState(s) else link.sendState(JSONObject().put("ready", false).put("speaker", speakerJson()).toString())
+            if (s != null && pageReady) link.sendState(s) else link.sendState(JSONObject().put("ready", false).put("speaker", speakerJson()).put("delay", songDelay()).toString())
         }
         if (pageReady) toPage(json)
     }

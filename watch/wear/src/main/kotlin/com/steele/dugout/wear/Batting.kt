@@ -41,6 +41,11 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.activity.compose.BackHandler
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
@@ -77,7 +82,8 @@ import kotlin.math.abs
 /**
  * Batting: one screen per batter. Swipe left and right (or turn the bezel) to move; it never starts or stops music.
  * The order goes round: after the last batter comes the leadoff batter again.
- * Press and hold anywhere on the face: a green ring fills around the edge, and the song starts when it closes.
+ * Press and hold anywhere on the face: a green ring fills around the edge. When it closes, a short countdown (set on the
+ * phone, 2 seconds unless changed) gives a moment to change your mind: a tap anywhere cancels before any sound plays.
  * While it plays, the screen turns blue with a big Stop, and swiping is off. Swipe up for the batting order.
  */
 @Composable
@@ -123,6 +129,23 @@ private fun BatterPager(st: BatState, line: String, color: Color, onOrder: () ->
     val rotary = remember { mutableFloatStateOf(0f) }
     val drag = remember { mutableFloatStateOf(0f) }
     val ring = remember { Animatable(0f) }
+    // the countdown after the ring closes: seconds left, or null when there's none
+    var countdown by remember { mutableStateOf<Int?>(null) }
+    var countJob by remember { mutableStateOf<Job?>(null) }
+    fun cancelCountdown() { countJob?.cancel(); countJob = null; if (countdown != null) { countdown = null; Buzz.tick(ctx) } }
+    fun startSong(p: Batter) {
+        val wait = cur.delay
+        if (wait <= 0) { Buzz.started(ctx); PhoneLink.send(Proto.cmd("play", "id" to p.id)); return }
+        Buzz.tick(ctx)
+        countJob = scope.launch {
+            for (left in wait downTo 1) { countdown = left; delay(1000) }
+            countdown = null
+            countJob = null
+            // still the same batter, still nothing playing: go
+            if (!cur.busy && cur.lineup.any { it.id == p.id }) { Buzz.started(ctx); PhoneLink.send(Proto.cmd("play", "id" to p.id)) }
+        }
+    }
+    BackHandler(enabled = countdown != null) { cancelCountdown() }
 
     // the phone moved to another batter (a tap on the phone, or a pick from the lineup): go the short way round
     LaunchedEffect(st.batter, n) {
@@ -141,13 +164,14 @@ private fun BatterPager(st: BatState, line: String, color: Color, onOrder: () ->
     LaunchedEffect(Unit) { focus.requestFocus() }
 
     val b = lineup.getOrNull(idx(pager.currentPage))
-    val canPlay = b != null && b.ready && pager.currentPage == pager.settledPage
+    val canPlay = b != null && b.ready && pager.currentPage == pager.settledPage && countdown == null
     val playable by rememberUpdatedState(canPlay)
     val batter by rememberUpdatedState(b)
 
     Box(
         Modifier.fillMaxSize()
             .onRotaryScrollEvent { e ->
+                if (countdown != null) return@onRotaryScrollEvent true
                 rotary.floatValue += e.verticalScrollPixels
                 if (abs(rotary.floatValue) > 60f) {
                     val to = (pager.currentPage + if (rotary.floatValue > 0) 1 else -1).coerceIn(0, pages - 1)
@@ -158,7 +182,7 @@ private fun BatterPager(st: BatState, line: String, color: Color, onOrder: () ->
             }
             .focusRequester(focus).focusable()
             .pointerInput(Unit) {
-                detectVerticalDragGestures(onDragEnd = { if (drag.floatValue < -50f) onOrder(); drag.floatValue = 0f }, onDragCancel = { drag.floatValue = 0f }) { _, dy -> drag.floatValue += dy }
+                detectVerticalDragGestures(onDragEnd = { if (drag.floatValue < -50f && countdown == null) onOrder(); drag.floatValue = 0f }, onDragCancel = { drag.floatValue = 0f }) { _, dy -> drag.floatValue += dy }
             }
             // The whole face is the Play button. Letting go early, or starting a swipe, does nothing, so a brush can't start a song.
             .pointerInput(Unit) {
@@ -168,7 +192,7 @@ private fun BatterPager(st: BatState, line: String, color: Color, onOrder: () ->
                         ring.snapTo(0f)
                         ring.animateTo(1f, tween(HOLD_MS, easing = LinearEasing))
                         val p = batter
-                        if (p != null && playable) { Buzz.started(ctx); PhoneLink.send(Proto.cmd("play", "id" to p.id)) }
+                        if (p != null && playable) startSong(p)
                     }
                     tryAwaitRelease()
                     job.cancel()
@@ -186,6 +210,30 @@ private fun BatterPager(st: BatState, line: String, color: Color, onOrder: () ->
             Text("︿ Lineup", color = Muted, fontSize = 11.sp)
         }
         EdgeRing(ring.value)
+        countdown?.let { left -> CountdownScreen(left, batter?.let { label(it) } ?: "", onCancel = { cancelCountdown() }) }
+    }
+}
+
+/**
+ * The moment between the ring closing and the song starting. The whole face is the cancel button. The finger that held
+ * the ring is still down when this shows; letting it go does nothing, only a new tap cancels.
+ */
+@Composable
+private fun CountdownScreen(left: Int, who: String, onCancel: () -> Unit) {
+    val stop by rememberUpdatedState(onCancel)
+    Box(
+        Modifier.fillMaxSize().background(Color(0xF2111827)).pointerInput(Unit) { detectTapGestures(onPress = { stop() }) },
+        contentAlignment = Alignment.Center,
+    ) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Text("STARTING IN", fontSize = 13.sp, fontWeight = FontWeight.Black, color = Muted)
+            Text("$left", fontSize = 64.sp, fontWeight = FontWeight.Black, color = Color.White, lineHeight = 66.sp)
+            if (who.isNotBlank()) Text(who, fontSize = 14.sp, color = Color.White, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(horizontal = 30.dp))
+            Spacer(Modifier.height(8.dp))
+            Box(Modifier.clip(RoundedCornerShape(20.dp)).background(Red).padding(horizontal = 22.dp, vertical = 8.dp)) {
+                Text("TAP TO CANCEL", fontSize = 14.sp, fontWeight = FontWeight.Black, color = Color.White)
+            }
+        }
     }
 }
 
@@ -256,7 +304,7 @@ private fun PlayingScreen(st: BatState) {
             Text(p?.label ?: "", fontSize = 14.sp, color = Color.White, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(horizontal = 30.dp))
             Spacer(Modifier.height(8.dp))
             Box(
-                Modifier.size(92.dp).clip(CircleShape).background(Red).clickable { Buzz.tick(ctx); PhoneLink.send(Proto.cmd("stop")) },
+                Modifier.size(92.dp).clip(CircleShape).background(Red).clickable { Buzz.tick(ctx); PhoneLink.send(Proto.cmd("stop", "now" to true)) },
                 contentAlignment = Alignment.Center,
             ) { Text("STOP", fontSize = 22.sp, fontWeight = FontWeight.Black, color = Color.White) }
         }
@@ -287,10 +335,15 @@ fun OrderScreen(onDone: () -> Unit, onSwap: (String) -> Unit) {
         }
         item {
             Text(
-                if (busy) "A song is playing. Stop it to change batters." else "Hold a batter to swap in a bench player.",
+                when {
+                    lineup.isEmpty() -> "No batting order yet. Set it up in Walk-Up on your phone."
+                    busy -> "A song is playing. Stop it to change batters."
+                    else -> "Hold a batter to swap in a bench player."
+                },
                 color = Muted, fontSize = 12.sp, textAlign = TextAlign.Center, modifier = Modifier.padding(top = 4.dp, start = 12.dp, end = 12.dp),
             )
         }
+        item { BackChip("Back to batter", onClick = onDone) }
     }
 }
 
@@ -307,10 +360,19 @@ fun BenchScreen(outId: String, onDone: () -> Unit) {
     val spot = st.lineup.indexOf(out) + 1
     val list = rememberScalingLazyListState(initialCenterItemIndex = 1)
     ScalingLazyColumn(state = list, modifier = Modifier.fillMaxSize()) {
-        item { ListHeader { Text("Swap in for $spot. ${label(out)}", textAlign = TextAlign.Center, maxLines = 2, overflow = TextOverflow.Ellipsis) } }
-        if (bench.isEmpty()) item {
-            Text("Nobody is on the bench. Add players to the team in Walk-Up on your phone.", color = Muted, fontSize = 13.sp, textAlign = TextAlign.Center, modifier = Modifier.padding(horizontal = 12.dp))
+        if (bench.isEmpty()) {
+            // nobody to swap in: say so plainly, and the only thing to do is go back
+            item { ListHeader { Text("No one on the bench", textAlign = TextAlign.Center) } }
+            item {
+                Text(
+                    "Everyone on the team is already batting. Add players in Walk-Up on your phone to swap them in here.",
+                    color = Muted, fontSize = 13.sp, textAlign = TextAlign.Center, modifier = Modifier.padding(horizontal = 12.dp),
+                )
+            }
+            item { BackChip("Back to the order", onClick = onDone) }
+            return@ScalingLazyColumn
         }
+        item { ListHeader { Text("Swap in for $spot. ${label(out)}", textAlign = TextAlign.Center, maxLines = 2, overflow = TextOverflow.Ellipsis) } }
         items(bench, key = { it.id }) { b ->
             PlayerRow(
                 title = label(b),
@@ -322,6 +384,7 @@ fun BenchScreen(outId: String, onDone: () -> Unit) {
             )
         }
         if (st.busy) item { Text("A song is playing. Stop it to swap.", color = Muted, fontSize = 12.sp, textAlign = TextAlign.Center) }
+        item { BackChip("Cancel", onClick = onDone) }
     }
 }
 
