@@ -180,7 +180,7 @@
       footer: '<button type="button" class="btn ghost" data-do="add">Add a sound</button><button type="button" class="btn" data-close>Done</button>',
       onClose: function () { if (off) off(); }
     });
-    var el = api.el;
+    var el = api.el, shown = null;
     function paint() {
       var b = B.tiles();
       $("#beList", el).innerHTML = b.length ? b.map(function (t, i) {
@@ -227,6 +227,7 @@
           '<button type="button" class="btn block top" data-do="preview">' + (playing ? "Stop" : "Play it") + "</button>";
       }
       $("#btBody", el).innerHTML = h;
+      shown = tt.songId || null;
     }
     paint();
     var name = $("#btName", el);
@@ -256,7 +257,9 @@
     });
     off = WU.on(function (what) {
       if (api.closed) return;
-      if (what === "data" && document.activeElement !== name && !(document.activeElement && document.activeElement.closest && document.activeElement.closest(".stepper"))) paint();
+      /* the body never holds the name box, so typing a name is never cut off; a stepper in use is left alone unless the sound itself changed */
+      var tt = B.tile(id), a = document.activeElement, inStep = !!(a && a.closest && a.closest("#btBody .stepper"));
+      if (what === "data" && (!inStep || !tt || (tt.songId || null) !== shown)) paint();
       else if (what === "audio") { var p = $('[data-do="preview"]', el); if (p) p.textContent = B.playingId() === id ? "Stop" : "Play it"; }
     });
   };

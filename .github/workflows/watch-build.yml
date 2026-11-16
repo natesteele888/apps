@@ -92,6 +92,7 @@ jobs:
       - name: Check the anthem download still works (a warning only)
         # Walk-Up's "Get the national anthem" downloads a public-domain recording from Wikimedia Commons on the coach's phone.
         # This only checks that the link still answers with audio the page is allowed to read; it never fails the build.
+        if: always()
         continue-on-error: true
         run: |
           url=$(node -e 'const s=require("fs").readFileSync("walkup/board.js","utf8");console.log(/url: "([^"]+)"/.exec(s)[1])')
