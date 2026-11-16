@@ -1,6 +1,7 @@
 // Firestore rules for the nates-toolbox Firebase project (Toolbox, Gameday Picks, Read 20, Photo Blueprint, Get Ready, Catch Log).
 // Copy of the live rules from the Firebase console, saved 2026-11-06. Photo Blueprint section changed 2026-11-15
-// (shared sheets lose the name and exact pin): paste this file into the console after that change merges.
+// (shared sheets lose the name and exact pin), published 2026-11-16. app_me added 2026-11-16 ("this is me" for app numbers):
+// paste this file into the console after that change merges.
 // OWNER_EMAIL stands in for Nate's sign-in email (this repo is public, so the
 // real address is not committed). Put the real address back before pasting
 // this into the console. Test: cd toolbox && npm install && npm test
@@ -198,6 +199,12 @@ service cloud.firestore {
     }
     match /app_goals/{id} {
       allow create: if countOk(id, 3) && id.split('~')[1] == request.resource.data.week;
+    }
+    // "This is me" (toolbox/me.html): a browser the owner marked sends its random phone code once, so the numbers page can
+    // leave out what it counted before. Only the app's folder is stored. Anyone may create one; only the owner reads them.
+    match /app_me/{pid} {
+      allow create: if pid.matches('[a-z0-9]{16}') && request.resource.data.keys().hasOnly(['app'])
+        && request.resource.data.app is string && request.resource.data.app.matches('[A-Za-z0-9-]{1,60}');
     }
   }
 }

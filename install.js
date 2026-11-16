@@ -14,11 +14,25 @@
   /* Remember real installs so the install page (natesteele888.github.io/apps/) can show what's actually on this phone.
      Key = this app's folder, e.g. "nate.installed:/apps/situations/". Only a timestamp is stored. */
   var DIR = location.pathname.replace(/[^/]*\.[a-z0-9]+$/i, "").replace(/([^/])$/, "$1/");
+  function meToast() {
+    var ok = false; try { ok = localStorage.getItem("nate.me") === "1"; } catch (e) {}
+    if (!ok || !document.body) return;
+    var t = document.createElement("div");
+    t.className = "nate-me-toast"; t.setAttribute("role", "status");
+    t.style.cssText = "position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom));transform:translateX(-50%);z-index:2147483001;max-width:calc(100% - 32px);background:#14201b;color:#fff;padding:12px 16px;border-radius:12px;font:600 15px/1.35 system-ui,sans-serif;box-shadow:0 6px 24px rgba(0,0,0,.3)";
+    t.textContent = "Marked as you: this browser won't count in the app numbers for this site.";
+    document.body.appendChild(t);
+    setTimeout(function () { if (t.parentNode) t.parentNode.removeChild(t); }, 6000);
+  }
   function markInstalled() { try { localStorage.setItem("nate.installed:" + DIR, String(Date.now())); } catch (e) {} }
   /* App numbers for the owner's numbers page (toolbox/numbers.html): an anonymous count of phones that open each app
      each week, and of home-screen installs (counted the first time it opens from the home screen). Sends only the app's
      folder, the week and a random 16-character code made on this phone: no names, accounts or content. Each phone sends
-     at most one open per app per week and one install per app. Skipped off https, on this computer and in tests. */
+     at most one open per app per week and one install per app. Skipped off https, on this computer and in tests.
+     "This is me": opening any page on a site with ?nateme (toolbox/me.html links to each site) marks this browser as the
+     owner's on that site. From then on it sends no counts there, and it sends its random code once to app_me so the
+     numbers page can leave out what it counted before. */
+  var meAsked = /(^|[?&#])nateme\b/.test(location.search + location.hash);
   try {
     (function () {
       var h = location.hostname;
@@ -35,12 +49,18 @@
       var d = new Date(); d.setHours(0, 0, 0, 0); d.setDate(d.getDate() + 3 - (d.getDay() + 6) % 7);
       var y = d.getFullYear(), wk = 1 + Math.round(((d - new Date(y, 0, 4)) / 864e5 - 3 + (new Date(y, 0, 4).getDay() + 6) % 7) / 7);
       var week = y + "-W" + (wk < 10 ? "0" : "") + wk;
-      function send(col, id, flag, val) {
+      function send(col, id, flag, val, fields) {
         if (localStorage.getItem(flag) === val || !window.fetch) return;
         fetch("https://firestore.googleapis.com/v1/projects/nates-toolbox/databases/(default)/documents/" + col + "?documentId=" + encodeURIComponent(id), {
           method: "POST", headers: { "Content-Type": "application/json" }, credentials: "omit", keepalive: true,
-          body: JSON.stringify({ fields: { app: { stringValue: app }, week: { stringValue: week } } })
+          body: JSON.stringify({ fields: fields || { app: { stringValue: app }, week: { stringValue: week } } })
         }).then(function (r) { if (r.ok || r.status === 409) try { localStorage.setItem(flag, val); } catch (e) {} }, function () {});
+      }
+      if (meAsked) localStorage.setItem("nate.me", "1");
+      if (localStorage.getItem("nate.me") === "1") {
+        window.nateCount = function () {};
+        send("app_me", pid, "nate.me.sent", pid, { app: { stringValue: app } });
+        return;
       }
       send("app_opens", app + "~" + week + "~" + pid, "nate.count.open:" + app, week);
       if (standalone) send("app_installs", app + "~" + pid, "nate.count.install:" + app, "1");
@@ -49,6 +69,7 @@
       window.nateCount = function (kind) { if (kind === "reads" || kind === "goals") send("app_" + kind, app + "~" + week + "~" + pid, "nate.count." + kind + ":" + app, week); };
     })();
   } catch (e) {}
+  if (meAsked) { if (standalone) markInstalled(); meToast(); return; }
   if (standalone) { markInstalled(); return; }
   var KEY = "nate.install.later:" + location.pathname.split("/").slice(0, 3).join("/");
   var asked = /(^|[?&#])install\b/.test(location.search + location.hash);
