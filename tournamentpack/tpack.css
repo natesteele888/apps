@@ -231,7 +231,8 @@ input:focus-visible, textarea:focus-visible, select:focus-visible { outline: 3px
 .scen > li span { font-family: var(--num); font-weight: 700; font-size: 26px; color: var(--accent); white-space: nowrap; }
 .scen { margin-top: 6px; }
 .scen > li span .tag { font-family: var(--font, inherit); font-size: 12px; vertical-align: middle; margin-left: 4px; color: var(--accent-ink); }
-.scen > li span .tag.warn { color: var(--warn); } .scen > li span .tag.info { color: var(--info); }
+.scen > li span .tag.cut-out { background: transparent; border: 1.5px solid var(--warn); color: var(--warn); }
+.scen > li span .tag.cut-dep { background: transparent; border: 1.5px solid var(--info); color: var(--info); }
 .cutline { margin: 6px 0 2px; padding: 8px 12px; border-radius: 12px; font-weight: 700; background: var(--accent-soft); }
 .cutline.out { background: rgba(255, 120, 90, .14); }
 .wi-games { list-style: none; margin: 8px 0 0; padding: 0; }

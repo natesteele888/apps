@@ -162,7 +162,7 @@
     return olCache.val;
   }
   V.outlookFor = outlookFor;
-  var CUT_TAG = { "in": ['<span class="tag ok">In</span>', "in the top "], out: ['<span class="tag warn">Out</span>', "out of the top "], maybe: ['<span class="tag info">Depends</span>', ""] };
+  var CUT_TAG = { "in": ['<span class="tag cut-in">In</span>'], out: ['<span class="tag cut-out">Out</span>'], maybe: ['<span class="tag cut-dep">Depends</span>'] };
   function rowTitle(r) {
     if (!r.of) return "Our pool games are done";
     if (r.wins === r.of) return r.of === 1 ? "If we win" : "If we win out";
