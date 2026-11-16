@@ -102,16 +102,20 @@
   }
   function hide() { if (host) { host.remove(); host = null; } }
 
+  /* A computer (Windows, Mac, Linux, a Chromebook): there is no home screen, so the bar says "this computer" and its own window. */
+  var desktop = function () { try { return !ios && !android && matchMedia("(pointer: fine)").matches; } catch (e) { return false; } };
+  function offer() { return desktop() ? ["Install " + appName() + " on this computer", "Opens in its own window, like a real app."] : ["Add " + appName() + " to your home screen", "Opens full screen, like a real app."]; }
   window.addEventListener("beforeinstallprompt", function (e) {
     e.preventDefault(); deferred = e;
     if (!framed && (asked || !later())) {
-      var go = function () { show(["Add " + appName() + " to your home screen", "Opens full screen, like a real app."], true); };
+      var go = function () { show(offer(), true); };
       document.body ? go() : document.addEventListener("DOMContentLoaded", go);
     }
   });
   window.addEventListener("appinstalled", function () {
     deferred = null; markInstalled();
-    show([appName() + " is on your home screen", "Long-press its icon and drop it on another to make a folder."], false);
+    show(desktop() ? [appName() + " is installed", "Find it in your apps menu. Right-click it on the taskbar to keep it there."]
+      : [appName() + " is on your home screen", "Long-press its icon and drop it on another to make a folder."], false);
     setTimeout(hide, 6000);
   });
   /* First open in a browser tab: say how to add it right away, without waiting for Chrome's own offer (which can
@@ -151,13 +155,14 @@
   function howTo(force) {
     if (!document.body || (!force && (host || installedHere()))) return;
     if (host) hide();
-    if (deferred) { show(["Add " + appName() + " to your home screen", "Opens full screen, like a real app."], true); return; }
+    if (deferred) { show(offer(), true); return; }
     if (ios) {
       var chromeIOS = /CriOS/.test(UA);
       show(["Add " + appName() + " to your home screen", chromeIOS ? "Tap the Share button (top right), then Add to Home Screen." : "Tap the Share button (square with an arrow), then Add to Home Screen."], false);
       return;
     }
-    show(["Add " + appName() + " to your home screen", android ? androidSteps()
+    show(desktop() ? ["Install " + appName() + " on this computer", "In Chrome, click the install icon at the right end of the address bar, or open the \u22ee menu, then Cast, save and share, then Install."]
+      : ["Add " + appName() + " to your home screen", android ? androidSteps()
       : "In your browser's menu, choose Install app or Add to Home screen."], false);
     /* Android hides Install inside an app's mini-browser, so offer a one-tap jump into the real browser there and
        from the install page. Samsung Internet and other browsers get a jump to Chrome. In Chrome itself the page is

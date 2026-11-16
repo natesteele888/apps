@@ -4,4 +4,5 @@
     <string name="walkup_name">Walk-Up</string>
     <string name="pitch_name">Pitch Count</string>
     <string name="gc_name">GC Scores</string>
+    <string name="scores_name">Scores</string>
 </resources>

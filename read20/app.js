@@ -6,9 +6,13 @@
   const CL = window.R20Cloud, WD = window.R20Words, AU = window.R20Audio, I = window.R20Icons;
   // Anonymous "someone really used it" counts for the owner's numbers page: a phone code and the week, nothing else (see install.js).
   function count(kind) { try { if (window.nateCount) window.nateCount(kind); } catch (e) {} }
-  const BUILD = "2026-11-16";   // change on each release; shown in Settings so a phone that is behind is easy to spot
+  const BUILD = "2026-11-17";   // change on each release; shown in Settings so a phone that is behind is easy to spot
   const teen = () => S.lv === "older";   // older readers get the darker look with line icons
   const icon = (name, fallback, size) => (teen() ? I(name, size) : fallback);
+  /* A computer (a mouse and a big screen, like a kids' laptop) or a phone or tablet. It only changes the words ("this computer"),
+     the desktop layout itself comes from the screen width in read20.css. */
+  const PC = (() => { try { return matchMedia("(pointer: fine)").matches && Math.min(screen.width, screen.height) >= 600; } catch (e) { return false; } })();
+  const PH = PC ? "computer" : "phone";
   const KEY = "read20.v1";
   const $ = s => document.querySelector(s);
   const esc = s => String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
@@ -91,7 +95,7 @@
     return "";
   }
   function cloudChanged() { if (!ui.book && !document.querySelector(".overlay")) { const h = $("#cloudbadge"); if (h) h.hidden = CL.status !== "ok"; } }
-  function warnHtml() { return '<div class="warn" id="warn" role="alert"' + (store.fail ? "" : " hidden") + '>⚠️ This phone is not letting the app save. Open Read 20 from the home-screen icon (not a private tab), or tap ⚙️ and save a backup.</div>'; }
+  function warnHtml() { return '<div class="warn" id="warn" role="alert"' + (store.fail ? "" : " hidden") + '>⚠️ This ' + PH + ' is not letting the app save. Open Read 20 from its ' + (PC ? 'app icon' : 'home-screen icon') + ' (not a private tab), or tap ⚙️ and save a backup.</div>'; }
   function paintWarn() { const w = $("#warn"); if (w) w.hidden = !store.fail; }
 
   const ui = { level: 1, month: null, sel: null, book: null, page: 0, paused: false, idle: false, acc: 0, last: 0, lastAct: 0, timer: 0, finishedNow: false, hl: -1 };
@@ -247,6 +251,7 @@
     $("#view").innerHTML = `
     <header class="top"><h1>${icon("logo", "📖 ")}Read ${S.goal}</h1><span class="cloudbadge" id="cloudbadge" title="Backed up online" ${CL.status === "ok" ? "" : "hidden"}>☁️✓</span>${teen() ? "" : `<button class="icon moon" id="moon" aria-label="${night() ? "Switch to light screen" : "Switch to dark screen (easier on the eyes in bed)"}">${night() ? "☀️" : "🌙"}</button>`}<button class="icon" id="gear" aria-label="Settings">${icon("sliders", "⚙️")}</button></header>
     ${warnHtml()}
+    <div class="home"><div class="hside">
     <div class="readers" role="tablist" aria-label="Readers">${R.order.map(id => `<button role="tab" aria-selected="${id === R.active}" class="rd ${id === R.active ? "on" : ""}" data-id="${esc(id)}"><span class="av" aria-hidden="true">${avOf(id)}</span><span class="nm">${esc(who(R.profiles[id]))}</span></button>`).join("")}${kid() ? "" : '<button class="rd add" id="addrd" aria-label="Add a reader"><span class="av" aria-hidden="true">＋</span><span class="nm">Add</span></button>'}</div>
     ${offer ? `<section class="nudge makeup"><b>${teen() ? "" : "🌅 "}Finish last night?</b><p>${S.name ? esc(S.name) + ", you" : "You"} read ${Math.floor(offer.sec / 60)} of ${S.goal} minutes last night. You have until noon to finish the other ${Math.ceil(offer.left / 60)}.</p><button class="btn" id="mkgo">Finish last night's reading</button></section>` : ""}
     ${ui.makeup ? `<p class="nudge makeup"><b>Finishing last night.</b> Your reading now counts for last night.<br><button class="linkbtn" id="mkoff">Never mind, back to tonight</button></p>` : ""}
@@ -259,15 +264,18 @@
       </div>
     </section>
     <button class="btn big" id="next"><span class="bk">${older ? I(nx.topic, 34) : esc(nx.cover)}</span><span><small>Read next</small><br>${esc(nx.title)}</span></button>
+    </div><div class="hmain">
     ${older ? `<h2 class="sec">The Library</h2>
     <div class="levels" role="tablist" aria-label="Topics">${B.TOPICS.map(t => `<button role="tab" aria-selected="${t.id === tp.id}" class="lv ${t.id === tp.id ? "on" : ""}" data-tp="${t.id}"><span>${I(t.id, 18)}</span>${t.name}</button>`).join("")}</div>
     <p class="lvinfo"><b>${esc(tp.name)}</b> · ${esc(tp.sub)}<br><small>${readIn} of ${list.length} read</small></p>` : `<h2 class="sec">The Book Shop</h2>
     <div class="levels" role="tablist" aria-label="Levels">${B.LEVELS.map(l => `<button role="tab" aria-selected="${l.n === ui.level}" class="lv ${l.n === ui.level ? "on" : ""}" data-lv="${l.n}"><span>${l.icon}</span>Level ${l.n}</button>`).join("")}</div>
     <p class="lvinfo"><b>${esc(lv.name)}</b> · ${esc(lv.sub)}<br><small>${readIn} of ${list.length} read</small></p>`}
     <div class="shelf">${list.map(b => `<button class="cover${older ? " tp-" + b.topic : ""}" data-id="${esc(b.id)}" style="--c:${esc(b.color)}" aria-label="${esc(b.title)}${fin[b.id] ? ", read" : ""}"><span class="ce">${older ? I(b.topic, 46) : esc(b.cover)}</span><span class="ct">${esc(b.title)}</span>${older ? `<span class="pips" aria-label="difficulty ${b.diff} of 3">${"●".repeat(b.diff)}${"○".repeat(3 - b.diff)}</span>` : ""}${fin[b.id] ? `<span class="check" aria-hidden="true">${older ? I("check", 18) : "✓"}</span>` : ""}</button>`).join("")}</div>
-    ${!kid() && C.totalAll(R) >= 600 && !CL.enabled() && (!bkDate() || C.daysSince(bkDate(), k) >= 7) ? '<section class="nudge"><b>Keep the reading log safe ☁️</b><p>The log lives on this phone. A parent can sign in with Google once to back it up online. Readers never have to sign in.</p><button class="btn alt" id="bknow">Set up the backup</button></section>' : ""}
+    </div><div class="hextra">
+    ${!kid() && C.totalAll(R) >= 600 && !CL.enabled() && (!bkDate() || C.daysSince(bkDate(), k) >= 7) ? '<section class="nudge"><b>Keep the reading log safe ☁️</b><p>The log lives on this ' + PH + '. A parent can sign in with Google once to back it up online. Readers never have to sign in.</p><button class="btn alt" id="bknow">Set up the backup</button></section>' : ""}
     <button class="btn alt" id="manual">＋ Log a book from home</button>
-    <p class="fine">Stories are free to share: written for this app, or old public-domain rhymes and fables. Everything stays on this phone.</p>`;
+    <p class="fine">Stories are free to share: written for this app, or old public-domain rhymes and fables. Everything stays on this ${PH}.</p>
+    </div></div>`;
     nav("books");
     $("#gear").onclick = openSettings;
     if ($("#mkgo")) $("#mkgo").onclick = () => { startMakeup(); };
@@ -299,11 +307,11 @@
         <button class="icon" id="pause" aria-label="Pause the timer">${icon("pause", "⏸")}</button>
       </header>
       ${warnHtml()}
-      <div class="idle" id="idlebox" hidden>Still reading? Tap anywhere to keep the timer going.</div>
+      <div class="idle" id="idlebox" hidden>Still reading? ${PC ? "Click anywhere or press any key" : "Tap anywhere"} to keep the timer going.</div>
       <div class="pic ${older ? "sm tp-" + bk.topic : cnt > 2 ? "m3" : cnt > 1 ? "m2" : ""}" aria-hidden="true">${older ? I(bk.topic, 40) : esc(emo)}</div>
       ${end ? `<div class="the-end"><h2>The End</h2><p>${esc(bk.title)}</p>${older && bk.gloss && bk.gloss.length ? glossHtml(bk) : ""}${older && bk.quiz && bk.quiz.length ? quizHtml(bk) : ""}<button class="btn big" id="more">Pick another story</button><button class="btn alt" id="again">Read it again</button></div>`
         : `<p class="text" id="text">${pg.text.split(/\s+/).map((w, i) => `<span class="w" role="button" tabindex="0" data-i="${i}">${esc(w)}</span>`).join(" ")}</p>`}
-      ${end ? "" : `<p class="hint">${older ? "" : "👆 "}${sylOn() ? "Press and hold a word to " + (older ? "see its syllables" : "break it into sounds") : S.say ? "Tap a word to hear it" : "Turn on the speaker, then tap a word to hear it"}</p>`}
+      ${end ? "" : `<p class="hint">${older ? "" : "👆 "}${sylOn() ? "Press and hold a word to " + (older ? "see its syllables" : "break it into sounds") : S.say ? (PC ? "Click" : "Tap") + " a word to hear it" : "Turn on the speaker, then " + (PC ? "click" : "tap") + " a word to hear it"}</p>`}
       <footer class="rnav">
         <button class="pgbtn" id="prev" ${ui.page === 0 ? "disabled" : ""} aria-label="Previous page">${icon("back", "◀", 26)}</button>
         <div class="pgnum" aria-live="polite">${end ? "The End" : "Page " + (ui.page + 1) + " of " + n}</div>
@@ -395,9 +403,22 @@
   function size(d) { S.size = Math.min(2, Math.max(0, S.size + d)); save(); renderReader(); }
 
   document.addEventListener("pointerdown", () => { if (ui.book) touch(); }, true);
+  /* Keyboard, for a computer: Right arrow, Page Down or Space turns to the next page; Left arrow, Page Up or Shift+Space goes back.
+     Enter on The End page picks the next story. A key held down turns one page, not ten. A key pressed on a button or a word
+     does that button's own thing instead. Escape closes the top pop-up. */
+  const onControl = el => !!(el && el.closest && el.closest("button,input,select,textarea,a,label,[role=button]"));
   document.addEventListener("keydown", e => {
+    if (e.key === "Escape" && overlays.length) { e.preventDefault(); escTop(); return; }
     if (!ui.book) return; touch();
-    if (e.key === "ArrowRight") turn(1); else if (e.key === "ArrowLeft") turn(-1);
+    if (overlays.length || e.altKey || e.ctrlKey || e.metaKey) return;
+    const k = e.key, end = ui.page >= ui.book.pages.length;
+    let d = 0;
+    if (k === "ArrowRight" || k === "PageDown") d = 1;
+    else if (k === "ArrowLeft" || k === "PageUp") d = -1;
+    else if (k === " " && !onControl(e.target)) d = e.shiftKey ? -1 : 1;
+    else if (k === "Enter" && end && !onControl(e.target) && $("#more")) { e.preventDefault(); if (!e.repeat) $("#more").click(); return; }
+    if (!d) return;
+    e.preventDefault(); if (!e.repeat) turn(d);
   });
   let sx = null;
   document.addEventListener("touchstart", e => { sx = ui.book && e.touches.length === 1 ? e.touches[0].clientX : null; }, { passive: true });
@@ -413,24 +434,24 @@
     const fin = C.finishedIds(S), totalSec = C.total(S), nights = Object.keys(S.days).filter(d => C.isDone(S, d)).length;
     $("#view").innerHTML = `
     <header class="top"><h1>${icon("calendar", "🗓️ ")}${S.name ? esc(S.name) + "'s" : "My"} Reading Log</h1><button class="icon" id="gear" aria-label="Settings">${icon("sliders", "⚙️")}</button></header>
-    <section class="stats"><div><b>${icon("flame", "🔥", 20)} ${C.streak(S, k)}</b><span>nights in a row</span></div><div><b>${icon("star", "⭐", 20)} ${nights}</b><span>${S.goal}-minute nights</span></div><div><b>${icon("done", "📚", 20)} ${Object.keys(fin).length}</b><span>stories finished</span></div><div><b>${icon("clock", "⏱", 20)} ${C.fmtTotal(totalSec)}</b><span>read in all</span></div></section>
-    <div class="mhead"><button class="icon" id="pm" aria-label="Last month">${icon("back", "◀", 20)}</button><h2>${names[m]} ${y}</h2><button class="icon" id="nm" aria-label="Next month">${icon("next", "▶", 20)}</button></div>
+    <div class="logwrap"><section class="stats"><div><b>${icon("flame", "🔥", 20)} ${C.streak(S, k)}</b><span>nights in a row</span></div><div><b>${icon("star", "⭐", 20)} ${nights}</b><span>${S.goal}-minute nights</span></div><div><b>${icon("done", "📚", 20)} ${Object.keys(fin).length}</b><span>stories finished</span></div><div><b>${icon("clock", "⏱", 20)} ${C.fmtTotal(totalSec)}</b><span>read in all</span></div></section>
+    <section class="logcal"><div class="mhead"><button class="icon" id="pm" aria-label="Last month">${icon("back", "◀", 20)}</button><h2>${names[m]} ${y}</h2><button class="icon" id="nm" aria-label="Next month">${icon("next", "▶", 20)}</button></div>
     <p class="mfine">${st.nights} night${st.nights === 1 ? "" : "s"} done this month</p>
     <div class="cal" role="grid"><div class="dow">S</div><div class="dow">M</div><div class="dow">T</div><div class="dow">W</div><div class="dow">T</div><div class="dow">F</div><div class="dow">S</div>
     ${cells.map(c => { if (!c) return '<div class="day empty"></div>'; const s = C.daySec(S, c), dn = +c.slice(8); const cls = (C.isDone(S, c) ? "done " : s ? "some " : "") + (c === k ? "now " : "") + (c === ui.sel ? "sel" : "");
-      return `<button class="day ${cls}" data-d="${c}" aria-label="${c}${s ? ", " + C.fmtMin(s) : ""}${C.isDone(S, c) ? ", goal reached" : ""}"><b>${dn}</b><i>${C.isDone(S, c) ? icon("star", "⭐", 14) : s ? Math.round(s / 60) + "m" : ""}</i></button>`; }).join("")}</div>
+      return `<button class="day ${cls}" data-d="${c}" aria-label="${c}${s ? ", " + C.fmtMin(s) : ""}${C.isDone(S, c) ? ", goal reached" : ""}"><b>${dn}</b><i>${C.isDone(S, c) ? icon("star", "⭐", 14) : s ? Math.round(s / 60) + "m" : ""}</i></button>`; }).join("")}</div></section>
     <div id="detail"></div>
     ${kid() ? "" : `<section class="keep"><h3>Keep the log safe</h3>
-      <p class="ok">${store.fail ? "⚠️ This phone is not letting the app save." : "✓ Saved on this phone"}</p>
+      <p class="ok">${store.fail ? "⚠️ This " + PH + " is not letting the app save." : "✓ Saved on this " + PH + ""}</p>
       <p class="cl2" id="cl2">${esc(cloudLine()) || "☁️ Not backed up online yet."}</p>
       <button class="btn" id="kcloud">${CL.status === "ok" ? "☁️ Back up now" : "☁️ Back up online (a parent signs in once)"}</button>
       <button class="btn alt" id="kfile">💾 Save a backup file</button>
       <p class="fine left" id="kmsg" role="status"></p>
-    </section>`}`;
+    </section>`}</div>`;
     nav("log");
     $("#gear").onclick = openSettings;
     if ($("#kcloud")) $("#kcloud").onclick = () => { if (CL.status === "ok") { CL.syncNow(); $("#kmsg").textContent = "Backing up…"; setTimeout(() => { if ($("#cl2")) renderLog(); }, 1500); } else openSafe(); };
-    if ($("#kfile")) $("#kfile").onclick = () => { backup(); $("#kmsg").textContent = "Backup file saved to this phone's Downloads."; };
+    if ($("#kfile")) $("#kfile").onclick = () => { backup(); $("#kmsg").textContent = "Backup file saved to this " + PH + "'s Downloads."; };
     $("#pm").onclick = () => { ui.month = m === 0 ? { y: y - 1, m: 11 } : { y, m: m - 1 }; renderLog(); };
     $("#nm").onclick = () => { ui.month = m === 11 ? { y: y + 1, m: 0 } : { y, m: m + 1 }; renderLog(); };
     document.querySelectorAll(".day[data-d]").forEach(b => (b.onclick = () => { ui.sel = b.dataset.d; renderLog(); }));
@@ -465,9 +486,18 @@
      so a tap that closes one and moves on costs nothing, and the entry we land on says how many should be open. */
   const overlays = [];
   let histDepth = 0, traveling = false, syncTimer = 0, afterTrip = null;
-  function trackOverlay(o) { overlays.push(o); syncHistory(); }
+  /* While a pop-up is open, the screen under it can't be clicked or tabbed to (inert), and the keyboard starts inside the pop-up.
+     When the last one closes, the keyboard goes back to where it was. */
+  function trackOverlay(o) {
+    o.r20From = document.activeElement; overlays.push(o); $("#app").inert = true;
+    const card = o.querySelector(".card"); if (card && !card.contains(document.activeElement)) { card.tabIndex = -1; try { card.focus({ preventScroll: true }); } catch (e) {} }
+    syncHistory();
+  }
+  function escTop() { const o = overlays[overlays.length - 1]; if (!o) return; const k = o.querySelector("#keep"); if (o.id === "party" && k) k.click(); else closeOverlay(o); }
   /* "then" runs once the pop-up's history entry is given back, so a page change can't land on top of it. */
-  function closeOverlay(o, then) { const i = overlays.indexOf(o); if (i >= 0) overlays.splice(i, 1); o.remove(); if (then) afterTrip = then; else if (stale && !overlays.length && !ui.book) { stale = false; route(); } syncHistory(); }
+  function closeOverlay(o, then) {
+    const i = overlays.indexOf(o); if (i >= 0) overlays.splice(i, 1); o.remove();
+    if (!overlays.length) { $("#app").inert = false; const f = o.r20From; try { (f && f.isConnected && f !== document.body ? f : $("#view")).focus({ preventScroll: true }); } catch (e) {} } if (then) afterTrip = then; else if (stale && !overlays.length && !ui.book) { stale = false; route(); } syncHistory(); }
   function syncHistory() { clearTimeout(syncTimer); syncTimer = setTimeout(reconcileHistory, 0); }
   function reconcileHistory() {
     if (traveling) return; // the popstate handler tidies up when our own trip back lands
@@ -526,7 +556,7 @@
   }
   function removeReader(o) {
     if (R.order.length < 2) return; const id = R.active, nm = who(S);
-    if (!confirm("Remove " + nm + " and all of " + nm + "'s reading history from this phone" + (CL.status === "ok" ? " and from the cloud backup" : "") + "? This cannot be undone.")) return;
+    if (!confirm("Remove " + nm + " and all of " + nm + "'s reading history from this " + PH + "" + (CL.status === "ok" ? " and from the cloud backup" : "") + "? This cannot be undone.")) return;
     R.gone[id] = 1; delete R.profiles[id]; R.order = R.order.filter(x => x !== id); R.active = R.order[0]; act(); save(true); if (CL.status === "ok") CL.overwrite();
     closeOverlay(o); ui.levelSet = false; ui.month = null; ui.sel = null; route();
   }
@@ -534,7 +564,7 @@
   /* ---------- settings: one reader's choices, and two short doors to everything else ---------- */
   function openSettings() {
     let av = S.av || avOf(R.active);
-    const safe = CL.status === "ok" ? "☁️ Backed up online" + (CL.shareKey() ? " and shared with another home" : "") : "Saved on this phone only. A parent can add an online backup.";
+    const safe = CL.status === "ok" ? "☁️ Backed up online" + (CL.shareKey() ? " and shared with another home" : "") : "Saved on this " + PH + " only. A parent can add an online backup.";
     const o = sheet(`<h2>Settings</h2>
       <section class="set"><h3>${esc(avOf(R.active))} ${esc(who(S))}</h3>
         <label>Name<input id="sn" maxlength="20" autocomplete="off" value="${esc(S.name)}" placeholder="Name"></label>
@@ -542,9 +572,9 @@
         <label>Reading goal each night<select id="sg">${C.GOALS.map(g => `<option ${g === S.goal ? "selected" : ""} value="${g}">${g} minutes</option>`).join("")}</select></label>
         <label>Reading level<select id="slv"><option value="early">Learning to read</option><option value="older">Older reader (grades 5 and up)</option></select></label>
         <label>Word size<select id="sz">${(S.lv === "older" ? ["Normal", "Large", "Extra large"] : ["Big", "Bigger", "Biggest"]).map((t, i) => `<option value="${i}">${t}</option>`).join("")}</select></label>
-        ${teen() ? "" : `<label>Screen look (this phone)<select id="slk">${[["auto", "Match my phone"], ["light", "Light"], ["dark", "Dark (easy on the eyes in bed)"]].map(([v, t]) => `<option value="${v}" ${getLook() === v ? "selected" : ""}>${t}</option>`).join("")}</select></label>`}
+        ${teen() ? "" : `<label>Screen look (this ${PH})<select id="slk">${[["auto", "Match my " + PH], ["light", "Light"], ["dark", "Dark (easy on the eyes in bed)"]].map(([v, t]) => `<option value="${v}" ${getLook() === v ? "selected" : ""}>${t}</option>`).join("")}</select></label>`}
         <label class="chk"><input type="checkbox" id="ss" ${S.say ? "checked" : ""}> Say a word out loud when it is tapped</label>
-        ${AU.canSpeak() ? `<label>Reading voice (this phone)<select id="svc"></select></label><label>Voice speed<select id="srt">${SPEEDS.map(([v, t]) => `<option value="${v}" ${Math.abs(getRate() - v) < 0.02 ? "selected" : ""}>${t}</option>`).join("")}</select></label><p class="fine left" id="svh">Pick the most natural-sounding one. Voices that say "Enhanced", "Natural" or "Premium" sound the most like a person.</p>` : ""}
+        ${AU.canSpeak() ? `<label>Reading voice (this ${PH})<select id="svc"></select></label><label>Voice speed<select id="srt">${SPEEDS.map(([v, t]) => `<option value="${v}" ${Math.abs(getRate() - v) < 0.02 ? "selected" : ""}>${t}</option>`).join("")}</select></label><p class="fine left" id="svh">Pick the most natural-sounding one. Voices that say "Enhanced", "Natural" or "Premium" sound the most like a person.</p>` : ""}
         ${R.order.length > 1 && !kid() ? `<button class="linkbtn danger" id="srm">Remove ${esc(who(S))}…</button>` : ""}
       </section>
       ${kid() ? "" : `<section class="set"><h3>Keep the log safe</h3><p class="fine left">${esc(safe)}</p><button class="btn alt" id="setsafe">Back up and share…</button></section>`}
@@ -554,17 +584,17 @@
         <button class="btn alt" id="srefresh">🔄 Get the newest version</button>
         <p class="fine left" id="sver">Library: ${B.books.length} stories · version ${BUILD}</p>
         <p class="fine left">© 2026 Nate Steele. All rights reserved. Please do not copy or resell this app.</p>
-        ${kid() ? '<button class="linkbtn" id="kunlink">Stop linking this phone…</button>' : ""}</section>
+        ${kid() ? '<button class="linkbtn" id="kunlink">Stop linking this ' + PH + '…</button>' : ""}</section>
       <div class="row"><button class="btn" id="sd">Done</button></div>`);
     $("#sz").value = String(S.size); $("#slv").value = S.lv;
     wireAvatars(o, a => (av = a));
     if ($("#setsafe")) $("#setsafe").onclick = openSafe;
-    if ($("#kunlink")) $("#kunlink").onclick = () => { if (confirm("Stop linking this phone? It keeps the reading it has, but it stops syncing with the parent's phone.")) { CL.unlinkKid(); closeOverlay(o); route(); } };
+    if ($("#kunlink")) $("#kunlink").onclick = () => { if (confirm("Stop linking this " + PH + "? It keeps the reading it has, but it stops syncing with the parent's phone.")) { CL.unlinkKid(); closeOverlay(o); route(); } };
     $("#srefresh").onclick = refreshApp;
     if ($("#srm")) $("#srm").onclick = () => removeReader(o);
     $("#stest").onclick = () => {
       AU.unlock(); const ok = AU.beep(), i = AU.info(); if (i.speech) setTimeout(() => AU.speak("Hello! Can you hear me?", 0.85), 700);
-      $("#stm").textContent = !ok ? "This browser cannot make sound." : "You should hear a beep" + (i.speech ? " and then a voice" : "") + ". " + (i.speech ? (i.voices ? "" : "This phone has not loaded a speaking voice yet; try again in a few seconds. ") : "This phone has no speaking voice, so word-reading is off. ") + "If you hear nothing: turn the media volume up and make sure the phone is not on silent.";
+      $("#stm").textContent = !ok ? "This browser cannot make sound." : "You should hear a beep" + (i.speech ? " and then a voice" : "") + ". " + (i.speech ? (i.voices ? "" : "This " + PH + " has not loaded a speaking voice yet; try again in a few seconds. ") : "This " + PH + " has no speaking voice, so word-reading is off. ") + "If you hear nothing: turn the media volume up and make sure the phone is not on silent.";
     };
     const fillVoices = () => { const sel = $("#svc"); if (!sel) return; const cur = (() => { try { return localStorage.getItem("read20.voice") || ""; } catch (e) { return ""; } })(), vs = AU.voices();
       sel.innerHTML = `<option value="">Best available${AU.voiceName() ? " (" + esc(AU.voiceName()) + ")" : ""}</option>` + vs.map(v => `<option value="${esc(v.uri)}" ${v.uri === cur ? "selected" : ""}>${esc(v.name)}</option>`).join(""); };
@@ -586,10 +616,10 @@
   /* ---------- keep the log safe: online backup, sharing with another home, files ---------- */
   function openSafe() {
     const o = sheet(`<h2>Keep the log safe</h2>
-      <p class="fine left">${store.fail ? "⚠️ This phone is not letting the app save." : "✓ Always saved on this phone."} This covers every reader on this phone.</p>
+      <p class="fine left">${store.fail ? "⚠️ This " + PH + " is not letting the app save." : "✓ Always saved on this " + PH + "."} This covers every reader on this ${PH}.</p>
       <section class="set"><h3>1 · Back up online</h3>
         <p class="fine left">A parent signs in with Google once. After that a lost, reset or new phone gets the log back. Readers never need to sign in.</p>
-        <p class="fine left">🔒 Optional. Without it, your reading stays on this phone (the app only sends anonymous counts of how many phones use it: a random code, no names). If a parent turns it on, the readers\u2019 names, minutes and the Google email are stored in the app\u2019s private database, locked to that family\u2019s Google sign-in. No ads, no tracking, never shared.</p>
+        <p class="fine left">🔒 Optional. Without it, your reading stays on this ${PH} (the app only sends anonymous counts of how many phones use it: a random code, no names). If a parent turns it on, the readers\u2019 names, minutes and the Google email are stored in the app\u2019s private database, locked to that family\u2019s Google sign-in. No ads, no tracking, never shared.</p>
         <p class="fine left" id="cl" role="status"></p>
         <button class="btn" id="cin" hidden>Sign in with Google</button>
         <button class="btn alt" id="cnow" hidden>Back up now</button>
@@ -599,7 +629,7 @@
         <button class="btn" id="shmake" hidden>Create a family link</button>
         <button class="btn" id="shsend" hidden>📤 Send the family link</button>
         <button class="btn alt" id="shcopy" hidden>Copy the link</button>
-        <button class="btn alt" id="shstop" hidden>Stop sharing on this phone</button>
+        <button class="btn alt" id="shstop" hidden>Stop sharing on this ${PH}</button>
         <label class="fine left">Got a link or code from the other home?<input id="jcode" placeholder="Paste it here" autocomplete="off"></label>
         <button class="btn alt" id="jgo">Join their log</button></section>
       <section class="set"><h3>3 · Give one reader their own phone</h3>
@@ -609,8 +639,8 @@
         <button class="btn" id="rlsend" hidden>📤 Send the reader link</button>
         <button class="btn alt" id="rlcopy" hidden>Copy the link</button>
         <button class="btn alt" id="rlstop" hidden>Stop linking this reader's phone</button>
-        <label class="fine left">Linking <b>this</b> phone to a reader? Paste the link or code you were sent<input id="rcode" placeholder="Paste it here" autocomplete="off"></label>
-        <button class="btn alt" id="rgo">Link this phone</button></section>
+        <label class="fine left">Linking <b>this</b> ${PH} to a reader? Paste the link or code you were sent<input id="rcode" placeholder="Paste it here" autocomplete="off"></label>
+        <button class="btn alt" id="rgo">Link this ${PH}</button></section>
       <section class="set"><h3>Or use a file</h3>
         <p class="fine left">${bkDate() ? "Last backup file: " + esc(bkDate()) + "." : "No backup file yet."} Keep it somewhere safe.</p>
         <button class="btn alt" id="sb">💾 Save a backup file</button>
@@ -647,7 +677,7 @@
     $("#cnow").onclick = () => CL.syncNow();
     $("#cout").onclick = () => CL.signOut();
     $("#sbs").onclick = () => sendBackup(m => ($("#sm").textContent = m));
-    $("#sb").onclick = () => { backup(); $("#sm").textContent = "Backup saved to this phone's Downloads."; };
+    $("#sb").onclick = () => { backup(); $("#sm").textContent = "Backup saved to this " + PH + "'s Downloads."; };
     $("#sr").onchange = e => restore(e.target.files[0], msg => ($("#sm").textContent = msg));
     $("#se").onclick = () => { if (confirm("Erase every night in " + who(S) + "'s reading log" + (CL.status === "ok" ? ", including the cloud backup" : "") + "? This cannot be undone.")) { S.days = {}; S.bk = ""; save(true); if (CL.status === "ok") CL.overwrite(); closeOverlay(o); route(); } };
     $("#safedone").onclick = () => { closeOverlay(o); route(); };
@@ -690,7 +720,7 @@
     const chips = a.syllables.map((sy, i) => `<button class="syl c${i % 4}" data-i="${i}" ${can ? "" : "disabled"} aria-label="${esc(sy.text)}"><span class="st">${esc(sy.text)}</span>${a.tricky || older ? "" : `<span class="snd">${sounds(sy)}</span>`}</button>`).join('<span class="dot" aria-hidden="true">·</span>');
     const o = sheet(`<div class="wordpop">
       <h2 class="wp-word">${esc(a.text)}</h2>
-      <p class="wp-sub">${a.tricky ? "🧠 A tricky word! It does not sound out the way it looks. Look at it and remember it." : n + " syllable" + (n === 1 ? "" : "s") + (can ? " · tap a part to hear it" : "")}</p>
+      <p class="wp-sub">${a.tricky ? "🧠 A tricky word! It does not sound out the way it looks. Look at it and remember it." : n + " syllable" + (n === 1 ? "" : "s") + (can ? " · " + (PC ? "click" : "tap") + " a part to hear it" : "")}</p>
       <div class="wp-syl">${chips}</div>
       ${can ? '<button class="btn alt" id="wphear">🔊 Say the whole word</button>' : ""}
       <button class="btn" id="wpdone">Got it</button></div>`);
@@ -701,11 +731,11 @@
 
   /* ---------- a child's own phone: one reader only ---------- */
   function openJoinReader(key) {
-    const o = sheet(`<h2>Link this phone to a reader?</h2>
-      <p>This phone will show <b>only that one reader</b> and nothing else: no other readers, and none of the parent screens. Any reading already done on this phone is kept and added to that reader.</p>
+    const o = sheet(`<h2>Link this ${PH} to a reader?</h2>
+      <p>This ${PH} will show <b>only that one reader</b> and nothing else: no other readers, and none of the parent screens. Any reading already done on this ${PH} is kept and added to that reader.</p>
       <p class="fine left">You will sign in with Google to finish. Any Google account works; it does not have to be a parent's.</p>
       <p class="fine left" id="jrmsg" role="status"></p>
-      <div class="row"><button class="btn alt" id="jrno">Not now</button><button class="btn" id="jryes">Link this phone</button></div>`);
+      <div class="row"><button class="btn alt" id="jrno">Not now</button><button class="btn" id="jryes">Link this ${PH}</button></div>`);
     const prev = CL.onchange;
     const update = () => {
       if (!$("#jrmsg")) { CL.onchange = prev; return; }
@@ -726,7 +756,7 @@
   }
   function openJoin(key) {
     const o = sheet(`<h2>Join this reading log?</h2>
-      <p>This phone and the phone that sent the link will share <b>one</b> reading log. Reading minutes from both homes add up, and each of you signs in with your <b>own</b> Google account.</p>
+      <p>This ${PH} and the phone that sent the link will share <b>one</b> reading log. Reading minutes from both homes add up, and each of you signs in with your <b>own</b> Google account.</p>
       <p class="fine left" id="jmsg" role="status"></p>
       <div class="row"><button class="btn alt" id="jno">Not now</button><button class="btn" id="jyes">Join</button></div>`);
     const prev = CL.onchange;
@@ -752,7 +782,7 @@
   async function sendBackup(say) {
     const f = new File([backupText()], "read20-backup-" + today() + ".json", { type: "application/json" });
     try { if (navigator.canShare && navigator.canShare({ files: [f] })) { await navigator.share({ files: [f], title: "Read 20 backup" }); say("Sent. On the other phone: Settings, Restore from a backup file."); return; } } catch (e) { if (e && e.name === "AbortError") return; }
-    backup(); say("This phone cannot share files, so it was saved to Downloads instead.");
+    backup(); say("This " + PH + " cannot share files, so it was saved to Downloads instead.");
   }
   function restore(file, say) {
     if (!file) return;
@@ -783,6 +813,15 @@
     document.addEventListener("visibilitychange", () => { if (document.hidden) { save(true); CL.flush(); } });
     try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist(); } catch (e) {} // ask Chrome never to clear her log to free space
     if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {});
+    /* Installed on a computer: Chrome opens an installed app in a smallish window the first time, so open it big once
+       (the whole screen on a laptop, at most 1440 by 960). After that, whatever size the family leaves it at sticks. */
+    try {
+      if (PC && matchMedia("(display-mode: standalone)").matches && !localStorage.getItem("read20.win")) {
+        localStorage.setItem("read20.win", "1");
+        const w = Math.min(screen.availWidth, 1440), h = Math.min(screen.availHeight, 960);
+        if (outerWidth < w - 40 || outerHeight < h - 40) { resizeTo(w, h); moveTo(Math.round((screen.availWidth - w) / 2), Math.round((screen.availHeight - h) / 2)); }
+      }
+    } catch (e) {}
     CL.init({ get: () => R, apply: adopt, applyReader: adoptReader, kidJoin, onchange: cloudChanged });
     route(); recover().then(() => { store.ready = true; save(true); });
   }
