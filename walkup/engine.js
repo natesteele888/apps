@@ -112,7 +112,8 @@
      the part that will play (so a 12-minute file does not sit in memory). Returns { buf, base } where base is the song time of the buffer's first sample. */
   E.songBuffer = function (song, trim) {
     if (!E.ctx()) return Promise.reject(fail("noaudio", "This browser can't play audio."));
-    var n0 = trim ? trim.start : 0, n1 = trim ? trim.start + trim.len : (song.dur || 0), hit = songCache.get(song.id);
+    // a long song keeps a little more than the clip: what "keep playing" can add, and a moment for its fade
+    var n0 = trim ? trim.start : 0, n1 = trim ? Math.min(song.dur || Infinity, trim.start + trim.len + C.extOf(song)) : (song.dur || 0), hit = songCache.get(song.id);
     if (hit && covers(hit, n0, n1)) return Promise.resolve(hit);
     var f = inflight[song.id];
     if (f && f.n0 <= n0 + 0.001 && f.n1 >= n1 - 0.001) return f.p;
@@ -145,7 +146,7 @@
     }).then(function (b) { if (b.duration <= CFG.longSec) songCache.set(song.id, { buf: b, base: 0 }); return b; });
   };
   /* keep a song the editor already decoded, so the first Play is instant */
-  E.putSongBuffer = function (song, fullBuf, trim) { songCache.set(song.id, cropIfLong(fullBuf, trim.start, trim.start + trim.len)); };
+  E.putSongBuffer = function (song, fullBuf, trim) { songCache.set(song.id, cropIfLong(fullBuf, trim.start, Math.min(fullBuf.duration, trim.start + trim.len + C.extOf(song)))); };
 
   /* ---------- the voice polish chain ---------- */
   function irFor(size, sr) {
@@ -261,7 +262,8 @@
     E.stop(0.03, true);
     var t0 = c.currentTime + 0.03, bus = c.createGain();
     bus.connect(master);
-    var run = { t0: t0, plan: pb.plan, bus: bus, nodes: [], timers: [], done: false, key: opts.key || "", onEnd: opts.onEnd, cancelTts: null, started: performance.now() };
+    var run = { t0: t0, plan: pb.plan, bus: bus, nodes: [], timers: [], done: false, key: opts.key || "", onEnd: opts.onEnd, cancelTts: null, started: performance.now(),
+      music: pb.music || null, ext: pb.music ? Math.max(0, +pb.ext || 0) : 0, extended: false, total: pb.plan.total, endTimer: 0 };
     pb.plan.tracks.forEach(function (tr) {
       if (tr.tts) {
         var delay = Math.max(0, t0 + tr.when - c.currentTime) * 1000;
@@ -280,9 +282,10 @@
       out.connect(bus);
       var offset = tr.track === "music" ? Math.max(0, tr.offset - (b.base || 0)) : Math.max(0, tr.offset);
       src.start(t0 + tr.when, offset, tr.duration);
-      run.nodes.push({ track: tr.track, src: src, g: g, duck: duck });
+      run.nodes.push({ track: tr.track, src: src, g: g, duck: duck, tr: tr });
     });
-    run.timers.push(setTimeout(function () { finish(run, "end"); }, (pb.plan.total + (t0 - c.currentTime)) * 1000 + 150));
+    run.endTimer = setTimeout(function () { finish(run, "end"); }, (pb.plan.total + (t0 - c.currentTime)) * 1000 + 150);
+    run.timers.push(run.endTimer);
     cur = run; E.last = run;
     changed();
     return run;
@@ -316,7 +319,44 @@
   };
   E.playing = function () {
     if (!cur || !ctx) return null;
-    return { key: cur.key, elapsed: Math.max(0, ctx.currentTime - cur.t0), total: cur.plan.total, run: cur };
+    return { key: cur.key, elapsed: Math.max(0, ctx.currentTime - cur.t0), total: cur.total, ext: cur.extended ? 0 : cur.ext, extended: cur.extended, run: cur };
+  };
+  /* "Keep playing": the song goes on past its clip, up to the song's extra seconds, then fades out over 2 s, unless Stop
+     comes first. The music carries on from the very sample it is on (a second copy picks up where the first leaves off),
+     so there is no gap or jump. Returns false when there is nothing to keep playing (no song, already kept, clip over). */
+  E.extend = function () {
+    var run = cur;
+    if (!run || run.done || run.extended || !(run.ext > 0) || !run.music || !ctx) return false;
+    var node = null;
+    run.nodes.forEach(function (n) { if (n.track === "music") node = n; });
+    if (!node) return false;
+    var c = ctx, tr = node.tr, buf = run.music.buf, base = run.music.base || 0;
+    var songStart = run.t0 + tr.when, clipEnd = songStart + tr.duration, at = c.currentTime + 0.05;
+    if (at >= clipEnd - 0.05) return false; // the clip is all but over
+    var startAt = Math.max(at, songStart), pos = tr.offset + (startAt - songStart);
+    var end = Math.min(tr.offset + tr.duration + run.ext, base + buf.duration), dur = end - pos;
+    if (dur <= tr.duration - (pos - tr.offset) + 0.2) return false; // the file has no more after the clip
+    var level = 0;
+    (tr.gainPoints || []).forEach(function (p) { if (p[1] > level) level = p[1]; });
+    var src = c.createBufferSource();
+    src.buffer = buf; src.connect(node.g);
+    try { node.src.stop(startAt); } catch (e) { /* ignore */ }
+    src.start(startAt, Math.max(0, pos - base), dur);
+    node.src = src;
+    var stopAt = startAt + dur, fade = Math.min(C.LIM.extFade, dur), g = node.g.gain;
+    try {
+      g.cancelScheduledValues(startAt); // the clip's own fade out is gone
+      g.setValueAtTime(level, startAt);
+      g.setValueAtTime(level, stopAt - fade);
+      g.linearRampToValueAtTime(0, stopAt);
+    } catch (e) { /* ignore */ }
+    clearTimeout(run.endTimer);
+    run.endTimer = setTimeout(function () { finish(run, "end"); }, (stopAt - c.currentTime) * 1000 + 150);
+    run.timers.push(run.endTimer);
+    run.extended = true;
+    run.total = Math.max(run.total, stopAt - run.t0);
+    changed();
+    return true;
   };
   /* one buffer, one region, with a fade out: used by previews in the editors */
   E.playSimple = function (buf, o) {
@@ -340,7 +380,7 @@
         voice: !v ? null : tts ? { len: C.estimateSpeech(text), speech: C.estimateSpeech(text), offset: 0, tts: true } : { len: voice.total, speech: voice.speech, offset: 0 },
         mix: player.mix
       });
-      return { plan: plan, music: music, voice: voice, tts: tts };
+      return { plan: plan, music: music, voice: voice, tts: tts, ext: song ? C.extOf(song) : 0 };
     });
   };
   /* the plan alone (no audio needed), for drawing the timeline */

@@ -130,6 +130,13 @@ const FAKE_NATIVE = () => {
     await page.evaluate(() => window.__wuCmd(JSON.stringify({ cmd: 'stop', now: true })));
     await page.waitForFunction(() => !window.WalkupApp.eng.playing());
     eq(await page.evaluate(() => window.WalkupApp.eng.last.stopped.fade), 0.05, 'the watch Stop cuts right away');
+    // the watch can ask to keep playing; the sample lineup's built-in sounds can't, so the page says ext 0 and does nothing
+    await page.evaluate(i => window.__wuCmd(JSON.stringify({ cmd: 'play', id: i })), id);
+    await page.waitForFunction(() => window.__sent.state.some(s => s.playing && s.playing.id && s.playing.ext === 0 && s.playing.extended === false));
+    await page.evaluate(() => window.__wuCmd(JSON.stringify({ cmd: 'extend' })));
+    eq(await page.evaluate(() => window.WalkupApp.eng.playing().extended), false);
+    await page.evaluate(() => window.__wuCmd(JSON.stringify({ cmd: 'stop', now: true })));
+    await page.waitForFunction(() => !window.WalkupApp.eng.playing());
     // the bench goes to the watch, and the watch can swap a bench player into a batting spot
     await page.evaluate(() => { const S = window.WalkupApp.S; S.st.lineup = S.st.lineup.slice(0, 8); window.WU.commit('data'); });
     await page.waitForFunction(() => { const s = window.__sent.state[window.__sent.state.length - 1]; return s.lineup.length === 8 && s.bench && s.bench.length === 1; });

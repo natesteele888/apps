@@ -326,6 +326,9 @@ const dbKeys = page => page.evaluate(() => window.WalkupApp.WU.db.keys());
     s4.roster[0].voice = C.defaultVoice('tts', {}, null); eq(C.activeVoice(s4.roster[0], s4.songs), null, 'even with a voice still set');
     eq(C.activeVoice(s4.roster[1], s4.songs).kind, 'tts', 'a regular song keeps its announcer'); eq(C.saysName(s4.roster[1], s4.songs), false); eq(C.activeVoice({}, s4.songs), null);
     eq(C.sanitizeState(s4).songs[0].intro, true, 'the setting survives saving'); eq(C.sanitizeState(s4).songs[2].intro, false);
+    // keep playing: 30 s unless set, never past 60, and it survives saving
+    const sx = C.sanitizeState({ songs: [{ id: 'sxa1', kind: 'file', title: 'A', dur: 90, ext: 45 }, { id: 'sxb1', kind: 'file', title: 'B', dur: 90 }, { id: 'sxc1', kind: 'file', title: 'C', dur: 90, ext: 999 }, { id: 'sxd1', kind: 'file', title: 'D', dur: 90, ext: -4 }] }).songs;
+    deep(sx.map(x => x.ext), [45, 30, 60, 0]); deep(sx.map(C.extOf), [45, 30, 60, 0]);
   });
 
   await test('core: where a song kicks in, and Ballclub lineups made into a batting order', async () => {
@@ -1383,6 +1386,42 @@ const dbKeys = page => page.evaluate(() => window.WalkupApp.WU.db.keys());
     await tab(page, 'game'); await sample(page); await page.click('[data-act=g-song]'); await page.click(sheetSel + ' [data-do=use][data-id="' + song.id + '"]'); await noSheets(page);
     await resetSpies(page); await page.click('#gPlay'); await page.waitForFunction(() => window.__starts.length >= 1, null, { timeout: 10000 });
     const sp = await spies(page); const mus = sp.starts.find(x => Math.abs(x.duration - t.len) < 1e-6); assert.ok(mus, JSON.stringify(sp.starts)); approx(mus.offset, 0, 1.01, 'plays from the start of the clip inside the cropped buffer');
+    deep(errors, []); await ctx.close();
+  });
+
+  await test('Keep playing: the song runs on past its clip from the same spot, up to its extra seconds, then fades out over 2 s', async () => {
+    const { page, errors, ctx } = await open();
+    await rich(page); await page.waitForSelector('#gPlay');
+    const song = (await state(page)).songs[0];
+    eq(song.ext, 30, 'a new song can keep playing for 30 s');
+    // the Trim sheet has the setting, in steps of 5
+    await tab(page, 'songs'); await page.click('[data-act=song-trim][data-id="' + song.id + '"]'); await page.waitForSelector('.sheet.trim #trMain:not([hidden])', { timeout: 10000 });
+    await page.click(sheetSel + ' [data-key=ext][data-step="-5"]'); eq((await state(page)).songs[0].ext, 25);
+    await page.click(sheetSel + ' [data-key=ext][data-step="5"]'); eq((await state(page)).songs[0].ext, 30);
+    await page.click(sheetSel + ' [data-close].btn'); await noSheets(page); await tab(page, 'game');
+    await resetSpies(page); await page.click('#gPlay'); await page.waitForFunction(() => window.__starts.length >= 1, null, { timeout: 8000 });
+    const before = await page.evaluate(() => { const p = window.WalkupApp.eng.playing(); return { total: p.total, ext: p.ext, extended: p.extended }; });
+    eq(before.ext, 30); eq(before.extended, false);
+    await settle(page, 400);
+    eq(await page.evaluate(() => window.WalkupApp.eng.extend()), true, 'keep playing');
+    const r = await page.evaluate(() => {
+      const E = window.WalkupApp.eng, run = E.last, n = run.nodes.find(x => x.track === 'music'), s = window.__starts[window.__starts.length - 1];
+      return { total: E.playing().total, extended: E.playing().extended, t0: run.t0, when: n.tr.when, off: n.tr.offset, len: n.tr.duration, start: s, base: run.music.base, bufDur: run.music.buf.duration,
+        gain: window.__ap.filter(c => c.p === n.g.gain).map(c => [c.k, c.v, c.t]) };
+    });
+    eq(r.extended, true);
+    // the second copy starts where the first is at that moment, and plays to the end of the 20 s file (less than clip + 30 s)
+    approx(r.start.offset + r.base, r.off + (r.start.when - (r.t0 + r.when)), 1e-6, 'carries on from the same spot in the song');
+    const end = Math.min(r.off + r.len + 30, r.base + r.bufDur);
+    approx(r.start.offset + r.start.duration, end - r.base, 1e-6, 'and runs to the end of what it may play');
+    assert.ok(r.total > before.total + 1, 'the play is longer now: ' + before.total + ' -> ' + r.total);
+    const last = r.gain[r.gain.length - 1]; eq(last[0], 'linearRampToValueAtTime'); eq(last[1], 0);
+    approx(last[2] - r.gain[r.gain.length - 2][2], 2, 1e-6, 'fades out over 2 s at the very end');
+    eq(await page.evaluate(() => window.WalkupApp.eng.extend()), false, 'only once');
+    // Stop still stops it
+    await page.click('#gPlay'); await page.waitForFunction(() => !window.WalkupApp.eng.playing());
+    // a built-in sound can't keep playing
+    eq(await page.evaluate(() => window.WalkupApp.core.extOf(window.WalkupApp.core.builtinSong('b:horn'))), 0);
     deep(errors, []); await ctx.close();
   });
 

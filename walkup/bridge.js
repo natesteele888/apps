@@ -2,7 +2,7 @@
    Inside the Dugout app, window.WalkupNative exists, and this file:
    - sends the batting order, who is up and what is playing to the app (and from there to the watch) whenever they change,
    - sends the pitch log the same way, and merges the watch's pitch log back in (every pitch is counted once),
-   - runs the watch's commands (pick a batter, play, stop, swap in a bench player),
+   - runs the watch's commands (pick a batter, play, stop, keep playing, swap in a bench player),
    - fills in two things Android's web view lacks: the computer voice (Android's own text-to-speech) and saving backup files.
    Nothing here goes to the internet. */
 (function () {
@@ -47,7 +47,7 @@
     var playing = null;
     if (pl) {
       var gid = pl.key && pl.key.indexOf("g:") === 0 ? pl.key.slice(2) : null, gp = gid ? WU.player(gid) : null;
-      playing = { id: gid, label: gp ? (gp.num ? "#" + gp.num + " " : "") + (gp.name || "") : "Preview", elapsed: Math.round(pl.elapsed * 100) / 100, total: Math.round(pl.total * 100) / 100 };
+      playing = { id: gid, label: gp ? (gp.num ? "#" + gp.num + " " : "") + (gp.name || "") : "Preview", elapsed: Math.round(pl.elapsed * 100) / 100, total: Math.round(pl.total * 100) / 100, ext: pl.ext || 0, extended: !!pl.extended };
     }
     return { v: 1, ready: true, batter: st.batter, lineup: lineup, bench: bench, playing: playing, loading: S.play && S.play.state === "loading" ? S.play.id : null, error: lastErr, team: st.settings.team || "" };
   }
@@ -95,6 +95,7 @@
       WU.act.play();
     }
     else if (c.cmd === "stop") WU.act.stop(c.now === true ? 0.05 : undefined);
+    else if (c.cmd === "extend") WU.act.extend();
     else if (c.cmd === "swap" && typeof c.out === "string" && typeof c["in"] === "string") swapIn(c.out, c["in"]);
     else if (c.cmd === "pitchlog" && c.log) WU.pitch.merge(c.log);
     sendState();

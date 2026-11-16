@@ -1,5 +1,5 @@
 // Network first, so updates show up right away; falls back to the last saved copy when offline.
-const CACHE = "walkup-v5";
+const CACHE = "walkup-v6";
 // Songs shared to Walk-Up from another Android app wait here until the app opens and picks them up. Never deleted by an update.
 const INBOX = "walkup-inbox-v1";
 // Save the page itself at install. Without this, the first visit caches nothing

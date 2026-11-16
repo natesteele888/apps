@@ -286,7 +286,12 @@ private fun BatterPage(b: Batter, i: Int, n: Int) {
     }
 }
 
-/** While a song plays: unmistakable, with one big Stop. */
+/**
+ * While a song plays: unmistakable, with one big Stop. A tap on Stop cuts the song. When the song has more after its clip,
+ * press and hold anywhere (Stop too) to keep it playing: a buzz, the ring turns gold, and it runs on until Stop, or fades
+ * out by itself when the extra time is up.
+ */
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun PlayingScreen(st: BatState) {
     val ctx = LocalContext.current
@@ -294,19 +299,36 @@ private fun PlayingScreen(st: BatState) {
     val pulse by rememberInfiniteTransition(label = "playing").animateFloat(0.75f, 1f, infiniteRepeatable(tween(700), RepeatMode.Reverse), label = "pulse")
     val p = st.playing
     LaunchedEffect(p?.id) { if (p != null) Buzz.started(ctx) }
-    Box(Modifier.fillMaxSize().background(Color(0xFF1D4ED8).copy(alpha = pulse)), contentAlignment = Alignment.Center) {
+    val canKeep = p != null && p.ext > 0 && !p.extended
+    val keep by rememberUpdatedState(canKeep)
+    fun keepPlaying() { if (keep) { Buzz.pattern(ctx, 60, 80, 60); PhoneLink.send(Proto.cmd("extend")) } }
+    fun stop() { Buzz.tick(ctx); PhoneLink.send(Proto.cmd("stop", "now" to true)) }
+    val kept = p?.extended == true
+    Box(
+        Modifier.fillMaxSize().background((if (kept) Color(0xFF1E3A8A) else Color(0xFF1D4ED8)).copy(alpha = pulse))
+            .pointerInput(Unit) { detectTapGestures(onLongPress = { keepPlaying() }) },
+        contentAlignment = Alignment.Center,
+    ) {
         if (p != null && p.total > 0) {
             val el = (p.elapsed + (t - st.receivedAt) / 1000.0).coerceIn(0.0, p.total)
-            CircularProgressIndicator(progress = (el / p.total).toFloat(), modifier = Modifier.fillMaxSize().padding(3.dp), indicatorColor = Color.White, trackColor = Color(0x44FFFFFF), strokeWidth = 6.dp)
+            CircularProgressIndicator(
+                progress = (el / p.total).toFloat(), modifier = Modifier.fillMaxSize().padding(3.dp),
+                indicatorColor = if (kept) Yellow else Color.White, trackColor = Color(0x44FFFFFF), strokeWidth = 6.dp,
+            )
         }
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(if (p != null) "PLAYING" else "STARTING", fontSize = 14.sp, fontWeight = FontWeight.Black, color = Color.White)
+            Text(if (p == null) "STARTING" else if (kept) "KEEP PLAYING" else "PLAYING", fontSize = 14.sp, fontWeight = FontWeight.Black, color = if (kept) Yellow else Color.White)
             Text(p?.label ?: "", fontSize = 14.sp, color = Color.White, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(horizontal = 30.dp))
             Spacer(Modifier.height(8.dp))
             Box(
-                Modifier.size(92.dp).clip(CircleShape).background(Red).clickable { Buzz.tick(ctx); PhoneLink.send(Proto.cmd("stop", "now" to true)) },
+                Modifier.size(92.dp).clip(CircleShape).background(Red).combinedClickable(onClick = { stop() }, onLongClick = { keepPlaying() }),
                 contentAlignment = Alignment.Center,
             ) { Text("STOP", fontSize = 22.sp, fontWeight = FontWeight.Black, color = Color.White) }
+            Spacer(Modifier.height(4.dp))
+            Text(
+                when { kept -> "Tap Stop to end"; canKeep -> "Hold to keep playing"; else -> "" },
+                fontSize = 11.sp, color = Color(0xCCFFFFFF),
+            )
         }
     }
 }

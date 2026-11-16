@@ -48,7 +48,7 @@
            kicks in, not on a quiet intro. The coach can still move either with Trim. */
         t = said ? C.clampTrim(buf.duration, { start: 0, len: C.LIM.maxLen, fade: 0.5 })
           : C.clampTrim(buf.duration, { start: C.loudStart(envelope(buf, 0.25), 0.25, t.len, buf.duration), len: t.len, fade: t.fade });
-        var song = { id: id, kind: "file", title: title, name: C.str(f.name, C.LIM.file), dur: round3(buf.duration), size: f.size, mime: C.str(f.type, 60), start: t.start, len: t.len, fade: t.fade, intro: said };
+        var song = { id: id, kind: "file", title: title, name: C.str(f.name, C.LIM.file), dur: round3(buf.duration), size: f.size, mime: C.str(f.type, 60), start: t.start, len: t.len, fade: t.fade, intro: said, ext: C.LIM.defExt };
         S.st.songs.push(song);
         try { E.putSongBuffer(song, buf, t); } catch (e) { /* the cache is only a speed-up */ }
         added.push(song);
@@ -236,6 +236,9 @@
       title: "Trim: " + song.title, song: song,
       getTrim: function () { return { start: song.start, len: song.len, fade: song.fade }; },
       setTrim: function (t) { song.start = t.start; song.len = t.len; song.fade = t.fade; WU.commit("data"); },
+      // a built-in sound is too short to keep playing
+      getExt: song.kind === "file" ? function () { return C.extOf(song); } : null,
+      setExt: function (v) { song.ext = Math.max(0, Math.min(C.LIM.maxExt, Math.round(v))); WU.commit("data"); },
       note: "This is the part of the song every player who uses it will get, unless a player has their own trim."
     });
   };
@@ -263,7 +266,8 @@
       '<button type="button" class="btn block" id="trPrev">' + U.I.play + ' <span>Preview</span></button>' +
       '<div class="ctls">' + U.stepper({ key: "start", label: "Starts at", hint: "seconds into the song", value: 0, min: 0, max: 100, step: 0.1, coarse: 1, slider: true }) +
       U.stepper({ key: "len", label: "Length", hint: "how many seconds play (1 to 30)", value: 10, min: 1, max: 30, step: 0.1, coarse: 1, slider: true }) +
-      U.stepper({ key: "fade", label: "Fade out", hint: "seconds (0 to 3)", value: 1, min: 0, max: 3, step: 0.1, slider: true }) + "</div>" +
+      U.stepper({ key: "fade", label: "Fade out", hint: "seconds (0 to 3)", value: 1, min: 0, max: 3, step: 0.1, slider: true }) +
+      (o.getExt ? U.stepper({ key: "ext", label: "Keep playing", hint: "extra seconds when you hold on the watch while it plays (0 to " + C.LIM.maxExt + ")", value: o.getExt(), min: 0, max: C.LIM.maxExt, step: 1, coarse: 5, slider: true }) : "") + "</div>" +
       '<p class="mute small-note" id="trLimit"></p><p class="mute small-note">' + esc(o.note || "") + "</p>" +
       (o.canReset ? '<button type="button" class="btn ghost block" id="trReset">Use the song\'s own trim</button>' : "") + "</div>";
     var sh = U.openSheet({
@@ -309,6 +313,7 @@
       $$('input[data-key="len"]', el).forEach(function (i) { i.min = L.minLen; i.max = lenMax; });
       $$('input[data-key="fade"]', el).forEach(function (i) { i.max = Math.min(C.LIM.maxFade, t.len); });
       U.setCtl(el, "start", t.start.toFixed(1)); U.setCtl(el, "len", t.len.toFixed(1)); U.setCtl(el, "fade", t.fade.toFixed(1));
+      if (o.getExt) U.setCtl(el, "ext", String(o.getExt()));
       q("#trFinal").innerHTML = "Final clip: <b>" + C.fmtSecs(t.len) + "</b> · " + C.fmtClock(t.start, true) + " to " + C.fmtClock(t.start + t.len, true) + (t.fade ? " · fades out over " + C.fmtSecs(t.fade) : "");
       var limited = t.len < C.LIM.maxLen && t.start + t.len >= D - 0.05 && D - t.start < C.LIM.maxLen;
       q("#trLimit").textContent = limited ? "The song ends at " + C.fmtClock(D, true) + ", so the clip can't be longer from here. Move the start earlier for more." : "";
@@ -323,6 +328,7 @@
     U.bindControls(el, function (key, mode, val) {
       if (!st.trim) return;
       if (!isFinite(val)) { sync(); return; }
+      if (key === "ext") { if (o.setExt) o.setExt(mode === "step" ? o.getExt() + val : val); sync(); return; }
       var t = st.trim, d = st.dur;
       if (key === "start") commit(C.moveStart(d, t, mode === "step" ? t.start + val : val));
       else if (key === "len") commit(C.setLen(d, t, mode === "step" ? t.len + val : val));

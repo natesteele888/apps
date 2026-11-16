@@ -11,7 +11,9 @@
   var LIM = {
     roster: 40, name: 40, num: 4, pos: 12, title: 60, file: 120,
     minLen: 1, maxLen: 30, maxFade: 3, defLen: 10, defFade: 1, maxDelay: 20,
-    maxSongBytes: 60 * 1024 * 1024, maxBundleBytes: 80 * 1024 * 1024, maxVoiceSec: 30, stopFade: 0.5
+    maxSongBytes: 60 * 1024 * 1024, maxBundleBytes: 80 * 1024 * 1024, maxVoiceSec: 30, stopFade: 0.5,
+    // "keep playing": how far past the clip a song may run when the coach holds on the watch, and its fade at the end
+    defExt: 30, maxExt: 60, extFade: 2
   };
   var BUNDLE_CHUNK = 196608; // bytes per base64 chunk in a "back up everything" file (a multiple of 3)
   var ATTACK = 0.008, END_RAMP = 0.01, VOICE_RAMP = 0.02;
@@ -347,6 +349,11 @@
     if (String(id).indexOf("b:") === 0) return builtinSong(id);
     for (var i = 0; i < songs.length; i++) if (songs[i].id === id) return songs[i];
     return null;
+  }
+  /* seconds a song may keep playing past its clip when the coach asks for more (built-in sounds are too short for it) */
+  function extOf(song) {
+    if (!song || song.kind !== "file") return 0;
+    return song.ext == null ? LIM.defExt : clamp(Math.round(num(song.ext, LIM.defExt)), 0, LIM.maxExt);
   }
   /* the trim a player really uses: their own, or the song's default */
   function effectiveTrim(player, song) {
@@ -712,7 +719,7 @@
     var id = typeof r.id === "string" && ID_RE.test(r.id) && !seen[r.id] ? r.id : uid();
     seen[id] = 1;
     var dur = clamp(num(r.dur, 0), 0, 86400), t = clampTrim(dur, r);
-    return { id: id, kind: "file", title: str(r.title, LIM.title) || "Song", name: str(r.name, LIM.file), dur: dur, size: int(r.size, 0, 1e12, 0), mime: str(r.mime, 60), start: t.start, len: t.len, fade: t.fade, intro: r.intro === true };
+    return { id: id, kind: "file", title: str(r.title, LIM.title) || "Song", name: str(r.name, LIM.file), dur: dur, size: int(r.size, 0, 1e12, 0), mime: str(r.mime, 60), start: t.start, len: t.len, fade: t.fade, intro: r.intro === true, ext: int(r.ext, 0, LIM.maxExt, LIM.defExt) };
   }
   function sanitizeVoice(r, seen) {
     if (!isObj(r)) return null;
@@ -983,7 +990,7 @@
     flatPolish: flatPolish, factoryAnnouncer: factoryAnnouncer, sanitizePolish: sanitizePolish, applyPreset: applyPreset, presetOf: presetOf, reverbMix: reverbMix,
     chainSpec: chainSpec, polishKey: polishKey, hash32: hash32, voiceRenderKey: voiceRenderKey, reverbTail: reverbTail, impulseResponse: impulseResponse,
     defaultMix: defaultMix, sanitizeMix: sanitizeMix, clipFrom: clipFrom, estimateSpeech: estimateSpeech, mixPlan: mixPlan,
-    builtinSong: builtinSong, songById: songById, effectiveTrim: effectiveTrim, defaultVoice: defaultVoice, newPlayer: newPlayer, playerLabel: playerLabel,
+    builtinSong: builtinSong, songById: songById, extOf: extOf, effectiveTrim: effectiveTrim, defaultVoice: defaultVoice, newPlayer: newPlayer, playerLabel: playerLabel,
     announceText: announceText, statusOf: statusOf,
     nextIndex: nextIndex, prevIndex: prevIndex, roles: roles, moveItem: moveItem, benchIds: benchIds, toBench: toBench, toLineup: toLineup, swapBench: swapBench, reindexBatter: reindexBatter,
     parseLine: parseLine, parsePasted: parsePasted,
