@@ -72,18 +72,21 @@
     if (n === g) return g;
     SB.game = n; SB.save("game", n);
     const fl = C.flashFor(g, n, a);
-    if (fl) flash(fl, n);
+    if (fl) flash(fl, n, fl === "BB" && n.score[0] + n.score[1] > g.score[0] + g.score[1] ? "Run scores" : "");
     announce(C.label(g, a) + ". " + C.summary(n));
     SB.renderBoard();
     return n;
   }
   SB.dispatch = dispatch;
 
-  const FLASH = { BB: ["BB", "Walk"], K: ["K", "Strikeout"], OUT: ["OUT", ""], SIDE: ["3 OUTS", ""], FINAL: ["FINAL", ""], MERCY: ["MERCY", "Mercy rule reached"] };
-  function flash(kind, g) {
+  const FLASH = { BB: ["BB", "Walk"], K: ["K", "Strikeout"], OUT: ["OUT", ""], SIDE: ["3 OUTS", ""], FINAL: ["FINAL", ""], MERCY: ["MERCY", "Mercy rule reached"],
+    LIMIT: ["LIMIT", ""], TIME: ["TIME", "No new inning"] };
+  function flash(kind, g, extra) {
     const el = $("#flash"); if (!el) return;
     let [big, sub] = FLASH[kind] || [kind, ""];
     if (kind === "SIDE") sub = (g.half === "top" ? "Top" : "Bottom") + " of the " + C.ordinal(g.inning);
+    if (kind === "LIMIT") sub = g.cfg.runLimit + " runs, switch sides";
+    if (extra) sub = extra;
     el.innerHTML = '<div class="fl-big">' + esc(big) + "</div>" + (sub ? '<div class="fl-sub">' + esc(sub) + "</div>" : "");
     el.dataset.f = kind; el.hidden = false; el.classList.remove("show"); void el.offsetWidth; el.classList.add("show");
     clearTimeout(B.flashTimer); B.flashTimer = setTimeout(() => { el.hidden = true; el.classList.remove("show"); }, 1500);
@@ -99,9 +102,26 @@
     const lo = clockMs(g, t) < 60000 && g.clock.run;
     el.classList.toggle("low", lo);
   }
+  /* baseball time limit: repaint the countdown line, and flash + buzz once when time runs out */
+  function bsTick(g, t) {
+    const ti = C.timeInfo(g, t); if (!ti) return;
+    const el = $("#view [data-tl]");
+    if (el) { const txt = C.timeText(g, t); if (el.textContent !== txt) el.textContent = txt; }
+    const key = g.id + ":" + g.firstPitch + ":" + g.cfg.timeLimit;
+    if (ti.over && B.overKey !== key) {
+      B.overKey = key;
+      if (!g.final && ti.elapsed - ti.limit <= 5000) {   // just ran out (not "ran out while the phone slept")
+        flash("TIME", g); announce("Time limit reached. Finish this inning, no new inning.");
+        if (SB.prefs.sound) SB.buzz(SB.prefs.loud);
+      }
+      SB.renderBoard();
+    } else if (!ti.over && B.overKey === key) B.overKey = null;
+  }
+  SB.bsTick = bsTick;
   function tick() {
     const g = SB.game;
-    if (!g || !g.clock || SB.view !== "board") return;
+    if (!g || SB.view !== "board") return;
+    if (!g.clock) { if (g.sport === "baseball") bsTick(g, Date.now()); return; }
     const t = Date.now();
     if (C.expired(g.clock, t)) {
       const due = C.buzzDue(g.clock, t);
@@ -192,14 +212,24 @@
       (g.cfg.pitch ? '<div class="stat"><span class="k">PITCHES</span><b class="v">' + g.pitches[i] + "</b></div>" : "") + "</div>";
     const tag = i => '<div class="t-tag' + (i === B_ && !g.final ? " on" : "") + '">' + (i === B_ && !g.final ? "AT BAT" : "") + "</div>";
     const cnt = (k, n, max, cls) => '<div class="cnt ' + cls + '"><span class="k">' + k + '</span><span class="dots" role="img" aria-label="' + n + " " + (k === "B" ? "balls" : k === "S" ? "strikes" : "outs") + '">' + dots(n, max) + "</span></div>";
+    const ti = C.timeInfo(g, Date.now());
     const banners = (g.final ? '<div class="end-banner" role="status"><span>FINAL</span><button type="button" class="reopen" data-act="a" data-t="reopen">Not over? Reopen</button></div>' : "") +
-      (C.mercy(g) ? '<div class="end-banner mercy" role="status">Mercy rule reached</div>' : "");
+      (C.mercy(g) ? '<div class="end-banner mercy" role="status"><span>Mercy rule reached</span>' + (g.final ? "" : '<button type="button" class="reopen" data-act="b-finish">Finish game</button>') + "</div>" : "") +
+      (C.runLimitHit(g) ? '<div class="end-banner limit" role="status"><span>' + g.cfg.runLimit + " run limit: switch sides</span>" +
+        '<button type="button" class="reopen" data-act="a" data-t="endHalf" data-fk="limit-end">End half</button></div>' : "") +
+      (ti && ti.over && !g.final ? (C.trimUnplayed(g) !== g
+        ? '<div class="end-banner time" role="status"><span>Time is up: no new inning</span><button type="button" class="reopen" data-act="b-finish">Finish game</button></div>'
+        : '<div class="end-banner time" role="status"><span>Time is up: finish this inning</span></div>') : "") +
+      (ti && !ti.over && !g.final ? '<div class="tl-line" data-tl>' + esc(C.timeText(g, Date.now())) + "</div>" : "");
+    const bases = g.bases || [false, false, false];
+    const base = (i, nm) => '<button type="button" class="base b' + (i + 1) + (bases[i] ? " on" : "") + '" data-act="a" data-t="base" data-base="' + i + '" data-fk="base' + i + '" aria-pressed="' + bases[i] + '" aria-label="Runner on ' + nm + '"' + (g.final ? " disabled" : "") + "><i></i></button>";
+    const diamond = '<div class="diamond" role="group" aria-label="Runners on base. Tap a base to put a runner on or take one off.">' + base(1, "2nd") + base(2, "3rd") + base(0, "1st") + '<i class="plate" aria-hidden="true"></i></div>';
     const od = g.onDeck || { name: "", num: "" };
     const onDeckBtn = '<button type="button" class="ondeck-set' + (od.name ? " has" : "") + '" data-act="b-ondeck" aria-label="' +
       (od.name ? "On deck: " + esc(od.name) + (od.num ? ", number " + esc(od.num) : "") + ". Tap to change." : "Add the on-deck batter's name and number") + '">' +
       '<span class="od-k">ON DECK</span><span class="od-v">' + (od.name ? esc(od.name) + (od.num ? ' <b>#' + esc(od.num) + "</b>" : "") : "Tap to add") + "</span></button>";
     const mid = '<section class="mid" aria-label="Inning and count"><div class="inn" role="img" aria-label="' + (top ? "Top" : "Bottom") + " of the " + C.ordinal(g.inning) + '"><i class="tri ' + (top ? "up" : "down") + '"></i><b>' + g.inning + "</b></div>" +
-      '<div class="count">' + cnt("B", g.balls, 3, "b") + cnt("S", g.strikes, 2, "s") + cnt("O", g.outs, 2, "o") + "</div>" + onDeckBtn + banners + "</section>";
+      '<div class="cd-row"><div class="count">' + cnt("B", g.balls, 3, "b") + cnt("S", g.strikes, 2, "s") + cnt("O", g.outs, 2, "o") + "</div>" + diamond + "</div>" + onDeckBtn + banners + "</section>";
     const dis = g.final;
     const pb = (txt, t, extra, o) => cb(txt, Object.assign({ data: Object.assign({ act: "a", t: t }, extra || {}), dis: dis && !o.live }, o));
     const sub = (main, i) => "<span>" + main + '</span><small style="color:' + esc(g.teams[i].c) + '">' + esc(g.teams[i].n) + "</small>";
@@ -312,6 +342,7 @@
     const a = { type: el.dataset.t };
     Object.keys(el.dataset).forEach(k => { if (k === "act" || k === "t" || k === "fk") return; const v = el.dataset[k]; a[k] = /^-?\d+$/.test(v) ? Number(v) : v; });
     if (a.type === "period" && a.d > 0 && g.clock) SB.audioUnlock();
+    if (g.sport === "baseball" && g.cfg.timeLimit > 0) SB.audioUnlock();   // so the time-limit buzzer can sound later
     dispatch(a);
   };
   ACT.clock = () => {
@@ -507,6 +538,30 @@
     });
   };
 
+  /* ----- baseball time limit: how long the game has been going ----- */
+  const tlOn = g => g.sport === "baseball" && g.cfg.timeLimit > 0;
+  ACT["b-time"] = () => {
+    const g = SB.game; if (!g || !tlOn(g)) return;
+    const ti = C.timeInfo(g, Date.now()), played = ti.started ? Math.floor(ti.elapsed / 60000) : "";
+    SB.openSheet({
+      title: "Time limit count", autofocus: "#tl-in",
+      html: '<p class="msg mute" style="margin-bottom:8px">No new inning after ' + esc(C.fmtHM(ti.limit)) + ". The count starts on its own at the first pitch. Fix it here if you started keeping score late, or the umpire's watch says something else.</p>" +
+        '<label class="field"><span class="label">Minutes played so far</span><input type="number" inputmode="numeric" id="tl-in" min="0" max="300" value="' + played + '" placeholder="Not started"></label>',
+      footer: '<button type="button" class="btn ghost" data-clear>Wait for first pitch</button><button type="button" class="btn" data-save>Save</button>',
+      onOpen(api) {
+        const save = () => {
+          const v = $("#tl-in", api.el).value; api.close();
+          if (v === "") return dispatch({ type: "timeSet", ms: null });
+          const m = Math.max(0, Math.min(300, Math.round(Number(v)) || 0));
+          dispatch({ type: "timeSet", ms: m * 60000 });
+        };
+        $("[data-save]", api.el).addEventListener("click", save);
+        $("[data-clear]", api.el).addEventListener("click", () => { api.close(); dispatch({ type: "timeSet", ms: null }); });
+        $("#tl-in", api.el).addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); save(); } });
+      }
+    });
+  };
+
   /* ----- game menu ----- */
   SB.focusAfterSheets = () => (SB.view === "board" ? $('#view [data-act="b-menu"]') : null);
   ACT["b-menu"] = () => {
@@ -514,8 +569,9 @@
     const li = (act, t, sub, danger) => '<button type="button" class="list-btn' + (danger ? " danger" : "") + '" data-act="' + act + '"><span class="t">' + t + (sub ? "<small>" + sub + "</small>" : "") + "</span>" + IC.next + "</button>";
     SB.openSheet({
       title: "Game menu", cls: "tall",
-      html: '<div class="list">' + li("b-edit", "Teams &amp; rules", "Names, colors, period length, innings...") + (g.clock ? li("b-clock", "Set the clock", "Type a minutes and seconds time") : "") + li("b-fix", "Fix numbers", "Change a score, foul, timeout or run directly") + li("b-log", "Undo log", "See and take back recent actions") + li("b-tv", "Cast to TV", TV_LABELS[B.tv.mode]) + "</div>" +
-        (g.clock ? '<div class="menu-sec">' + SB.toggle("sound", "Buzzer sound", SB.prefs.sound, "Plays when the clock reaches zero.") + SB.toggle("loud", "Loud buzzer", SB.prefs.loud, "Longer and louder.") +
+      html: '<div class="list">' + li("b-edit", "Teams &amp; rules", "Names, colors, period length, innings...") + (g.clock ? li("b-clock", "Set the clock", "Type a minutes and seconds time") : "") +
+        (tlOn(g) ? li("b-time", "Time limit count", g.firstPitch == null ? "Starts at the first pitch" : C.fmtHM(C.timeInfo(g, Date.now()).elapsed) + " played so far") : "") + li("b-fix", "Fix numbers", "Change a score, foul, timeout or run directly") + li("b-log", "Undo log", "See and take back recent actions") + li("b-tv", "Cast to TV", TV_LABELS[B.tv.mode]) + "</div>" +
+        (g.clock || tlOn(g) ? '<div class="menu-sec">' + SB.toggle("sound", "Buzzer sound", SB.prefs.sound, g.clock ? "Plays when the clock reaches zero." : "Plays when the time limit runs out.") + SB.toggle("loud", "Loud buzzer", SB.prefs.loud, "Longer and louder.") +
           '<button type="button" class="btn ghost small" data-act="test-buzz" style="margin-top:6px">Test the buzzer</button></div>' : "") +
         '<div class="list" style="margin-top:12px">' + li("share-text", "Share result", "Copies the score as text") + li("share-pic", "Share picture", "A picture of the board") + "</div>" +
         '<div class="list" style="margin-top:12px">' + li("b-finish", "Finish game", "Save it to Recent games") + li("b-discard", "Throw this game away", "Nothing is saved", true) + "</div>" +

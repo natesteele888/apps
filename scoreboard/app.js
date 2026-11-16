@@ -28,7 +28,8 @@
   function ruleLine(sport, cfg) {
     if (sport === "basketball") return C.fmtClock(cfg.periodSec * 1000) + (cfg.periods === 2 ? " halves" : " quarters") + (cfg.bonusAt ? ", bonus at " + cfg.bonusAt : "") + ", " + cfg.timeouts + " timeouts";
     if (sport === "football") return C.fmtClock(cfg.periodSec * 1000) + " quarters, " + cfg.timeouts + " timeouts a half";
-    if (sport === "baseball") return cfg.innings + " innings" + (cfg.extra ? ", extra innings" : "") + (cfg.mercyRuns ? ", mercy at " + cfg.mercyRuns : "");
+    if (sport === "baseball") return cfg.innings + " innings" + (cfg.extra ? ", extra innings" : "") + (cfg.mercyRuns ? ", mercy at " + cfg.mercyRuns : "") +
+      (cfg.runLimit ? ", " + cfg.runLimit + " runs an inning" : "") + (cfg.timeLimit ? ", no new inning after " + C.fmtHM(cfg.timeLimit * 60000) : "");
     return "Two scores and a label";
   }
   const START = { basketball: "Start a basketball game", baseball: "Start a baseball game", football: "Start a football game", generic: "Just keep score" };
