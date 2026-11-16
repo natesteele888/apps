@@ -1,7 +1,7 @@
 name: Dugout phone screen check
 # Runs the Dugout phone app on Android 15 and Android 16 emulators and checks that its top bar sits below the status bar
 # and the page ends above the navigation bar (watch/phone/src/androidTest). Each run also prints a small screenshot of
-# the app to the log, between "SCREENSHOT BEGIN" and "SCREENSHOT END", as base64 JPEG.
+# the app to the log, between "SCREENSHOT BEGIN" and "SCREENSHOT END", as base64 PNG.
 on:
   push:
     paths:

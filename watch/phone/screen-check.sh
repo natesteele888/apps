@@ -9,8 +9,7 @@ adb install -r -g "$TEST"
 adb shell am start -W -n com.steele.dugout/.MainActivity
 sleep 12
 adb exec-out screencap -p > /tmp/shot.png
-convert /tmp/shot.png -resize 360x -quality 70 /tmp/shot.jpg
-echo "SCREENSHOT BEGIN"; base64 -w 0 /tmp/shot.jpg; echo; echo "SCREENSHOT END"
+echo "SCREENSHOT BEGIN"; base64 -w 0 /tmp/shot.png; echo; echo "SCREENSHOT END"
 adb shell am force-stop com.steele.dugout
 adb logcat -c
 set +e
