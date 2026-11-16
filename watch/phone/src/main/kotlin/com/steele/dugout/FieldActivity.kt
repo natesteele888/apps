@@ -107,10 +107,10 @@ class FieldActivity : ComponentActivity() {
             }
         }
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
-            // Back goes back inside Field mode (a game to today's list, settings to where they came from); from the top it
+            // Back presses Field mode's own Back button (a game to today's list, settings or the order back to the game); from the top it
             // leaves, unless the tablet is pinned
             override fun handleOnBackPressed() {
-                web.evaluateJavascript("(function(){var b=document.querySelector('.fm-top [data-a=home],.fm-top [data-a=back]');if(b){b.click();return 1}return 0})()") { r ->
+                web.evaluateJavascript("(function(){var b=document.querySelector('.fm-top > button[data-a]:first-child');if(b){b.click();return 1}return 0})()") { r ->
                     if (r != "1" && !pinned()) finish()
                 }
             }
