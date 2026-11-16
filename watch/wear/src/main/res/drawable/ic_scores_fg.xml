@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Scores: a little scoreboard, two teams and their runs -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android" android:width="108dp" android:height="108dp" android:viewportWidth="108" android:viewportHeight="108">
+    <path android:fillColor="#FFFFFFFF" android:pathData="M34,38h40a4,4 0,0 1,4 4v24a4,4 0,0 1,-4 4h-40a4,4 0,0 1,-4 -4v-24a4,4 0,0 1,4 -4z" />
+    <path android:fillColor="#FF7C2D12" android:pathData="M36,44h22v6h-22zM36,58h22v6h-22z" />
+    <path android:fillColor="#FFDC2626" android:pathData="M63,44h9v6h-9zM63,58h9v6h-9z" />
+</vector>

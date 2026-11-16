@@ -3,8 +3,10 @@
     <uses-feature android:name="android.hardware.type.watch" />
     <uses-permission android:name="android.permission.VIBRATE" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <!-- Scores reads the league scores over the internet (through the phone on watches without Wi-Fi or LTE) -->
+    <uses-permission android:name="android.permission.INTERNET" />
 
-    <!-- One install, two apps in the watch's app list: Walk-Up and Pitch Count. Each works without the other. -->
+    <!-- One install, three apps in the watch's app list: Walk-Up, Pitch Count and Scores. Each works without the others. -->
     <application
         android:allowBackup="false"
         android:icon="@mipmap/ic_launcher"
@@ -35,6 +37,19 @@
             android:label="@string/pitch_name"
             android:launchMode="singleTask"
             android:taskAffinity="com.steele.dugout.pitch">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+        <activity
+            android:name=".ScoresActivity"
+            android:exported="true"
+            android:icon="@mipmap/ic_scores"
+            android:roundIcon="@mipmap/ic_scores"
+            android:label="@string/scores_name"
+            android:launchMode="singleTask"
+            android:taskAffinity="com.steele.dugout.scores">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
