@@ -1,0 +1,44 @@
+/* Walk-Up Field mode: a tablet across the press box table, read at arm's length and tapped in a hurry. */
+body.fm { --nav-h: 96px; }
+#field { min-height: 100vh; min-height: 100dvh; display: flex; flex-direction: column; }
+#fmView { flex: 1; display: flex; flex-direction: column; }
+.fm-top { position: sticky; top: 0; z-index: 20; display: flex; align-items: center; gap: 12px; padding: calc(var(--sa-t) + 10px) calc(16px + var(--sa-r)) 10px calc(16px + var(--sa-l)); background: rgba(10, 13, 18, 0.94); border-bottom: 1px solid var(--line); }
+.fm-top h1 { flex: 1; min-width: 0; font: 700 24px/1.15 "Barlow Condensed", system-ui, sans-serif; letter-spacing: 0.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.fm-top .btn svg { width: 22px; height: 22px; }
+.fm-brand { font: 700 16px/1 "Barlow Condensed", system-ui, sans-serif; color: var(--accent); text-transform: uppercase; letter-spacing: 0.08em; }
+.fm-main { flex: 1; width: 100%; max-width: 1200px; margin: 0 auto; padding: 16px calc(16px + var(--sa-r)) 24px calc(16px + var(--sa-l)); display: flex; flex-direction: column; gap: 14px; }
+.fm-main .card { display: flex; flex-direction: column; gap: 12px; }
+.fm-gate { max-width: 560px; }
+.fm-code { font: 700 clamp(44px, 11vw, 76px)/1 "Barlow Condensed", ui-monospace, monospace; letter-spacing: 0.06em; text-align: center; padding: 18px 8px; border: 2px dashed var(--line2); border-radius: 16px; color: var(--accent); }
+.fm-lbl { display: flex; flex-direction: column; gap: 6px; color: var(--mute); font-size: 14px; }
+.fm-lbl input { min-height: 48px; padding: 10px 12px; border-radius: 12px; border: 1px solid var(--line2); background: var(--panel2); color: var(--text); font-size: 17px; }
+.fm-fields { display: flex; flex-wrap: wrap; gap: 10px; }
+.fm-fields .btn { min-height: 52px; }
+.fm-bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.fm .msg.warn { color: var(--warn); }
+.fm-game { display: grid; grid-template-columns: auto 1fr; grid-template-rows: auto auto; column-gap: 18px; row-gap: 4px; align-items: baseline; width: 100%; padding: 18px 20px; text-align: left; border: 1px solid var(--line); border-radius: 16px; background: var(--panel); cursor: pointer; }
+.fm-game:active { background: var(--panel2); }
+.fm-time { grid-row: 1 / 3; font: 700 30px/1 "Barlow Condensed", system-ui, sans-serif; color: var(--accent); align-self: center; }
+.fm-vs { font: 700 22px/1.2 "Barlow Condensed", system-ui, sans-serif; }
+.fm-teams { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.fm-team { display: flex; flex-direction: column; align-items: center; gap: 2px; min-height: 64px; padding: 10px; border-radius: 14px; border: 2px solid var(--line); background: var(--panel); font: 700 22px/1.1 "Barlow Condensed", system-ui, sans-serif; cursor: pointer; }
+.fm-team.on { border-color: var(--accent); background: var(--panel2); }
+.fm-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 12px; }
+.fm-tile { position: relative; display: flex; flex-direction: column; align-items: flex-start; gap: 4px; min-height: 120px; padding: 14px 16px; text-align: left; border-radius: 16px; border: 2px solid var(--line); background: var(--panel); cursor: pointer; }
+.fm-tile:active { background: var(--panel2); }
+.fm-tile.next { border-color: var(--line2); }
+.fm-tile.on { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(198, 255, 61, 0.25); }
+.fm-num { font: 700 20px/1 "Barlow Condensed", system-ui, sans-serif; color: var(--mute); min-height: 20px; }
+.fm-name { font: 700 30px/1.05 "Barlow Condensed", system-ui, sans-serif; word-break: break-word; }
+.fm-song { font-size: 14px; color: var(--mute); overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+.fm-tag { position: absolute; top: 12px; right: 12px; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--mute); }
+.fm-tag.live { color: var(--accent); }
+.fm-foot { position: sticky; bottom: 0; z-index: 20; display: grid; grid-template-columns: 1fr auto; gap: 12px; padding: 12px calc(16px + var(--sa-r)) calc(12px + var(--sa-b)) calc(16px + var(--sa-l)); background: rgba(10, 13, 18, 0.96); border-top: 1px solid var(--line); }
+.fm-foot .btn { min-height: 68px; font-size: 20px; gap: 10px; }
+.fm-foot .btn svg { width: 24px; height: 24px; }
+.fm-play { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.fm-stop { min-width: 160px; background: var(--bad); border-color: var(--bad); color: var(--ink); }
+.fm-count { position: fixed; inset: 0; z-index: 80; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; background: rgba(10, 13, 18, 0.9); cursor: pointer; }
+.fm-count-n { font: 700 min(40vh, 220px)/1 "Barlow Condensed", system-ui, sans-serif; color: var(--accent); }
+.fm-count-who { font: 700 40px/1.1 "Barlow Condensed", system-ui, sans-serif; }
+@media (max-width: 520px) { .fm-grid { grid-template-columns: 1fr 1fr; } .fm-name { font-size: 24px; } .fm-stop { min-width: 110px; } }

@@ -36,8 +36,13 @@ self.addEventListener("fetch", e => {
     return;
   }
   if (e.request.method !== "GET") return;
+  // Field mode's sign-in and LYBS Select's database answer live, never from a saved copy.
+  if (url.origin !== self.location.origin && /(^|\.)(firebaseio\.com|googleapis\.com)$/.test(url.hostname) && !/^fonts\./.test(url.hostname)) return;
   e.respondWith(fetch(e.request).then(res => {
     if (res.ok || res.type === "opaque") { const copy = res.clone(); caches.open(CACHE).then(c => c.put(e.request, copy)); }
     return res;
   }).catch(() => caches.match(e.request, {ignoreSearch: true}).then(r => r || (e.request.mode === "navigate" ? caches.match("./") : undefined))));
 });
+// Field mode (the tablet at the field) is saved at install too, so it opens with no signal.
+const FIELD_SHELL = ["field.html", "field.css", "field-core.js", "field.js", "/lybs-ballclub/js/team-registry.js"];
+self.addEventListener("install", e => e.waitUntil(caches.open(CACHE).then(c => Promise.all(FIELD_SHELL.map(u => c.add(new Request(u, {cache: "reload"})).catch(() => {}))))));
