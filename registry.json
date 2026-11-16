@@ -766,30 +766,30 @@
         "autoShots": [],
         "latest": {
           "d": "Nov 16, 2026",
-          "t": "Age page: make the year buttons big enough to tap on a phone",
-          "url": "https://github.com/natesteele888/lybs-ballclub/commit/8d34fa0a5dba4650f1e3a5ac6eb7d304438fd0a7"
+          "t": "Roster: Card photo button for Steele Cards, with team-only rules for approved photos",
+          "url": "https://github.com/natesteele888/lybs-ballclub/commit/09d73b92c2cbd43b6637b1a6c70aca4f1880a71f"
         },
-        "version": "1.26.3",
+        "version": "1.27.1",
         "history": [
+          {
+            "v": "1.27.0",
+            "t": "Roster: Card photo button for Steele Cards, with team-only rules for approved photos"
+          },
+          {
+            "v": "1.26.7",
+            "t": "GameChanger schedule job: fix the import that crashed every run"
+          },
+          {
+            "v": "1.26.5",
+            "t": "Roster: walk-up song requests with coach approval, alerts and a league song library"
+          },
+          {
+            "v": "1.26.4",
+            "t": "Field tablets: let a walk-up tablet read game-day data, and walk-up songs per player"
+          },
           {
             "v": "1.26.3",
             "t": "Age page: make the year buttons big enough to tap on a phone"
-          },
-          {
-            "v": "1.26.1",
-            "t": "Give the division checker more inner padding on desktop"
-          },
-          {
-            "v": "1.26.0",
-            "t": "Let the division checker fill its program page's full width"
-          },
-          {
-            "v": "1.25.9",
-            "t": "Load fonts without holding up the app, division checker and age page"
-          },
-          {
-            "v": "1.25.8",
-            "t": "Add one-field division checker for program pages"
           }
         ],
         "caps": [
@@ -950,12 +950,16 @@
         ],
         "autoShots": [],
         "latest": {
-          "d": "Nov 15, 2026",
-          "t": "Power Program: load the fonts without holding up the first screen",
-          "url": "https://github.com/natesteele888/fitness-hub/commit/66f05976eb4a862454f098387117845aeeca7e63"
+          "d": "Nov 16, 2026",
+          "t": "Power Program: an empty Save Check-In no longer logs a blank check-in",
+          "url": "https://github.com/natesteele888/fitness-hub/commit/a2deafecf573dd6ae4e467c4952e84a892160ab0"
         },
-        "version": "1.4.0",
+        "version": "1.4.1",
         "history": [
+          {
+            "v": "1.4.1",
+            "t": "Power Program: an empty Save Check-In no longer logs a blank check-in"
+          },
           {
             "v": "1.4.0",
             "t": "Power Program: load the fonts without holding up the first screen"
@@ -971,10 +975,6 @@
           {
             "v": "1.3.7",
             "t": "Power Program: make Reset all progress a full-size tap"
-          },
-          {
-            "v": "1.3.6",
-            "t": "Power Program: save progress under a name-free key, copying old progress forward"
           }
         ],
         "caps": [
@@ -1189,12 +1189,16 @@
         ],
         "autoShots": [],
         "latest": {
-          "d": "Nov 15, 2026",
-          "t": "Load the fonts without holding up the sponsor form and banner list",
-          "url": "https://github.com/natesteele888/sponsor-banner-inventory/commit/2ae46b31978c0b4e3b35e4c3acbe2b7368fc367a"
+          "d": "Nov 16, 2026",
+          "t": "2027 tab: five count tiles in one row; hide the empty photo box",
+          "url": "https://github.com/natesteele888/sponsor-banner-inventory/commit/bc40742dca33b10c9b963432ed8e64d8ffcd054b"
         },
-        "version": "1.2.9",
+        "version": "1.3.0",
         "history": [
+          {
+            "v": "1.3.0",
+            "t": "2027 tab: five count tiles in one row; hide the empty photo box"
+          },
           {
             "v": "1.2.9",
             "t": "Load the fonts without holding up the sponsor form and banner list"
@@ -1210,10 +1214,6 @@
           {
             "v": "1.2.5",
             "t": "Add 2027 sponsor banner intake: hourly sponsor check, info email, reply form, 2027 tab"
-          },
-          {
-            "v": "1.2.4",
-            "t": "Load the map library without holding up the banner list"
           }
         ],
         "caps": [
@@ -1303,12 +1303,16 @@
         ],
         "autoShots": [],
         "latest": {
-          "d": "Nov 15, 2026",
-          "t": "QR shows up on a slow signal; cap RSVP answers and questions; longer codes; guest-isolation rules tests",
-          "url": "https://github.com/natesteele888/events/commit/99df626d1c6abdece83691161f8285730baa31f4"
+          "d": "Nov 16, 2026",
+          "t": "Show a loading screen when a host opens Edit, and don't paint the editor over the page they moved to",
+          "url": "https://github.com/natesteele888/events/commit/cc9bdcd03b9cde8826ddd863496c3c53e3f52ff2"
         },
-        "version": "1.3.6",
+        "version": "1.3.7",
         "history": [
+          {
+            "v": "1.3.7",
+            "t": "Show a loading screen when a host opens Edit, and don't paint the editor over the page they moved to"
+          },
           {
             "v": "1.3.5",
             "t": "QR shows up on a slow signal; cap RSVP answers and questions; longer codes; guest-isolation rules tests"
@@ -1324,10 +1328,6 @@
           {
             "v": "1.3.1",
             "t": "Load the QR code library without holding up the page"
-          },
-          {
-            "v": "1.3.0",
-            "t": "Tests: always run the browser run against the real security rules"
           }
         ],
         "caps": [
@@ -2086,30 +2086,30 @@
         "autoShots": [],
         "latest": {
           "d": "Nov 16, 2026",
-          "t": "Dugout watch: a way back from every screen, and a countdown before a song",
-          "url": "https://github.com/natesteele888/apps/commit/c5342fa0318f429febbf7579e803201e7ef24535"
+          "t": "Field tablet: play the song a coach approved in Ballclub",
+          "url": "https://github.com/natesteele888/apps/commit/476ca61433d75f3f412bae050dc3454a69526484"
         },
-        "version": "1.1.5",
+        "version": "1.2.8",
         "history": [
           {
-            "v": "1.1.5",
-            "t": "Dugout watch: a way back from every screen, and a countdown before a song"
+            "v": "1.2.8",
+            "t": "Field tablet: play the song a coach approved in Ballclub"
           },
           {
-            "v": "1.1.4",
-            "t": "Dugout watch: whole face is Play, the order goes round, swap in bench players"
+            "v": "1.2.5",
+            "t": "Walk-Up: a Ballclub song starts where the family set it, even on a short song"
           },
           {
-            "v": "1.1.3",
-            "t": "Walk-Up: the Mix sheet and Play leave the announcer out for a clip that says the name"
+            "v": "1.2.4",
+            "t": "Walk-Up: approve Ballclub song requests in one tap and bring approved songs onto the phone; iPhone audio and the watch note"
           },
           {
-            "v": "1.1.2",
-            "t": "Walk-Up: let a clip that already says the name play on its own"
+            "v": "1.2.3",
+            "t": "Field mode: change the batting order at the tablet, and the other town by number"
           },
           {
-            "v": "1.1.1",
-            "t": "Walk-Up: match song names the way coaches type them"
+            "v": "1.2.2",
+            "t": "Game sounds: update the start and end in place, so a tap on a stepper is never lost to a redraw"
           }
         ],
         "caps": [
@@ -2536,8 +2536,12 @@
           "store/shots/getready-5.webp",
           "store/shots/getready-6.webp"
         ],
-        "version": "1.0.6",
+        "version": "1.0.7",
         "history": [
+          {
+            "v": "1.0.7",
+            "t": "Get Ready: no buzz before the first tap (fixes red CI)"
+          },
           {
             "v": "1.0.6",
             "t": "Add a copyright notice and an all-rights-reserved LICENSE"
@@ -2553,16 +2557,12 @@
           {
             "v": "1.0.3",
             "t": "Get Ready: Google sign-in backup, and always load the freshest copy"
-          },
-          {
-            "v": "1.0.2",
-            "t": "Get Ready: separate lists for different days"
           }
         ],
         "latest": {
-          "d": "Nov 12, 2026",
-          "t": "Add a copyright notice and an all-rights-reserved LICENSE",
-          "url": "https://github.com/natesteele888/apps/commit/25fd10682c4fe1ef072b42512df48ff23a75faea"
+          "d": "Nov 16, 2026",
+          "t": "Get Ready: no buzz before the first tap (fixes red CI)",
+          "url": "https://github.com/natesteele888/apps/commit/71e6c4d65155cdde04f26ccf7fc8e8316b6fdf5d"
         },
         "caps": [
           "Check things off with a picture of each item beside it",
