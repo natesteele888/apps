@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<!-- Copyright (c) 2026 Nate Steele. All rights reserved. Not licensed for copying, hosting or resale. See LICENSE. -->
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Walk-Up Field mode</title>
+<meta name="description" content="Walk-Up Field mode: the tablet at the field that plays every Lunenburg team's walk-ups from the coach's saved lineup.">
+<meta name="theme-color" content="#0A0D12">
+<meta name="color-scheme" content="dark">
+<meta name="robots" content="noindex">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" type="image/png" sizes="192x192" href="/apps/icons/walkup-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Barlow:wght@400;500;600;700;800&display=swap" media="print" onload="this.media='all'">
+<link rel="stylesheet" href="walkup.css">
+<link rel="stylesheet" href="field.css">
+</head>
+<body class="fm">
+<div id="field"></div>
+<noscript><p style="padding:24px;font-family:sans-serif;color:#EEF2F8">Walk-Up Field mode needs JavaScript turned on to work.</p></noscript>
+<!-- LYBS Select's list of teams (same site). If it can't load, the tablet uses the teams it saved today. -->
+<script src="/lybs-ballclub/js/team-registry.js" defer></script>
+<script src="sounds.js" defer></script>
+<script src="core.js" defer></script>
+<script src="db.js" defer></script>
+<script src="engine.js" defer></script>
+<script src="ui.js" defer></script>
+<script src="field-core.js" defer></script>
+<script src="field.js" defer></script>
+</body>
+</html>
