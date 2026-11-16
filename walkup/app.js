@@ -282,6 +282,21 @@
     });
   }
 
+  /* ---------- the lock screen: a Stop button while something plays ---------- */
+  A.mediaSession = function () {
+    var ms = navigator.mediaSession; if (!ms) return;
+    var stop = function () { if (WU.act.stop) WU.act.stop(0.05); };
+    ["pause", "stop"].forEach(function (a) { try { ms.setActionHandler(a, stop); } catch (e) { /* not on this phone */ } });
+    WU.on(function (what) {
+      if (what !== "audio") return;
+      var p = E.playing && E.playing();
+      try {
+        if (p) { if (window.MediaMetadata) ms.metadata = new MediaMetadata({ title: S.play && S.play.board ? "Game sound" : "Walk-up", artist: "Walk-Up" }); ms.playbackState = "playing"; }
+        else ms.playbackState = "none";
+      } catch (e) { /* ignore */ }
+    });
+  };
+
   /* ---------- start ---------- */
   A.start = function () {
     var host = document.getElementById("walkup");
@@ -294,19 +309,23 @@
     WU.on(function (what) {
       if (what === "audio") { paintTransport(); if (WU.board && S.tab === "game") WU.board.paint(); return; }
       if (what === "board") { if (WU.board && S.tab === "game") WU.board.paint(); return; }
+      if (what === "club") { if (S.tab === "team") A.render(); return; }
       if (what === "data" || what === "meta") { A.render(); syncWake(); if (what === "data") WU.warm(); }
       if (what === "wake") syncWake();
     });
     wire(host);
     /* the very first tap anywhere wakes the audio, so the first Play is not late */
     document.addEventListener("click", function () { E.unlock(); A.armWarm(); }, { once: true, capture: true });
+    /* an iPhone puts the audio back to sleep after a call, a lock or a switch to another app: any tap wakes it again */
+    document.addEventListener("pointerdown", function () { if (E.state() !== "running" && E.state() !== "none") E.unlock(); }, { capture: true, passive: true });
+    A.mediaSession();
     document.addEventListener("visibilitychange", function () { syncWake(); });
     var done = false, go = function () { if (done) return; done = true; A.render(); syncWake(); };
     var slow = setTimeout(go, 1500);
     WU.refreshHave().then(function () {
       if (S.loadFailed || S.mem) return 0;
       return WU.gc();
-    }).then(function () { return WU.refreshHave(); }).then(function () { clearTimeout(slow); if (done) A.render(); else go(); if (WU.req) WU.req.start(); });
+    }).then(function () { return WU.refreshHave(); }).then(function () { clearTimeout(slow); if (done) A.render(); else go(); if (WU.req) WU.req.start(); if (WU.club) WU.club.start(); });
     if (S.st.settings.wake) syncWake();
     if ("serviceWorker" in navigator && /^https?:$/.test(location.protocol)) window.addEventListener("load", function () { navigator.serviceWorker.register("sw.js").catch(function () { /* the app works without it */ }); });
     window.WalkupApp = { S: S, eng: E, WU: WU, core: C, wakeActive: A.wakeActive, lastPlay: function () { return A.lastPlay; }, warmed: function () { return A.warmedAt || 0; } };
