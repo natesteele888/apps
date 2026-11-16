@@ -1052,7 +1052,7 @@ function rng(seed) { return function () { seed |= 0; seed = seed + 0x6D2B79F5 | 
     await page.click('.reopen'); eq(await page.$$eval('.end-banner', e => e.length), 0); assert.ok(!(await page.$eval(AT('ball'), b => b.disabled)));
     noErr(errors); await page.context().close();
     ({ page, errors } = await fresh({ ls: board(SEED.baseballMercy()) }));
-    eq(await txt(page, '.end-banner.mercy'), 'Mercy rule reached'); eq((await live(page)).final, false, 'the mercy rule never ends the game by itself');
+    eq(await txt(page, '.end-banner.mercy span'), 'Mercy rule reached'); assert.ok(await page.$('.end-banner.mercy [data-act=b-finish]'), 'Finish game offered'); eq((await live(page)).final, false, 'the mercy rule never ends the game by itself');
     assert.ok(!(await page.$eval(AT('ball'), b => b.disabled)));
     noErr(errors); await page.context().close();
     ({ page, errors } = await fresh({ ls: board(SEED.baseballPitch()) }));
@@ -1313,8 +1313,8 @@ function rng(seed) { return function () { seed |= 0; seed = seed + 0x6D2B79F5 | 
   await test('Offline: after one visit the service worker serves the whole app with no network, and only prunes its own caches', async () => {
     const { ctx, page, errors } = await fresh({ np: { sw: true }, init: () => { if (!sessionStorage.getItem('__c')) { sessionStorage.setItem('__c', '1'); caches.open('situations-v99').then(c => c.put('/x', new Response('x'))); caches.open('scoreboard-v0').then(c => c.put('/y', new Response('y'))); } } });
     await page.evaluate(() => navigator.serviceWorker.ready.then(() => 1));
-    await page.waitForFunction(async () => { const k = await caches.keys(); return k.includes('scoreboard-v2') && !k.includes('scoreboard-v0') && (await (await caches.open('scoreboard-v2')).keys()).length >= 8; }, null, { timeout: 10000 });
-    const cached = await page.evaluate(async () => (await (await caches.open('scoreboard-v2')).keys()).map(r => new URL(r.url).pathname));
+    await page.waitForFunction(async () => { const k = await caches.keys(); return k.includes('scoreboard-v3') && !k.includes('scoreboard-v0') && (await (await caches.open('scoreboard-v3')).keys()).length >= 8; }, null, { timeout: 10000 });
+    const cached = await page.evaluate(async () => (await (await caches.open('scoreboard-v3')).keys()).map(r => new URL(r.url).pathname));
     for (const f of ['/apps/scoreboard/', '/apps/scoreboard/core.js', '/apps/scoreboard/ui.js', '/apps/scoreboard/rules.js', '/apps/scoreboard/share.js', '/apps/scoreboard/board.js', '/apps/scoreboard/app.js', '/apps/scoreboard/scoreboard.css', '/apps/scoreboard/manifest.json']) assert.ok(cached.includes(f), 'cached ' + f + ' in ' + cached.join());
     await reload(page); await page.waitForTimeout(400);
     assert.ok(await page.evaluate(() => !!navigator.serviceWorker.controller), 'the page is controlled by the worker');
@@ -1404,7 +1404,7 @@ function rng(seed) { return function () { seed |= 0; seed = seed + 0x6D2B79F5 | 
     files.forEach(f => assert.ok(fs.statSync(path.join(dir, f)).size < 60 * 1024, f + ' is ' + fs.statSync(path.join(dir, f)).size + ' bytes'));
     const sw = fs.readFileSync(path.join(dir, 'sw.js'), 'utf8');
     files.filter(f => f !== 'sw.js' && !/\.(png)$/.test(f)).forEach(f => assert.ok(f === 'index.html' ? sw.includes('"./"') : sw.includes('"' + f + '"'), 'sw.js lists ' + f));
-    assert.ok(sw.includes('const CACHE = "scoreboard-v2"') && sw.includes('startsWith("scoreboard-")'));
+    assert.ok(sw.includes('const CACHE = "scoreboard-v3"') && sw.includes('startsWith("scoreboard-")'));
     const man = JSON.parse(fs.readFileSync(path.join(dir, 'manifest.json'), 'utf8'));
     eq(man.orientation, 'any'); eq(man.display, 'standalone'); assert.ok(man.icons.length >= 2 && man.name && man.short_name);
     const code = files.filter(f => /\.(js|html)$/.test(f) && f !== 'sw.js').map(f => fs.readFileSync(path.join(dir, f), 'utf8')).join('\n');

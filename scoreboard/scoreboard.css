@@ -268,7 +268,7 @@ table.ls td.cur { background: rgba(41,211,224,.2); border-radius: 6px; }
 /* the count and the runners sit side by side */
 .cd-row { display: flex; align-items: center; justify-content: center; gap: 16px; margin-top: 6px; }
 .cd-row .count { margin-top: 0; }
-.diamond { position: relative; flex: none; width: clamp(96px, 26vmin, 140px); height: clamp(96px, 26vmin, 140px); }
+.diamond { position: relative; flex: none; width: clamp(100px, 26vmin, 140px); height: clamp(100px, 26vmin, 140px); }
 .base { position: absolute; width: 44%; height: 44%; display: grid; place-items: center; padding: 0; margin: 0; background: none; border: 0; border-radius: 10px; }
 .base i { display: block; width: 56%; height: 56%; transform: rotate(45deg); border: 3px solid #5a6b7d; border-radius: 3px; background: #0b1015; }
 .base.on i { background: var(--yel); border-color: var(--yel); box-shadow: 0 0 14px rgba(255,200,61,.55); }
@@ -399,7 +399,7 @@ table.ls td.cur { background: rgba(41,211,224,.2); border-radius: 6px; }
   .inn b { font-size: clamp(50px, 15vmin, 120px); }
   .tri.up { border-width: 0 13px 23px 13px; } .tri.down { border-width: 23px 13px 0 13px; }
   .count { gap: 2px; margin-top: 2px; }
-  .cd-row { gap: 10px; margin-top: 2px; } .diamond { width: clamp(70px, 18vmin, 110px); height: clamp(70px, 18vmin, 110px); }
+  .cd-row { gap: 10px; margin-top: 2px; } .diamond { width: 100px; height: clamp(70px, 18vmin, 110px); } .plate { width: 10px; height: 10px; }
   .tl-line { margin-top: 2px; font-size: 12px; }
   .cnt .dots i { width: clamp(18px, 4.2vmin, 28px); height: clamp(18px, 4.2vmin, 28px); }
   .dd { min-height: 48px; margin-top: 2px; } .dd-m { font-size: 28px; }
