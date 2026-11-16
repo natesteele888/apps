@@ -827,9 +827,12 @@ const ranks = (res) => res.rows.map(r => r.team + ':' + r.rank + (r.tied ? 't' :
       eq(await page.locator('.trow.us').count(), 1);
       eq(await txt(page, '.card.stand .big'), 'Seed 2 of 5 teams · 2-1');
       const sc = await txt(page, '.scen');
-      assert.ok(/If we win out.*2 games left, all wins.*seed 1/.test(sc), sc);
-      assert.ok(/If we lose out.*all 2 games lost.*seed 4/.test(sc), sc);
-      assert.ok(/Estimate/.test(await txt(page, '.card:has(.scen) .label')));
+      assert.ok(/If we win out.*2-0 the rest of the way.*seed 1 In/.test(sc), sc);
+      assert.ok(/If we win 1 of 2.*seed 1 to 4 In/.test(sc), sc);
+      // other teams' games count too: losing out can drop us to 6th, which is still a maybe for the top 4
+      assert.ok(/If we lose out.*0-2 the rest of the way.*seed 4 to 6 Depends/.test(sc), sc);
+      assert.ok(/top 4 make the bracket\. Still alive: anywhere from seed 1 to 6/.test(await txt(page, '.cutline')));
+      assert.ok(!/Estimate/.test(await txt(page, '.card:has(.scen) .label')), 'every result was checked, so no Estimate label');
       // team record line: Team B 2-1, .667, 18 runs for, 10 against, diff +8
       assert.ok(/\.667 · 18 runs for, 10 against · diff \+8/.test(await txt(page, '.stand-list li:nth-child(1) .st')), await txt(page, '.stand-list li:nth-child(1) .st'));
       eq(await page.locator('.tag.info').count(), 3, 'the three teams that needed a tiebreaker are tagged');
@@ -896,19 +899,44 @@ const ranks = (res) => res.rows.map(r => r.team + ':' + r.rank + (r.tied ? 't' :
     });
   });
 
-  await test('what do we need: after our last pool game is scored the estimate is replaced by the final seed', async () => {
+  await test('what do we need: it follows each of our scores, and says when we have clinched', async () => {
     await app({ tours: [mkTour({ id: 'wn1' })], open: true }, async page => {
       await page.locator('.game.ours', { hasText: 'Team E' }).click(); await openSheetWait(page);
       await fillGame(page, { final: true, sa: 5, sb: 2 }); await saveSheet(page); await noSheets(page);
       await tabTo(page, 'standings');
-      assert.ok(/1 game left, all wins.*seed 1/.test(await txt(page, '.scen')), 'one game left after the first is scored');
+      assert.ok(/If we win.*1-0 the rest of the way.*seed 1 In.*If we lose.*0-1 the rest of the way.*seed 2 to 4 In/.test(await txt(page, '.scen')), 'one game left after the first is scored');
+      assert.ok(/Clinched: Our Team finishes in the top 4/.test(await txt(page, '.cutline')));
       await tabTo(page, 'games');
       await page.locator('.game.ours', { hasText: 'Team F' }).click(); await openSheetWait(page);
       await fillGame(page, { final: true, sa: 6, sb: 1 }); await saveSheet(page); await noSheets(page);
       await tabTo(page, 'standings');
       eq(await txt(page, '.card.stand .big'), 'Seed 1 of 6 teams · 4-1');
-      assert.ok(/No pool games left for Our Team/.test(await txt(page, '.card.soft')), await txt(page, '#view'));
-      eq(await page.locator('.scen').count(), 0);
+      // our games are done, two games between other teams are not: the card says where that leaves us
+      assert.ok(/Our pool games are done.*Other teams still have games.*seed 1 In/.test(await txt(page, '.scen')), await txt(page, '#view'));
+      assert.ok(/including the 2 games between other teams/.test(await txt(page, '.card:has(.scen)')));
+    });
+  });
+
+  await test('try some scores: made-up scores move the standings live, and nothing is saved', async () => {
+    await app({ tours: [mkTour({ id: 'wi1' })], open: true }, async page => {
+      await tabTo(page, 'standings');
+      await page.click('[data-act="whatif-open"]'); await openSheetWait(page);
+      eq(await page.locator(sheetSel + ' .wi-game').count(), 4, 'the 4 pool games still to play');
+      eq(await page.locator(sheetSel + ' .wi-game.us').count(), 2, 'ours are marked');
+      assert.ok(/Type a score/.test(await txt(page, sheetSel + ' .wi-out')));
+      // we lose both, 0-3
+      for (const opp of ['Team E', 'Team F']) {
+        const li = page.locator(sheetSel + ' .wi-game.us', { hasText: opp });
+        await li.locator('input[data-side="a"]').fill('0'); await li.locator('input[data-side="b"]').fill('3');
+      }
+      assert.ok(/Our Team would be seed 4, in the bracket\./.test(await txt(page, sheetSel + ' .wi-head')), await txt(page, sheetSel + ' .wi-head'));
+      eq(await page.locator(sheetSel + ' .wi-table li.cut').count(), 1, 'the cut line is drawn under seed 4');
+      eq(await page.locator(sheetSel + ' .wi-table li.us').count(), 1);
+      await page.click(sheetSel + ' [data-clear]');
+      assert.ok(/Type a score/.test(await txt(page, sheetSel + ' .wi-out')));
+      await page.click(sheetSel + ' .sh-foot [data-close]'); await noSheets(page);
+      const saved = await page.evaluate(() => TP.cur().games.filter(g => g.kind === 'pool' && g.status !== 'final').length);
+      eq(saved, 4, 'nothing was saved');
     });
   });
 
