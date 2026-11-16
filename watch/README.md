@@ -3,10 +3,11 @@
 Dugout is two small Android apps that work together:
 
 - **Dugout for the phone.** This app is the Walk-Up web app full screen, with a thin bar on top showing the speaker, plus **Pocket** and **Watch** buttons. The music still plays on the phone, through your Bluetooth adapter on the Bose L1.
-- **Three watch apps** (Wear OS, built for the Galaxy Watch 7 or 8, and installable on watches back to Android Wear 2.0), from one install:
+- **Four watch apps** (Wear OS, built for the Galaxy Watch 7 or 8, and installable on watches back to Android Wear 2.0), from one install:
   - **Walk-Up**, a remote for the walk-up songs on the phone.
   - **Pitch Count**, a pitch counter.
   - **Scores**, today's MAC League scores from around the league, the same ones LYBS Select shows.
+  - **GC Scores**, your own team's GameChanger scoreboard: the live score, the next game and recent finals.
 
   Each works without the others. Use Walk-Up on a day with no pitch count, or Pitch Count with no music.
 
@@ -67,6 +68,14 @@ Nothing goes through the internet or a server. Player names and photos stay on t
 - On a day with no league games it shows each division's standings instead.
 - It needs the internet: on most watches that comes through the phone, so keep Bluetooth on. The last scores it saw stay on the watch for when there's no signal.
 - No sign-in. It reads only public league results (teams, scores, records), nothing about any player.
+
+**GC Scores** (the red scoreboard icon)
+- Your team's GameChanger scoreboard on your wrist, the same games and scores as the GameChanger scoreboard widget in Ballclub.
+- During a game: a big **LIVE** score, the opponent and the inning. It reads GameChanger again every 30 seconds while the screen is open. Tap it for the line score (runs by inning, then R H E).
+- Between games: **Next** game and time, then **Recent** finals (green win, red loss) and **Coming up**. Tap a final for its line score.
+- Pick the team once on the phone: **Watch › GameChanger team**, paste the team's web.gc.com/teams/… link, tap **Send to watch**.
+- It reads GameChanger's public team page data, so no sign-in. It needs the phone nearby (or the watch's own Wi-Fi). With no signal it shows the last scores it read and when.
+- Only teams scored in GameChanger show up, and the score is only as live as the scorekeeper.
 
 ## What the phone does
 
@@ -138,17 +147,29 @@ Both apps must be signed with the same key, because the watch only talks to a ph
 
 - `shared/` holds the message format (`Protocol.kt`) and the pitch math (`PitchCore.kt`). The pitch math is a Kotlin copy of `walkup/pitch-core.js`, and its unit tests match `tests/walkup-pitch.test.cjs`.
 - `phone/` is the Dugout phone app. It's a WebView of the live Walk-Up site (`https://natesteele888.github.io/apps/walkup/`) with a JavaScript bridge (`walkup/bridge.js` on the page side, `Bridge.kt` here). The bridge adds Android text-to-speech, file picking, the microphone and saving to Downloads.
-- `wear/` is the watch install, built with Compose for Wear OS. It has three launcher activities, `WalkUpActivity`, `PitchCountActivity` and `ScoresActivity`, so the watch shows three apps. Walk-Up and Pitch Count share `PhoneLink` and `PitchStore`, and one application id with the phone app, which the Wear OS link needs. Its minSdk is 25 (Android Wear 2.0), with java.time desugared, and CI runs lint's NewApi check so it stays that way. An old watch pairs with the phone through Google's Wear OS app, not Galaxy Wearable.
+- `wear/` is the watch install, built with Compose for Wear OS. It has four launcher activities, `WalkUpActivity`, `PitchCountActivity`, `ScoresActivity` and `GameChangerActivity` (GC Scores), so the watch shows four apps. Walk-Up and Pitch Count share `PhoneLink` and `PitchStore`, and one application id with the phone app, which the Wear OS link needs. Its minSdk is 25 (Android Wear 2.0), with java.time desugared, and CI runs lint's NewApi check so it stays that way. An old watch pairs with the phone through Google's Wear OS app, not Galaxy Wearable.
 - **Scores' data** is plain HTTPS and JSON, so any watch can read it the same way, an Apple Watch app later included: an anonymous Firebase sign-in, then `shared/macLeagueStandings.json` from LYBS Ballclub's Realtime Database. `shared/.../LeagueScores.kt` has the addresses, the data's shape and the parser, with tests. The data is written by `scripts/scrape-standings.mjs` in the lybs-ballclub repo, every 30 minutes from 8am to 9pm ET.
 - Build: `./gradlew :shared:test :phone:assembleDebug :wear:assembleDebug` (JDK 17, Android SDK 35). GitHub Actions runs this on every push that touches `watch/` or Walk-Up.
 - The phone app loads the live site. Web changes reach Dugout once they're merged to `main` and published.
 - **Signing and releases.** The workflow signs both apps with the key in the `DUGOUT_KEY` secret (a base64 PKCS12 keystore with the alias `dugout`) and its password in `DUGOUT_KEY_PASSWORD`, sets the version code to the run number, and publishes main builds as releases. The key is never committed: `.github/workflows/dugout-key-setup.yml` makes it once, on GitHub's runner, and saves it straight into the secrets. `phone/.../Updater.kt` reads the releases list, and Android only installs an update signed with the same key.
+
+### GC Scores data (and an Apple Watch version later)
+
+GC Scores reads three public GameChanger URLs straight from the watch, with no key or sign-in. A browser can't call them (CORS), but an app can. LYBS Ballclub's schedule mirror (`lybs-ballclub/scripts/scrape-gamechanger-schedule.mjs`) reads the same feed.
+
+| What | URL | Fields used |
+| --- | --- | --- |
+| Team | `https://api.team-manager.gc.com/public/teams/{teamId}` | `name`, `team_season.season/year/record` |
+| Games | `https://api.team-manager.gc.com/public/teams/{teamId}/games` | `id`, `opponent_team.name`, `start_ts`, `end_ts`, `home_away`, `score.team/opponent_team`, `game_status`, `has_live_stream` |
+| Line score | `https://api.team-manager.gc.com/public/game-stream-processing/{gameId}/details?include=line_scores` | `line_score.team/opponent_team.scores` (runs by inning), `.totals` (R, H, E) |
+
+`teamId` is the short id in the team's web.gc.com/teams/… link. The parsing and the live/final/upcoming rules are in `shared/.../GcCore.kt` with tests. It's plain JSON over HTTPS and nothing in it is Android-only, so a SwiftUI watchOS app could read the same URLs with `URLSession` and copy those rules. The feed has team names, times and scores only. GC Scores doesn't read the team's staff list, and no player names or stats.
 
 ## Setting up another coach
 
 1. Install `dugout-phone.apk` on their Android phone, and `dugout-watch.apk` on their Galaxy Watch if they have one, both from the newest `dugout-v…` release in this repo. Dugout keeps itself up to date after that.
 2. Open Dugout on the phone and add their team in Walk-Up: players, songs and voices. Or restore a Walk-Up backup file they made in Chrome.
 3. For pitch counts, tap **Count pitches too**, then add pitchers in the Bullpen and pick the league division in Pitching settings. If they use LYBS Ballclub, they can open their own team once through **Watch › Open LYBS Ballclub here**, then add its pitchers.
-4. On the watch, open Walk-Up or Pitch Count. **Scores** works for any coach with nothing to set up.
+4. On the watch, open Walk-Up or Pitch Count. **Scores** works for any coach with nothing to set up. For **GC Scores**, paste the team's GameChanger link in **Watch › GameChanger team** on the phone.
 
 Each coach's team stays on their own phone and watch. Coaches without an Android phone can still use Walk-Up in Chrome at the web address above, including the pitch counter, but without a watch.

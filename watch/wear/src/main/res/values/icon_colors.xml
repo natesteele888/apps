@@ -2,5 +2,6 @@
 <resources>
     <color name="walkup_bg">#FF1D4ED8</color>
     <color name="pitch_bg">#FF15803D</color>
+    <color name="gc_bg">#FF7F1D1D</color>
     <color name="scores_bg">#FF7C2D12</color>
 </resources>

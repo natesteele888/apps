@@ -10,6 +10,7 @@ import com.google.android.gms.wearable.MessageClient
 import com.google.android.gms.wearable.MessageEvent
 import com.google.android.gms.wearable.PutDataRequest
 import com.google.android.gms.wearable.Wearable
+import com.steele.dugout.shared.Gc
 import com.steele.dugout.shared.Paths
 import com.steele.dugout.shared.PitchCore
 import kotlinx.coroutines.CoroutineScope
@@ -123,6 +124,12 @@ class WearLink(private val a: MainActivity) : MessageClient.OnMessageReceivedLis
         suspend fun deletePhoto(ctx: Context, id: String) {
             val me = Wearable.getNodeClient(ctx).localNode.await().id
             Wearable.getDataClient(ctx).deleteDataItems(Uri.Builder().scheme(PutDataRequest.WEAR_URI_SCHEME).authority(me).path(Paths.PHOTO + id).build()).await()
+        }
+
+        /** the GameChanger team the watch's GC Scores shows (an id, or "" for none), synced so the watch gets it whenever it connects */
+        suspend fun putGcTeam(ctx: Context, id: String) {
+            val req = PutDataRequest.create(Gc.PATH_TEAM).setData(id.toByteArray(Charsets.UTF_8)).setUrgent()
+            Wearable.getDataClient(ctx).putDataItem(req).await()
         }
 
         suspend fun watchCount(ctx: Context): Int = try { Wearable.getNodeClient(ctx).connectedNodes.await().size } catch (e: Exception) { 0 }
