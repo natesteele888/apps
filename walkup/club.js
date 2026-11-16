@@ -108,7 +108,10 @@
     var r = await WU.songs.addFiles([asFile(rec, s.title)]), song = r.added[0];
     if (!song) return false;
     WU.songs.choose(p.id, song.id);
-    p.trim = C.clampTrim(song.dur, { start: Number(s.start) || 0, len: song.len, fade: song.fade });
+    /* keep the start the family picked; a short song plays less rather than starting earlier */
+    var from = Math.max(0, Number(s.start) || 0), D = Number(song.dur) || 0, len = Number(song.len) || C.LIM.defLen;
+    if (D > from + 1) len = Math.min(len, Math.floor((D - from) * 10) / 10);
+    p.trim = C.clampTrim(song.dur, { start: from, len: len, fade: song.fade });
     WU.commit("data"); markDone(pid, s.at);
     U.toast(p.name + "'s walk-up song: " + s.title + (s.start ? ", from " + fmt(s.start) : "") + ".", "ok");
     return true;
