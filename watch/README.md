@@ -47,9 +47,9 @@ Nothing goes through the internet or a server. Player names and photos stay on t
 
 **Walk-Up** (the blue music-note icon)
 - One screen per batter shows the jersey number big, the name, and the batter's photo behind them if you set one.
-- Swipe left or right, or turn the bezel, to move between batters. Swiping never starts or stops music.
-- Swipe up, or tap **≡ Order**, for the batting order. Tap a name to jump there.
-- To play, press and hold the green **Hold to play** button until the ring fills, about one second. Letting go early does nothing.
+- Swipe left or right, or turn the bezel, to move between batters. Swiping never starts or stops music. The order goes round: after the last batter comes the leadoff batter again.
+- Swipe up for the batting order. Tap a name to jump there. Press and hold a name to swap in a bench player: pick who comes in, and they take that batting spot while the other player goes to the bench. Swaps wait while a song plays.
+- To play, press and hold anywhere on the face. A green ring fills around the edge, and the song starts when it closes, about one second. Letting go early, or starting a swipe, does nothing.
 - While a song plays, the whole screen pulses blue with **PLAYING**, a ring showing the song's progress, and a big red **STOP**. One tap stops it. You can't swipe to another batter while a song plays.
 - The top line shows the speaker: green when the phone is on a Bluetooth speaker, yellow for "No speaker", and red for "Open Dugout on your phone" when the watch can't reach the phone.
 
@@ -99,7 +99,7 @@ Nothing goes through the internet or a server. Player names and photos stay on t
 7. On the watch, open **Walk-Up**. The top line turns from red to "No speaker" (the emulator has no Bluetooth speaker), and the batters show up.
 8. Try it out:
    - Swipe between batters and check that the phone follows.
-   - Hold **Hold to play**. The song plays on the phone, and the watch turns blue with **STOP**.
+   - Hold the face until the green ring closes. The song plays on the phone, and the watch turns blue with **STOP**.
    - Tap **STOP**.
    - On the phone, tap **Count pitches too**. On the watch, open **Pitch Count** and tap a few times. The phone's pitch counter shows the same count.
    - Tap **+1 Pitch** on the phone. The watch shows it too.

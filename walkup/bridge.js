@@ -2,14 +2,14 @@
    Inside the Dugout app, window.WalkupNative exists, and this file:
    - sends the batting order, who is up and what is playing to the app (and from there to the watch) whenever they change,
    - sends the pitch log the same way, and merges the watch's pitch log back in (every pitch is counted once),
-   - runs the watch's commands (pick a batter, play, stop),
+   - runs the watch's commands (pick a batter, play, stop, swap in a bench player),
    - fills in two things Android's web view lacks: the computer voice (Android's own text-to-speech) and saving backup files.
    Nothing here goes to the internet. */
 (function () {
   "use strict";
   var N = window.WalkupNative;
   if (!N || typeof N.postState !== "function") return;
-  var WU = window.WU = window.WU || {};
+  var WU = window.WU = window.WU || {}, C = window.WalkupCore;
 
   /* ---------- the computer voice, through Android's own text-to-speech ---------- */
   if (!("speechSynthesis" in window) && typeof N.ttsSpeak === "function") {
@@ -38,17 +38,18 @@
   /* ---------- what the watch needs to know ---------- */
   function snapshot() {
     var S = WU.S, st = S.st, E = WU.eng, pl = E.playing();
-    var lineup = st.lineup.map(function (id) {
+    function row(id) {
       var p = WU.player(id); if (!p) return null;
       var code = WU.status(p).code;
       return { id: p.id, name: p.name || "", num: p.num || "", pos: p.pos || "", ready: !(code === "empty" || code === "needs-song" || code === "needs-voice"), code: code };
-    }).filter(Boolean);
+    }
+    var lineup = st.lineup.map(row).filter(Boolean), bench = C.benchIds(st.roster, st.lineup).map(row).filter(Boolean);
     var playing = null;
     if (pl) {
       var gid = pl.key && pl.key.indexOf("g:") === 0 ? pl.key.slice(2) : null, gp = gid ? WU.player(gid) : null;
       playing = { id: gid, label: gp ? (gp.num ? "#" + gp.num + " " : "") + (gp.name || "") : "Preview", elapsed: Math.round(pl.elapsed * 100) / 100, total: Math.round(pl.total * 100) / 100 };
     }
-    return { v: 1, ready: true, batter: st.batter, lineup: lineup, playing: playing, loading: S.play && S.play.state === "loading" ? S.play.id : null, error: lastErr, team: st.settings.team || "" };
+    return { v: 1, ready: true, batter: st.batter, lineup: lineup, bench: bench, playing: playing, loading: S.play && S.play.state === "loading" ? S.play.id : null, error: lastErr, team: st.settings.team || "" };
   }
   var tState = 0, tPitch = 0;
   function sendState() { clearTimeout(tState); tState = setTimeout(function () { try { N.postState(JSON.stringify(snapshot())); } catch (e) { console.error(e); } }, 60); }
@@ -69,6 +70,17 @@
     if (!idle()) return; // never stop a song just because the watch moved
     WU.act.pick({ dataset: { i: String(i) } });
   }
+  /* the watch swaps a bench player in for one in the batting order: same batting spot, and the one coming out sits */
+  function swapIn(outId, inId) {
+    var st = WU.S.st, old = st.lineup, i = old.indexOf(outId);
+    if (i < 0 || C.benchIds(st.roster, old).indexOf(inId) < 0) { lastErr = { msg: "The lineup changed on the phone. Try the swap again.", at: Date.now() }; return; }
+    if (!idle()) return; // never change the order under a song that is playing
+    st.lineup = C.swapBench(old, i, inId);
+    st.batter = C.reindexBatter(old, st.batter, st.lineup);
+    WU.commit("data");
+    var a = WU.player(inId), b = WU.player(outId);
+    if (a && b) WU.U.toast(C.playerLabel(a) + " swapped in for " + C.playerLabel(b) + ".", "ok");
+  }
   window.__wuCmd = function (json) {
     if (!ready()) return false;
     var c; try { c = typeof json === "string" ? JSON.parse(json) : json; } catch (e) { return false; }
@@ -83,6 +95,7 @@
       WU.act.play();
     }
     else if (c.cmd === "stop") WU.act.stop();
+    else if (c.cmd === "swap" && typeof c.out === "string" && typeof c["in"] === "string") swapIn(c.out, c["in"]);
     else if (c.cmd === "pitchlog" && c.log) WU.pitch.merge(c.log);
     sendState();
     return true;
