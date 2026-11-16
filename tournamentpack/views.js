@@ -154,12 +154,45 @@
       (n.tied ? '<p class="warnmsg">Still tied with another team. The tiebreaker steps are below.</p>' : "") + "</article>";
     return h + scenarioList(sc, t);
   }
+  /* every result still to play, theirs too. Worked out once per set of games (it can be a few thousand standings). */
+  var olCache = { key: "", val: null };
+  function outlookFor(t) {
+    var key = JSON.stringify([t.team, t.rules, t.sport, t.bracket.size, t.games.filter(function (g) { return g.kind === "pool"; }).map(function (g) { return [g.id, g.a, g.b, g.status, g.sa, g.sb, g.forfeit]; })]);
+    if (olCache.key !== key) olCache = { key: key, val: C.outlook(t.games, Object.assign({}, t.rules, { sport: t.sport }), t.team, { cut: t.bracket.size }) };
+    return olCache.val;
+  }
+  V.outlookFor = outlookFor;
+  var CUT_TAG = { "in": ['<span class="tag ok">In</span>', "in the top "], out: ['<span class="tag warn">Out</span>', "out of the top "], maybe: ['<span class="tag info">Depends</span>', ""] };
+  function rowTitle(r) {
+    if (!r.of) return "Our pool games are done";
+    if (r.wins === r.of) return r.of === 1 ? "If we win" : "If we win out";
+    if (r.wins === 0) return r.of === 1 ? "If we lose" : "If we lose out";
+    return "If we win " + r.wins + " of " + r.of;
+  }
+  function rowSub(r) { return r.of ? r.wins + "-" + (r.of - r.wins) + " the rest of the way" : "Other teams still have games"; }
   function scenarioList(sc, t) {
+    var o = outlookFor(t);
+    if (o && o.enumerated && o.rows.length && (o.mine || o.theirs)) {
+      var cut = o.cut, h = '<article class="card"><div class="label">What do we need?</div>';
+      if (cut && o.all) {
+        h += '<p class="cutline ' + o.all.cut + '">' + (o.all.cut === "in" ? "Clinched: " + esc(t.team) + " finishes in the top " + cut + " whatever happens." :
+          o.all.cut === "out" ? "The top " + cut + " make the bracket, and " + esc(t.team) + " can't get there now." :
+            "The top " + cut + " make the bracket. Still alive: anywhere from seed " + o.all.best + " to " + o.all.worst + ".") + "</p>";
+      }
+      h += '<ul class="scen">' + o.rows.map(function (r) {
+        return "<li><div><b>" + esc(rowTitle(r)) + "</b><small>" + esc(rowSub(r)) + "</small></div><span>" + esc(seedText(r.best, r.worst)) + (cut ? " " + CUT_TAG[r.cut][0] : "") + "</span></li>";
+      }).join("") + "</ul>";
+      h += '<p class="mute small">This checks every result still to play in the pool' + (o.theirs ? ", including the " + C.plural(o.theirs, "game") + " between other teams" : "") +
+        ", at a close score and a blowout." + (o.ties && o.mine ? " Our own games are counted as wins or losses." : "") + " A range means " + C.sportInfo(t.sport).unit + " or other teams' results decide it.</p>" +
+        (o.mine + o.theirs ? '<button type="button" class="btn ghost small" data-act="whatif-open" data-fk="whatif">Try some scores</button>' : "") + "</article>";
+      return h;
+    }
     if (!sc.remaining) return '<article class="card soft"><div class="label">What do we need?</div><p>No pool games left for ' + esc(t.team) + ". Your pool seed is the one shown above.</p></article>";
     return '<article class="card"><div class="label">What do we need? <span class="est">Estimate</span></div><ul class="scen">' +
       "<li><div><b>If we win out</b><small>" + C.plural(sc.remaining, "game") + " left, all wins</small></div><span>" + esc(seedText(sc.win.best, sc.win.worst)) + "</span></li>" +
       "<li><div><b>If we lose out</b><small>all " + C.plural(sc.remaining, "game") + " lost</small></div><span>" + esc(seedText(sc.lose.best, sc.lose.worst)) + "</span></li></ul>" +
-      '<p class="mute small">This is an estimate. It only changes our own remaining pool games and leaves every other result as it is now, so games in other pools or between other teams are not predicted. If it comes down to ' + C.sportInfo(t.sport).unit + ", the final scores can move the seed.</p></article>";
+      '<p class="mute small">This is an estimate. There are too many games left to check every result, so it only changes our own remaining pool games and leaves every other result as it is now. If it comes down to ' + C.sportInfo(t.sport).unit + ", the final scores can move the seed.</p>" +
+      '<button type="button" class="btn ghost small" data-act="whatif-open" data-fk="whatif">Try some scores</button></article>';
   }
   function tieCard(t, tie) {
     var h = '<article class="card tie"><div class="label">Tiebreaker for ' + (tie.from === tie.to ? ord(tie.from) : ord(tie.from) + " to " + ord(tie.to)) + "</div><h3>" + esc(C.joinNames(tie.teams)) + "</h3>" +

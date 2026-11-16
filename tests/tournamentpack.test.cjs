@@ -281,6 +281,42 @@ const ranks = (res) => res.rows.map(r => r.team + ':' + r.rank + (r.tied ? 't' :
     assert.ok(sc.win.best <= sc.win.worst); assert.ok(sc.lose.best <= sc.lose.worst); assert.ok(sc.win.best < sc.lose.best);
   });
 
+  await test('outlook: every result still to play, other teams included, with the bracket cut', async () => {
+    const t = C.sampleTournament(TODAY), cfg = Object.assign({}, t.rules, { sport: t.sport });
+    const o = C.outlook(t.games, cfg, 'Our Team', { cut: 4 });
+    eq(o.enumerated, true); eq(o.mine, 2); eq(o.cut, 4);
+    // win out: seed 1. Win one: 3-2, and other games can still push us to 4th. Lose out: 2-3, and if D beats C and E beats B,
+    // B, C, D, E and we are all .500 behind F, so we can fall to 6th: the old estimate (others frozen) said 4th.
+    deq(o.rows.map(r => [r.wins, r.of, r.best, r.worst, r.cut]), [[2, 2, 1, 1, 'in'], [1, 2, 1, 4, 'in'], [0, 2, 4, 6, 'maybe']]);
+    deq(o.all, { best: 1, worst: 6, cut: 'maybe' });
+    eq(C.outlook(t.games, cfg, 'Our Team').rows[0].cut, null, 'no cut line: no In/Out');
+    eq(C.outlook(t.games, cfg, ''), null);
+  });
+
+  await test('outlook: clinched, eliminated, and too many games to check', async () => {
+    const won = C.outlook([P('A', 'B', 2, 0), P('A', 'C', 3, 1), P('B', 'C')], BASE, 'A', { cut: 1 });
+    deq([won.mine, won.theirs, won.rows.length, won.rows[0].of, won.all], [0, 1, 1, 0, { best: 1, worst: 1, cut: 'in' }], 'clinched with others still playing');
+    const lost = C.outlook([P('B', 'A', 2, 0), P('C', 'A', 3, 1), P('B', 'C')], BASE, 'A', { cut: 1 });
+    deq(lost.all, { best: 3, worst: 3, cut: 'out' }, 'can not reach the top 1');
+    // 8 teams, nothing played: 21 other games is far too many to check, so others stay as they are (unplayed)
+    const ts = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'], gs = [];
+    ts.forEach((x, i) => ts.slice(i + 1).forEach(y => gs.push(P(x, y))));
+    const t0 = Date.now(), big = C.outlook(gs, BASE, 'A', { cut: 4 });
+    assert.ok(Date.now() - t0 < 1500, 'took ' + (Date.now() - t0));
+    deq([big.enumerated, big.mine, big.theirs, big.rows.length], [false, 7, 21, 8]);
+    deq([big.rows[0].best, big.rows[0].worst], [1, 1], 'win all 7: first');
+  });
+
+  await test('whatIf: typed scores for unplayed pool games move the standings, nothing else', async () => {
+    const g1 = P('A', 'B', 1, 0), g2 = P('A', 'C'), g3 = P('B', 'C');
+    const r = C.whatIf([g1, g2, g3], BASE, { [g2.id]: { sa: 0, sb: 2 }, [g1.id]: { sa: 0, sb: 9 }, [g3.id]: { sa: 'x', sb: 2 } });
+    eq(r.used, 1, 'only the unplayed game with a real score counts');
+    const row = k => r.rows.filter(x => x.key === C.teamKey(k))[0];
+    deq([row('A').w, row('A').l, row('C').w, row('C').rank], [1, 1, 1, 1]);
+    eq(C.whatIf([g1, g2], BASE, null).used, 0);
+    eq(g2.status, 'scheduled', 'the real games are not changed');
+  });
+
   /* ---------- bracket ---------- */
   const T = (size, seeds) => C.sanitizeTournament({ id: 'brt1', name: 'T', sport: 'baseball', start: '2026-11-07', end: '2026-11-08', team: 'C', games: [], bracket: { size, seeds }, pack: [] });
   const BG = (slot, a, b, sa, sb, extra) => Object.assign({ id: 'b' + slot, kind: 'bracket', slot, date: '2026-11-08', time: '', field: '', label: '', a: a || '', b: b || '', status: sa == null ? 'scheduled' : 'final', sa: sa == null ? null : sa, sb: sb == null ? null : sb, innings: null, forfeit: '' }, extra || {});
