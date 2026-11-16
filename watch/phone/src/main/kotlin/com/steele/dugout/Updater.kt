@@ -1,55 +1,38 @@
 package com.steele.dugout
 
-import android.app.Activity
 import android.app.AlertDialog
-import android.app.PendingIntent
+import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.Intent
-import android.content.pm.PackageInstaller
 import android.net.Uri
-import android.os.Build
 import android.provider.Settings
 import android.widget.Toast
+import androidx.core.content.FileProvider
 import androidx.lifecycle.lifecycleScope
 import com.steele.dugout.shared.Updates
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
+import java.io.File
 import java.net.HttpURLConnection
 import java.net.URL
 
 /**
  * Keeps Dugout up to date: when the app opens (at most every half hour) it asks GitHub for the newest Dugout release,
- * offers it in a pop-up, downloads it and hands it to Android's installer, which shows its own "Update this app?" screen.
- * Android only installs it over this copy if it is signed with the same key, so nothing else can slip in this way.
+ * offers it in a pop-up, downloads it and opens it in Android's own installer, which asks "Do you want to update this
+ * app?". Android only installs it over this copy if it is signed with the same key, so nothing else can slip in this way.
+ *
+ * The installer is opened straight from Dugout's own screen. (Builds up to 40 committed an install session and waited
+ * for Android to call back; on Android 15 that call-back was held until Dugout left the screen, and the update looped.)
  */
 class Updater(private val a: MainActivity) {
     companion object {
         private const val PREFS = "updates"
         private const val EVERY_MS = 30L * 60 * 1000 // a new build shows up within half an hour of opening the app
         private const val MAX_BYTES = 200L * 1024 * 1024
-
-        /** the result of an install, from [UpdateStatusActivity] */
-        fun onStatus(act: Activity, i: Intent) {
-            when (i.getIntExtra(PackageInstaller.EXTRA_STATUS, Int.MIN_VALUE)) {
-                PackageInstaller.STATUS_PENDING_USER_ACTION -> {
-                    val confirm: Intent? = if (Build.VERSION.SDK_INT >= 33) i.getParcelableExtra(Intent.EXTRA_INTENT, Intent::class.java)
-                    else @Suppress("DEPRECATION") i.getParcelableExtra(Intent.EXTRA_INTENT)
-                    if (confirm != null) try { act.startActivity(confirm) } catch (e: Exception) { toast(act, "Couldn't open the installer.") }
-                }
-                PackageInstaller.STATUS_SUCCESS -> Unit // Android restarts Dugout on the new version
-                PackageInstaller.STATUS_FAILURE_ABORTED -> {
-                    act.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putLong("last", 0).apply()
-                    toast(act, "Update cancelled. Dugout will offer it again next time.")
-                }
-                PackageInstaller.STATUS_FAILURE_CONFLICT, PackageInstaller.STATUS_FAILURE_INCOMPATIBLE ->
-                    toast(act, "This copy of Dugout came from an older build, so it can't update itself. Uninstall it and install the newest Dugout once.")
-                else -> toast(act, "The update didn't install. " + (i.getStringExtra(PackageInstaller.EXTRA_STATUS_MESSAGE) ?: ""))
-            }
-        }
-
-        private fun toast(c: Context, s: String) = Toast.makeText(c, s.trim(), Toast.LENGTH_LONG).show()
+        const val AUTHORITY_SUFFIX = ".updates" // the FileProvider in AndroidManifest.xml
+        private const val APK_MIME = "application/vnd.android.package-archive"
     }
 
     private val prefs = a.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
@@ -74,14 +57,14 @@ class Updater(private val a: MainActivity) {
                 prefs.edit().putLong("last", now).apply()
                 Updates.newest(list, BuildConfig.VERSION_CODE)
             } catch (e: Exception) {
-                if (tell) toast(a, "Couldn't check for updates. Check the connection and try again.")
+                if (tell) toast("Couldn't check for updates. Check the connection and try again.")
                 busy = false
                 return@launch
             }
             busy = false
             when {
                 rel != null -> offer(rel)
-                tell -> toast(a, "Dugout is up to date (version ${BuildConfig.VERSION_CODE}).")
+                tell -> toast("Dugout is up to date (version ${BuildConfig.VERSION_CODE}).")
             }
         }
     }
@@ -104,7 +87,7 @@ class Updater(private val a: MainActivity) {
             .setPositiveButton("Continue") { _, _ ->
                 pending = rel
                 try { a.startActivity(Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES, Uri.parse("package:" + a.packageName))) }
-                catch (e: Exception) { pending = null; toast(a, "Couldn't open that setting.") }
+                catch (e: Exception) { pending = null; toast("Couldn't open that setting.") }
             }
             .setNegativeButton("Not now", null)
             .show()
@@ -114,56 +97,64 @@ class Updater(private val a: MainActivity) {
         busy = true
         val dlg = AlertDialog.Builder(a).setTitle("Updating Dugout").setMessage("Downloading…").setCancelable(false).show()
         a.lifecycleScope.launch {
-            val err = withContext(Dispatchers.IO) {
-                try { install(rel) { pct -> a.runOnUiThread { dlg.setMessage("Downloading… $pct%") } }; null } catch (e: Exception) { e }
+            val result = withContext(Dispatchers.IO) {
+                try { Result.success(fetch(rel) { pct -> a.runOnUiThread { dlg.setMessage("Downloading… $pct%") } }) }
+                catch (e: Exception) { Result.failure(e) }
             }
             busy = false
             dlg.dismiss()
-            if (err != null) toast(a, "The update didn't download. Try again later.")
+            val apk = result.getOrNull()
+            when {
+                apk == null -> toast("The update didn't download. Try again later.")
+                !a.isFinishing -> openInstaller(apk)
+            }
         }
     }
 
-    /** streams the APK into an install session and commits it; Android then asks to confirm */
-    private fun install(rel: Updates.Release, progress: (Int) -> Unit) {
+    /** downloads the release's APK into Dugout's cache and checks it is this app at that version */
+    private fun fetch(rel: Updates.Release, progress: (Int) -> Unit): File {
+        val dir = File(a.cacheDir, "updates").apply { mkdirs() }
+        dir.listFiles()?.forEach { it.delete() } // an older download
+        val file = File(dir, "dugout-${rel.version}.apk")
         val conn = open(rel.apkUrl)
         try {
             if (conn.responseCode != 200) throw IllegalStateException("HTTP " + conn.responseCode)
             val len = conn.contentLengthLong
             if (len > MAX_BYTES) throw IllegalStateException("too big")
-            val pi = a.packageManager.packageInstaller
-            val params = PackageInstaller.SessionParams(PackageInstaller.SessionParams.MODE_FULL_INSTALL).apply {
-                setAppPackageName(a.packageName)
-                if (len > 0) setSize(len)
-            }
-            val id = pi.createSession(params)
-            val session = pi.openSession(id)
-            try {
-                conn.inputStream.use { input ->
-                    session.openWrite("dugout.apk", 0, if (len > 0) len else -1).use { out ->
-                        val buf = ByteArray(64 * 1024)
-                        var total = 0L
-                        var shown = -1
-                        while (true) {
-                            val n = input.read(buf)
-                            if (n < 0) break
-                            total += n
-                            if (total > MAX_BYTES) throw IllegalStateException("too big")
-                            out.write(buf, 0, n)
-                            if (len > 0) { val pct = (total * 100 / len).toInt(); if (pct != shown) { shown = pct; progress(pct) } }
-                        }
-                        session.fsync(out)
+            conn.inputStream.use { input ->
+                file.outputStream().use { out ->
+                    val buf = ByteArray(64 * 1024)
+                    var total = 0L
+                    var shown = -1
+                    while (true) {
+                        val n = input.read(buf)
+                        if (n < 0) break
+                        total += n
+                        if (total > MAX_BYTES) throw IllegalStateException("too big")
+                        out.write(buf, 0, n)
+                        if (len > 0) { val pct = (total * 100 / len).toInt(); if (pct != shown) { shown = pct; progress(pct) } }
                     }
+                    if (len > 0 && total != len) throw IllegalStateException("short download")
                 }
-                val target = Intent(a, UpdateStatusActivity::class.java)
-                val flags = PendingIntent.FLAG_UPDATE_CURRENT or (if (Build.VERSION.SDK_INT >= 31) PendingIntent.FLAG_MUTABLE else 0)
-                session.commit(PendingIntent.getActivity(a, id, target, flags).intentSender)
-                session.close()
-            } catch (e: Exception) {
-                session.abandon()
-                throw e
             }
+        } catch (e: Exception) {
+            file.delete(); throw e
         } finally { conn.disconnect() }
+        @Suppress("DEPRECATION")
+        val info = a.packageManager.getPackageArchiveInfo(file.path, 0)
+        val code = info?.longVersionCode ?: -1L
+        if (info?.packageName != a.packageName || code != rel.version.toLong()) { file.delete(); throw IllegalStateException("not this app") }
+        return file
     }
+
+    /** opens Android's installer on the downloaded APK, from Dugout's own screen */
+    private fun openInstaller(apk: File) {
+        val uri = FileProvider.getUriForFile(a, a.packageName + AUTHORITY_SUFFIX, apk)
+        val i = Intent(Intent.ACTION_VIEW).setDataAndType(uri, APK_MIME).addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        try { a.startActivity(i) } catch (e: ActivityNotFoundException) { toast("Couldn't open Android's installer.") }
+    }
+
+    private fun toast(s: String) = Toast.makeText(a, s, Toast.LENGTH_LONG).show()
 
     private fun open(url: String): HttpURLConnection {
         val c = URL(url).openConnection() as HttpURLConnection

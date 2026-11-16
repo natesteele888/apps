@@ -1,7 +1,8 @@
 name: Dugout phone screen check
 # Runs the Dugout phone app on Android 15 and Android 16 emulators and checks that its top bar sits below the status bar
 # and the page ends above the navigation bar (watch/phone/src/androidTest). Each run also prints a small screenshot of
-# the app to the log, between "SCREENSHOT BEGIN" and "SCREENSHOT END", as base64 PNG.
+# the app to the log, between "SCREENSHOT BEGIN" and "SCREENSHOT END", as base64 PNG. With the Dugout signing key, it
+# also installs a build numbered 1 and checks that Dugout's own updater installs the newest published release over it.
 on:
   push:
     paths:
@@ -34,8 +35,30 @@ jobs:
           distribution: temurin
           java-version: "17"
       - uses: gradle/actions/setup-gradle@v4
+      - name: Unpack the Dugout signing key
+        id: key
+        env:
+          KEY: ${{ secrets.DUGOUT_KEY }}
+        run: |
+          if [ -n "$KEY" ]; then
+            echo "$KEY" | base64 -d > "$RUNNER_TEMP/dugout.p12"
+            echo "DUGOUT_KEYSTORE=$RUNNER_TEMP/dugout.p12" >> "$GITHUB_ENV"
+            echo "signed=1" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Build an old copy for the update check
+        if: steps.key.outputs.signed == '1'
+        working-directory: watch
+        env:
+          DUGOUT_VERSION: "1"
+          DUGOUT_KEY_PASSWORD: ${{ secrets.DUGOUT_KEY_PASSWORD }}
+        run: |
+          ./gradlew --no-daemon :phone:assembleDebug
+          cp phone/build/outputs/apk/debug/phone-debug.apk "$RUNNER_TEMP/old.apk"
       - name: Build the app and its screen test
         working-directory: watch
+        env:
+          DUGOUT_VERSION: "999999"
+          DUGOUT_KEY_PASSWORD: ${{ secrets.DUGOUT_KEY_PASSWORD }}
         run: ./gradlew --no-daemon :phone:assembleDebug :phone:assembleDebugAndroidTest
       - name: Run on the emulator
         uses: reactivecircus/android-emulator-runner@v2
@@ -46,4 +69,6 @@ jobs:
           profile: pixel_7
           disable-animations: true
           emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim
-          script: bash watch/phone/screen-check.sh
+          script: |
+            bash watch/phone/screen-check.sh
+            if [ -f "$RUNNER_TEMP/old.apk" ]; then bash watch/phone/update-check.sh "$RUNNER_TEMP/old.apk"; fi
