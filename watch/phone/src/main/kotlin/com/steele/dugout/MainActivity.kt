@@ -48,6 +48,8 @@ class MainActivity : ComponentActivity() {
         const val WALKUP = "https://natesteele888.github.io/apps/walkup/"
         const val BALLCLUB = "https://natesteele888.github.io/lybs-ballclub/"
         const val EXTRA_OPEN = "open"
+        /** marks the top bar, so the on-screen test can find it */
+        const val TOP_BAR_TAG = "dugout-top-bar"
 
         /** the newest state the page sent, for the Watch settings screen */
         @Volatile var lastState: String? = null
@@ -198,6 +200,7 @@ class MainActivity : ComponentActivity() {
         val b = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL
             setBackgroundColor(Color.parseColor("#111A2E")); setPadding(dp(12), dp(4), dp(6), dp(4))
+            tag = TOP_BAR_TAG
         }
         speakerText = TextView(this).apply { textSize = 14f; setTextColor(Color.WHITE); maxLines = 1 }
         b.addView(speakerText, LinearLayout.LayoutParams(0, WRAP_CONTENT, 1f))

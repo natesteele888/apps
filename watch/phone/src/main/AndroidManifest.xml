@@ -27,12 +27,14 @@
             </intent-filter>
         </activity>
         <activity android:name=".LeagueActivity" android:exported="false" android:label="MAC League" />
-        <activity
-            android:name=".UpdateStatusActivity"
+        <!-- hands a downloaded update to Android's installer (Updater.kt) -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.updates"
             android:exported="false"
-            android:theme="@android:style/Theme.Translucent.NoTitleBar"
-            android:excludeFromRecents="true"
-            android:noHistory="true" />
+            android:grantUriPermissions="true">
+            <meta-data android:name="android.support.FILE_PROVIDER_PATHS" android:resource="@xml/update_paths" />
+        </provider>
         <activity android:name=".WatchActivity" android:exported="false" android:label="@string/watch_title" />
         <service
             android:name=".KeepAliveService"

@@ -131,7 +131,7 @@ Both apps must be signed with the same key, because the watch only talks to a ph
 
 ## Updates
 
-- **Phone:** Dugout checks for a new version when it opens (at most every 6 hours) and asks **Update Dugout?** Tap **Update**, then **Update** on Android's own screen. The first time, Android asks you to allow Dugout to install apps. **Watch › Check for updates** looks right away.
+- **Phone:** Dugout checks for a new version when it opens (at most every half hour) and asks **Update Dugout?** Tap **Update**, then **Update** on Android's own screen. The first time, Android asks you to allow Dugout to install apps. **Watch › Check for updates** looks right away.
 - **Watch:** the watch app doesn't update itself. When a release changes the watch app, install its `dugout-watch.apk` with step 5 above (step 6 on an older watch).
 - Only main-branch builds that change the apps are published, as `dugout-v<number>` releases in this repo. A Walk-Up-only change needs no app update, because Dugout loads the live site.
 - **Switching over once:** a Dugout installed from an older build (signed with a throwaway debug key) can't update itself. Uninstall it, then install `dugout-phone.apk` from the newest `dugout-v…` release. Do the same for the watch.
