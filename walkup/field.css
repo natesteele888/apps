@@ -42,3 +42,15 @@ body.fm { --nav-h: 96px; }
 .fm-count-n { font: 700 min(40vh, 220px)/1 "Barlow Condensed", system-ui, sans-serif; color: var(--accent); }
 .fm-count-who { font: 700 40px/1.1 "Barlow Condensed", system-ui, sans-serif; }
 @media (max-width: 520px) { .fm-grid { grid-template-columns: 1fr 1fr; } .fm-name { font-size: 24px; } .fm-stop { min-width: 110px; } }
+/* changing the order at the tablet */
+.stack-h { display: inline-flex; gap: 8px; flex-wrap: wrap; }
+.fm-olist { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.fm-orow { display: flex; align-items: center; gap: 10px; min-height: 60px; padding: 6px 10px; border: 1px solid var(--line); border-radius: 14px; background: var(--panel); }
+.fm-orow.out { opacity: 0.55; }
+.fm-orow.drag { border-color: var(--accent); background: var(--panel2); }
+.fm-handle { touch-action: none; cursor: grab; font-size: 28px; line-height: 1; padding: 8px 10px; color: var(--mute); user-select: none; }
+.fm-opos { width: 28px; text-align: right; font: 700 22px/1 "Barlow Condensed", system-ui, sans-serif; color: var(--accent); }
+.fm-oname { flex: 1; min-width: 0; font: 700 22px/1.15 "Barlow Condensed", system-ui, sans-serif; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fm-orow .btn.small { min-height: 48px; min-width: 48px; }
+.fm-addnum { display: flex; gap: 10px; }
+.fm-addnum input { flex: 1; min-width: 0; min-height: 56px; padding: 10px 14px; border-radius: 12px; border: 1px solid var(--line2); background: var(--panel2); color: var(--text); font-size: 24px; }

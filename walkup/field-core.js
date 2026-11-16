@@ -197,6 +197,32 @@
     return { st: st, rep: rep, picked: picked, unmatched: unmatched };
   }
 
+  /* ---------- the order set at the tablet ---------- */
+  /* a row's lasting key: its Ballclub player id, else its name (a lineup slot for someone not on the roster) */
+  function rowKey(r) { return r && r.pid ? "p:" + r.pid : "n:" + norm(r && r.name); }
+  /* saved: {order: [keys], out: [keys]} from the tablet. Rows in the saved order, players marked not here left out, and
+     anyone new since (added to the roster) at the end, in the coach's order. */
+  function applyOrder(rows, saved) {
+    rows = arr(rows);
+    if (!isObj(saved)) return rows.slice();
+    var by = Object.create(null), out = Object.create(null), res = [];
+    rows.forEach(function (r) { by[rowKey(r)] = r; });
+    arr(saved.out).forEach(function (k) { out[k] = 1; });
+    arr(saved.order).forEach(function (k) { if (by[k] && !out[k]) { res.push(by[k]); delete by[k]; } });
+    rows.forEach(function (r) { var k = rowKey(r); if (by[k] && !out[k]) { res.push(r); delete by[k]; } });
+    return res;
+  }
+  /* jersey numbers typed at the tablet for the other town: "7, 12 #3" -> ["7", "12", "3"] */
+  function parseNums(text) {
+    return String(text == null ? "" : text).split(/[\s,;\/]+/).map(function (x) { return x.replace(/^#/, "").replace(/[^0-9]/g, "").slice(0, 3); })
+      .filter(Boolean).slice(0, 40);
+  }
+  /* the other town's batters: numbers only, announced "Now batting, number 7" */
+  function visitorRows(nums) {
+    return arr(nums).map(function (n) { return String(n).replace(/[^0-9]/g, "").slice(0, 3); }).filter(Boolean)
+      .map(function (n, i) { return { pid: "", vis: i, name: "", num: n }; });
+  }
+
   /* when a game's lineups should be loaded and kept fresh: from an hour before until it starts, then they hold still */
   function loadWindow(game, nowMin) {
     if (!game || game.time == null) return "open";
@@ -208,7 +234,8 @@
   var api = {
     FIELDS: FIELDS, PRELOAD_MIN: PRELOAD_MIN, arr: arr, norm: norm, deviceCode: deviceCode, parseTime: parseTime, fmtTime: fmtTime, ymd: ymd,
     minutesOf: minutesOf, homeFields: homeFields, fieldKey: fieldKey, atField: atField, isTeam: isTeam, gamesAt: gamesAt,
-    pickLineup: pickLineup, orderRows: orderRows, songMatch: songMatch, buildSide: buildSide, loadWindow: loadWindow
+    pickLineup: pickLineup, orderRows: orderRows, songMatch: songMatch, buildSide: buildSide, loadWindow: loadWindow,
+    rowKey: rowKey, applyOrder: applyOrder, parseNums: parseNums, visitorRows: visitorRows
   };
   root.FieldCore = api;
   if (typeof module !== "undefined" && module.exports) module.exports = api;

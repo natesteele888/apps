@@ -81,6 +81,17 @@ const INFO = { facilities: [{ name: 'Fitzgerald Field', town: 'Lunenburg', home:
     eq(F.loadWindow({ time: 18 * 60 }, 16 * 60), 'early'); eq(F.loadWindow({ time: 18 * 60 }, 17 * 60 + 30), 'open'); eq(F.loadWindow({ time: 18 * 60 }, 18 * 60 + 1), 'started');
   });
 
+  await test('Core: an order set at the tablet, players not here, and the other town by number', async () => {
+    const rows = [{ pid: 'a', name: 'Player A' }, { pid: 'b', name: 'Player B' }, { pid: '', name: 'Player C' }, { pid: 'd', name: 'Player D' }];
+    assert.deepStrictEqual(F.applyOrder(rows, { order: ['p:d', 'n:player c', 'p:a'], out: ['p:b'] }).map(r => r.name), ['Player D', 'Player C', 'Player A']);
+    assert.deepStrictEqual(F.applyOrder(rows.concat([{ pid: 'e', name: 'Player E' }]), { order: ['p:b', 'p:a'] }).map(r => r.pid), ['b', 'a', '', 'd', 'e'], 'new players go last');
+    eq(F.applyOrder(rows, null).length, 4);
+    assert.deepStrictEqual(F.parseNums('7, 12 #3/44 x 1234'), ['7', '12', '3', '44', '123']);
+    const v = F.buildSide(C, { side: 'b', rows: F.visitorRows(['7', '12']), songs: [], settings: C.emptyState().settings });
+    eq(v.st.roster.length, 2); eq(C.announceText(v.st.roster[0], 'pa'), 'Now batting. Number 7.');
+    assert.ok(v.st.roster.every(p => p.songId && p.voice));
+  });
+
   const srv = await startServer('walkup');
   const br = await chromium.launch({ executablePath: CHROME, args: ['--no-sandbox', '--autoplay-policy=no-user-gesture-required'] });
 
@@ -145,9 +156,10 @@ const INFO = { facilities: [{ name: 'Fitzgerald Field', town: 'Lunenburg', home:
   async function approvedGame(opts = {}) {
     const db = { data: league(), kiosks: { uidTablet1: { ok: true, code: 'X' } }, requests: {}, uid: 'uidTablet1', down: false, reads: [] };
     const o = await open({ ...opts, db });
-    await o.page.waitForSelector('[data-a=field][data-f="Fitzgerald Field"]');
-    await o.page.click('[data-a=field][data-f="Fitzgerald Field"]');
-    await o.page.waitForFunction(() => window.WU.field.S.day.teams['majors-blue'] && window.WU.field.S.day.teams['majors-blue'].at);
+    const field = opts.field || 'Fitzgerald Field', team = opts.team || 'majors-blue';
+    await o.page.waitForSelector(`[data-a=field][data-f="${field}"]`);
+    await o.page.click(`[data-a=field][data-f="${field}"]`);
+    await o.page.waitForFunction(t => window.WU.field.S.day.teams[t] && window.WU.field.S.day.teams[t].at, team);
     await o.page.click('.fm-game');
     await o.page.waitForSelector('.fm-tile');
     return o;
@@ -200,6 +212,51 @@ const INFO = { facilities: [{ name: 'Fitzgerald Field', town: 'Lunenburg', home:
     await page.click('[data-a=reload]');
     await page.waitForFunction(() => !window.WU.field.S.loading);
     assert.ok(db.reads.filter(r => r === 'teams/majors-black/lineups').length > n, 'Reload lineups fetches them');
+    assert.deepStrictEqual(errors, []); await ctx.close();
+  });
+
+  await test('Page: the order can be changed at the tablet, with a player marked not here, and it stays', async () => {
+    const { page, errors, ctx } = await approvedGame();
+    await page.click('[data-a=bat][data-k="1"]');
+    await page.click('[data-a=order]'); await page.waitForSelector('.fm-orow');
+    eq(await page.locator('.fm-orow').count(), 9);
+    assert.ok(/#9/.test(await page.textContent('.fm-orow >> nth=0')));
+    await page.click('.fm-orow >> nth=0 >> [data-a=o-down]');
+    assert.ok(/#8/.test(await page.textContent('.fm-orow >> nth=0')) && /#9/.test(await page.textContent('.fm-orow >> nth=1')));
+    await page.click('.fm-orow >> nth=2 >> [data-a=o-out]');
+    assert.ok(/not here/.test(await page.textContent('.fm-orow >> nth=8')), 'the missing player moves to the bottom');
+    // drag the last one in the order to the top by its handle
+    const h = await page.locator('.fm-orow >> nth=7 >> .fm-handle').boundingBox(), top = await page.locator('.fm-orow >> nth=0').boundingBox();
+    await page.mouse.move(h.x + h.width / 2, h.y + h.height / 2); await page.mouse.down();
+    await page.mouse.move(h.x + h.width / 2, top.y + top.height / 2, { steps: 12 }); await page.mouse.up();
+    assert.ok(/#1\b/.test(await page.textContent('.fm-orow >> nth=0')), 'dragged to the top');
+    await page.click('.fm-foot [data-a=order-done]'); await page.waitForSelector('.fm-tile');
+    eq(await page.locator('.fm-tile').count(), 8);
+    eq(await page.textContent('.fm-tile >> nth=0 >> .fm-num'), '#1'); eq(await page.textContent('.fm-tile >> nth=1 >> .fm-num'), '#8');
+    assert.ok(/Order set at this tablet/.test(await page.textContent('.fm-bar')));
+    await page.reload(); await page.waitForSelector('.fm-game'); await page.click('.fm-game'); await page.waitForSelector('.fm-tile');
+    await page.click('[data-a=bat][data-k="1"]');
+    eq(await page.locator('.fm-tile').count(), 8, 'kept after a reload');
+    await page.click('[data-a=order]'); await page.click('[data-a=o-reset]'); await page.click('.fm-foot [data-a=order-done]');
+    eq(await page.locator('.fm-tile').count(), 9, 'back to the coach\'s order');
+    assert.deepStrictEqual(errors, []); await ctx.close();
+  });
+
+  await test('Page: the other town is announced by the numbers typed at the tablet', async () => {
+    const { page, errors, ctx } = await approvedGame({ field: 'Powell Field', team: 'minors-black' });
+    eq(await page.evaluate(() => window.WU.field.S.bat), 1, 'starts on the Lunenburg team when the visitors have no lineup');
+    await page.click('[data-a=bat][data-k="0"]');
+    await page.click('.fm-main [data-a=order]'); await page.waitForSelector('#fmNums');
+    await page.fill('#fmNums', '7, 12 #3'); await page.press('#fmNums', 'Enter');
+    eq(await page.locator('.fm-orow').count(), 3);
+    await page.click('.fm-orow >> nth=1 >> [data-a=o-del]');
+    await page.click('.fm-foot [data-a=order-done]'); await page.waitForSelector('.fm-tile');
+    eq(await page.locator('.fm-tile').count(), 2);
+    assert.ok(/#7/.test(await page.textContent('.fm-tile >> nth=0')));
+    await page.click('.fm-tile >> nth=0'); await page.click('.fm-count');
+    await page.click('.fm-tile >> nth=1'); await page.waitForSelector('.fm-count', { state: 'detached', timeout: 5000 });
+    await page.waitForFunction(() => window.__tts.length > 0, null, { timeout: 8000 });
+    eq(await page.evaluate(() => window.__tts[0]), 'Now batting. Number 3.');
     assert.deepStrictEqual(errors, []); await ctx.close();
   });
 
