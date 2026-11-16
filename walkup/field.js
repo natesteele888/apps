@@ -348,7 +348,7 @@
         if (!ok) { S.view = "gate"; render(); return; }
         S.view = S.set.field || S.set.fieldChosen ? "today" : "settings";
         render();
-        sync(false);
+        if (S.view === "today") sync(false); // a new tablet loads once its field is picked
         if (!timer) timer = setInterval(function () { if (S.approved && !document.hidden) sync(false); }, CFG.refreshMs);
       }, function () {
         /* no signal: a tablet that was let in before still plays what it saved for today */
