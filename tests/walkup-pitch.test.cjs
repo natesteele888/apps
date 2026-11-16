@@ -123,6 +123,18 @@ const FAKE_NATIVE = () => {
     eq(await page.evaluate(() => !!window.WalkupApp.eng.playing()), true, 'still playing');
     await page.evaluate(() => window.__wuCmd(JSON.stringify({ cmd: 'stop' })));
     await page.waitForFunction(() => !window.WalkupApp.eng.playing());
+    // the bench goes to the watch, and the watch can swap a bench player into a batting spot
+    await page.evaluate(() => { const S = window.WalkupApp.S; S.st.lineup = S.st.lineup.slice(0, 8); window.WU.commit('data'); });
+    await page.waitForFunction(() => { const s = window.__sent.state[window.__sent.state.length - 1]; return s.lineup.length === 8 && s.bench && s.bench.length === 1; });
+    const st2 = await page.evaluate(() => window.__sent.state[window.__sent.state.length - 1]);
+    const outId = st2.lineup[3].id, inId = st2.bench[0].id;
+    await page.evaluate(([o, i]) => window.__wuCmd(JSON.stringify({ cmd: 'swap', out: o, in: i })), [outId, inId]);
+    eq(await page.evaluate(() => window.WalkupApp.S.st.lineup[3]), inId, 'bench player takes the 4th spot');
+    await page.waitForFunction(o => { const s = window.__sent.state[window.__sent.state.length - 1]; return s.bench.length === 1 && s.bench[0].id === o; }, outId);
+    // a stale swap (that player isn't in the order any more) changes nothing
+    const before = await page.evaluate(() => window.WalkupApp.S.st.lineup.join());
+    await page.evaluate(([o, i]) => window.__wuCmd(JSON.stringify({ cmd: 'swap', out: o, in: i })), [outId, inId]);
+    eq(await page.evaluate(() => window.WalkupApp.S.st.lineup.join()), before, 'stale swap ignored');
     // pitches merge in once, even with the pitching card hidden on the phone (the watch's Pitch Count app works alone)
     eq(await page.$('#ptCard'), null);
     await page.evaluate(() => window.WU.pitch.add());

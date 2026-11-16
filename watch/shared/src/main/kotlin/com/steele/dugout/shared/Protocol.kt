@@ -6,7 +6,7 @@ import org.json.JSONObject
 object Paths {
     /** phone to watch: who is up, the batting order, what is playing (a message) */
     const val STATE = "/walkup/state"
-    /** watch to phone: hello, select, play, stop (a message) */
+    /** watch to phone: hello, select, play, stop, swap (a message) */
     const val CMD = "/walkup/cmd"
     /** each side's pitch log (a synced data item; it waits and syncs later if the two are apart) */
     const val PITCH = "/pitch/log"
@@ -26,6 +26,8 @@ data class BatState(
     val ready: Boolean,
     val batter: Int,
     val lineup: List<Batter>,
+    /** everyone on the team who isn't in the batting order, to swap in from the watch */
+    val bench: List<Batter> = emptyList(),
     val playing: Playing?,
     val loading: String?,
     val error: String?,
@@ -43,14 +45,8 @@ fun JSONObject.str(key: String): String = if (isNull(key)) "" else optString(key
 object Proto {
     fun parseState(json: String, now: Long): BatState? = try {
         val o = JSONObject(json)
-        val arr = o.optJSONArray("lineup")
-        val lineup = ArrayList<Batter>()
-        if (arr != null) for (i in 0 until arr.length()) {
-            val b = arr.optJSONObject(i) ?: continue
-            val id = b.str("id")
-            if (!Paths.safeId(id)) continue
-            lineup.add(Batter(id, b.str("name").take(60), b.str("num").take(4), b.str("pos").take(6), b.optBoolean("ready"), b.str("code")))
-        }
+        val lineup = batters(o, "lineup")
+        val bench = batters(o, "bench").filter { b -> lineup.none { it.id == b.id } }
         val p = o.optJSONObject("playing")
         val playing = if (p == null) null else Playing(
             p.str("id").takeIf { Paths.safeId(it) }, p.str("label").take(80),
@@ -61,6 +57,7 @@ object Proto {
             ready = o.optBoolean("ready"),
             batter = o.optInt("batter", 0).coerceIn(0, maxOf(0, lineup.size - 1)),
             lineup = lineup,
+            bench = bench,
             playing = playing,
             loading = o.str("loading").takeIf { Paths.safeId(it) },
             error = err?.str("msg")?.take(120),
@@ -70,6 +67,24 @@ object Proto {
             receivedAt = now,
         )
     } catch (e: Exception) { null }
+
+    private fun batters(o: JSONObject, key: String): List<Batter> {
+        val arr = o.optJSONArray(key) ?: return emptyList()
+        val out = ArrayList<Batter>()
+        for (i in 0 until minOf(arr.length(), 60)) {
+            val b = arr.optJSONObject(i) ?: continue
+            val id = b.str("id")
+            if (!Paths.safeId(id) || out.any { it.id == id }) continue
+            out.add(Batter(id, b.str("name").take(60), b.str("num").take(4), b.str("pos").take(6), b.optBoolean("ready"), b.str("code")))
+        }
+        return out
+    }
+
+    /** the batting order goes round: after the last batter comes the leadoff batter again */
+    fun wrap(i: Int, n: Int): Int = if (n <= 0) 0 else ((i % n) + n) % n
+
+    /** swap bench player [inId] into [outId]'s spot in the batting order */
+    fun swap(outId: String, inId: String): String = cmd("swap", "out" to outId, "in" to inId)
 
     fun cmd(name: String, vararg extra: Pair<String, Any>): String {
         val o = JSONObject().put("cmd", name)

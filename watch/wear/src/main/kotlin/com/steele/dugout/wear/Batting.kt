@@ -1,5 +1,15 @@
 package com.steele.dugout.wear
 
+import androidx.wear.compose.foundation.lazy.items
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.runtime.key
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.Canvas
 import android.graphics.BitmapFactory
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.LinearEasing
@@ -55,8 +65,6 @@ import androidx.compose.ui.unit.sp
 import androidx.wear.compose.foundation.lazy.ScalingLazyColumn
 import androidx.wear.compose.foundation.lazy.itemsIndexed
 import androidx.wear.compose.foundation.lazy.rememberScalingLazyListState
-import androidx.wear.compose.material.Chip
-import androidx.wear.compose.material.ChipDefaults
 import androidx.wear.compose.material.CircularProgressIndicator
 import androidx.wear.compose.material.ListHeader
 import androidx.wear.compose.material.Text
@@ -68,8 +76,9 @@ import kotlin.math.abs
 
 /**
  * Batting: one screen per batter. Swipe left and right (or turn the bezel) to move; it never starts or stops music.
- * Press and hold Play until the ring fills to start the song. While it plays, the screen turns blue with a big Stop,
- * and swiping is off. Swipe up for the batting order.
+ * The order goes round: after the last batter comes the leadoff batter again.
+ * Press and hold anywhere on the face: a green ring fills around the edge, and the song starts when it closes.
+ * While it plays, the screen turns blue with a big Stop, and swiping is off. Swipe up for the batting order.
  */
 @Composable
 fun BattingScreen(onOrder: () -> Unit) {
@@ -88,37 +97,60 @@ fun BattingScreen(onOrder: () -> Unit) {
         return
     }
     if (st.busy) { PlayingScreen(st); return }
-    BatterPager(st, line, color, onOrder)
+    // a new pager when the order gets longer or shorter, so the pages still line up with the batters
+    key(st.lineup.size) { BatterPager(st, line, color, onOrder) }
 }
+
+/** how many times round the order the pager can go each way before it runs out (far more than any game) */
+private const val LAPS = 2000
+
+/** how long to hold before the song starts */
+private const val HOLD_MS = 1000
 
 @Composable
 private fun BatterPager(st: BatState, line: String, color: Color, onOrder: () -> Unit) {
     val ctx = LocalContext.current
     val lineup = st.lineup
-    val pager = rememberPagerState(initialPage = st.batter.coerceIn(0, lineup.size - 1)) { lineup.size }
+    val n = lineup.size
+    // The pager has many laps of the same order, and starts in the middle, so swiping past the last batter
+    // lands on the first one (and back past the first lands on the last).
+    val pages = if (n > 1) n * LAPS else 1
+    val pager = rememberPagerState(initialPage = if (n > 1) n * (LAPS / 2) + st.batter.coerceIn(0, n - 1) else 0) { pages }
+    fun idx(page: Int) = Proto.wrap(page, n)
     val cur by rememberUpdatedState(st)
     val scope = rememberCoroutineScope()
     val focus = remember { FocusRequester() }
-    var rotary = remember { mutableFloatStateOf(0f) }
-    var drag = remember { mutableFloatStateOf(0f) }
+    val rotary = remember { mutableFloatStateOf(0f) }
+    val drag = remember { mutableFloatStateOf(0f) }
+    val ring = remember { Animatable(0f) }
 
-    // the phone moved to another batter (a tap on the phone, or the next batter after a song)
-    LaunchedEffect(st.batter, lineup.size) {
-        if (st.batter in lineup.indices && pager.currentPage != st.batter && !pager.isScrollInProgress) pager.animateScrollToPage(st.batter)
+    // the phone moved to another batter (a tap on the phone, or a pick from the lineup): go the short way round
+    LaunchedEffect(st.batter, n) {
+        val here = idx(pager.currentPage)
+        if (st.batter in lineup.indices && here != st.batter && !pager.isScrollInProgress) {
+            var d = Proto.wrap(st.batter - here, n)
+            if (d > n / 2) d -= n
+            pager.animateScrollToPage((pager.currentPage + d).coerceIn(0, pages - 1))
+        }
     }
     // the watch moved: tell the phone who is up (never while a song plays; the phone ignores it then too)
     LaunchedEffect(pager.settledPage) {
-        val p = pager.settledPage
+        val p = idx(pager.settledPage)
         if (!cur.busy && p != cur.batter && p in cur.lineup.indices) PhoneLink.send(Proto.cmd("select", "index" to p))
     }
     LaunchedEffect(Unit) { focus.requestFocus() }
+
+    val b = lineup.getOrNull(idx(pager.currentPage))
+    val canPlay = b != null && b.ready && pager.currentPage == pager.settledPage
+    val playable by rememberUpdatedState(canPlay)
+    val batter by rememberUpdatedState(b)
 
     Box(
         Modifier.fillMaxSize()
             .onRotaryScrollEvent { e ->
                 rotary.floatValue += e.verticalScrollPixels
                 if (abs(rotary.floatValue) > 60f) {
-                    val to = (pager.currentPage + if (rotary.floatValue > 0) 1 else -1).coerceIn(0, lineup.size - 1)
+                    val to = (pager.currentPage + if (rotary.floatValue > 0) 1 else -1).coerceIn(0, pages - 1)
                     rotary.floatValue = 0f
                     scope.launch { pager.animateScrollToPage(to) }
                 }
@@ -127,23 +159,58 @@ private fun BatterPager(st: BatState, line: String, color: Color, onOrder: () ->
             .focusRequester(focus).focusable()
             .pointerInput(Unit) {
                 detectVerticalDragGestures(onDragEnd = { if (drag.floatValue < -50f) onOrder(); drag.floatValue = 0f }, onDragCancel = { drag.floatValue = 0f }) { _, dy -> drag.floatValue += dy }
+            }
+            // The whole face is the Play button. Letting go early, or starting a swipe, does nothing, so a brush can't start a song.
+            .pointerInput(Unit) {
+                detectTapGestures(onPress = {
+                    if (!playable) return@detectTapGestures
+                    val job = scope.launch {
+                        ring.snapTo(0f)
+                        ring.animateTo(1f, tween(HOLD_MS, easing = LinearEasing))
+                        val p = batter
+                        if (p != null && playable) { Buzz.started(ctx); PhoneLink.send(Proto.cmd("play", "id" to p.id)) }
+                    }
+                    tryAwaitRelease()
+                    job.cancel()
+                    scope.launch { ring.snapTo(0f) }
+                })
             },
     ) {
-        HorizontalPager(state = pager, modifier = Modifier.fillMaxSize()) { i -> BatterPage(lineup[i], i, lineup.size) }
-        Column(Modifier.align(Alignment.TopCenter).padding(top = 14.dp).clickable { onOrder() }, horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(line, color = color, fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(horizontal = 40.dp))
-            Text("≡ Order", color = Muted, fontSize = 11.sp)
+        HorizontalPager(state = pager, modifier = Modifier.fillMaxSize(), beyondViewportPageCount = 0) { page -> val i = idx(page); BatterPage(lineup[i], i, n) }
+        Text(
+            line, color = color, fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.align(Alignment.TopCenter).padding(top = 14.dp, start = 40.dp, end = 40.dp),
+        )
+        Column(Modifier.align(Alignment.BottomCenter).padding(bottom = 12.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+            Text(if (b != null && !b.ready) "No song to play" else "Hold to play", color = Muted, fontSize = 11.sp)
+            Text("︿ Lineup", color = Muted, fontSize = 11.sp)
         }
-        val b = lineup.getOrNull(pager.currentPage)
-        val canPlay = b != null && b.ready && pager.currentPage == pager.settledPage
-        HoldToPlay(
-            enabled = canPlay,
-            label = if (b != null && !b.ready) "No song" else "Hold\nto play",
-            modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 10.dp),
-        ) {
-            if (b != null) { Buzz.started(ctx); PhoneLink.send(Proto.cmd("play", "id" to b.id)) }
-        }
+        EdgeRing(ring.value)
     }
+}
+
+/** the green ring around the edge of the face that fills while Play is held, with a soft glow */
+@Composable
+private fun EdgeRing(progress: Float) {
+    if (progress <= 0f) return
+    Canvas(Modifier.fillMaxSize()) {
+        val w = 7.dp.toPx()
+        val glow = 18.dp.toPx()
+        val inset = glow / 2
+        val tl = Offset(inset, inset)
+        val sz = Size(size.width - glow, size.height - glow)
+        drawArc(Green.copy(alpha = 0.18f), 0f, 360f, false, tl, sz, style = Stroke(w))
+        drawArc(Green.copy(alpha = 0.35f * progress + 0.1f), -90f, 360f * progress, false, tl, sz, style = Stroke(glow, cap = StrokeCap.Round))
+        drawArc(Green, -90f, 360f * progress, false, tl, sz, style = Stroke(w, cap = StrokeCap.Round))
+    }
+}
+
+/** a name as big as fits: short names get the biggest letters */
+private fun nameSize(name: String) = when {
+    name.length <= 9 -> 34.sp
+    name.length <= 14 -> 30.sp
+    name.length <= 20 -> 26.sp
+    else -> 22.sp
 }
 
 @Composable
@@ -154,48 +221,20 @@ private fun BatterPage(b: Batter, i: Int, n: Int) {
         val f = PhoneLink.photoFile(ctx, b.id)
         if (f.exists()) try { BitmapFactory.decodeFile(f.path)?.asImageBitmap() } catch (e: Exception) { null } else null
     }
+    val name = b.name.ifBlank { "Batter ${i + 1}" }
+    val size = nameSize(name)
     Box(Modifier.fillMaxSize().background(Color.Black)) {
         if (photo != null) {
             Image(photo, contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize().alpha(0.55f))
             Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color(0x66000000), Color(0xCC000000)))))
         }
-        Column(Modifier.fillMaxSize().padding(horizontal = 22.dp), verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally) {
-            Spacer(Modifier.height(4.dp))
-            if (b.num.isNotEmpty()) Text("#" + b.num, fontSize = 50.sp, fontWeight = FontWeight.Black, color = Color.White)
-            Text(b.name.ifBlank { "Batter ${i + 1}" }, fontSize = 20.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center, maxLines = 2, overflow = TextOverflow.Ellipsis, color = Color.White)
-            Text(listOf(b.pos, "${i + 1} of $n").filter { it.isNotBlank() }.joinToString(" · "), fontSize = 12.sp, color = Muted)
-            if (!b.ready) Text(if (b.code == "needs-voice") "Needs the announcer" else "No song yet", fontSize = 12.sp, color = Yellow)
-            Spacer(Modifier.height(58.dp))
+        Column(Modifier.fillMaxSize().padding(horizontal = 20.dp), verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally) {
+            if (b.num.isNotEmpty()) Text("#" + b.num, fontSize = 44.sp, fontWeight = FontWeight.Black, color = Color.White, lineHeight = 46.sp)
+            Text(name, fontSize = size, lineHeight = size * 1.08f, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center, maxLines = 2, overflow = TextOverflow.Ellipsis, color = Color.White)
+            Spacer(Modifier.height(2.dp))
+            Text(listOf(b.pos, "${i + 1} of $n").filter { it.isNotBlank() }.joinToString(" · "), fontSize = 13.sp, color = Muted)
+            if (!b.ready) Text(if (b.code == "needs-voice") "Needs the announcer" else "No song yet", fontSize = 13.sp, color = Yellow)
         }
-    }
-}
-
-/** Press and hold until the ring fills (about a second). Letting go early does nothing, so a brush can't start a song. */
-@Composable
-fun HoldToPlay(enabled: Boolean, label: String, modifier: Modifier = Modifier, onPlay: () -> Unit) {
-    val ring = remember { Animatable(0f) }
-    val scope = rememberCoroutineScope()
-    val play by rememberUpdatedState(onPlay)
-    val on by rememberUpdatedState(enabled)
-    Box(
-        modifier.size(64.dp).clip(CircleShape).background(if (enabled) Green else Color(0xFF334155))
-            .pointerInput(Unit) {
-                detectTapGestures(onPress = {
-                    if (!on) return@detectTapGestures
-                    val job = scope.launch {
-                        ring.snapTo(0f)
-                        ring.animateTo(1f, tween(900, easing = LinearEasing))
-                        play()
-                    }
-                    tryAwaitRelease()
-                    job.cancel()
-                    scope.launch { ring.snapTo(0f) }
-                })
-            },
-        contentAlignment = Alignment.Center,
-    ) {
-        CircularProgressIndicator(progress = ring.value, modifier = Modifier.fillMaxSize(), indicatorColor = Color.White, trackColor = Color.Transparent, strokeWidth = 5.dp)
-        Text(label, fontSize = 11.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center, color = Color.White, lineHeight = 12.sp)
     }
 }
 
@@ -224,28 +263,80 @@ private fun PlayingScreen(st: BatState) {
     }
 }
 
-/** The batting order, to jump to the right batter. */
+/** The batting order: tap a batter to jump to them; press and hold one to swap in a bench player. */
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun OrderScreen(onDone: () -> Unit) {
+fun OrderScreen(onDone: () -> Unit, onSwap: (String) -> Unit) {
+    val ctx = LocalContext.current
     val st = PhoneLink.state.collectAsState().value
     val lineup = st?.lineup ?: emptyList()
     val busy = st?.busy == true
     val list = rememberScalingLazyListState(initialCenterItemIndex = (st?.batter ?: 0) + 1)
     ScalingLazyColumn(state = list, modifier = Modifier.fillMaxSize()) {
         item { ListHeader { Text("Batting order") } }
-        itemsIndexed(lineup) { i, b ->
-            Chip(
+        itemsIndexed(lineup, key = { _, b -> b.id }) { i, b ->
+            val up = st != null && i == st.batter
+            PlayerRow(
+                title = "${i + 1}. " + label(b),
+                sub = when { up -> "Up now"; !b.ready -> "No song yet"; else -> null },
+                subColor = if (!up && !b.ready) Yellow else Color.White.copy(alpha = 0.8f),
+                bg = if (up) Green else Color(0xFF1E293B),
                 onClick = { if (!busy && st != null && i != st.batter) PhoneLink.send(Proto.cmd("select", "index" to i)); onDone() },
-                modifier = Modifier.fillMaxWidth(),
-                label = { Text("${i + 1}. " + (if (b.num.isNotEmpty()) "#${b.num} " else "") + b.name, maxLines = 1, overflow = TextOverflow.Ellipsis) },
-                secondaryLabel = when {
-                    st != null && i == st.batter -> { { Text("Up now") } }
-                    !b.ready -> { { Text("No song yet", color = Yellow) } }
-                    else -> null
-                },
-                colors = if (st != null && i == st.batter) ChipDefaults.primaryChipColors() else ChipDefaults.secondaryChipColors(),
+                onLongClick = if (busy) null else ({ Buzz.tick(ctx); onSwap(b.id) }),
             )
         }
-        if (busy) item { Text("A song is playing. Stop it to change batters.", color = Muted, fontSize = 12.sp, textAlign = TextAlign.Center) }
+        item {
+            Text(
+                if (busy) "A song is playing. Stop it to change batters." else "Hold a batter to swap in a bench player.",
+                color = Muted, fontSize = 12.sp, textAlign = TextAlign.Center, modifier = Modifier.padding(top = 4.dp, start = 12.dp, end = 12.dp),
+            )
+        }
+    }
+}
+
+/** Pick a bench player to take [outId]'s spot in the batting order. The one coming out goes to the bench. */
+@Composable
+fun BenchScreen(outId: String, onDone: () -> Unit) {
+    val ctx = LocalContext.current
+    val st = PhoneLink.state.collectAsState().value
+    val out = st?.lineup?.firstOrNull { it.id == outId }
+    val bench = st?.bench ?: emptyList()
+    // the player left the order (a swap went through, or the phone changed it): back to the order
+    LaunchedEffect(out == null) { if (out == null) onDone() }
+    if (st == null || out == null) return
+    val spot = st.lineup.indexOf(out) + 1
+    val list = rememberScalingLazyListState(initialCenterItemIndex = 1)
+    ScalingLazyColumn(state = list, modifier = Modifier.fillMaxSize()) {
+        item { ListHeader { Text("Swap in for $spot. ${label(out)}", textAlign = TextAlign.Center, maxLines = 2, overflow = TextOverflow.Ellipsis) } }
+        if (bench.isEmpty()) item {
+            Text("Nobody is on the bench. Add players to the team in Walk-Up on your phone.", color = Muted, fontSize = 13.sp, textAlign = TextAlign.Center, modifier = Modifier.padding(horizontal = 12.dp))
+        }
+        items(bench, key = { it.id }) { b ->
+            PlayerRow(
+                title = label(b),
+                sub = if (!b.ready) "No song yet" else b.pos.ifBlank { null },
+                subColor = if (!b.ready) Yellow else Muted,
+                bg = Color(0xFF1E293B),
+                onClick = { if (!st.busy) { Buzz.tick(ctx); PhoneLink.send(Proto.swap(outId, b.id)); onDone() } },
+                onLongClick = null,
+            )
+        }
+        if (st.busy) item { Text("A song is playing. Stop it to swap.", color = Muted, fontSize = 12.sp, textAlign = TextAlign.Center) }
+    }
+}
+
+private fun label(b: Batter) = (if (b.num.isNotEmpty()) "#${b.num} " else "") + b.name.ifBlank { "Player" }
+
+/** one row in a list: a tap, and (where there's something to do) a press and hold */
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun PlayerRow(title: String, sub: String?, subColor: Color, bg: Color, onClick: () -> Unit, onLongClick: (() -> Unit)?) {
+    Column(
+        Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp)).background(bg)
+            .combinedClickable(onClick = onClick, onLongClick = onLongClick)
+            .padding(horizontal = 14.dp, vertical = 8.dp),
+    ) {
+        Text(title, color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        if (sub != null) Text(sub, color = subColor, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
     }
 }
