@@ -714,29 +714,43 @@ drill:["Open Read 20, let the timer run for a minute, close the app and reopen i
 q:{q:"Ballclub saves an approved song as title. The field tablet reads song. What happens?",o:["The tablet plays the song anyway","The tablet finds nothing, and there's no error","Firebase renames the field to match"],a:1,w:"The data saved fine, under a name the reader never asks for. No error, just nothing. That was the Walk-Up bug. Like the Gear guard in Stage 1: no error doesn't mean no problem."}},
 
 {phase:"Ship it",title:"Version control",
-idea:`<b>Git</b> takes snapshots of a folder called <b>commits</b>. A <b>repository</b> is the folder plus its history. <b>Push</b> sends your commits to GitHub; <b>GitHub Pages</b> turns a repo into a live website. Every commit is a point you can return to. That's why each waypoint on your Build Board should end with one.`,
-fig:()=>svg(300,id=>
-  B(20,40,140,72,"Your folder",["working copy"],"d-box")+A(id,162,76,208,76,"commit")+
-  B(210,40,140,72,"Local history",["snapshots"],"d-blue")+A(id,352,76,398,76,"push")+
-  B(400,40,140,72,"GitHub repo",["natesteele888/…"],"d-blue")+A(id,542,76,598,76,"Pages")+
-  B(600,40,140,72,"Live site",["github.io URL"],"d-good")+
-  `<line x1="40" y1="210" x2="720" y2="210" class="d-a"/>`+
-  [70,130,190,260,330,400,470,540,610,680].map((x,i)=>`<circle cx="${x}" cy="210" r="7" class="${[2,5,9].includes(i)?"d-mark":"d-box"}"/>`).join("")+
-  T(190,250,"Waypoint","d-t","middle")+T(190,268,"prototype works","d-s","middle")+
-  T(400,250,"Waypoint","d-t","middle")+T(400,268,"validator passes","d-s","middle")+
-  T(680,250,"Waypoint","d-t","middle")+T(680,268,"integrated","d-s","middle")+
-  T(40,180,"Each dot is a commit. Gold dots are safe stopping points.","d-lab")
+idea:`<b>Git</b> saves snapshots of a folder, called <b>commits</b>. A <b>repository</b> is the folder plus its whole history. <b>Main</b> is the copy your live apps come from, so nothing gets changed there directly. Each change goes on a <b>branch</b>, a side copy, and comes back through a <b>pull request</b> (PR), where checks run and you decide. <b>Merge</b> brings it into main, and main goes live. Two habits keep it safe: <b>pull</b> before you edit, because main keeps moving, and remember that <b>history keeps everything</b>, even what you delete later.`,
+fig:()=>svg(330,id=>
+  T(30,75,"main","d-t")+`<line x1="80" y1="70" x2="600" y2="70" class="d-a"/>`+
+  `<circle cx="110" cy="70" r="8" class="d-box"/><circle cx="200" cy="70" r="8" class="d-box"/><circle cx="330" cy="70" r="8" class="d-blue"/><circle cx="470" cy="70" r="9" class="d-mark"/>`+
+  T(330,48,"sync bot commit","d-lab","middle")+T(470,48,"merge","d-lab","middle")+
+  C(id,"M200,78 C 215,170 240,170 270,170 L 400,170 C 440,170 458,120 468,82","good")+
+  `<circle cx="300" cy="170" r="8" class="d-blue"/><circle cx="370" cy="170" r="8" class="d-blue"/>`+T(335,196,"your branch: 2 commits","d-lab","middle")+
+  A(id,600,70,628,70)+B(630,40,110,60,"Live site",["main goes live"],"d-good")+
+  B(230,222,190,62,"Pull request",["the checks run here"],"d-blue")+A(id,422,253,478,253)+
+  B(480,222,190,62,"You tap Merge",["from your phone"],"d-mark")+A(id,560,220,476,84,"","good")+
+  T(20,316,"Main kept moving while you worked. Pull before you edit, or your push gets turned away.","d-lab")
 ),
-cap:"Top: the path from your folder to a live site. Bottom: commits as a timeline, with waypoints as the commits where everything works.",
+cap:"How every change reaches your live apps: a branch, a pull request with its checks, then your tap on Merge. The App Store's sync bot keeps adding commits to main every 3 hours, so main never sits still.",
+fig2:()=>svg(260,id=>
+  T(190,24,"STEELE CARDS: DELETING ISN'T ERASING","d-lab","middle")+`<line x1="30" y1="80" x2="350" y2="80" class="d-a"/>`+
+  `<circle cx="60" cy="80" r="8" class="d-bad"/><circle cx="180" cy="80" r="8" class="d-box"/><circle cx="300" cy="80" r="8" class="d-box"/>`+
+  T(60,108,"photos in","d-lab","middle")+T(180,108,"photos removed","d-lab","middle")+T(300,108,"today","d-lab","middle")+
+  B(30,132,320,56,"An old branch",["still pointed at the photos"],"d-bad")+A(id,80,130,62,92,"","bad")+
+  B(30,204,320,44,"Fix: delete that branch",null,"d-good")+
+  T(570,24,"BALLCLUB: A REVERT IS A NEW COMMIT","d-lab","middle")+`<line x1="410" y1="80" x2="730" y2="80" class="d-a"/>`+
+  `<circle cx="440" cy="80" r="8" class="d-box"/><circle cx="560" cy="80" r="8" class="d-warn"/><circle cx="680" cy="80" r="8" class="d-good"/>`+
+  T(440,108,"gold accent","d-lab","middle")+T(560,108,"white and gray","d-lab","middle")+T(680,108,"Revert","d-lab","middle")+
+  C(id,"M676,70 C 640,40 480,40 446,68","good")+
+  B(410,140,320,64,"Same day, one step back",["the gold returns, and history","shows both steps"],"d-good")
+),
+cap2:"Left: why an old branch had to go before card photos were really out of the Steele Cards repo. Right: the Ballclub palette change on Oct 24 and the revert that undid it the same day.",
 builds:[
- {p:"Bengals football apps",t:"You commit and push with GitHub Desktop, and Claude writes the commit summary for you to paste.",l:"Good commit messages are notes to future you."},
- {p:"Leaving home mid-session",t:"From your phone, Claude checked the GitHub commit list and confirmed the push had landed. The full change is visible at the commit's URL.",l:"A pushed commit is safe even if your laptop isn't with you.",u:CH("62794f61-375b-4bad-96d8-94b4c5da16b3")},
- {p:"Party RSVP",t:"The site didn't load until GitHub Pages was switched on in the repo settings.",l:"Repo and website are separate switches.",u:CH("2366e2c0-38c5-4b4e-b4fc-09b1199df12f")},
- {p:"Meeting Secretary",t:"Reference builds with real board member names were kept out of the repo with <code>.gitignore</code>.",l:"Decide what never goes into history. Removing it later is hard."}
+ {p:"Every PR you merge",t:"Claude works on a branch and opens a pull request that shows exactly what changed. You read it and tap Merge on your phone. PR 134, the field tablet's walk-up songs, went live that way today.",l:"Main is the live copy. Nothing reaches it without a PR and your tap."},
+ {p:"App Store sync",t:"A robot commits to the apps repo every 3 hours, copying Toolbox icon and listing changes into the catalog. Main moves even when nobody is working, so a branch made this morning is already behind.",l:"Pull before you edit. Working in a copy that's behind is how pushes get turned away and conflicts start."},
+ {p:"Checks on a PR",t:"Every apps PR runs its browser tests as checks, about 36 of them, before you merge. On your private repos, checks use your monthly Actions minutes, which ran out on Nov 16, so changes there now get bundled into fewer pushes.",l:"Every push starts a check run. Bundle small changes into one PR."},
+ {p:"Steele Cards",t:"Card photos were removed from the files, but an old branch still pointed at commits that held them, so they could still be dug out of history. A one-time cleanup deleted that branch.",l:"Git remembers everything. Keep private data out from the very first commit."},
+ {p:"LYBS Reporting",t:"Raw exports go in <code>raw_data/</code>, which is listed in <code>.gitignore</code>, so Git never even sees them. Only scrubbed rows get committed.",l:"Decide what never enters history before you start."},
+ {p:"Ballclub",t:"On Oct 24 a change swapped the mustard gold accent for a white and gray palette. It was reverted the same day: a new commit that undoes the old one, so the gold came back and the history shows both steps.",l:"A revert is the safe undo. It adds a step instead of erasing one."}
 ],
-terms:[["repository (repo)","A project folder plus its full history."],["commit","A saved snapshot with a message."],["diff","The red and green view of what changed."],["push / pull","Send commits to GitHub / bring them down."],["branch","A side copy to try something without touching main."],["GitHub Pages","Free hosting that serves a repo as a website."],[".gitignore","A list of files Git should never track."],["revert","Undo a commit by adding one that reverses it."]],
-drill:["Open <a href=\"https://github.com/natesteele888/ASL-Bengals/commits\" target=\"_blank\" rel=\"noopener\">your ASL-Bengals commit list</a>.","Click any commit and read the diff: red lines removed, green added.","Next build, ask Claude to stop at each waypoint so you commit there."],
-q:{q:"When is the safest moment to stop working for the night?",o:["Mid-feature, as long as you save the file","Right after a commit where everything works","Whenever the chat gets long"],a:1,w:"A commit at a working state is a guaranteed place to resume or roll back to."}},
+terms:[["repository (repo)","A project folder plus its full history."],["commit","A saved snapshot with a message."],["main","The branch your live app is built from."],["branch","A side copy to work in without touching main."],["pull request (PR)","A request to merge a branch, with its changes and checks on one page."],["merge","Bringing a branch's commits into main."],["push / pull","Send commits up to GitHub / bring new ones down."],["merge conflict","Two changes to the same lines. A person has to pick."],[".gitignore","Files Git should never track, like raw exports."],["revert","Undo a commit by adding one that reverses it."]],
+drill:["Open <a href=\"https://github.com/natesteele888/apps/pull/134\" target=\"_blank\" rel=\"noopener\">PR 134</a> and tap Files changed. Red lines were removed and green lines added. That's a diff.","Open <a href=\"https://github.com/natesteele888/apps/commits/main\" target=\"_blank\" rel=\"noopener\">the apps commit list</a> and find a “Sync the App Store” commit. That's the robot moving main while you sleep.","Next PR you merge, ask Claude: “Draw this PR as a branch diagram: where it left main, its commits, and where it merges back.”"],
+q:{q:"A commit puts a phone number in a public repo. You delete the line and commit again. Is it gone?",o:["Yes, the new commit removed it","No, the earlier commit still has it in history","Yes, if you revert the first commit"],a:1,w:"Deleting it from the files, or reverting, leaves it in the earlier commit. It has to be cut out of history too, like the Steele Cards cleanup. Easier to keep it out from the start."}},
 
 {phase:"Ship it",title:"Hosting and caching",
 idea:`<b>Hosting</b> means a server hands your files to browsers. GitHub Pages is <b>static hosting</b>: it just serves files. <b>Deploying</b> publishes a new version. To be fast, browsers and <b>service workers</b> keep <b>cached</b> copies, so a phone can keep showing an old version after you've shipped a new one. When a device behaves differently, suspect a stale copy first.`,
