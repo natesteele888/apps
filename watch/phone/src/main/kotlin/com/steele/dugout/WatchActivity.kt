@@ -84,6 +84,17 @@ class WatchActivity : ComponentActivity() {
         col.addView(button("Open LYBS Ballclub here") { done("ballclub") })
         col.addView(text("\nOfficial pitch counts are the ones on the MAC League website. Dugout opens it here, and remembers your team's page.", 14f, Color.parseColor("#94A3B8")))
         col.addView(button("Official counts (MAC League)") { startActivity(Intent(this, LeagueActivity::class.java)) })
+        col.addView(text("\nField tablet", 18f))
+        col.addView(text("For a tablet that stays at the field: it plays every Lunenburg team's walk-ups from the lineups coaches save in LYBS Select. Full screen, the screen stays on, and the app stays pinned so nobody leaves it by mistake. A board member lets the tablet in once.", 14f, Color.parseColor("#94A3B8")))
+        col.addView(button("Open Field mode") { FieldActivity.open(this) })
+        col.addView(button("Add Field mode to the home screen") {
+            android.widget.Toast.makeText(this, if (FieldActivity.addHomeIcon(this)) "Look for the Field mode icon on the home screen." else "This tablet's home screen can't add the icon. Open Field mode from here.", android.widget.Toast.LENGTH_LONG).show()
+        })
+        val pin = android.widget.CheckBox(this).apply {
+            text = "Keep Field mode pinned (to leave, hold Back and Overview)"; isChecked = FieldActivity.pinOn(this@WatchActivity); setTextColor(Color.WHITE)
+            setOnCheckedChangeListener { _, on -> FieldActivity.setPin(this@WatchActivity, on) }
+        }
+        col.addView(pin)
         col.addView(text("\nDugout version ${BuildConfig.VERSION_CODE}. Dugout checks for a new version when it opens.", 14f, Color.parseColor("#94A3B8")))
         col.addView(button("Check for updates") { done("update") })
         col.addView(button("Back to Walk-Up") { done("walkup") })

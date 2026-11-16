@@ -35,6 +35,14 @@
             android:grantUriPermissions="true">
             <meta-data android:name="android.support.FILE_PROVIDER_PATHS" android:resource="@xml/update_paths" />
         </provider>
+        <!-- the tablet at the field (FieldActivity.kt); exported so its home-screen icon can open it. It only ever shows Walk-Up's Field mode page. -->
+        <activity
+            android:name=".FieldActivity"
+            android:exported="true"
+            android:label="Field mode"
+            android:launchMode="singleTask"
+            android:taskAffinity="com.steele.dugout.field"
+            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboard|keyboardHidden|uiMode|density" />
         <activity android:name=".WatchActivity" android:exported="false" android:label="@string/watch_title" />
         <service
             android:name=".KeepAliveService"

@@ -6,8 +6,9 @@ import android.speech.tts.TextToSpeech
 import android.speech.tts.UtteranceProgressListener
 import org.json.JSONObject
 
-/** The announcer's computer voice: Android's own text-to-speech, standing in for the browser's (the web view has none). */
-class Tts(private val a: MainActivity) {
+/** The announcer's computer voice: Android's own text-to-speech, standing in for the browser's (the web view has none).
+ *  [runJs] runs a line of script in the page that asked (Walk-Up, or Field mode). */
+class Tts(private val a: android.app.Activity, private val runJs: (String) -> Unit) {
     private var ready = false
     private var failed = false
     private val waiting = ArrayList<Array<Any>>()
@@ -30,7 +31,7 @@ class Tts(private val a: MainActivity) {
         })
     }
 
-    private fun event(id: String, ev: String) { a.runJs("window.__wuTts&&window.__wuTts(" + JSONObject.quote(id) + "," + JSONObject.quote(ev) + ")") }
+    private fun event(id: String, ev: String) { runJs("window.__wuTts&&window.__wuTts(" + JSONObject.quote(id) + "," + JSONObject.quote(ev) + ")") }
 
     fun speak(id: String, text: String, rate: Double, vol: Double) = a.runOnUiThread {
         when {
