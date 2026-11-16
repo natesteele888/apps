@@ -3,7 +3,7 @@
 (function () {
   "use strict";
   const C = window.SPCore, X = window.SPExif, F = window.SPFigures, S = window.SPStore, L = window.L;
-  const VERSION = "1.2.0", APP_URL = "https://natesteele888.github.io/apps/photoblueprint/";
+  const VERSION = "1.3.0", APP_URL = "https://natesteele888.github.io/apps/photoblueprint/";
   const $ = (s, r) => (r || document).querySelector(s), $$ = (s, r) => Array.from((r || document).querySelectorAll(s));
   const view = $("#view"), nav = $("#nav"), feedEl = $("#feed"), toastEl = $("#toast");
   const esc = s => String(s == null ? "" : s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
@@ -79,6 +79,15 @@
       try { await S.cloud.publish(r, r.image); r.pending = false; r.published = true; r.uid = S.cloud.user.uid; await S.local.put(r); n++; } catch (e) {}
     }
     if (n) { state.mine = null; state.pub = null; toast(n === 1 ? "1 sheet published" : n + " sheets published"); if (/^#(map|sheets)?$/.test(location.hash || "#")) route(); }
+  }
+
+  // Sheets shared before 1.3.0 showed the photographer's name and exact pin to anyone. Once per session, when the owner is
+  // signed in, they move to the public feed without either (SPStore.cloud.movePublicShares). Nothing to do: it just runs.
+  let moved = false;
+  async function moveOldShares() {
+    if (moved || !S.cloud.user) return; moved = true;
+    try { const n = await S.cloud.movePublicShares(); if (n) { state.pub = null; toast(n === 1 ? "1 shared sheet now hides your name and exact spot" : n + " shared sheets now hide your name and exact spot", 4000); } }
+    catch (e) { moved = false; if (window.nateHealth) window.nateHealth.note("sync", "Share cleanup failed: " + (e && (e.code || e.message) || "unknown")); }
   }
 
   /* ---------- the picture: EXIF, resize, thumbnail ---------- */
@@ -220,6 +229,8 @@
       ["Support", s.support], ["Light", s.light], ["Filters", s.filters], ["Angle of view", fovDeg ? fovDeg + "°" : ""], ["Subject", s.distance ? C.fmtDistance(s.distance, state.units) + " away" : ""], ["Taken", C.fmtDate(s.taken)]].filter(x => x[1] != null && x[1] !== "");
     const camY = F.cameraY(s.posture), dim = `<svg viewBox="0 0 16 120" preserveAspectRatio="none" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="1" opacity=".7" vector-effect="non-scaling-stroke"><line x1="8" y1="${camY}" x2="8" y2="120"/><line x1="3" y1="${camY}" x2="13" y2="${camY}"/><line x1="3" y1="120" x2="13" y2="120"/><path d="M5 ${camY + 5} L8 ${camY} L11 ${camY + 5}"/><path d="M5 115 L8 120 L11 115"/></g></svg>`;
     const where = C.isLatLon(s.lat, s.lon);
+    // A sheet shared by someone else (the feed or a link) carries only the general area, not the spot: show a circle, no cone, no directions.
+    const approx = !!(s._approx || shared);
     view.innerHTML = `<a class="back" href="${shared ? "#map" : "#sheets"}">${ICONS.back} ${shared ? "Map" : "Sheets"}</a>
     <article class="sheet" aria-label="Shot sheet ${esc(C.sheetNo(s.id))}">
       <div class="photo" id="photo">${image || s.thumb ? `<img src="${image || s.thumb}" class="${image ? "" : "lo"}" alt="${esc(s.title)}">` : `<div class="noimg">${shared ? "The picture stays with its photographer.<br>This link carries the sheet." : "No picture"}</div>`}
@@ -239,11 +250,11 @@
         <div class="kv">${kv.length ? kv.map(x => `<span>${esc(x[0])}</span><span>${esc(x[1])}</span>`).join("") : `<span>Gear</span><span>Not noted</span>`}</div>
       </div>
       ${where ? `<div class="where"><div class="mini"><div class="map" id="mini" aria-label="Where the photographer stood"></div></div>
-        <div class="coords"><span>${esc(C.fmtCoord(s.lat, s.lon))}</span><span>${s.place ? esc(s.place) : ""}</span></div></div>` : ""}
+        <div class="coords">${approx ? `<span>Around ${esc(C.fmtArea(s.lat, s.lon))}</span><span>The exact spot stays with the photographer</span>` : `<span>${esc(C.fmtCoord(s.lat, s.lon))}</span><span>${s.place ? esc(s.place) : ""}</span>`}</div></div>` : ""}
       ${s.story ? `<div class="story"><h3>How I got the shot</h3>${s.story.split(/\n{2,}/).map(p => `<p>${esc(p).replace(/\n/g, "<br>")}</p>`).join("")}</div>` : ""}
       <div class="actions">
         ${s.ig ? `<a class="btn ig" href="${esc(s.ig)}" target="_blank" rel="noopener">${ICONS.ig} Instagram</a>` : ""}
-        ${where ? `<a class="btn" href="https://www.google.com/maps/dir/?api=1&destination=${s.lat},${s.lon}" target="_blank" rel="noopener">${ICONS.pin} Take me there</a>` : ""}
+        ${where && !approx ? `<a class="btn" href="https://www.google.com/maps/dir/?api=1&destination=${s.lat},${s.lon}" target="_blank" rel="noopener">${ICONS.pin} Take me there</a>` : ""}
         <button class="btn" id="share">${ICONS.share} Share</button>
         ${shared ? `<button class="btn pri" id="copy">Save a copy</button>` : ""}
         ${mine ? `<a class="btn" href="#edit/${esc(s.id)}">Edit</a><button class="btn danger" id="del">Delete</button>` : ""}
@@ -251,12 +262,18 @@
     </article>`;
     if (where) {
       const map = makeMap($("#mini"), { scrollWheelZoom: false, zoomControl: true });
-      map.setView([s.lat, s.lon], 15);
-      L.marker([s.lat, s.lon], { icon: pinIcon(mine ? "me" : ""), interactive: false }).addTo(map); addWedge(map, s, null, { stroke: true, fillOpacity: .22, length: 70 });
+      if (approx) {
+        // Frame the area first: a circle only joins the map once the map has a view.
+        map.fitBounds(L.latLng(s.lat, s.lon).toBounds(C.AREA_RADIUS * 2), { animate: false });
+        L.circle([s.lat, s.lon], { radius: C.AREA_RADIUS, color: accent(), weight: 1.2, opacity: .8, fillOpacity: .12, interactive: false, className: "area" }).addTo(map);
+      } else {
+        map.setView([s.lat, s.lon], 15);
+        L.marker([s.lat, s.lon], { icon: pinIcon(mine ? "me" : ""), interactive: false }).addTo(map); addWedge(map, s, null, { stroke: true, fillOpacity: .22, length: 70 });
+      }
       requestAnimationFrame(() => map.invalidateSize());
     }
     $("#share").onclick = () => share(s, mine);
-    if ($("#copy")) $("#copy").onclick = () => { state.draft = Object.assign(C.newSheet(), s, { id: C.newId(), uid: "", author: "", public: false, thumb: "" }); state.image = ""; state.fromShare = true; go("#new"); };
+    if ($("#copy")) $("#copy").onclick = () => { state.draft = Object.assign(C.newSheet(), s, { id: C.newId(), uid: "", author: "", public: false, thumb: "", _approx: undefined }); state.image = ""; state.fromShare = true; go("#new"); };
     if ($("#del")) $("#del").onclick = async function () {
       if (this.dataset.sure !== "1") { this.dataset.sure = "1"; this.textContent = "Really delete? Tap again"; setTimeout(() => { if (this.isConnected) { this.dataset.sure = ""; this.textContent = "Delete"; } }, 4000); return; }
       await S.local.del(s.id);
@@ -338,7 +355,7 @@
       </section>
       <section class="panel"><h2>6 · Share</h2>
         <div class="toggle"><div><b>Share with everyone</b><small id="pubhint"></small></div><button type="button" class="sw" id="pub" role="switch" aria-checked="${d.public ? "true" : "false"}" aria-label="Share with everyone"></button></div>
-        <div id="signinrow" hidden><p class="hint">Sharing needs a Google sign-in, so the sheet has an owner. Your name from Google appears on it.</p><button type="button" class="btn sm" id="signin">Sign in with Google</button></div>
+        <div id="signinrow" hidden><p class="hint">Sharing needs a Google sign-in, so the sheet has an owner. Your name isn't shown on it.</p><button type="button" class="btn sm" id="signin">Sign in with Google</button></div>
       </section>
       <ul class="errs" id="errs" hidden></ul>
       <div class="footer"><button type="submit" class="btn pri" id="save">${editing ? "Save sheet" : "Save sheet"}</button></div>
@@ -415,7 +432,7 @@
     const pub = $("#pub"), pubhint = $("#pubhint"), signinrow = $("#signinrow");
     function pubUI() {
       const u = S.cloud.user;
-      pubhint.textContent = d.public ? (u ? "Everyone can see this sheet and the photo on the map." : "Sign in below; it'll publish once you have.") : (editing && d._published ? "Turning this off takes it off the map for everyone." : "Off: the sheet stays on this phone" + (u ? " and in your account." : "."));
+      pubhint.textContent = d.public ? (u ? "Everyone can see this sheet and the photo, pinned to the general area. Your exact spot and your name stay private." : "Sign in below; it'll publish once you have.") : (editing && d._published ? "Turning this off takes it off the map for everyone." : "Off: the sheet stays on this phone" + (u ? " and in your account." : "."));
       signinrow.hidden = !(d.public && !u);
     }
     pub.onclick = () => { d.public = !d.public; pub.setAttribute("aria-checked", d.public ? "true" : "false"); pubUI(); if (d.public && !S.cloud.ready()) S.cloud.start().then(pubUI); };
@@ -454,7 +471,7 @@
     const u = S.cloud.user, st = S.cloud.status;
     view.innerHTML = `
     <section class="panel"><h2>Account</h2>
-      <div class="who" id="who">${u ? `${u.photo ? `<img src="${esc(u.photo)}" alt="" referrerpolicy="no-referrer">` : ""}<div><b>${esc(u.name || "Signed in")}</b><small>Sheets you share carry this name</small></div>` : `<div><b>Not signed in</b><small>${st === "loading" ? "Checking…" : "Sheets stay on this phone until you sign in"}</small></div>`}</div>
+      <div class="who" id="who">${u ? `${u.photo ? `<img src="${esc(u.photo)}" alt="" referrerpolicy="no-referrer">` : ""}<div><b>${esc(u.name || "Signed in")}</b><small>Only you see this. Shared sheets don't show your name</small></div>` : `<div><b>Not signed in</b><small>${st === "loading" ? "Checking…" : "Sheets stay on this phone until you sign in"}</small></div>`}</div>
       <div class="row" style="margin-top:12px">${u ? `<button class="btn" id="signout">Sign out</button><button class="btn" id="syncnow">Sync now</button>` : `<button class="btn pri" id="signin">Sign in with Google</button>`}</div>
       <p class="hint" style="margin-top:10px">Signing in keeps your sheets in your account across phones and lets you share them with everyone. Reading never needs it.</p>
     </section>
@@ -473,7 +490,7 @@
     <section class="panel about"><h2>About</h2>
       <p><b>Photo Blueprint</b> pins a photo to the spot it was taken from and draws the sheet of how: the stance, the gear, the exposure, the direction the camera faced, and the story behind it. A companion to your gallery, not a replacement.</p>
       <p>A photo's own notes (EXIF) fill the sheet in when the file has them; phones usually keep them, exports from social apps usually strip them. Only the resized picture is kept, never the original file.</p>
-      <p>What you share is public: anyone with the app can see a shared sheet, its picture and its pin. Think before pinning a home. Everything else stays on this phone${u ? " and in your account" : ""}.</p>
+      <p>What you share is public: anyone with the app can see a shared sheet, its picture and roughly where it was taken (the town, not the spot). Your name and the exact pin stay in your account. The picture itself can still show where you were, so think before sharing one of home. Everything else stays on this phone${u ? " and in your account" : ""}.</p>
       <p>Map by <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors.</p>
     </section>
     <p class="ver">Photo Blueprint ${VERSION}</p>`;
@@ -529,7 +546,7 @@
   const _set = S.cloud.onchange; void _set; void prevChange;
   const origDesc = Object.getOwnPropertyDescriptor(S.cloud, "onchange");
   let screenCb = origDesc && origDesc.value || (() => {});
-  Object.defineProperty(S.cloud, "onchange", { get: () => (st => { screenCb(st); if (st === "signedin") pushPending(); }), set: fn => { screenCb = fn; }, configurable: true });
+  Object.defineProperty(S.cloud, "onchange", { get: () => (st => { screenCb(st); if (st === "signedin") { pushPending(); moveOldShares(); } }), set: fn => { screenCb = fn; }, configurable: true });
   if (S.settings.get("cloud")) S.cloud.start();
   route();
   window.addEventListener("load", () => { if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {}); });

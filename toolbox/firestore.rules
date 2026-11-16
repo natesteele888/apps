@@ -1,5 +1,6 @@
 // Firestore rules for the nates-toolbox Firebase project (Toolbox, Gameday Picks, Read 20, Photo Blueprint, Get Ready, Catch Log).
-// Copy of the live rules from the Firebase console, saved 2026-11-06.
+// Copy of the live rules from the Firebase console, saved 2026-11-06. Photo Blueprint section changed 2026-11-15
+// (shared sheets lose the name and exact pin): paste this file into the console after that change merges.
 // OWNER_EMAIL stands in for Nate's sign-in email (this repo is public, so the
 // real address is not committed). Put the real address back before pasting
 // this into the console. Test: cd toolbox && npm install && npm test
@@ -63,32 +64,52 @@ service cloud.firestore {
       allow delete: if request.auth != null && request.auth.uid == uid;
     }
     // ---------- Photo Blueprint (apps/photoblueprint): photos pinned to where they were shot ----------
-    // sp_sheets: one photographer's own sheets (owner only, their cross-phone copy).
-    // sp_public: the sheets shared with everyone (anyone can read; only the owner writes, and the doc's uid must be theirs).
-    // sp_images: the resized picture for a sheet, as one data-URL string under 950 KB; readable when the sheet is public or by its owner.
+    // sp_sheets: one photographer's own sheets (owner only, their cross-phone copy: exact pin, place and name).
+    // sp_feed: the sheets shared with everyone. Anyone can read them, so they hold no name (author) and no typed place, and the
+    //   pin is rounded to a tenth of a degree (the town, not the spot). Only the owner writes, and the doc's uid must be theirs.
+    // sp_public: the old shared copy, which held the name and exact pin. Now readable only by its owner and never written
+    //   again; the app moves each one to sp_feed when its owner signs in (Photo Blueprint 1.3.0).
+    // sp_images: the resized picture for a sheet (re-drawn on a canvas, so no camera notes or GPS), one data-URL string
+    //   under 950 KB; readable when the sheet is public or by its owner.
+    // Deleting a document that isn't there is allowed (resource == null), so one batch can clear every copy of a sheet.
     function spOwnerOf(d) { return request.auth != null && d.uid == request.auth.uid; }
-    function spSheetOk(d) {
-      return d.keys().hasOnly(['id', 'uid', 'author', 'public', 'created', 'updated', 'title', 'story', 'lat', 'lon', 'heading', 'posture', 'height',
-          'camera', 'lens', 'focal', 'sensor', 'aperture', 'shutter', 'iso', 'ev', 'filters', 'support', 'light', 'taken', 'ig', 'thumb', 'w', 'h', 'place', 'distance'])
-        && d.uid is string && d.title is string && d.title.size() > 0 && d.title.size() <= 120
+    function spBaseOk(d) {
+      return d.uid is string && d.title is string && d.title.size() > 0 && d.title.size() <= 120
         && d.public is bool && d.created is number && d.updated is number
         && (!('story' in d) || (d.story is string && d.story.size() <= 6000))
         && (!('thumb' in d) || (d.thumb is string && d.thumb.size() <= 70000))
-        && (!('author' in d) || (d.author is string && d.author.size() <= 80))
         && (!('ig' in d) || (d.ig is string && d.ig.size() <= 300))
         && d.lat is number && d.lon is number && d.lat >= -90 && d.lat <= 90 && d.lon >= -180 && d.lon <= 180;
+    }
+    function spSheetOk(d) {
+      return d.keys().hasOnly(['id', 'uid', 'author', 'public', 'created', 'updated', 'title', 'story', 'lat', 'lon', 'heading', 'posture', 'height',
+          'camera', 'lens', 'focal', 'sensor', 'aperture', 'shutter', 'iso', 'ev', 'filters', 'support', 'light', 'taken', 'ig', 'thumb', 'w', 'h', 'place', 'distance'])
+        && spBaseOk(d)
+        && (!('author' in d) || (d.author is string && d.author.size() <= 80));
+    }
+    // A tenth of a degree: whole numbers pass, and so does anything that is already rounded to one decimal place.
+    function spArea(v) { return v is int || v == math.round(v * 10) / 10.0; }
+    function spFeedOk(d) {
+      return d.keys().hasOnly(['id', 'uid', 'public', 'created', 'updated', 'title', 'story', 'lat', 'lon', 'heading', 'posture', 'height',
+          'camera', 'lens', 'focal', 'sensor', 'aperture', 'shutter', 'iso', 'ev', 'filters', 'support', 'light', 'taken', 'ig', 'thumb', 'w', 'h', 'distance'])
+        && spBaseOk(d) && d.public == true && spArea(d.lat) && spArea(d.lon);
     }
     match /sp_sheets/{id} {
       allow read: if spOwnerOf(resource.data);
       allow create: if spOwnerOf(request.resource.data) && request.resource.data.id == id && spSheetOk(request.resource.data);
       allow update: if spOwnerOf(resource.data) && spOwnerOf(request.resource.data) && request.resource.data.id == id && spSheetOk(request.resource.data);
-      allow delete: if spOwnerOf(resource.data);
+      allow delete: if resource == null || spOwnerOf(resource.data);
+    }
+    match /sp_feed/{id} {
+      allow read: if true;
+      allow create: if spOwnerOf(request.resource.data) && request.resource.data.id == id && spFeedOk(request.resource.data);
+      allow update: if spOwnerOf(resource.data) && spOwnerOf(request.resource.data) && request.resource.data.id == id && spFeedOk(request.resource.data);
+      allow delete: if resource == null || spOwnerOf(resource.data);
     }
     match /sp_public/{id} {
-      allow read: if true;
-      allow create: if spOwnerOf(request.resource.data) && request.resource.data.id == id && request.resource.data.public == true && spSheetOk(request.resource.data);
-      allow update: if spOwnerOf(resource.data) && spOwnerOf(request.resource.data) && request.resource.data.id == id && request.resource.data.public == true && spSheetOk(request.resource.data);
-      allow delete: if spOwnerOf(resource.data);
+      allow read: if spOwnerOf(resource.data);
+      allow create, update: if false;
+      allow delete: if resource == null || spOwnerOf(resource.data);
     }
     match /sp_images/{id} {
       allow read: if resource.data.public == true || spOwnerOf(resource.data);
@@ -96,7 +117,7 @@ service cloud.firestore {
         && request.resource.data.keys().hasOnly(['uid', 'public', 'data', 'updated'])
         && request.resource.data.public is bool
         && (!('data' in request.resource.data) || (request.resource.data.data is string && request.resource.data.data.size() <= 950000));
-      allow delete: if spOwnerOf(resource.data);
+      allow delete: if resource == null || spOwnerOf(resource.data);
     }
     // ---------- Get Ready (apps/getready): optional cloud backup of one person's checklist ----------
     // One document per signed-in Google account, readable and writable only by that account: the lists,
