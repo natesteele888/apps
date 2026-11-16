@@ -181,13 +181,16 @@
       var p = C.newPlayer({ id: "f" + (o.side || "a") + "-" + i, name: r.name, num: r.num });
       p.full = r.name; p.pid = r.pid || "";
       var pk = r.pid && isObj(picks[r.pid]) ? picks[r.pid] : null;
-      if (pk && pk.song) {
-        var sid = songMatch(pk.song, songs), song = sid ? C.songById(songs, sid) : null;
+      // Ballclub's approved song request: {kind, title, start, at, ...}
+      // (js/song-requests.js approvedSong). Older records used "song".
+      var want = pk ? str(pk.title || pk.song, 120) : "";
+      if (want) {
+        var sid = songMatch(want, songs), song = sid ? C.songById(songs, sid) : null;
         if (song) {
           p.songId = sid; picked++;
           var start = Number(pk.start);
           if (isFinite(start) && start > 0) p.trim = { start: Math.min(start, Math.max(0, (song.dur || 0) - 1)), len: song.len, fade: song.fade };
-        } else unmatched.push({ name: r.name, song: str(pk.song, 120) });
+        } else unmatched.push({ name: r.name, song: want });
       }
       return p;
     });

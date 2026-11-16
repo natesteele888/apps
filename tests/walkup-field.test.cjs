@@ -27,7 +27,7 @@ function league() {
                   { id: 'l1', name: 'Old', date: '2026-05-01', slots: black.map(p => ({ playerId: p.id, name: p.name })) }],
         schedule: [{ id: 'g1', opponent: 'Majors Blue', date: DAY, gameTime: '6:00 PM', homeAway: 'home', location: 'Fitzgerald Field, Lunenburg', status: 'scheduled' },
                    { id: 'g2', opponent: 'Leominster', date: DAY, gameTime: '8:00 PM', homeAway: 'away', location: 'Doyle Field, Leominster' }],
-        walkupSongs: { kp0: { song: 'Not On This Tablet', at: 1 } }
+        walkupSongs: { kp0: { kind: 'link', title: 'Not On This Tablet', start: 0, at: '2026-11-16T12:00:00.000Z', rid: 'r1', link: 'https://example.test/x' } }
       },
       'majors-blue': {
         roster: blue,
@@ -74,7 +74,7 @@ const INFO = { facilities: [{ name: 'Fitzgerald Field', town: 'Lunenburg', home:
     eq(rows[0].pid, 'kp8', 'today\'s order'); eq(rows[0].num, '9');
     const songs = [{ id: 's1', kind: 'file', title: 'Thunderstruck', dur: 200 }, { id: 's2', kind: 'file', title: 'Eye of the Tiger (Live)', dur: 240 }];
     eq(F.songMatch('thunderstruck', songs), 's1'); eq(F.songMatch('Eye of the Tiger', songs), 's2'); eq(F.songMatch('Something Else', songs), null);
-    const b = F.buildSide(C, { side: 'a', rows, picks: { kp8: { song: 'Thunderstruck', start: 30 }, kp7: { song: 'Nope' } }, songs, settings: C.emptyState().settings });
+    const b = F.buildSide(C, { side: 'a', rows, picks: { kp8: { kind: 'library', title: 'Thunderstruck', start: 30, at: '2026-11-16T12:00:00.000Z', lib: 'l1' }, kp7: { song: 'Nope' } }, songs, settings: C.emptyState().settings });
     eq(b.st.roster.length, 9); eq(b.st.roster[0].songId, 's1'); eq(b.st.roster[0].trim.start, 30); eq(b.picked, 1);
     eq(b.unmatched.length, 1); eq(b.st.roster[0].name, 'Player', 'announced by first name');
     assert.ok(b.st.roster.every(p => p.songId && p.voice), 'everyone gets a song and the voice');
