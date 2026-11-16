@@ -1,7 +1,7 @@
 // Firestore rules for the nates-toolbox Firebase project (Toolbox, Gameday Picks, Read 20, Photo Blueprint, Get Ready, Catch Log).
 // Copy of the live rules from the Firebase console, saved 2026-11-06. Photo Blueprint section changed 2026-11-15
-// (shared sheets lose the name and exact pin), published 2026-11-16. app_me added 2026-11-16 ("this is me" for app numbers):
-// paste this file into the console after that change merges.
+// (shared sheets lose the name and exact pin), published 2026-11-16. app_me added 2026-11-16 ("this is me" for app numbers),
+// published 2026-11-16. The live console rules match this file.
 // OWNER_EMAIL stands in for Nate's sign-in email (this repo is public, so the
 // real address is not committed). Put the real address back before pasting
 // this into the console. Test: cd toolbox && npm install && npm test
