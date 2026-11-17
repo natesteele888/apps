@@ -221,6 +221,7 @@ const pl = (ev, id) => Object.assign({ id }, ev.p[id]);
     eq(await page.isDisabled('#rgo'), true, 'official needs at least two who are in');
     await page.evaluate(() => window.FW.ui.write({ 'rally.r.bravo00001': { n: 'Bravo Test', s: 'in', at: Date.now() } }));
     await page.waitForFunction(() => !document.querySelector('#rgo').disabled);
+    page.once('dialog', d => d.accept()); // "Make it official?" asks first
     await page.click('#rgo'); await page.waitForFunction(() => window.FW.debug.S.tab === 'teams');
     const code = await page.evaluate(() => window.FW.debug.S.code);
     eq(await page.evaluate(c => Object.keys(JSON.parse(localStorage.getItem('fw:ev:' + c)).p).length, code), 2);
