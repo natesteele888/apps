@@ -202,6 +202,7 @@ const SPY = () => {
   /* ---- share link + import in a clean phone ---- */
   await step("share link round trip into a fresh phone", async () => {
     await page.goto(URL, { waitUntil: "load" }); await page.waitForSelector(".quick");
+    await page.click(".rt"); await page.waitForSelector('[data-act="rmenu"]');
     await page.evaluate(() => { Object.defineProperty(navigator, "share", { value: undefined, configurable: true }); });
     await page.click('[data-act="rmenu"]'); await page.click('[data-s="share"]');
     await page.waitForSelector("#sheetWrap", { state: "hidden" });
