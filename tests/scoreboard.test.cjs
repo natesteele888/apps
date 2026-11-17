@@ -318,6 +318,106 @@ function rng(seed) { return function () { seed |= 0; seed = seed + 0x6D2B79F5 | 
     const off = run(G('baseball'), ['ball', 'strike']); deq(off.pitches, [0, 0], 'off by default');
   });
 
+  await test('core: runners on base (tap a base, three outs or a new half clears them)', () => {
+    let g = G('baseball');
+    deq(g.bases, [false, false, false], 'empty to start');
+    g = T(g, { type: 'base', base: 0 }); deq(g.bases, [true, false, false]); eq(C.undoLog(g)[0], 'Runner on 1st');
+    g = T(g, { type: 'base', base: 2 }); deq(g.bases, [true, false, true]);
+    g = T(g, { type: 'base', base: 0 }); deq(g.bases, [false, false, true]); eq(C.undoLog(g)[0], 'Runner off 1st');
+    eq(T(g, { type: 'base', base: 5 }), g, 'no 4th base'); eq(T(g, { type: 'base' }), g, 'no base given');
+    deq(C.undo(g).bases, [true, false, true], 'undo puts the runner back');
+    g = run(g, ['out', 'out', 'hit']); deq(g.bases, [false, false, true], 'outs and hits leave the runners to you');
+    g = T(g, 'out'); deq([g.half, g.bases], ['bot', [false, false, false]], 'the third out clears the bases');
+    g = run(g, [{ type: 'base', base: 1 }, 'endHalf']); deq(g.bases, [false, false, false], 'End half clears them');
+    g = run(g, [{ type: 'base', base: 1 }, { type: 'setInning', inning: 4, half: 'top' }]); deq(g.bases, [false, false, false], 'a jump clears them');
+    const fin = Object.assign({}, g, { final: true }); eq(T(fin, { type: 'base', base: 0 }), fin, 'no runners after the final');
+  });
+
+  await test('core: ball four moves only the forced runners, and a bases-loaded walk scores a run', () => {
+    const walk = bases => { let g = G('baseball'); bases.forEach((on, i) => { if (on) g = T(g, { type: 'base', base: i }); }); return run(g, times(4, 'ball')); };
+    deq(walk([false, false, false]).bases, [true, false, false], 'bases empty: batter to 1st');
+    deq(walk([true, false, false]).bases, [true, true, false], 'runner on 1st is forced to 2nd');
+    deq(walk([false, true, false]).bases, [true, true, false], 'runner on 2nd is not forced');
+    deq(walk([false, false, true]).bases, [true, false, true], 'runner on 3rd is not forced');
+    deq(walk([true, true, false]).bases, [true, true, true], '1st and 2nd: both forced, bases loaded');
+    deq(walk([true, false, true]).bases, [true, true, true], '1st and 3rd: 3rd stays');
+    deq(walk([false, true, true]).bases, [true, true, true], '2nd and 3rd: nobody forced');
+    const loaded = walk([true, true, true]);
+    deq([loaded.bases, loaded.score, loaded.inn[1]], [[true, true, true], [0, 1], [1]], 'bases loaded: a run for the away team, still loaded');
+    eq(C.undoLog(loaded)[0], 'Ball four (walk), run scores');
+    deq([C.undo(loaded).score, C.undo(loaded).balls], [[0, 0], 3], 'one undo takes back the walk and the run');
+    // a bases-loaded walk-off in the bottom of the last inning ends the game
+    let w = run(G('baseball', { cfg: { innings: 1 } }), ['endHalf', { type: 'base', base: 0 }, { type: 'base', base: 1 }, { type: 'base', base: 2 }]);
+    w = run(w, times(4, 'ball')); deq([w.score, w.final], [[1, 0], true], 'walk-off walk');
+  });
+
+  await test('core: run limit per half inning is a banner, and the last inning can be open', () => {
+    const cfg = { runLimit: 5, innings: 6 };
+    let g = G('baseball', { cfg });
+    g = T(g, { type: 'run', d: 4 }); eq(C.runLimitHit(g), false, '4 runs');
+    const five = T(g, { type: 'run', d: 1 }); eq(C.runLimitHit(five), true, '5 runs hits the limit');
+    eq(C.flashFor(g, five, { type: 'run' }), 'LIMIT', 'flashes once when reached');
+    eq(C.flashFor(five, T(five, { type: 'run', d: 1 }), { type: 'run' }), null, 'not again for the 6th run');
+    eq(five.half, 'top', 'never ends the half for you'); eq(T(five, { type: 'run', d: 1 }).inn[1][0], 6, 'a run on the same play still counts');
+    const bot = T(five, 'endHalf'); deq([C.halfRuns(bot), C.runLimitHit(bot)], [0, false], 'the home team starts fresh');
+    // the last inning is open by default, and can be limited too
+    const last = T(G('baseball', { cfg }), { type: 'setInning', inning: 6, half: 'top' });
+    eq(C.runLimitHit(T(last, { type: 'run', d: 7 })), false, 'last inning open');
+    const lim = T(G('baseball', { cfg: { runLimit: 5, innings: 6, openLast: false } }), { type: 'setInning', inning: 6, half: 'top' });
+    eq(C.runLimitHit(T(lim, { type: 'run', d: 5 })), true, 'last inning limited when openLast is off');
+    eq(C.runLimitHit(T(G('baseball'), { type: 'run', d: 9 })), false, 'off by default');
+    eq(C.sanitizeCfg('baseball', { runLimit: 99 }).runLimit, 20, 'clamped');
+    deq([C.sanitizeCfg('baseball', {}).runLimit, C.sanitizeCfg('baseball', {}).openLast, C.sanitizeCfg('baseball', {}).timeLimit], [0, true, 0], 'defaults');
+  });
+
+  await test('core: time limit counts from the first pitch; no new inning once it runs out', () => {
+    const MIN = 60000;
+    let g = G('baseball', { cfg: { timeLimit: 105 } });
+    deq(C.timeInfo(g, NOW), { limit: 105 * MIN, started: false, elapsed: 0, left: 105 * MIN, over: false });
+    eq(C.timeText(g, NOW), 'Time limit 1:45, starts at the first pitch');
+    eq(T(g, { type: 'base', base: 0 }).firstPitch, null, 'putting a runner on is not a pitch');
+    g = C.step(g, { type: 'strike', t: NOW + 5000 }); eq(g.firstPitch, NOW + 5000, 'the first pitch starts it');
+    g = C.step(g, { type: 'ball', t: NOW + 90000 }); eq(g.firstPitch, NOW + 5000, 'later pitches do not move it');
+    eq(C.timeText(g, NOW + 5000 + 40 * MIN), 'No new inning in 1:05');
+    eq(C.timeText(g, NOW + 5000 + 104 * MIN + 30000), 'No new inning in 0:30');
+    const over = C.timeInfo(g, NOW + 5000 + 105 * MIN); deq([over.over, over.left], [true, 0]);
+    eq(C.timeText(g, NOW + 5000 + 200 * MIN), 'Time is up: no new inning');
+    eq(g.final, false, 'never ends the game for you');
+    // undo of the first pitch clears the start again
+    let h = C.step(G('baseball', { cfg: { timeLimit: 90 } }), { type: 'ball', t: NOW }); eq(C.undo(h).firstPitch, null);
+    // a game picked up late: a run also starts it, and the count can be set by hand
+    eq(C.step(G('baseball', { cfg: { timeLimit: 90 } }), { type: 'run', d: 1, t: NOW }).firstPitch, NOW);
+    let s = C.step(g, { type: 'timeSet', ms: 30 * MIN, t: NOW + 10 * MIN }); eq(s.firstPitch, NOW - 20 * MIN, 'set 30 minutes played');
+    eq(C.undoLog(s)[0], 'Time limit count set to 30 min played');
+    eq(C.step(s, { type: 'timeSet', ms: null, t: NOW }).firstPitch, null, 'cleared: waits for the next pitch');
+    eq(C.step(s, { type: 'timeSet', ms: 1 }), s, 'needs a timestamp');
+    eq(C.timeInfo(G('baseball'), NOW), null, 'off by default'); eq(C.timeText(G('basketball'), NOW), '');
+    eq(C.fmtHM(105 * MIN), '1:45'); eq(C.fmtHM(59 * MIN + 1), '1:00'); eq(C.fmtHM(0), '0:00');
+  });
+
+  await test('core: finishing at the top of an inning nobody batted in drops that inning', () => {
+    let g = run(G('baseball', { cfg: { innings: 6 } }), [{ type: 'run', d: 2 }, 'endHalf', { type: 'run', d: 1 }, 'endHalf']);
+    deq([g.inning, g.half], [2, 'top']);
+    const t = C.trimUnplayed(g); deq([t.inning, t.half, t.inn], [1, 'bot', [[1], [2]]]);
+    const r = C.makeRecent(g, 'final', NOW); deq([r.inning, r.half], [1, 'bot']); eq(C.statusText(r, 'final'), 'Final, 1 inning');
+    deq(C.lineScore(r).rows.map(x => x.cells.filter(c => c !== '')), [['2'], ['1']], 'no 0 for an inning that was never played');
+    eq(C.resultText(r).split('\n')[1], 'AWAY: 2 = 2 R, 0 H, 0 E');
+    const pitched = T(g, 'ball'); eq(C.trimUnplayed(pitched), pitched, 'a pitch in it: keep it');
+    const on = T(g, { type: 'base', base: 0 }); eq(C.trimUnplayed(on), on, 'a runner on: keep it');
+    const ran = T(g, { type: 'run', d: 1 }); eq(C.trimUnplayed(ran), ran, 'a run: keep it');
+    const first = G('baseball'); eq(C.trimUnplayed(first), first, 'the 1st inning is never dropped');
+    const b = G('basketball'); eq(C.trimUnplayed(b), b);
+  });
+
+  await test('core: old saved baseball games (before runners and time limits) still load', () => {
+    const old = JSON.parse(JSON.stringify(run(G('baseball'), ['ball', 'strike'])));
+    delete old.bases; delete old.firstPitch; delete old.cfg.runLimit; delete old.cfg.openLast; delete old.cfg.timeLimit;
+    const g = C.sanitizeGame(old);
+    deq([g.bases, g.firstPitch, g.cfg.runLimit, g.cfg.openLast, g.cfg.timeLimit, g.balls, g.strikes], [[false, false, false], null, 0, true, 0, 1, 1]);
+    const bad = C.sanitizeGame(Object.assign({}, old, { bases: ['yes', 1, true], firstPitch: 'soon' }));
+    deq([bad.bases, bad.firstPitch], [[false, false, true], null], 'junk is cleaned');
+  });
+
   await test('core: fix-up numbers (set) and the setInning jump', () => {
     let g = G('baseball');
     g = run(g, ['endHalf', 'endHalf', 'endHalf']); // top 1, bot 1, top 2 -> now bottom of the 2nd... see below
@@ -477,13 +577,14 @@ function rng(seed) { return function () { seed |= 0; seed = seed + 0x6D2B79F5 | 
         () => ({ type: 'ball' }), () => ({ type: 'ball' }), () => ({ type: 'strike' }), () => ({ type: 'strike' }), () => ({ type: 'foul' }), () => ({ type: 'out' }),
         () => ({ type: 'hit' }), () => ({ type: 'error' }), () => ({ type: 'run', d: pick([1, 1, 2, -1]) }), () => ({ type: 'endHalf' }),
         () => ({ type: 'setInning', inning: 1 + Math.floor(r() * 9), half: pick(['top', 'bot']) }), () => ({ type: 'reopen' }),
-        () => Object.assign(set(), { k: pick(['hits', 'errs', 'pitches']) }), () => ({ type: 'set', k: 'inn', team: team(), i: Math.floor(r() * 3), v: Math.floor(r() * 5) })],
+        () => Object.assign(set(), { k: pick(['hits', 'errs', 'pitches']) }), () => ({ type: 'set', k: 'inn', team: team(), i: Math.floor(r() * 3), v: Math.floor(r() * 5) }),
+        () => ({ type: 'base', base: Math.floor(r() * 3) }), () => ({ type: 'base', base: Math.floor(r() * 3) }), () => ({ type: 'timeSet', ms: pick([null, 0, 600000, 6000000]) })],
       generic: [() => ({ type: 'score', team: team(), d: pick([1, 5, 10, -1, -5, -10]) })]
     }[sport];
     return pick(list)();
   }
   function replay(sport, seed, steps, withClock) {
-    const r = rng(seed), init = G(sport, sport === 'baseball' ? { cfg: { pitch: seed % 2 === 0 } } : {});
+    const r = rng(seed), init = G(sport, sport === 'baseball' ? { cfg: { pitch: seed % 2 === 0, runLimit: seed % 3 ? 5 : 0, timeLimit: seed % 2 ? 0 : 90 } } : {});
     const drop = withClock ? ['clock'] : [];
     let g = init, t = NOW; const before = [];
     for (let i = 0; i < steps; i++) {
@@ -951,7 +1052,7 @@ function rng(seed) { return function () { seed |= 0; seed = seed + 0x6D2B79F5 | 
     await page.click('.reopen'); eq(await page.$$eval('.end-banner', e => e.length), 0); assert.ok(!(await page.$eval(AT('ball'), b => b.disabled)));
     noErr(errors); await page.context().close();
     ({ page, errors } = await fresh({ ls: board(SEED.baseballMercy()) }));
-    eq(await txt(page, '.end-banner.mercy'), 'Mercy rule reached'); eq((await live(page)).final, false, 'the mercy rule never ends the game by itself');
+    eq(await txt(page, '.end-banner.mercy span'), 'Mercy rule reached'); assert.ok(await page.$('.end-banner.mercy [data-act=b-finish]'), 'Finish game offered'); eq((await live(page)).final, false, 'the mercy rule never ends the game by itself');
     assert.ok(!(await page.$eval(AT('ball'), b => b.disabled)));
     noErr(errors); await page.context().close();
     ({ page, errors } = await fresh({ ls: board(SEED.baseballPitch()) }));
@@ -1212,8 +1313,8 @@ function rng(seed) { return function () { seed |= 0; seed = seed + 0x6D2B79F5 | 
   await test('Offline: after one visit the service worker serves the whole app with no network, and only prunes its own caches', async () => {
     const { ctx, page, errors } = await fresh({ np: { sw: true }, init: () => { if (!sessionStorage.getItem('__c')) { sessionStorage.setItem('__c', '1'); caches.open('situations-v99').then(c => c.put('/x', new Response('x'))); caches.open('scoreboard-v0').then(c => c.put('/y', new Response('y'))); } } });
     await page.evaluate(() => navigator.serviceWorker.ready.then(() => 1));
-    await page.waitForFunction(async () => { const k = await caches.keys(); return k.includes('scoreboard-v2') && !k.includes('scoreboard-v0') && (await (await caches.open('scoreboard-v2')).keys()).length >= 8; }, null, { timeout: 10000 });
-    const cached = await page.evaluate(async () => (await (await caches.open('scoreboard-v2')).keys()).map(r => new URL(r.url).pathname));
+    await page.waitForFunction(async () => { const k = await caches.keys(); return k.includes('scoreboard-v3') && !k.includes('scoreboard-v0') && (await (await caches.open('scoreboard-v3')).keys()).length >= 8; }, null, { timeout: 10000 });
+    const cached = await page.evaluate(async () => (await (await caches.open('scoreboard-v3')).keys()).map(r => new URL(r.url).pathname));
     for (const f of ['/apps/scoreboard/', '/apps/scoreboard/core.js', '/apps/scoreboard/ui.js', '/apps/scoreboard/rules.js', '/apps/scoreboard/share.js', '/apps/scoreboard/board.js', '/apps/scoreboard/app.js', '/apps/scoreboard/scoreboard.css', '/apps/scoreboard/manifest.json']) assert.ok(cached.includes(f), 'cached ' + f + ' in ' + cached.join());
     await reload(page); await page.waitForTimeout(400);
     assert.ok(await page.evaluate(() => !!navigator.serviceWorker.controller), 'the page is controlled by the worker');
@@ -1303,7 +1404,7 @@ function rng(seed) { return function () { seed |= 0; seed = seed + 0x6D2B79F5 | 
     files.forEach(f => assert.ok(fs.statSync(path.join(dir, f)).size < 60 * 1024, f + ' is ' + fs.statSync(path.join(dir, f)).size + ' bytes'));
     const sw = fs.readFileSync(path.join(dir, 'sw.js'), 'utf8');
     files.filter(f => f !== 'sw.js' && !/\.(png)$/.test(f)).forEach(f => assert.ok(f === 'index.html' ? sw.includes('"./"') : sw.includes('"' + f + '"'), 'sw.js lists ' + f));
-    assert.ok(sw.includes('const CACHE = "scoreboard-v2"') && sw.includes('startsWith("scoreboard-")'));
+    assert.ok(sw.includes('const CACHE = "scoreboard-v3"') && sw.includes('startsWith("scoreboard-")'));
     const man = JSON.parse(fs.readFileSync(path.join(dir, 'manifest.json'), 'utf8'));
     eq(man.orientation, 'any'); eq(man.display, 'standalone'); assert.ok(man.icons.length >= 2 && man.name && man.short_name);
     const code = files.filter(f => /\.(js|html)$/.test(f) && f !== 'sw.js').map(f => fs.readFileSync(path.join(dir, f), 'utf8')).join('\n');
