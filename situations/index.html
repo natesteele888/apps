@@ -22,6 +22,10 @@
   /lybs-ballclub/ on this same site. Fix plays in lybs-ballclub, never here.
   This page only supplies the few things Ballclub's page normally provides:
   where the rule files live, an info popup, and the app frame.
+
+  Org in a box: another league's name, colors, logo and teams come from
+  settings (org.js, orgs/<slug>.json, ?setup), never from edits here.
+  LYBS is the built-in default and changes nothing. See orgs/README.md.
 -->
 <link rel="stylesheet" href="/lybs-ballclub/css/situations.css">
 <script src="https://natesteele888.github.io/apps/install.js" defer></script>
@@ -29,7 +33,7 @@
 <style>
 :root{color-scheme:dark}
 *{box-sizing:border-box}
-html,body{margin:0;background:#0c1512;color:#f2f5f1}
+html,body{margin:0;background:var(--org-bg,#0c1512);color:var(--org-ink,#f2f5f1)}
 body{font-family:'Barlow',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
   padding:calc(10px + env(safe-area-inset-top)) 12px calc(20px + env(safe-area-inset-bottom));-webkit-tap-highlight-color:transparent}
 main{max-width:720px;margin:0 auto}
@@ -37,10 +41,10 @@ main{max-width:720px;margin:0 auto}
 .sectionHeader{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:2px 0 10px}
 .recordLine{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:26px;letter-spacing:.01em}
 .btn{display:inline-flex;align-items:center;justify-content:center;min-height:40px;padding:0 14px;border-radius:10px;
-  border:1px solid #28453c;background:#132420;color:#f2f5f1;font:600 15px 'Barlow',sans-serif;cursor:pointer}
-.situationsRoot .btn.btnGhost{background:transparent;border:1px solid #28453c}
-.emptyState{padding:30px 10px;text-align:center;color:#8fa89e}
-.loading{padding:40px 10px;text-align:center;color:#8fa89e;font-family:'Barlow Condensed',sans-serif;font-size:18px}
+  border:1px solid var(--org-line,#28453c);background:var(--org-panel,#132420);color:var(--org-ink,#f2f5f1);font:600 15px 'Barlow',sans-serif;cursor:pointer}
+.situationsRoot .btn.btnGhost{background:transparent;border:1px solid var(--org-line,#28453c)}
+.emptyState{padding:30px 10px;text-align:center;color:var(--org-mute,#8fa89e)}
+.loading{padding:40px 10px;text-align:center;color:var(--org-mute,#8fa89e);font-family:'Barlow Condensed',sans-serif;font-size:18px}
 /* Bigger taps on a phone than Ballclub's own sizes (same look, larger targets). */
 .situationsRoot .sitDiamond{width:72px;height:72px}
 .situationsRoot .sitDiamond button{width:24px;height:24px}
@@ -51,39 +55,68 @@ main{max-width:720px;margin:0 auto}
 .situationsRoot .sitPill{min-height:36px}
 .situationsRoot input[type=range]{height:32px}
 /* Info popup (Ballclub's openInfoModal) */
-#info{position:fixed;inset:0;z-index:50;background:rgba(0,0,0,.6);display:none;align-items:flex-end;justify-content:center}
-#info.on{display:flex}
-#info .sheet{background:#132420;border:1px solid #28453c;border-radius:16px 16px 0 0;width:100%;max-width:720px;
+#info,#setup{position:fixed;inset:0;z-index:50;background:rgba(0,0,0,.6);display:none;align-items:flex-end;justify-content:center}
+#info.on,#setup.on{display:flex}
+#info .sheet,#setup .sheet{background:var(--org-panel,#132420);border:1px solid var(--org-line,#28453c);border-radius:16px 16px 0 0;width:100%;max-width:720px;
   max-height:86vh;overflow:auto;padding:16px 16px calc(20px + env(safe-area-inset-bottom))}
-#info h2{font-family:'Barlow Condensed',sans-serif;font-size:24px;margin:0 0 8px;display:flex;justify-content:space-between;align-items:center;gap:10px}
+#info h2,#setup h2{font-family:'Barlow Condensed',sans-serif;font-size:24px;margin:0 0 8px;display:flex;justify-content:space-between;align-items:center;gap:10px}
 #info table{width:100%;border-collapse:collapse;font-size:14px}
-#info td,#info th{border-bottom:1px solid #28453c;padding:6px 4px;text-align:left;vertical-align:top}
-#infoClose{min-width:44px;min-height:44px;border:0;background:none;color:#f2f5f1;font-size:26px;cursor:pointer}
-footer{margin:22px 0 0;text-align:center;color:#8fa89e;font-size:13px}
+#info td,#info th{border-bottom:1px solid var(--org-line,#28453c);padding:6px 4px;text-align:left;vertical-align:top}
+#infoClose,#setupClose{min-width:44px;min-height:44px;border:0;background:none;color:var(--org-ink,#f2f5f1);font-size:26px;cursor:pointer}
+footer{margin:22px 0 0;text-align:center;color:var(--org-mute,#8fa89e);font-size:13px}
 footer .btn{margin-top:8px}
+/* Org bar: only shows for a league other than the built-in LYBS default (see org.js). */
+.orgBar{display:flex;align-items:center;gap:12px;margin:0 0 10px;padding:10px 12px;border-radius:12px;
+  background:var(--org-panel,#132420);border:1px solid var(--org-line,#28453c);border-left:4px solid var(--org-accent,#ffc53d)}
+.orgBar[hidden],.orgTeams[hidden],.orgNote[hidden],#orgLogo[hidden]{display:none}
+#orgLogo{width:44px;height:44px;object-fit:contain;flex:none;border-radius:8px}
+.orgWho{min-width:0}
+.orgName{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:20px;line-height:1.1;overflow-wrap:anywhere}
+.orgTeamLine{font-size:13px;color:var(--org-mute,#8fa89e)}
+.orgTeams{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 10px}
+.orgTeams button{min-height:36px;padding:0 12px;border-radius:999px;border:1px solid var(--org-line,#28453c);
+  background:var(--org-panel,#132420);color:var(--org-ink,#f2f5f1);font:600 14px 'Barlow',sans-serif;cursor:pointer;display:inline-flex;align-items:center;gap:6px}
+.orgTeams button[aria-pressed="true"]{background:var(--org-accent,#ffc53d);border-color:var(--org-accent,#ffc53d);color:var(--org-on-accent,#111)}
+.orgTeams .dot{width:10px;height:10px;border-radius:50%;flex:none}
+.orgNote{margin:0 0 10px;padding:9px 12px;border-radius:10px;border:1px dashed var(--org-line,#28453c);color:var(--org-mute,#8fa89e);font-size:14px}
 </style>
 </head>
 <body>
 <main>
+  <div id="orgNote" class="orgNote" role="status" hidden></div>
+  <div id="orgBar" class="orgBar" hidden><img id="orgLogo" alt="" hidden><div class="orgWho"><div id="orgName" class="orgName"></div><div id="orgTeam" class="orgTeamLine"></div></div></div>
+  <div id="orgTeams" class="orgTeams" role="group" aria-label="Pick your team" hidden></div>
   <div id="sit"><div class="loading">Loading the field…</div></div>
   <footer>
-    <div>Same plays as the Situations tab in LYBS Ballclub.</div>
+    <div id="orgFooter">Same plays as the Situations tab in LYBS Ballclub.</div>
     <button class="btn" type="button" onclick="window.nateHealth&&nateHealth.report()">Something wrong? Send a report</button>
   </footer>
 </main>
 <div id="info" role="dialog" aria-modal="true" aria-labelledby="infoTitle">
   <div class="sheet"><h2><span id="infoTitle"></span><button id="infoClose" type="button" aria-label="Close">×</button></h2><div id="infoBody"></div></div>
 </div>
+<div id="setup" role="dialog" aria-modal="true" aria-labelledby="setupTitle"></div>
+<script src="org.js"></script>
 <script>
 (function () {
   var SRC = '/lybs-ballclub/';
-  // The trainer fetches 'data/situations.csv' relative to its page; point those at Ballclub's copies.
+  var Org = window.WDIGOrg;
+  var org = null, team = null;
+  // Org files and their relative links live in this app's orgs/ folder.
+  function orgUrl(u) { return /^https:\/\//i.test(u) ? u : 'orgs/' + u; }
+  // The trainer fetches 'data/situations.csv' relative to its page; point those at Ballclub's
+  // copies, or at the org's own play files when its settings name them.
   var realFetch = window.fetch.bind(window);
   window.fetch = function (u, o) {
-    if (typeof u === 'string' && /^data\//.test(u)) u = SRC + u.replace(/\?.*$/, '');
+    if (typeof u === 'string' && /^data\//.test(u)) {
+      var file = u.replace(/\?.*$/, '');
+      if (org && org.plays && file === 'data/situations.csv') u = orgUrl(org.plays.situations);
+      else if (org && org.plays && file === 'data/responsibilities.csv') u = orgUrl(org.plays.responsibilities);
+      else u = SRC + file;
+    }
     return realFetch(u, o);
   };
-  // No shared database here: always read the rule files Ballclub ships.
+  // No shared database here: always read the rule files.
   window.dbGet = function () { return Promise.resolve(null); };
   window.dbPut = function () { return Promise.resolve(); };
   window.sharedPath = function (p) { return p; };
@@ -102,22 +135,96 @@ footer .btn{margin-top:8px}
   info.addEventListener('click', function (e) { if (e.target === info) closeInfo(); });
   document.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeInfo(); });
 
+  var store = {
+    get: function (k) { return localStorage.getItem(k); },
+    set: function (k, v) { localStorage.setItem(k, v); },
+    remove: function (k) { localStorage.removeItem(k); },
+  };
+
+  /* Puts an org's name, logo, colors and teams on the page. The built-in LYBS
+     default adds nothing, so the page looks exactly as it always has. */
+  function applyOrg(o, t) {
+    org = o; team = t || null;
+    document.title = Org.title(o, team);
+    var style = document.getElementById('orgTheme');
+    var css = Org.themeCss(o, team);
+    if (css) {
+      if (!style) { style = document.createElement('style'); style.id = 'orgTheme'; document.head.appendChild(style); }
+      style.textContent = css;
+    } else if (style) style.remove();
+    var meta = document.querySelector('meta[name="theme-color"]');
+    meta.setAttribute('content', o.branding.secondaryColor || '#0c1512');
+    document.getElementById('orgFooter').textContent = Org.footer(o);
+    document.getElementById('orgFooter').hidden = !Org.footer(o);
+    var bar = document.getElementById('orgBar');
+    bar.hidden = !Org.showsBar(o);
+    document.getElementById('orgName').textContent = o.name;
+    document.getElementById('orgTeam').textContent = team ? team.name : (o.teams.length ? 'Pick your team below' : 'Baseball situations');
+    var logo = document.getElementById('orgLogo');
+    if (o.branding.logoUrl) {
+      logo.onerror = function () { logo.hidden = true; };
+      logo.hidden = false;
+      logo.src = orgUrl(o.branding.logoUrl);
+      logo.alt = o.name + ' logo';
+    } else { logo.hidden = true; logo.removeAttribute('src'); }
+    var box = document.getElementById('orgTeams');
+    box.hidden = !o.teams.length;
+    box.innerHTML = '';
+    o.teams.forEach(function (x) {
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.dataset.team = x.id;
+      b.setAttribute('aria-pressed', team && team.id === x.id ? 'true' : 'false');
+      if (x.color) { var d = document.createElement('span'); d.className = 'dot'; d.style.background = x.color; b.appendChild(d); }
+      b.appendChild(document.createTextNode(x.name));
+      b.onclick = function () {
+        var pick = team && team.id === x.id ? null : x;
+        try { if (pick) store.set(Org.TEAM_KEY + ':' + o.slug, pick.id); else store.remove(Org.TEAM_KEY + ':' + o.slug); } catch (e) { /* ignore */ }
+        applyOrg(o, pick);
+      };
+      box.appendChild(b);
+    });
+  }
+  window.WDIGPage = { apply: applyOrg, current: function () { return { org: org, team: team }; }, store: store };
+
   var host = document.getElementById('sit');
   function fail() {
     host.innerHTML = '<div class="emptyState">Couldn\'t load the plays. Check your signal and try again.<br><br>' +
       '<button class="btn" type="button" onclick="location.reload()">Try again</button></div>';
   }
-  var s = document.createElement('script');
-  s.src = SRC + 'js/situations.js';
-  s.onload = function () {
-    if (!window.Situations) return fail();
-    window.Situations.ensureLoaded(false).then(function (d) {
-      if (!d || !d.situations || !d.situations.length) return fail();
-      window.Situations.render(host);
-    }).catch(fail);
-  };
-  s.onerror = fail;
-  document.head.appendChild(s);
+  function startTrainer() {
+    var s = document.createElement('script');
+    s.src = SRC + 'js/situations.js';
+    s.onload = function () {
+      if (!window.Situations) return fail();
+      window.Situations.ensureLoaded(false).then(function (d) {
+        if (!d || !d.situations || !d.situations.length) return fail();
+        window.Situations.render(host);
+      }).catch(fail);
+    };
+    s.onerror = fail;
+    document.head.appendChild(s);
+  }
+
+  Org.resolve({
+    search: location.search, hash: location.hash, store: store,
+    fetchJson: function (u) { return realFetch(u, { cache: 'no-cache' }).then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); }); },
+  }).then(function (res) {
+    applyOrg(res.org, Org.pickTeam(res.org, location.search, store));
+    if (res.source === 'link' && history.replaceState) history.replaceState(null, '', location.pathname + location.search);
+    if (res.note === 'missing') {
+      var n = document.getElementById('orgNote');
+      n.textContent = 'Couldn\'t find that league\'s settings, so these are the LYBS plays.';
+      n.hidden = false;
+    }
+  }).catch(function () { applyOrg(Org.defaultOrg(), null); }).then(function () {
+    startTrainer();
+    if (/[?&]setup\b/.test(location.search)) {
+      var st = document.createElement('script');
+      st.src = 'setup.js';
+      document.head.appendChild(st);
+    }
+  });
 })();
 </script>
 <script>if("serviceWorker" in navigator){addEventListener("load",()=>navigator.serviceWorker.register("sw.js").catch(()=>{}))}</script>
