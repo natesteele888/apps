@@ -41,8 +41,9 @@ adb shell appops set $PKG REQUEST_INSTALL_PACKAGES allow
 echo "installed version $(ver)"
 # Dugout checks GitHub once when it opens, so wait until the emulator itself can reach GitHub first.
 for i in $(seq 1 60); do
-  adb shell ping -c 1 -W 2 api.github.com >/dev/null 2>&1 && { echo "emulator reaches api.github.com (after ${i} tries)"; break; }
-  [ "$i" = 60 ] && echo "emulator still can't reach api.github.com"
+  # the emulator may not answer pings, so a resolved address ("PING api.github.com (1.2.3.4)") counts as online
+  adb shell ping -c 1 -W 2 api.github.com 2>&1 | grep -q "^PING .*(" && { echo "emulator finds api.github.com (after ${i} tries)"; break; }
+  [ "$i" = 60 ] && echo "emulator still can't find api.github.com"
   sleep 2
 done
 adb logcat -c
