@@ -281,6 +281,42 @@ const ranks = (res) => res.rows.map(r => r.team + ':' + r.rank + (r.tied ? 't' :
     assert.ok(sc.win.best <= sc.win.worst); assert.ok(sc.lose.best <= sc.lose.worst); assert.ok(sc.win.best < sc.lose.best);
   });
 
+  await test('outlook: every result still to play, other teams included, with the bracket cut', async () => {
+    const t = C.sampleTournament(TODAY), cfg = Object.assign({}, t.rules, { sport: t.sport });
+    const o = C.outlook(t.games, cfg, 'Our Team', { cut: 4 });
+    eq(o.enumerated, true); eq(o.mine, 2); eq(o.cut, 4);
+    // win out: seed 1. Win one: 3-2, and other games can still push us to 4th. Lose out: 2-3, and if D beats C and E beats B,
+    // B, C, D, E and we are all .500 behind F, so we can fall to 6th: the old estimate (others frozen) said 4th.
+    deq(o.rows.map(r => [r.wins, r.of, r.best, r.worst, r.cut]), [[2, 2, 1, 1, 'in'], [1, 2, 1, 4, 'in'], [0, 2, 4, 6, 'maybe']]);
+    deq(o.all, { best: 1, worst: 6, cut: 'maybe' });
+    eq(C.outlook(t.games, cfg, 'Our Team').rows[0].cut, null, 'no cut line: no In/Out');
+    eq(C.outlook(t.games, cfg, ''), null);
+  });
+
+  await test('outlook: clinched, eliminated, and too many games to check', async () => {
+    const won = C.outlook([P('A', 'B', 2, 0), P('A', 'C', 3, 1), P('B', 'C')], BASE, 'A', { cut: 1 });
+    deq([won.mine, won.theirs, won.rows.length, won.rows[0].of, won.all], [0, 1, 1, 0, { best: 1, worst: 1, cut: 'in' }], 'clinched with others still playing');
+    const lost = C.outlook([P('B', 'A', 2, 0), P('C', 'A', 3, 1), P('B', 'C')], BASE, 'A', { cut: 1 });
+    deq(lost.all, { best: 3, worst: 3, cut: 'out' }, 'can not reach the top 1');
+    // 8 teams, nothing played: 21 other games is far too many to check, so others stay as they are (unplayed)
+    const ts = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'], gs = [];
+    ts.forEach((x, i) => ts.slice(i + 1).forEach(y => gs.push(P(x, y))));
+    const t0 = Date.now(), big = C.outlook(gs, BASE, 'A', { cut: 4 });
+    assert.ok(Date.now() - t0 < 1500, 'took ' + (Date.now() - t0));
+    deq([big.enumerated, big.mine, big.theirs, big.rows.length], [false, 7, 21, 8]);
+    deq([big.rows[0].best, big.rows[0].worst], [1, 1], 'win all 7: first');
+  });
+
+  await test('whatIf: typed scores for unplayed pool games move the standings, nothing else', async () => {
+    const g1 = P('A', 'B', 1, 0), g2 = P('A', 'C'), g3 = P('B', 'C');
+    const r = C.whatIf([g1, g2, g3], BASE, { [g2.id]: { sa: 0, sb: 2 }, [g1.id]: { sa: 0, sb: 9 }, [g3.id]: { sa: 'x', sb: 2 } });
+    eq(r.used, 1, 'only the unplayed game with a real score counts');
+    const row = k => r.rows.filter(x => x.key === C.teamKey(k))[0];
+    deq([row('A').w, row('A').l, row('C').w, row('C').rank], [1, 1, 1, 1]);
+    eq(C.whatIf([g1, g2], BASE, null).used, 0);
+    eq(g2.status, 'scheduled', 'the real games are not changed');
+  });
+
   /* ---------- bracket ---------- */
   const T = (size, seeds) => C.sanitizeTournament({ id: 'brt1', name: 'T', sport: 'baseball', start: '2026-11-07', end: '2026-11-08', team: 'C', games: [], bracket: { size, seeds }, pack: [] });
   const BG = (slot, a, b, sa, sb, extra) => Object.assign({ id: 'b' + slot, kind: 'bracket', slot, date: '2026-11-08', time: '', field: '', label: '', a: a || '', b: b || '', status: sa == null ? 'scheduled' : 'final', sa: sa == null ? null : sa, sb: sb == null ? null : sb, innings: null, forfeit: '' }, extra || {});
@@ -469,6 +505,56 @@ const ranks = (res) => res.rows.map(r => r.team + ':' + r.rank + (r.tied ? 't' :
     r = C.renameTeam(t, 'Team B', 'team c'); eq(r.ok, false); assert.ok(/played each other/.test(r.error));
     r = C.renameTeam(t, 'Team E', 'Team D'); eq(r.ok, false, 'D and E met once, so they cannot become one team');
     r = C.renameTeam(t, 'Team E', 'Team Zed'); eq(r.ok, true); eq(C.renameTeam(t, 'Team E', '   ').ok, false); r = C.renameTeam(t, 'Team E', 'team e'); eq(r.ok, true, 'changing only the case is fine');
+  });
+
+  /* ---------- party games and keep score ---------- */
+  await test('party: round robin pairs everyone once; teams typed one per line are cleaned', async () => {
+    const rr = C.roundRobin(['A', 'B', 'C', 'D']); eq(rr.length, 3); eq(rr.flat().length, 6);
+    const pairs = new Set(rr.flat().map(p => p.slice().sort().join('-'))); eq(pairs.size, 6, 'every pair once');
+    rr.forEach(rd => eq(new Set(rd.flat()).size, 4, 'nobody plays twice in a round'));
+    const odd = C.roundRobin(['A', 'B', 'C']); eq(odd.length, 3); eq(odd.flat().length, 3, 'one team sits out each round');
+    deq(C.roundRobin(['A']), []);
+    deq(C.partyTeams(' Sharks \n\nJets, owls\nsharks\nOwls'), ['Sharks', 'Jets', 'owls']);
+    eq(C.partyTeams(Array.from({ length: 30 }, (_, i) => 'T' + i).join('\n')).length, 16, '16 teams at most');
+  });
+
+  await test('party: a round robin on two fields, and a bracket that only takes 4, 6 or 8', async () => {
+    const t = C.partyTournament({ teams: ['Red', 'Blue', 'Gold', 'Green', 'Pink'], date: TODAY, start: '13:00', gameMin: 15, fields: 2 });
+    eq(t.party, true); eq(t.sport, 'flag', 'flag football unless picked'); eq(t.name, 'Party games'); eq(t.team, ''); eq(t.games.length, 10);
+    deq([...new Set(t.games.map(g => g.time))], ['13:00', '13:15', '13:30', '13:45', '14:00'], 'two games at a time, then the next slot');
+    deq([...new Set(t.games.map(g => g.field))].sort(), ['Field 1', 'Field 2']);
+    eq(t.rules.cap, 21); eq(t.rules.forfeitWin, 6);
+    const one = C.partyTournament({ teams: ['A', 'B'], sport: 'basketball', fields: 1, start: '09:00' }); eq(one.games.length, 1); eq(one.games[0].field, ''); eq(one.sport, 'basketball');
+    eq(C.partyTournament({ teams: ['A'] }).error, 'Type at least two teams.');
+    assert.ok(/4, 6 or 8 teams\. You have 5/.test(C.partyTournament({ teams: ['A', 'B', 'C', 'D', 'E'], format: 'bracket' }).error));
+    const b6 = C.partyTournament({ teams: ['S1', 'S2', 'S3', 'S4', 'S5', 'S6'], format: 'bracket', start: '10:00', gameMin: 20 });
+    deq(b6.bracket.seeds, ['S1', 'S2', 'S3', 'S4', 'S5', 'S6']); eq(b6.bracket.size, 6);
+    eq(b6.games.length, 5, 'two first-round games (1 and 2 have byes), two semis, the final'); assert.ok(b6.games.every(g => g.kind === 'bracket'));
+    deq(b6.games.map(g => g.time), ['10:00', '10:20', '10:40', '11:00', '11:20']);
+    const now = C.playNow(b6); eq(now.length, 1); assert.ok(now[0].a && now[0].b, 'the first game already has its two teams');
+    const back = C.sanitizeTournament(JSON.parse(JSON.stringify(b6))); eq(back.party, true); eq(C.sanitizeTournament(Object.assign({}, b6, { party: 'yes' })).party, undefined);
+  });
+
+  await test('party: the live score is kept while a game is on and dropped once it is final', async () => {
+    const g = C.sanitizeGame({ id: 'g1', kind: 'pool', a: 'A', b: 'B', status: 'scheduled', lsa: 7, lsb: 6 }); eq(g.lsa, 7); eq(g.lsb, 6);
+    const f = C.sanitizeGame({ id: 'g1', kind: 'pool', a: 'A', b: 'B', status: 'final', sa: 7, sb: 6, lsa: 7, lsb: 6 }); eq(f.lsa, undefined);
+    eq(C.sanitizeGame({ id: 'g1', kind: 'pool', a: 'A', b: 'B', lsa: 3 }).lsa, undefined, 'both or neither');
+    eq(C.sanitizeGame({ id: 'g1', kind: 'pool', a: 'A', b: 'B', lsa: -4, lsb: 'x' }).lsa, undefined);
+  });
+
+  await test('keep score: the request names the game; the final comes back once, ties and stale ones are refused', async () => {
+    const t = C.partyTournament({ teams: ['A1', 'B2', 'C3', 'D4'], format: 'bracket', start: '10:00' }), g = C.playNow(t)[0];
+    const req = C.keepRequest(t, g, 'tok123abc', 5); deq(req, { v: 1, token: 'tok123abc', tid: t.id, gid: g.id, sport: 'flag', a: g.a, b: g.b, at: 5 });
+    eq(C.keepRequest(t, g, 'bad token!', 5), null); eq(C.keepRequest(t, t.games[2], 'tok123abc', 5), null, 'the final has no teams yet');
+    const res = (sa, sb, o) => Object.assign({ v: 1, token: 'tok123abc', tid: t.id, gid: g.id, sa, sb }, o || {});
+    eq(C.applyResult(t, res(7, 7)).skip, 'tie', 'a bracket game needs a winner');
+    eq(C.applyResult(t, res(7, 6, { tid: 'other' })).skip, 'other'); eq(C.applyResult(t, res(7, 6, { gid: 'nope' })).skip, 'gone'); eq(C.applyResult(t, res('x', 6)).skip, 'gone');
+    const r = C.applyResult(t, res(13, 6)); assert.ok(r.t); eq(r.sa, 13);
+    const done = r.t.games.find(x => x.id === g.id); eq(done.status, 'final'); eq(done.sa, 13); eq(done.sb, 6);
+    const fin = r.t.games.find(x => x.slot === 'r2m1'); assert.ok(fin.a === g.a || fin.b === g.a, 'the winner moves on to the final');
+    eq(C.applyResult(r.t, res(13, 6)).skip, 'same'); eq(C.applyResult(r.t, res(14, 6)).skip, 'already');
+    eq(t.games.find(x => x.id === g.id).status, 'scheduled', 'the tournament passed in is not changed');
+    const rr = C.partyTournament({ teams: ['A', 'B'] }); eq(C.applyResult(rr, { v: 1, tid: rr.id, gid: rr.games[0].id, sa: 6, sb: 6 }).t.games[0].sa, 6, 'a tie is fine in a round robin');
   });
 
   /* ================= part 2: the real app in Chrome ================= */
@@ -791,9 +877,12 @@ const ranks = (res) => res.rows.map(r => r.team + ':' + r.rank + (r.tied ? 't' :
       eq(await page.locator('.trow.us').count(), 1);
       eq(await txt(page, '.card.stand .big'), 'Seed 2 of 5 teams · 2-1');
       const sc = await txt(page, '.scen');
-      assert.ok(/If we win out.*2 games left, all wins.*seed 1/.test(sc), sc);
-      assert.ok(/If we lose out.*all 2 games lost.*seed 4/.test(sc), sc);
-      assert.ok(/Estimate/.test(await txt(page, '.card:has(.scen) .label')));
+      assert.ok(/If we win out.*2-0 the rest of the way.*seed 1 In/.test(sc), sc);
+      assert.ok(/If we win 1 of 2.*seed 1 to 4 In/.test(sc), sc);
+      // other teams' games count too: losing out can drop us to 6th, which is still a maybe for the top 4
+      assert.ok(/If we lose out.*0-2 the rest of the way.*seed 4 to 6 Depends/.test(sc), sc);
+      assert.ok(/top 4 make the bracket\. Still alive: anywhere from seed 1 to 6/.test(await txt(page, '.cutline')));
+      assert.ok(!/Estimate/.test(await txt(page, '.card:has(.scen) .label')), 'every result was checked, so no Estimate label');
       // team record line: Team B 2-1, .667, 18 runs for, 10 against, diff +8
       assert.ok(/\.667 · 18 runs for, 10 against · diff \+8/.test(await txt(page, '.stand-list li:nth-child(1) .st')), await txt(page, '.stand-list li:nth-child(1) .st'));
       eq(await page.locator('.tag.info').count(), 3, 'the three teams that needed a tiebreaker are tagged');
@@ -860,19 +949,44 @@ const ranks = (res) => res.rows.map(r => r.team + ':' + r.rank + (r.tied ? 't' :
     });
   });
 
-  await test('what do we need: after our last pool game is scored the estimate is replaced by the final seed', async () => {
+  await test('what do we need: it follows each of our scores, and says when we have clinched', async () => {
     await app({ tours: [mkTour({ id: 'wn1' })], open: true }, async page => {
       await page.locator('.game.ours', { hasText: 'Team E' }).click(); await openSheetWait(page);
       await fillGame(page, { final: true, sa: 5, sb: 2 }); await saveSheet(page); await noSheets(page);
       await tabTo(page, 'standings');
-      assert.ok(/1 game left, all wins.*seed 1/.test(await txt(page, '.scen')), 'one game left after the first is scored');
+      assert.ok(/If we win.*1-0 the rest of the way.*seed 1 In.*If we lose.*0-1 the rest of the way.*seed 2 to 4 In/.test(await txt(page, '.scen')), 'one game left after the first is scored');
+      assert.ok(/Clinched: Our Team finishes in the top 4/.test(await txt(page, '.cutline')));
       await tabTo(page, 'games');
       await page.locator('.game.ours', { hasText: 'Team F' }).click(); await openSheetWait(page);
       await fillGame(page, { final: true, sa: 6, sb: 1 }); await saveSheet(page); await noSheets(page);
       await tabTo(page, 'standings');
       eq(await txt(page, '.card.stand .big'), 'Seed 1 of 6 teams · 4-1');
-      assert.ok(/No pool games left for Our Team/.test(await txt(page, '.card.soft')), await txt(page, '#view'));
-      eq(await page.locator('.scen').count(), 0);
+      // our games are done, two games between other teams are not: the card says where that leaves us
+      assert.ok(/Our pool games are done.*Other teams still have games.*seed 1 In/.test(await txt(page, '.scen')), await txt(page, '#view'));
+      assert.ok(/including the 2 games between other teams/.test(await txt(page, '.card:has(.scen)')));
+    });
+  });
+
+  await test('try some scores: made-up scores move the standings live, and nothing is saved', async () => {
+    await app({ tours: [mkTour({ id: 'wi1' })], open: true }, async page => {
+      await tabTo(page, 'standings');
+      await page.click('[data-act="whatif-open"]'); await openSheetWait(page);
+      eq(await page.locator(sheetSel + ' .wi-game').count(), 4, 'the 4 pool games still to play');
+      eq(await page.locator(sheetSel + ' .wi-game.us').count(), 2, 'ours are marked');
+      assert.ok(/Type a score/.test(await txt(page, sheetSel + ' .wi-out')));
+      // we lose both, 0-3
+      for (const opp of ['Team E', 'Team F']) {
+        const li = page.locator(sheetSel + ' .wi-game.us', { hasText: opp });
+        await li.locator('input[data-side="a"]').fill('0'); await li.locator('input[data-side="b"]').fill('3');
+      }
+      assert.ok(/Our Team would be seed 4, in the bracket\./.test(await txt(page, sheetSel + ' .wi-head')), await txt(page, sheetSel + ' .wi-head'));
+      eq(await page.locator(sheetSel + ' .wi-table li.cut').count(), 1, 'the cut line is drawn under seed 4');
+      eq(await page.locator(sheetSel + ' .wi-table li.us').count(), 1);
+      await page.click(sheetSel + ' [data-clear]');
+      assert.ok(/Type a score/.test(await txt(page, sheetSel + ' .wi-out')));
+      await page.click(sheetSel + ' .sh-foot [data-close]'); await noSheets(page);
+      const saved = await page.evaluate(() => TP.cur().games.filter(g => g.kind === 'pool' && g.status !== 'final').length);
+      eq(saved, 4, 'nothing was saved');
     });
   });
 
@@ -1296,7 +1410,7 @@ const ranks = (res) => res.rows.map(r => r.team + ':' + r.rank + (r.tied ? 't' :
       const clean = async where => {
         eq(await page.evaluate(() => window.__xss), undefined, where + ': nothing ran');
         eq(await page.evaluate(() => document.body.querySelectorAll('img, [onerror], [onload], [onclick], [onmouseover]').length), 0, where + ': no injected elements');
-        eq(await page.evaluate(() => document.querySelectorAll('script').length), 6, where + ': no extra script tags (install.js, health.js, core, ui, views, app)');
+        eq(await page.evaluate(() => document.querySelectorAll('script').length), 7, where + ': no extra script tags (install.js, health.js, core, ui, views, app, party)');
       };
       await page.click('[data-act=tour-new]'); await openSheetWait(page);
       await page.fill('#f-name', IMG); await page.fill('#f-team', '<b>Evil</b> "Team"'); await saveSheet(page); await noSheets(page);
@@ -1534,6 +1648,43 @@ const ranks = (res) => res.rows.map(r => r.team + ':' + r.rank + (r.tied ? 't' :
       await page.click('.tcard'); await page.waitForSelector('.card.next');
       for (const tb of ['games', 'standings', 'bracket', 'pack', 'notes']) { await tabTo(page, tb); await qa(page, tb, { contrast: false }); }
       await tabTo(page, 'games'); await page.locator('.game').first().click(); await openSheetWait(page); await qa(page, 'game sheet', { contrast: false });
+    });
+  });
+
+  await test('party games: type the teams, play on the big screen, keep score in Scoreboard and the final comes back', async () => {
+    await app({ size: [320, 640] }, async page => {
+      await page.click('[data-act=party-new]'); await openSheetWait(page);
+      await page.fill('#p-teams', 'Red Rockets\nBlue Sharks\nGold Owls');
+      assert.ok(/3 teams, 3 games/.test(await txt(page, '#p-count')));
+      await qa(page, 'party sheet at 320');
+      await page.click(sheetSel + ' [data-p-go]'); await noSheets(page);
+      await page.waitForSelector('.pl-game');
+      eq(await page.getAttribute('#nav [data-tab=play]', 'aria-current'), 'page');
+      eq(await page.locator('#nav [data-tab]').count(), 4, 'play, games, standings, pack');
+      eq(await page.locator('.pl-game').count(), 1);
+      await page.evaluate(() => { const t = document.querySelector('#toasts'); if (t) t.innerHTML = ''; });
+      await qa(page, 'play screen at 320'); await shot(page, '19-party-play', 320);
+      // score the first game here: a touchdown and the 1-point try, then Final
+      const first = page.locator('.pl-game').first();
+      await first.locator('[data-side=a][data-d="6"]').click(); await first.locator('[data-side=a][data-d="1"]').click();
+      eq(await txt(page, '.pl-game .pl-score'), '7');
+      await page.click('[data-act=play-final]'); await page.waitForSelector('.sheet.confirm'); await page.click('.sheet.confirm [data-ok]'); await noSheets(page);
+      await page.waitForSelector('.pl-table');
+      // the next game: keep score in Scoreboard
+      const next = await page.evaluate(() => { const g = TP.C.playNow(TP.cur())[0]; return { id: g.id, a: g.a, b: g.b }; });
+      await page.click('[data-act=keep-score][data-id="' + next.id + '"]');
+      await page.waitForURL(/\/scoreboard\//); await page.waitForFunction(() => window.SB && SB.game && SB.view === 'board', null, { timeout: 6000 });
+      const sg = await page.evaluate(() => ({ flag: SB.game.cfg.flag, a: SB.game.teams[0].n, b: SB.game.teams[1].n, url: location.search }));
+      eq(sg.flag, true); eq(sg.a, next.a.slice(0, 16)); eq(sg.b, next.b.slice(0, 16)); eq(sg.url, '', 'the token is taken off the address');
+      await page.click('[data-act=a][data-t=score][data-team="1"][data-d="6"]'); await page.click('[data-act=a][data-t=score][data-team="1"][data-d="2"]');
+      await page.click('[data-act=b-menu]'); await page.click('[data-act=b-finish]');
+      await page.waitForSelector('.sheet-wrap.open [data-ok]'); await page.click('.sheet-wrap.open [data-ok]');
+      await page.waitForSelector('text=Final sent to Tournament Pack');
+      await page.click('a.btn[href="../tournamentpack/"]');
+      await page.waitForURL(/\/tournamentpack\//); await waitToast(page, /Final from Scoreboard/);
+      const done = await page.evaluate(id => { const g = TP.cur() ? TP.cur().games.find(x => x.id === id) : Object.values(TP.S.tours)[0].games.find(x => x.id === id); return [g.status, g.sa, g.sb]; }, next.id);
+      deq(done, ['final', 0, 8]);
+      eq(await page.evaluate(() => Object.keys(localStorage).filter(k => k.startsWith('apps.handoff.')).length), 0, 'nothing left behind');
     });
   });
 

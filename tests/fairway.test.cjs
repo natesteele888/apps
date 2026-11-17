@@ -1,0 +1,243 @@
+// Fairway (golf tournaments) tests. Run:
+//   cd <apps> && NODE_PATH=<node_modules with playwright> tests/run.sh fairway
+// Part 1 tests core.js on its own: scoring math, the board, groups, stats, closest-to-the-pin distances, cleaning,
+// and Phase 1: who's in, making it official, the draft, team board, match play, tee times, the calendar file, chat.
+// Part 2 drives the real page with Firebase blocked (so tournaments run on the phone): the demo board, field, score,
+// course and player card, starting a tournament, closest to the pin with the browser's own made-up GPS, the sound
+// switch, names shown as text, and a tournament got going on one phone (official, chat, tee time, calendar file).
+// Live sharing between phones needs the shared database and is not tested here.
+const assert = require('assert');
+const C = require('../apps/fairway/core.js');
+const { launch, startServer, newPage } = require('./lib.cjs');
+
+const results = [];
+async function test(name, fn) {
+  if (process.env.ONLY && !new RegExp(process.env.ONLY, 'i').test(name)) return;
+  const t0 = Date.now();
+  try { await fn(); results.push([name, true]); console.log('PASS  ' + name + '  (' + (Date.now() - t0) + 'ms)'); }
+  catch (e) { results.push([name, false, e]); console.log('FAIL  ' + name + '\n      ' + String(e && e.stack || e).split('\n').slice(0, 6).join('\n      ')); }
+}
+const eq = (a, b, m) => assert.strictEqual(a, b, (m ? m + ': ' : '') + 'expected ' + JSON.stringify(b) + ' got ' + JSON.stringify(a));
+const deq = (a, b, m) => assert.deepStrictEqual(a, b, m);
+const NOW = 1794000000000;
+function twoPlayers() {
+  const ev = C.newEvent({ name: 'Test Cup', now: NOW });
+  ev.p.aaaaaa1 = C.newPlayer(ev, { name: 'Alpha Test', tee: 'blue', g: 1, st: 1 });
+  ev.p.bbbbbb1 = C.newPlayer(ev, { name: 'Bravo Test', tee: 'white', g: 1, st: 1 });
+  return ev;
+}
+const pl = (ev, id) => Object.assign({ id }, ev.p[id]);
+
+(async () => {
+  /* ===================== PART 1: core.js ===================== */
+  await test('core: the sample course is made up, par 72, four tees', () => {
+    const c = C.sampleCourse();
+    assert.match(c.name, /made-up/); eq(c.holes.length, 18); eq(C.coursePar(c), 72); eq(c.tees.length, 4);
+    const ev = C.newEvent({ name: 'X', now: NOW }); eq(ev.course.sample, undefined, 'no sample flag in a tournament');
+    deq(ev.ctph, []); deq(ev.ctp, {});
+  });
+
+  await test('core: to-par words and colors match the Masters board (red under, green over)', () => {
+    eq(C.fmtPar(0), 'E'); eq(C.fmtPar(-3), '-3'); eq(C.fmtPar(2), '+2');
+    eq(C.tone(-1), 'under'); eq(C.tone(1), 'over'); eq(C.tone(0), 'even');
+  });
+
+  await test('core: a round adds up (to par, thru, next hole) and the board ties and ranks', () => {
+    const ev = twoPlayers(); const pars = ev.course.holes.slice(0, 3).map(h => h.par);
+    // Alpha: par, birdie, bogey relative to each hole; Bravo: par, par, par
+    [0, -1, 1].forEach((d, i) => { ev.p.aaaaaa1.s['1_' + (i + 1)] = pars[i] + d; });
+    pars.forEach((p, i) => { ev.p.bbbbbb1.s['1_' + (i + 1)] = p; });
+    const r = C.round(ev, pl(ev, 'aaaaaa1'), 1);
+    eq(r.toPar, 0); eq(r.thru, 3); eq(r.next, 4); eq(r.strokes, pars.reduce((a, b) => a + b, 0));
+    const s = C.standings(ev); eq(s[0].pos, 'T1'); eq(s[1].pos, 'T1');
+    ev.p.aaaaaa1.s['1_4'] = ev.course.holes[3].par - 1;
+    const s2 = C.standings(ev); eq(s2[0].name, 'Alpha Test'); eq(s2[0].pos, '1'); eq(s2[0].toPar, -1); eq(s2[1].pos, '2');
+  });
+
+  await test('core: a group starting on 10 plays 10 to 18 then 1 to 9', () => {
+    deq(C.playOrder(18, 10).slice(0, 10), [10, 11, 12, 13, 14, 15, 16, 17, 18, 1]);
+    deq(C.playOrder(9, 1), [1, 2, 3, 4, 5, 6, 7, 8, 9]);
+  });
+
+  await test('core: the demo is twelve made-up golfers in three groups', () => {
+    const ev = C.demoEvent(NOW); eq(C.players(ev).length, 12); eq(C.groups(ev).length, 3);
+    eq(C.groups(ev)[2].start, 10); eq(ev.cur, 2);
+  });
+
+  await test('core: cleaning drops bad scores, keys and closest-to-the-pin entries', () => {
+    const ev = twoPlayers(); ev.p.aaaaaa1.s['1_1'] = 4; ev.p.aaaaaa1.s['1_2'] = 99; ev.p.aaaaaa1.s['9_1'] = 4; ev.p.aaaaaa1.s.junk = 3;
+    ev.ctph = [2, 2, 19, 'x', 5]; ev.ctp = { '1_2': { aaaaaa1: { d: 12.5, m: 'gps', at: 1, acc: 20 }, ghost01: { d: 1, m: 'tape', at: 1 } }, '1_7': { aaaaaa1: { d: 3, m: 'tape', at: 1 } } };
+    const c = C.cleanEvent(ev);
+    deq(c.p.aaaaaa1.s, { '1_1': 4 }); deq(c.ctph, [2, 5]);
+    deq(Object.keys(c.ctp), ['1_2'], 'only marked holes'); deq(Object.keys(c.ctp['1_2']), ['aaaaaa1'], 'only players in the tournament');
+    eq(C.cleanCtpEntry({ d: -1, m: 'gps' }), null); eq(C.cleanCtpEntry({ d: 5000, m: 'gps' }), null);
+    eq(C.cleanCtpEntry({ d: 5, m: 'tape', at: 1, ph: 'BAD!' }).ph, undefined);
+  });
+
+  await test('core: closest-to-the-pin distance, averaging and feet words', () => {
+    const ft = C.metres({ lat: 40, lon: -75 }, { lat: 40.00003, lon: -75 }) * 3.28084;
+    assert.ok(ft > 10.8 && ft < 11.1, 'about 11 feet, got ' + ft);
+    const f = C.averageFix([{ lat: 40, lon: -75, acc: 5 }, { lat: 40.0001, lon: -75, acc: 50 }, { lat: 41, lon: -75, acc: 150 }, { lat: 40, lon: -75, acc: 0 }]);
+    eq(f.n, 3, 'a reading 150 m out is ignored'); assert.ok(Math.abs(f.lat - 40) < 0.00001, 'the sure readings win'); assert.ok(f.acc >= 2 && f.acc <= 3);
+    eq(C.averageFix([]), null);
+    const m = C.ctpMeasure({ lat: 40, lon: -75, acc: 4 }, { lat: 40.00003, lon: -75, acc: 3 });
+    assert.ok(m.ft > 10.8 && m.ft < 11.1); eq(m.acc, 16, 'margins combine: 5 m is 16 ft');
+    eq(C.fmtFeet(14.5), '14 ft 6 in'); eq(C.fmtFeet(9.99), '10 ft'); eq(C.fmtFeet(8), '8 ft'); eq(C.fmtFeet(150), '50 yds');
+    const ev = twoPlayers(); ev.ctph = [2]; ev.ctp = { '1_2': { aaaaaa1: { d: 12, m: 'gps', at: 2, acc: 20 }, bbbbbb1: { d: 8.5, m: 'tape', at: 3 } } };
+    const b = C.ctpBoard(ev, 1); eq(b.length, 1); eq(b[0].best.name, 'Bravo Test'); eq(b[0].list.length, 2);
+    eq(C.ctpBoard(ev, 2)[0].best, null, 'round 2 is still open');
+  });
+
+  await test('core: changes use dotted paths, and DELETE clears a score', () => {
+    const ev = twoPlayers();
+    const a = C.applyPatch(ev, { 'p.aaaaaa1.s.1_1': 4, 'ctp.1_2.aaaaaa1': { d: 3, m: 'tape', at: 1 } });
+    eq(a.p.aaaaaa1.s['1_1'], 4); eq(a.ctp['1_2'].aaaaaa1.d, 3);
+    const b = C.applyPatch(a, { 'p.aaaaaa1.s.1_1': C.DELETE }); eq(b.p.aaaaaa1.s['1_1'], undefined);
+  });
+
+  await test('core phase 1: who is in, then official puts everyone in on the tee sheet, four to a group', () => {
+    let ev = C.newEvent({ name: 'Test Cup', now: NOW });
+    ev.rally = { on: true, date: '2026-11-21', goal: 8, note: '', r: {} };
+    ['Al Test', 'Bo Test', 'Cy Test', 'Di Test', 'Ed Test', 'Fa Test'].forEach((n, i) => { ev.rally.r['rid00' + i] = { n, s: i < 5 ? 'in' : 'maybe', at: NOW + i }; });
+    ev.rally.r.rid009 = { n: 'Out Test', s: 'out', at: NOW };
+    ev = C.cleanEvent(ev);
+    const rl = C.rallyList(ev); eq(rl.in, 5); eq(rl.maybe, 1);
+    ev = C.cleanEvent(C.applyPatch(ev, C.officialPatch(ev, NOW)));
+    eq(ev.rally.on, false); eq(C.players(ev).length, 5, 'only the ins');
+    deq(C.players(ev).map(p => p.g).sort(), [1, 1, 1, 1, 2]);
+    assert.ok(ev.p.rid000, 'a rally answer keeps its id as the player id');
+  });
+
+  await test('core phase 1: snake draft by lowest handicap, team board and who-wins picks', () => {
+    let ev = C.newEvent({ name: 'Test Cup', now: NOW });
+    [3, 8, 12, 20, 5, 15].forEach((hc, i) => { ev.p['pl00000' + i] = C.newPlayer(ev, { name: 'Golfer ' + i, hc, group: 1 + (i >> 2) }); });
+    ev.fmt = C.cleanFmt({ kind: 'teams', nt: 2, draft: 'snake', clk: 60 });
+    const caps = C.pickCaptains(ev, 2, 'low'); deq(caps.slice().sort(), ['pl000000', 'pl000004']);
+    ev = C.cleanEvent(C.applyPatch(ev, C.draftStartPatch(ev, caps, NOW)));
+    let st = C.draftState(ev, NOW + 10000); eq(st.on, C.teamOf(ev, st.cap)); eq(st.left, 50); eq(st.avail.length, 4);
+    const order = [];
+    for (;;) { st = C.draftState(ev, NOW); if (!st.on) break; order.push(st.on); ev = C.cleanEvent(C.applyPatch(ev, C.pickPatch(ev, st.avail[0].id, NOW))); }
+    eq(order.length, 4); eq(order[1], order[2], 'snake: the second team picks twice in a row');
+    eq(ev.dr.done, true);
+    const board = C.teamBoard(ev); eq(board.length, 2); eq(board[0].members.length + board[1].members.length, 6);
+    assert.strictEqual(C.cleanFmt({ kind: 'bad', clk: 7 }).kind, 'solo'); eq(C.cleanFmt({ clk: 7 }).clk, 60);
+  });
+
+  await test('core phase 1: match play holes up, closed out, and a win chance', () => {
+    const ev = twoPlayers(); ev.m = { mt00001: { a: ['aaaaaa1'], b: ['bbbbbb1'], r: 1 } };
+    [1, 2, 3].forEach(h => { ev.p.aaaaaa1.s['1_' + h] = 4; ev.p.bbbbbb1.s['1_' + h] = h < 3 ? 5 : 4; });
+    let ms = C.matchStatus(ev, ev.m.mt00001); assert.match(ms.text, /2 UP/); assert.ok(ms.pa > 0.6 && ms.pa < 0.9, 'chance ' + ms.pa);
+    for (let h = 4; h <= 18; h++) { ev.p.aaaaaa1.s['1_' + h] = 3; ev.p.bbbbbb1.s['1_' + h] = 5; }
+    ms = C.matchStatus(ev, ev.m.mt00001); assert.match(ms.text, /\d+&\d+/); eq(ms.pa, 1);
+  });
+
+  await test('core phase 1: tee times, reminders and the calendar file use the course, never a player', () => {
+    let ev = twoPlayers(); ev.tt = { date: '2026-11-21', where: 'Sample Pines', g: { 1: '08:10', 99: '25:00' } }; ev = C.cleanEvent(ev);
+    deq(ev.tt.g, { 1: '08:10' }, 'bad group and bad time dropped');
+    eq(C.fmtTime('08:10'), '8:10 AM'); eq(C.fmtTime('13:05'), '1:05 PM'); eq(C.fmtDate('2026-11-21'), 'Sat, Nov 21');
+    const ics = C.icsFor(ev, 1, { now: NOW, drive: 25, uid: 'abc' });
+    assert.match(ics, /DTSTART:20261121T081000/); assert.match(ics, /LOCATION:Sample Pines/);
+    eq((ics.match(/BEGIN:VALARM/g) || []).length, 4); assert.match(ics, /TRIGGER:-PT55M/, 'leave now = drive + 30');
+    assert.ok(!/Alpha|Bravo/.test(ics), 'no names in the calendar file');
+    assert.match(C.directions(ev), /^https:\/\/www\.google\.com\/maps\/search\/\?api=1&query=Sample%20Pines$/);
+  });
+
+  await test('core phase 1: chat messages are cleaned, polls keep only real votes, birdies shout', () => {
+    eq(C.cleanMsg({ k: 'm', n: 'Al', t: '   ', at: 1 }), null);
+    eq(C.cleanMsg({ k: 'm', n: 'Al', t: 'x'.repeat(900), at: 1 }).t.length, 500);
+    const p = C.cleanMsg({ k: 'p', n: 'Al', t: 'Who?', o: ['A', 'B', ''], v: { rid0001: 1, bad: 0, rid0002: 7 }, by: 'rid0001', at: 1 });
+    deq(p.o, ['A', 'B']); deq(p.v, { rid0001: 1 });
+    eq(C.cleanMsg({ k: 'p', n: 'Al', t: 'Who?', o: ['A'], at: 1 }), null, 'a poll needs two options');
+    const ev = twoPlayers(); eq(C.shout(ev, 'aaaaaa1', 1, 1, 3), 'Birdie! Alpha Test on 1.'); eq(C.shout(ev, 'aaaaaa1', 1, 1, 4), null);
+    eq(C.cleanHc('+2.1'), -2.1); eq(C.cleanHc('abc'), null);
+  });
+
+  /* ===================== PART 2: the page ===================== */
+  let server, browser;
+  try { server = await startServer('fairway'); browser = await launch(); }
+  catch (e) { results.push(['harness', false, e]); console.log('HARNESS ' + e.message); }
+  const open = async (opts = {}) => {
+    const p = await newPage(browser, opts);
+    await p.page.route(/gstatic\.com\/firebasejs/, r => r.abort()); // never the real database from a test
+    await p.page.goto(server.url); await p.page.waitForSelector('#demo');
+    return p;
+  };
+
+  if (browser) await test('page: the demo board, field, score, course and a flipping player card', async () => {
+    const { page, errors, ctx } = await open();
+    await page.click('#demo'); await page.waitForSelector('.lb tbody tr');
+    eq(await page.locator('.lb tbody tr').count(), 12);
+    assert.ok(await page.locator('.lb tbody tr').first().locator('.tp.under').count(), 'the leader is red (under par)');
+    assert.ok(await page.locator('.ctp').count(), 'closest to the pin on the board');
+    await page.click('[data-bm=field]'); await page.waitForSelector('.frow'); eq(await page.locator('.frow').count(), 12);
+    await page.click('[data-bm=course]'); await page.waitForSelector('table.course');
+    await page.click('[data-tab=score]'); await page.waitForSelector('.scorer li');
+    await page.click('[data-tab=board]'); await page.click('[data-bm=leaders]'); await page.locator('[data-player]').first().click();
+    await page.waitForSelector('.flipper.flipped', { timeout: 3000 });
+    await page.click('[data-ct=stats]'); assert.match(await page.locator('.cbody').textContent(), /Birdies|birdies/);
+    await page.click('.cbtns [data-cclose]'); await page.waitForFunction(() => !document.querySelector('#cardlayer').innerHTML);
+    const wide = await page.evaluate(() => document.documentElement.scrollWidth); assert.ok(wide <= 390, 'no sideways scroll at 390 px, got ' + wide);
+    deq(errors, []); await ctx.close();
+  });
+
+  if (browser) await test('page: start a tournament on this phone, mark a closest-to-the-pin hole and measure with GPS', async () => {
+    const { page, errors, ctx } = await open({ ctx: { geolocation: { latitude: 40, longitude: -75, accuracy: 4 }, permissions: ['geolocation'] } });
+    await page.click('#new'); await page.fill('#nn', 'Test Classic'); await page.fill('#nme', 'Alpha Test');
+    await page.locator('#nf [type=submit]').click();
+    await page.waitForFunction(() => window.FW.debug.S.view === 'event' && window.FW.debug.S.ev);
+    const code = await page.evaluate(() => window.FW.debug.S.code); assert.match(code, /^[a-z2-7]{20}$/);
+    await page.click('[data-tab=more]'); await page.click('label:has([data-ctph="2"]) span');
+    await page.waitForFunction(c => (JSON.parse(localStorage.getItem('fw:ev:' + c)).ctph || []).includes(2), code);
+    await page.click('[data-tab=score]'); await page.click('.strip [data-h="2"]');
+    await page.click('#ctpopen'); await page.click('#meas');
+    await page.click('#mpin'); await page.waitForFunction(() => /Marked/.test(document.querySelector('#g1').textContent), null, { timeout: 15000 });
+    await ctx.setGeolocation({ latitude: 40.00003, longitude: -75, accuracy: 4 });
+    await page.click('#mball'); await page.waitForFunction(() => /ft/.test(document.querySelector('#cres').textContent), null, { timeout: 15000 });
+    assert.match(await page.locator('#cres').textContent(), /give or take \d+ feet/);
+    await page.click('#csave');
+    const e = await page.waitForFunction(c => { const d = JSON.parse(localStorage.getItem('fw:ev:' + c)); const b = d.ctp && d.ctp['1_2']; return b && Object.values(b)[0]; }, code).then(h => h.jsonValue());
+    eq(e.m, 'gps'); assert.ok(e.d > 9 && e.d < 13, 'about 11 feet, got ' + e.d);
+    await page.click('[data-tab=board]'); assert.match(await page.locator('.ctp').textContent(), /Alpha Test/);
+    deq(errors, []); await ctx.close();
+  });
+
+  if (browser) await test('page: the sound switch remembers off, and names are shown as text', async () => {
+    const { page, errors, ctx } = await open();
+    const before = await page.getAttribute('#snd', 'aria-pressed');
+    await page.click('#snd'); eq(await page.evaluate(() => localStorage.getItem('fw:sound')), before === 'true' ? 'off' : 'on');
+    await page.click('#new'); await page.fill('#nn', '<img src=x onerror=window.__pwn=1>'); await page.fill('#nme', '<b>Bold</b>');
+    await page.locator('#nf [type=submit]').click(); await page.waitForFunction(() => window.FW.debug.S.ev);
+    await page.click('[data-tab=board]');
+    eq(await page.evaluate(() => !!window.__pwn), false); eq(await page.locator('.lb b:text("Bold")').count(), 0);
+    deq(errors, []); await ctx.close();
+  });
+
+  if (browser) await test('page: get a tournament going on this phone, make it official, chat, tee time and calendar file', async () => {
+    const { page, errors, ctx } = await open({ ctx: { acceptDownloads: true } });
+    await page.click('#rally'); await page.fill('#nn', 'Test Rally'); await page.fill('#nd', '2026-11-21'); await page.fill('#nme', 'Alpha Test');
+    await page.click('[data-nk=teams]'); await page.locator('#nf [type=submit]').click();
+    await page.waitForFunction(() => window.FW.debug.S.tab === 'going');
+    assert.match(await page.locator('body').textContent(), /Sat, Nov 21/);
+    eq(await page.isDisabled('#rgo'), true, 'official needs at least two who are in');
+    await page.evaluate(() => window.FW.ui.write({ 'rally.r.bravo00001': { n: 'Bravo Test', s: 'in', at: Date.now() } }));
+    await page.waitForFunction(() => !document.querySelector('#rgo').disabled);
+    page.once('dialog', d => d.accept()); // "Make it official?" asks first
+    await page.click('#rgo'); await page.waitForFunction(() => window.FW.debug.S.tab === 'teams');
+    const code = await page.evaluate(() => window.FW.debug.S.code);
+    eq(await page.evaluate(c => Object.keys(JSON.parse(localStorage.getItem('fw:ev:' + c)).p).length, code), 2);
+    await page.click('[data-tab=chat]'); await page.fill('#ct', '<b>Tee</b> it up'); await page.locator('#cf [type=submit]').click();
+    await page.waitForSelector('.chat li.cm.mine'); assert.match(await page.locator('.chat li.cm.mine').textContent(), /<b>Tee<\/b> it up/, 'chat shown as text');
+    await page.click('[data-tab=more]'); await page.fill('[data-ttg="1"]', '08:10'); await page.locator('[data-ttg="1"]').dispatchEvent('change');
+    await page.waitForSelector('.teecard'); assert.match(await page.locator('.teecard').textContent(), /8:10 AM/);
+    const [dl] = await Promise.all([page.waitForEvent('download'), page.click('#addcal')]);
+    assert.match(dl.suggestedFilename(), /\.ics$/);
+    const wide = await page.evaluate(() => document.documentElement.scrollWidth); assert.ok(wide <= 390, 'no sideways scroll at 390 px, got ' + wide);
+    deq(errors, []); await ctx.close();
+  });
+
+  if (browser) await browser.close();
+  if (server) server.stop();
+  const bad = results.filter(r => !r[1]);
+  console.log(bad.length ? bad.length + ' FAILED' : 'ALL PASSED (' + results.length + ')');
+  process.exit(bad.length ? 1 : 0);
+})();

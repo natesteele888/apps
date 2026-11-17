@@ -1,9 +1,9 @@
 // Network first, so updates show up right away; falls back to the last saved copy when offline.
-const CACHE = "tournamentpack-v2";
+const CACHE = "tournamentpack-v4";
 // Save the page itself at install. Without this, the first visit caches nothing
 // (the page loaded before the worker existed), so opening it offline right after
 // installing fails. Each file is added on its own so one miss can't block install.
-const SHELL = ["./", "manifest.json", "tpack.css", "core.js", "ui.js", "views.js", "app.js", "/apps/icons/tournamentpack-192.png", "/apps/icons/tournamentpack-512.png", "/apps/icons/tournamentpack-maskable.png"];
+const SHELL = ["./", "manifest.json", "tpack.css", "core.js", "ui.js", "views.js", "app.js", "party.js", "/apps/icons/tournamentpack-192.png", "/apps/icons/tournamentpack-512.png", "/apps/icons/tournamentpack-maskable.png"];
 self.addEventListener("install", e => {
   self.skipWaiting();
   e.waitUntil(caches.open(CACHE).then(c => Promise.all(SHELL.map(u => c.add(new Request(u, {cache: "reload"})).catch(() => {})))));

@@ -19,8 +19,9 @@
     lastNextKey = nextKey();
   }
   TP.render = render;
+  TP.openTour = function (id) { openTour(id); };
   function scrollTop() { try { window.scrollTo(0, 0); } catch (e) { /* ignore */ } }
-  function openTour(id) { S.view = "tournament"; S.tid = id; S.tab = "games"; S.packEdit = false; render(); scrollTop(); TP.syncHistory(); }
+  function openTour(id) { S.view = "tournament"; S.tid = id; S.tab = S.tours[id] && S.tours[id].party ? "play" : "games"; S.packEdit = false; render(); scrollTop(); TP.syncHistory(); }
   function goList() { flushNotes(); S.view = "list"; S.tid = null; S.packEdit = false; render(); scrollTop(); TP.syncHistory(); }
   TP.leavePage = function () { flushNotes(); S.view = "list"; S.tid = null; S.packEdit = false; render(); scrollTop(); };
 
@@ -230,9 +231,10 @@
         '<div class="cols2"><div class="field"><label class="label" for="g-field">Field or court</label><input type="text" id="g-field" maxlength="60" autocomplete="off" placeholder="Field 3"></div><div class="field"><label class="label" for="g-label">Round label</label><input type="text" id="g-label" maxlength="40" autocomplete="off" placeholder="Pool play"></div></div>' +
         '<div class="field"><span class="label">Status</span>' + pillsHtml("status", [["scheduled", "Scheduled"], ["final", "Final"]], st.status, "Status") + "</div>" +
         '<div class="f-res"><div class="cols2 f-scores"><div class="field"><label class="label" id="g-la" for="g-sa">Score</label><input type="number" id="g-sa" inputmode="numeric" min="0" max="999"></div><div class="field"><label class="label" id="g-lb" for="g-sb">Score</label><input type="number" id="g-sb" inputmode="numeric" min="0" max="999"></div></div>' +
-        (t.sport !== "basketball" ? '<div class="field"><label class="label" for="g-inn">Innings played, only if the game was shortened</label><input type="number" id="g-inn" inputmode="numeric" min="1" max="30" placeholder="Full game"><div class="hint">For a time-limit or called game. Leave blank for a full game.</div></div>' : "") +
+        (C.sportInfo(t.sport).unit === "runs" ? '<div class="field"><label class="label" for="g-inn">Innings played, only if the game was shortened</label><input type="number" id="g-inn" inputmode="numeric" min="1" max="30" placeholder="Full game"><div class="hint">For a time-limit or called game. Leave blank for a full game.</div></div>' : "") +
         '<div class="field"><label class="label" for="g-forf">Forfeit</label><select id="g-forf"><option value="">No forfeit</option><option value="a">Side 1 forfeited</option><option value="b">Side 2 forfeited</option></select><div class="hint" id="g-forfinfo"></div></div></div>' +
         '<p class="errmsg" id="g-err" role="alert" hidden></p>' +
+        (editing && g.status !== "final" && g.a && g.b ? '<button type="button" class="btn ghost block" data-act="keep-score" data-id="' + esc(g.id) + '" style="margin-top:8px">Keep score in Scoreboard</button>' : "") +
         (editing ? '<button type="button" class="btn danger block" data-del style="margin-top:8px">Delete this game</button>' : ""),
       footer: '<button type="button" class="btn ghost" data-close>Cancel</button><button type="button" class="btn" data-save>' + (editing ? "Save game" : "Add game") + "</button>",
       onOpen: function (api) {
@@ -405,6 +407,48 @@
     });
   }
   ACT["rules-open"] = function () { TP.closeAllSheets(); openRulesSheet("tour"); };
+
+  /* ----- what if: type scores for pool games not played yet and watch the standings move. Nothing is saved. ----- */
+  ACT["whatif-open"] = function () {
+    var t = cur(); if (!t) return;
+    var left = C.sortGames(t.games.filter(function (g) { return g.kind === "pool" && g.status !== "final" && g.a && g.b; }));
+    if (!left.length) return toast("Every pool game has a final score, so there is nothing to try.", "");
+    var picks = {}, cfg = Object.assign({}, t.rules, { sport: t.sport }), us = C.teamKey(t.team), cut = t.bracket.size;
+    function gameRow(g) {
+      var ours = C.isOurs(t, g);
+      return '<li class="wi-game' + (ours ? " us" : "") + '" data-id="' + esc(g.id) + '"><div class="wi-when mute small">' + esc(C.fmtDay(g.date) + (g.time ? " · " + C.fmtTime(g.time) : "")) + "</div>" +
+        '<div class="wi-row"><label class="wi-team"><span>' + esc(g.a) + '</span><input type="number" inputmode="numeric" min="0" max="999" data-side="a" aria-label="' + esc(g.a + " score against " + g.b) + '"></label>' +
+        '<span class="wi-v" aria-hidden="true">vs</span><label class="wi-team"><span>' + esc(g.b) + '</span><input type="number" inputmode="numeric" min="0" max="999" data-side="b" aria-label="' + esc(g.b + " score against " + g.a) + '"></label></div></li>';
+    }
+    function tableHTML() {
+      var r = C.whatIf(t.games, cfg, picks), ranked = r.rows.filter(function (x) { return x.gp > 0; }), me = us ? r.rows.filter(function (x) { return x.key === us; })[0] : null;
+      var head = !r.used ? "Type a score for any game to see what it does." :
+        me && me.rank != null ? esc(t.team) + " would be seed " + me.rank + (me.rankTo > me.rank ? " to " + me.rankTo + " (still tied)" : "") + (cut ? (me.rankTo <= cut ? ", in the bracket." : me.rank > cut ? ", out of the top " + cut + "." : ", right on the line.") : ".") :
+          "Standings with " + C.plural(r.used, "made-up score") + ":";
+      return '<p class="wi-head">' + head + "</p>" + (ranked.length ? '<ol class="wi-table">' + ranked.map(function (x) {
+        return '<li class="' + (x.key === us ? "us" : "") + (cut && x.rank === cut ? " cut" : "") + '"><span class="rk">' + (x.tied ? "T" : "") + x.rank + "</span><b>" + esc(x.team) + '</b><span class="num">' + x.w + "-" + x.l + (x.t ? "-" + x.t : "") + "</span></li>";
+      }).join("") + "</ol>" : "");
+    }
+    openSheet({
+      title: "Try some scores", cls: "form",
+      html: '<p class="msg">Make up scores for games still to play and the standings below follow, with every tiebreaker. Nothing here is saved.</p>' +
+        '<ol class="wi-games">' + left.map(gameRow).join("") + '</ol><div class="wi-out" aria-live="polite">' + tableHTML() + "</div>",
+      footer: '<button type="button" class="btn ghost" data-clear>Clear</button><button type="button" class="btn" data-close>Done</button>',
+      onOpen: function (api) {
+        var out = $(".wi-out", api.el);
+        api.el.addEventListener("input", function (e) {
+          var inp = e.target.closest("input[data-side]"); if (!inp) return;
+          var li = inp.closest("[data-id]"), id = li.getAttribute("data-id");
+          var a = $('[data-side="a"]', li).value, b = $('[data-side="b"]', li).value;
+          if (a === "" || b === "") delete picks[id]; else picks[id] = { sa: Number(a), sb: Number(b) };
+          out.innerHTML = tableHTML();
+        });
+        $("[data-clear]", api.el).addEventListener("click", function () {
+          picks = {}; Array.prototype.forEach.call(api.el.querySelectorAll("input[data-side]"), function (i) { i.value = ""; }); out.innerHTML = tableHTML();
+        });
+      }
+    });
+  };
   ACT["rules-defaults"] = function () { openRulesSheet("defaults"); };
   ACT["team-open"] = function (el) {
     var t = cur(), name = el.getAttribute("data-team"), k = C.teamKey(name);

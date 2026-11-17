@@ -27,8 +27,9 @@
 
   function ruleLine(sport, cfg) {
     if (sport === "basketball") return C.fmtClock(cfg.periodSec * 1000) + (cfg.periods === 2 ? " halves" : " quarters") + (cfg.bonusAt ? ", bonus at " + cfg.bonusAt : "") + ", " + cfg.timeouts + " timeouts";
-    if (sport === "football") return C.fmtClock(cfg.periodSec * 1000) + " quarters, " + cfg.timeouts + " timeouts a half";
-    if (sport === "baseball") return cfg.innings + " innings" + (cfg.extra ? ", extra innings" : "") + (cfg.mercyRuns ? ", mercy at " + cfg.mercyRuns : "");
+    if (sport === "football") return (cfg.flag ? "Flag: " : "") + C.fmtClock(cfg.periodSec * 1000) + (cfg.periods === 2 ? " halves, " : " quarters, ") + cfg.timeouts + " timeouts a half";
+    if (sport === "baseball") return cfg.innings + " innings" + (cfg.extra ? ", extra innings" : "") + (cfg.mercyRuns ? ", mercy at " + cfg.mercyRuns : "") +
+      (cfg.runLimit ? ", " + cfg.runLimit + " runs an inning" : "") + (cfg.timeLimit ? ", no new inning after " + C.fmtHM(cfg.timeLimit * 60000) : "");
     return "Two scores and a label";
   }
   const START = { basketball: "Start a basketball game", baseball: "Start a baseball game", football: "Start a football game", generic: "Just keep score" };
@@ -55,7 +56,7 @@
     h += '<section class="card"><div class="card-head"><h2 class="sec">Teams</h2><button type="button" class="btn ghost small" data-act="swap-teams">' + IC.swap + ' Swap</button></div><p class="hint" style="margin:-2px 0 10px">Names show on the board. Home is on the left. Tap a color circle to change its color.</p>' +
       SB.teamRow(0, T[0], "Home team") + SB.teamRow(1, T[1], "Away team") + "</section>";
     h += '<section aria-label="Start a game"><h2 class="sec pad">Start a game</h2><div class="sports">' + C.SPORTS.map(s =>
-      '<div class="sport-row"><button type="button" class="sport-btn" data-act="start" data-sport="' + s.id + '" aria-labelledby="sbn-' + s.id + '" aria-describedby="sbd-' + s.id + '"><span class="si" aria-hidden="true">' + s.icon + '</span><span class="st"><b id="sbn-' + s.id + '">' + esc(START[s.id]) + '</b><small id="sbd-' + s.id + '">' + esc(ruleLine(s.id, SB.prefs.cfg[s.id])) + "</small></span></button>" +
+      '<div class="sport-row"><button type="button" class="sport-btn" data-act="start" data-sport="' + s.id + '" aria-labelledby="sbn-' + s.id + '" aria-describedby="sbd-' + s.id + '"><span class="si" aria-hidden="true">' + s.icon + '</span><span class="st"><b id="sbn-' + s.id + '">' + esc(s.id === "football" && SB.prefs.cfg.football.flag ? "Start a flag football game" : START[s.id]) + '</b><small id="sbd-' + s.id + '">' + esc(ruleLine(s.id, SB.prefs.cfg[s.id])) + "</small></span></button>" +
       (s.id === "generic" ? "" : '<button type="button" class="icon-btn" data-act="rules" data-sport="' + s.id + '" aria-label="' + esc(s.label) + ' rules">' + gear + "</button>") + "</div>").join("") + "</div></section>";
     h += '<section aria-label="Recent games"><h2 class="sec pad">Recent games</h2>';
     if (SB.recent.length) h += '<div class="recent">' + SB.recent.map(recentRow).join("") + "</div>";
@@ -75,12 +76,16 @@
   ACT["swap-teams"] = () => { const t = readHomeTeams(); S.homeTeams = [t[1], t[0]]; syncHomeTeams(true); SB.renderHome(); };
 
   /* ================= starting, resuming, finishing ================= */
-  function doStart(sport) {
+  function doStart(sport, req) {
     syncHomeTeams(true);
-    const g = C.newGame(sport, { teams: SB.prefs.teams, cfg: SB.prefs.cfg[sport], date: SB.today() });
+    // a Tournament Pack game: its two teams (colors kept from the home screen), and flag football's rules when that is the sport
+    const cfg = req && req.cfg ? Object.assign({}, SB.prefs.cfg[sport].flag ? SB.prefs.cfg[sport] : {}, req.cfg) : SB.prefs.cfg[sport];
+    const teams = req ? req.teams.map((t, i) => ({ n: t.n, c: SB.prefs.teams[i].c })) : SB.prefs.teams;
+    const g = C.newGame(sport, { teams: teams, cfg: cfg, date: SB.today(), link: req ? req.link : null });
     SB.game = g; SB.save("game", g);
     SB.enterBoard();
   }
+  SB.startFor = req => askThen(() => doStart(req.sport, req), req);
   function saveLiveAs(status) {
     const g = SB.game; if (!g) return;
     SB.recent = C.addRecent(SB.recent, C.makeRecent(g, status, Date.now())); saveRecent();
@@ -88,18 +93,23 @@
   ACT.start = el => {
     const sport = el.dataset.sport;
     syncHomeTeams(true);
-    if (!SB.game) return doStart(sport);
+    askThen(() => doStart(sport));
+  };
+  /* a game already on the board is ended first, one way or the other */
+  function askThen(go, req) {
+    if (!SB.game) return go();
     const g = SB.game;
     SB.openSheet({
       title: "A game is already open",
       html: '<p class="msg">' + esc(C.summary(g)) + " (" + esc(C.progressText(g)) + ") is still in progress. Starting a new game ends it.</p>",
       footer: '<div class="stack-foot"><button type="button" class="btn" data-keep>Save it to Recent, then start</button><button type="button" class="btn danger solid" data-toss>Throw it away, then start</button><button type="button" class="btn ghost" data-close>Cancel</button></div>',
       onOpen(api) {
-        $("[data-keep]", api.el).addEventListener("click", () => { api.close(); saveLiveAs("stopped"); doStart(sport); });
-        $("[data-toss]", api.el).addEventListener("click", () => { api.close(); doStart(sport); });
+        $("[data-keep]", api.el).addEventListener("click", () => { api.close(); saveLiveAs("stopped"); go(); });
+        $("[data-toss]", api.el).addEventListener("click", () => { api.close(); go(); });
       }
     });
-  };
+    if (req) SB.toast("Then the " + req.names[0] + " vs " + req.names[1] + " game from Tournament Pack starts.", "", 5000);
+  }
   ACT.resume = () => { if (SB.game) SB.enterBoard(); };
   ACT["discard-live"] = () => ACT["b-discard"]();
   ACT["b-discard"] = () => {
@@ -115,6 +125,7 @@
     SB.openSheet({
       title: "Finish this game?",
       html: '<p class="msg">It is saved to Recent games as:</p><pre class="resultbox">' + esc(C.resultText(g, "final")) + "</pre>" + (t ? '<p class="msg mute">' + esc(t) + "</p>" : "") +
+        (g.link ? '<p class="msg mute">The final score goes back to Tournament Pack.</p>' : "") +
         '<button type="button" class="btn ghost block small" data-stop style="margin-top:12px">Stopped early? Save it as stopped instead</button>',
       footer: '<button type="button" class="btn ghost" data-close>Keep playing</button><button type="button" class="btn" data-ok>Finish &amp; save</button>',
       onOpen(api) {
@@ -130,6 +141,7 @@
     SB.recent = C.addRecent(SB.recent, entry); saveRecent();
     SB.game = null; SB.store.del("game");
     SB.leaveBoard();
+    if (g.link && SB.sendFinal && SB.sendFinal(g, status)) return;
     SB.toast(status === "stopped" ? "Saved as stopped." : "Game saved to Recent games.", "ok");
     openRecent(entry.id);
   }
@@ -274,6 +286,7 @@
     SB.memMode = !SB.probeStorage();
     loadAll();
     if (SB.game && SB.store.get("view") === "board") SB.enterBoard(); else SB.renderHome();
+    if (SB.takeRequest) SB.takeRequest();
     if (S.damaged) setTimeout(() => SB.toast("A saved game couldn't be read, so it was cleared. Your recent games are fine.", "error", 7000), 400);
     if ("serviceWorker" in navigator) window.addEventListener("load", () => { navigator.serviceWorker.register("sw.js").catch(() => {}); });
   }

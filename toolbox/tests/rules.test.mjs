@@ -3,7 +3,7 @@
 import { test, before, after, beforeEach } from 'node:test';
 import { readFileSync } from 'node:fs';
 import { initializeTestEnvironment, assertSucceeds, assertFails } from '@firebase/rules-unit-testing';
-import { doc, getDoc, setDoc, getDocs, collection, deleteDoc, query, where, orderBy, updateDoc, writeBatch } from 'firebase/firestore';
+import { doc, getDoc, setDoc, getDocs, collection, deleteDoc, query, where, orderBy, limitToLast, updateDoc, writeBatch } from 'firebase/firestore';
 
 const OWNER = 'owner@example.com';
 let env;
@@ -382,4 +382,124 @@ test('this is me (app_me): anyone can mark a random phone code once; only the ow
   // The owner's own "seen" list for the new-phone badge rides on the owner-only rule at the top.
   await assertSucceeds(setDoc(doc(owner(), 'app_seen/watch'), { codes: ['abcdefghij012345'], updated: 1 }));
   await assertFails(getDoc(doc(stranger(), 'app_seen/watch')));
+});
+
+// ---------- Fairway golf tournaments (golf_events): the code is the key, no sign-in ----------
+const FW_CODE = 'abcdefghijklmnopqrst';
+const fwHoles = n => Array.from({ length: n }, (_, i) => ({ par: 4, hcp: i + 1, y: { blue: 400 } }));
+const fwEvent = (extra = {}) => ({ v: 1, name: 'Test Cup', created: 1, updated: 1, rounds: 2, cur: 1, done: false,
+  course: { name: 'Test Course', tees: [{ id: 'blue', name: 'Blue', color: '#1f4fa8' }], holes: fwHoles(18) },
+  p: { pl0000001: { n: 'Test Golfer', tee: 'blue', g: 1, st: 1, at: 1, s: {} } }, ...extra });
+
+test('fairway: anyone with the code can start, read and score a tournament, signed in or not', async () => {
+  await assertSucceeds(setDoc(doc(anon(), 'golf_events/' + FW_CODE), fwEvent()));
+  await assertSucceeds(getDoc(doc(anon(), 'golf_events/' + FW_CODE)));
+  await assertSucceeds(getDoc(doc(stranger(), 'golf_events/' + FW_CODE)));
+  await assertSucceeds(updateDoc(doc(anon(), 'golf_events/' + FW_CODE), { 'p.pl0000001.s.1_1': 4, updated: 2 }));
+  await assertSucceeds(updateDoc(doc(stranger(), 'golf_events/' + FW_CODE), { 'p.pl0000002': { n: 'Second Golfer', tee: 'blue', g: 1, st: 1, at: 2, s: {} }, updated: 3 }));
+  await assertSucceeds(updateDoc(doc(anon(), 'golf_events/' + FW_CODE), { cur: 2, done: true, name: 'Test Cup Final', updated: 4 }));
+});
+
+test('fairway: no listing, no deleting, and the code must be 20 letters and digits 2-7', async () => {
+  await assertSucceeds(setDoc(doc(anon(), 'golf_events/' + FW_CODE), fwEvent()));
+  await assertFails(getDocs(collection(anon(), 'golf_events')));
+  await assertFails(getDocs(collection(stranger(), 'golf_events')));
+  await assertFails(deleteDoc(doc(anon(), 'golf_events/' + FW_CODE)));
+  await assertFails(setDoc(doc(anon(), 'golf_events/short'), fwEvent()));
+  await assertFails(setDoc(doc(anon(), 'golf_events/ABCDEFGHIJKLMNOPQRST'), fwEvent()));
+  await assertFails(setDoc(doc(anon(), 'golf_events/abcdefghijklmnopqrs1'), fwEvent()), '1 is not in the code alphabet');
+});
+
+test('fairway: the shape is checked, and the course and start time cannot change', async () => {
+  await assertFails(setDoc(doc(anon(), 'golf_events/' + FW_CODE), fwEvent({ extra: 'x' })));
+  await assertFails(setDoc(doc(anon(), 'golf_events/' + FW_CODE), fwEvent({ name: '' })));
+  await assertFails(setDoc(doc(anon(), 'golf_events/' + FW_CODE), fwEvent({ rounds: 5 })));
+  await assertFails(setDoc(doc(anon(), 'golf_events/' + FW_CODE), fwEvent({ cur: 3 })));
+  await assertFails(setDoc(doc(anon(), 'golf_events/' + FW_CODE), fwEvent({ course: { name: 'X', tees: [], holes: fwHoles(18) } })));
+  await assertFails(setDoc(doc(anon(), 'golf_events/' + FW_CODE), fwEvent({ course: { name: 'X', tees: [{ id: 'a' }], holes: fwHoles(12) } })));
+  await assertFails(setDoc(doc(anon(), 'golf_events/' + FW_CODE), fwEvent({ course: { name: 'X', tees: [{ id: 'a' }], holes: fwHoles(18), sample: true } })));
+  await assertSucceeds(setDoc(doc(anon(), 'golf_events/' + FW_CODE), fwEvent({ course: { name: 'Nine', tees: [{ id: 'a' }], holes: fwHoles(9) } })));
+  await assertFails(updateDoc(doc(anon(), 'golf_events/' + FW_CODE), { 'course.name': 'Changed', updated: 2 }));
+  await assertFails(updateDoc(doc(anon(), 'golf_events/' + FW_CODE), { created: 99 }));
+  await assertFails(updateDoc(doc(anon(), 'golf_events/' + FW_CODE), { secret: 'x' }));
+});
+
+test('fairway: a tournament holds at most 120 players', async () => {
+  const p = {}; for (let i = 0; i < 121; i++) p['pl' + String(i).padStart(7, '0')] = { n: 'G', tee: 'blue', g: 1, st: 1, at: 1, s: {} };
+  await assertFails(setDoc(doc(anon(), 'golf_events/' + FW_CODE), fwEvent({ p })));
+  delete p.pl0000120;
+  await assertSucceeds(setDoc(doc(anon(), 'golf_events/' + FW_CODE), fwEvent({ p })));
+});
+
+test('fairway: a tournament code gives no way into anything else', async () => {
+  await assertFails(getDoc(doc(anon(), 'projects/p1')));
+  await assertFails(getDocs(collection(anon(), 'cl_crews')));
+});
+
+test('fairway: closest to the pin distances live in the tournament, photos in small documents under it', async () => {
+  const jpg = 'data:image/jpeg;base64,' + 'A'.repeat(400);
+  await assertFails(setDoc(doc(anon(), 'golf_events/' + FW_CODE + '/ctp/ph00001'), { img: jpg, updated: 1 }), 'no tournament yet');
+  await assertSucceeds(setDoc(doc(anon(), 'golf_events/' + FW_CODE), fwEvent({ ctph: [7, 15], ctp: {} })));
+  await assertSucceeds(updateDoc(doc(anon(), 'golf_events/' + FW_CODE), { 'ctp.1_7.pl0000001': { d: 14.5, m: 'gps', acc: 22, at: 5 }, updated: 5 }));
+  await assertSucceeds(updateDoc(doc(stranger(), 'golf_events/' + FW_CODE), { ctph: [3, 7, 15], updated: 6 }));
+  await assertFails(updateDoc(doc(anon(), 'golf_events/' + FW_CODE), { ctph: Array.from({ length: 19 }, (_, i) => i + 1), updated: 7 }));
+  await assertFails(updateDoc(doc(anon(), 'golf_events/' + FW_CODE), { ctph: 'all', updated: 7 }));
+  await assertSucceeds(setDoc(doc(anon(), 'golf_events/' + FW_CODE + '/ctp/ph00001'), { img: jpg, updated: 1 }));
+  await assertSucceeds(getDoc(doc(stranger(), 'golf_events/' + FW_CODE + '/ctp/ph00001')));
+  await assertFails(getDocs(collection(anon(), 'golf_events/' + FW_CODE + '/ctp')));
+  await assertFails(deleteDoc(doc(anon(), 'golf_events/' + FW_CODE + '/ctp/ph00001')));
+  await assertFails(setDoc(doc(anon(), 'golf_events/' + FW_CODE + '/ctp/ph00002'), { img: 'javascript:alert(1)', updated: 1 }));
+  await assertFails(setDoc(doc(anon(), 'golf_events/' + FW_CODE + '/ctp/ph00002'), { img: jpg, updated: 1, who: 'x' }));
+  await assertFails(setDoc(doc(anon(), 'golf_events/' + FW_CODE + '/ctp/ph00002'), { img: 'data:image/jpeg;base64,' + 'A'.repeat(600000), updated: 1 }));
+  await assertFails(setDoc(doc(anon(), 'golf_events/' + FW_CODE + '/ctp/BAD!'), { img: jpg, updated: 1 }));
+});
+
+test('fairway phase 1: rally, format, teams, draft, matchups, picks and tee times fit in the tournament', async () => {
+  const ref = doc(anon(), 'golf_events/' + FW_CODE);
+  await assertSucceeds(setDoc(ref, fwEvent({ p: {}, rally: { on: true, date: '2026-11-21', note: '', goal: 8, r: { rs0000001: { n: 'Test Golfer', s: 'in', at: 1 } } },
+    fmt: { kind: 'teams', nt: 2, draft: 'snake', clk: 60, mt: 'singles' }, tt: { date: '2026-11-21', where: '', g: {} } })));
+  await assertSucceeds(updateDoc(doc(stranger(), 'golf_events/' + FW_CODE), { 'rally.r.rs0000002': { n: 'Second Golfer', s: 'maybe', at: 2 }, updated: 2 }));
+  await assertSucceeds(updateDoc(ref, { 'p.rs0000001': { n: 'Test Golfer', tee: 'blue', g: 1, st: 1, at: 3, s: {} }, 'p.rs0000002': { n: 'Second Golfer', tee: 'blue', g: 1, st: 1, at: 3, s: {} },
+    'rally.on': false, updated: 3 }));
+  await assertSucceeds(updateDoc(ref, { teams: { t1: { n: 'Team 1', cap: 'rs0000001' }, t2: { n: 'Team 2', cap: 'rs0000002' } },
+    dr: { on: true, done: false, ord: ['t1', 't2'], pk: [], at: 4 }, updated: 4 }));
+  await assertSucceeds(updateDoc(ref, { 'dr.pk': ['rs0000001'], updated: 5 }));
+  await assertSucceeds(updateDoc(ref, { 'm.mt0000001': { a: ['rs0000001'], b: ['rs0000002'], r: 1 }, 'pk.rs0000002': 't1', 'tt.g.1': '08:10', updated: 6 }));
+  // shapes and caps
+  await assertFails(updateDoc(ref, { 'rally.extra': 'x', updated: 7 }));
+  await assertFails(updateDoc(ref, { 'fmt.extra': 1, updated: 7 }));
+  await assertFails(updateDoc(ref, { 'dr.who': 'x', updated: 7 }));
+  await assertFails(updateDoc(ref, { 'tt.home': 'x', updated: 7 }));
+  await assertFails(updateDoc(ref, { teams: Object.fromEntries(Array.from({ length: 9 }, (_, i) => ['t' + i, { n: 'T' }])), updated: 7 }));
+  await assertFails(updateDoc(ref, { m: Object.fromEntries(Array.from({ length: 61 }, (_, i) => ['mt' + String(i).padStart(6, '0'), { a: [], b: [], r: 1 }])), updated: 7 }));
+  await assertFails(updateDoc(ref, { 'dr.ord': 'all', updated: 7 }));
+});
+
+test('fairway phase 1: the chat lives under the tournament; votes and birdie shouts are the only edits', async () => {
+  const chat = id => doc(anon(), 'golf_events/' + FW_CODE + '/chat/' + id);
+  const msg = { k: 'm', by: 'pl0000001', n: 'Test Golfer', t: 'On my way', at: 1 };
+  await assertFails(setDoc(chat('msg0000000001'), msg), 'no tournament yet');
+  await assertSucceeds(setDoc(doc(anon(), 'golf_events/' + FW_CODE), fwEvent()));
+  await assertSucceeds(setDoc(chat('msg0000000001'), msg));
+  await assertSucceeds(getDocs(query(collection(stranger(), 'golf_events/' + FW_CODE + '/chat'), orderBy('at'), limitToLast(150))));
+  await assertFails(updateDoc(chat('msg0000000001'), { t: 'Edited' }), 'a message cannot be changed');
+  await assertFails(deleteDoc(chat('msg0000000001')));
+  await assertFails(setDoc(chat('msg0000000002'), { ...msg, t: '' }));
+  await assertFails(setDoc(chat('msg0000000002'), { ...msg, t: 'x'.repeat(501) }));
+  await assertFails(setDoc(chat('msg0000000002'), { ...msg, email: 'x' }));
+  await assertFails(setDoc(chat('BAD!'), msg));
+  // a poll: anyone can vote, nothing else can change
+  const poll = { k: 'p', by: 'pl0000001', n: 'Test Golfer', t: 'Power rankings', o: ['Team 1', 'Team 2'], v: {}, at: 2 };
+  await assertSucceeds(setDoc(chat('poll000000001'), poll));
+  await assertSucceeds(updateDoc(doc(stranger(), 'golf_events/' + FW_CODE + '/chat/poll000000001'), { 'v.pl0000002': 1 }));
+  await assertFails(updateDoc(chat('poll000000001'), { o: ['Rigged', 'Team 2'] }));
+  await assertFails(setDoc(chat('poll000000002'), { ...poll, o: ['Only one'] }));
+  // the app's birdie shout can be replaced by a better one (birdie to eagle), but stays a shout
+  const shout = { k: 'a', n: 'Fairway', t: 'Birdie! Test Golfer on 7.', at: 3 };
+  await assertSucceeds(setDoc(chat('apl0000001r1h7'), shout));
+  await assertSucceeds(setDoc(chat('apl0000001r1h7'), { ...shout, t: 'Eagle! Test Golfer on 7.' }));
+  await assertFails(setDoc(chat('apl0000001r1h7'), { ...msg }));
+  // a chat for a code nobody has can't be started, and the chat gives no way into other tournaments' lists
+  await assertFails(setDoc(doc(anon(), 'golf_events/zzzzzzzzzzzzzzzzzzzz/chat/msg0000000001'), msg));
+  await assertFails(getDocs(collection(anon(), 'golf_events')));
 });
