@@ -343,3 +343,86 @@ input:focus, select:focus, textarea:focus { outline: 0; border-color: var(--gree
 .ctph input:checked + span small { color: #cfe0d2; }
 .ctph input:focus-visible + span { outline: 3px solid var(--gold); }
 .msg.small { font-size: 13.5px; }
+
+/* ---------- Phase 1: plain pick lists with big rows (joining, setup, captains, the draft, picks, polls) ---------- */
+.stepno { font: 700 13px/1 var(--sans); letter-spacing: .12em; text-transform: uppercase; color: var(--green); margin: 16px 0 8px; }
+.jh { font: 700 26px var(--serif); color: var(--ink); margin: 0 0 12px; }
+.pick { display: grid; background: var(--paper); border: 1px solid var(--line); border-radius: 14px; overflow: hidden; margin: 0 0 10px; }
+.pk { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 60px; padding: 10px 16px; border: 0; border-top: 1px solid var(--line); background: transparent; text-align: left; cursor: pointer; font-size: 17px; }
+.pk:first-child { border-top: 0; }
+.pk .grow { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.pk .grow b { display: flex; align-items: center; gap: 8px; }
+.pk .grow small { font-size: 14px; margin-top: 2px; }
+.pk .ck { width: 28px; height: 28px; border-radius: 50%; border: 2px solid var(--line); flex: none; display: grid; place-items: center; color: #fff; font-weight: 800; }
+.pk.on { background: var(--green3); }
+.pk.on .ck { background: var(--green); border-color: var(--green); }
+.pk.on .ck::after { content: "✓"; }
+.pk .val { font-weight: 700; color: var(--green); white-space: nowrap; }
+.pk .go { font-weight: 800; color: #fff; background: var(--green); border-radius: 10px; padding: 8px 14px; }
+.pk:disabled { cursor: default; }
+.pk:disabled .grow { opacity: .55; }
+
+/* get it going */
+.rally { padding: 6px 2px 4px; }
+.eyebrow { font: 700 12px/1 var(--sans); letter-spacing: .14em; text-transform: uppercase; color: var(--muted); margin: 6px 0; }
+.rdate { font: 700 30px var(--serif); color: var(--green); }
+.rcount { display: flex; justify-content: space-between; align-items: baseline; margin: 10px 0 6px; }
+.rcount b { font: 700 26px var(--cond); }
+.bar { height: 10px; border-radius: 6px; background: var(--line); overflow: hidden; margin-bottom: 12px; }
+.bar i { display: block; height: 100%; background: var(--green); transition: width .3s; }
+.ritem { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 12px 14px; background: var(--paper); border: 1px solid var(--line); border-radius: 12px; }
+.chip.maybe { background: #fff3cf; color: #6b5200; }
+.chip.out { background: #eee; color: var(--muted); }
+
+/* the draft */
+.clockcard { display: flex; justify-content: space-between; align-items: center; gap: 12px; background: var(--green); color: #fff; border-radius: 16px; padding: 16px; margin: 4px 0 8px; }
+.clockcard small { color: #cfe0d2; display: block; }
+.clockcard b { display: block; font: 700 28px var(--serif); }
+.clock { font: 700 40px var(--cond); background: #0a3a26; border-radius: 10px; padding: 4px 12px; min-width: 96px; text-align: center; }
+.clock.late { color: var(--gold); }
+.upnext { color: var(--muted); margin: 4px 0 8px; font-weight: 600; }
+.yourpick { background: var(--gold); color: #2b2205; font-weight: 800; border-radius: 10px; padding: 10px 14px; }
+.hcbox { margin-bottom: 8px; }
+
+/* teams, picks and matchups */
+.tboard { background: #fff; border: 3px solid var(--green); border-radius: 12px; overflow: hidden; }
+.trow { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-top: 1px solid var(--line); }
+.trow:first-child { border-top: 0; }
+.trow .pos { width: 28px; font: 700 18px var(--cond); }
+.trow .tn { flex: 1; min-width: 0; }
+.trow .tn b, .trow .tn small { display: block; }
+.trow .score .tp { font-size: 26px; }
+.rosters { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; margin: 10px 0; }
+.roster { background: var(--paper); border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; }
+.roster h3 { margin: 0 0 4px; font: 700 15px var(--sans); color: var(--green); }
+.roster ol { margin: 0; padding-left: 20px; }
+.roster button { border: 0; background: none; padding: 4px 0; text-align: left; cursor: pointer; font-weight: 600; }
+.match { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 6px 10px; background: #fff; border: 1px solid var(--line); border-radius: 12px; padding: 12px; margin-bottom: 8px; }
+.match .ma, .match .mb { font-weight: 700; }
+.match .mb { text-align: right; }
+.match .lead { color: var(--under); }
+.match .ms { font: 700 20px var(--cond); text-align: center; }
+.match .ms small { display: block; font: 600 12px var(--sans); }
+.match .ms.up { color: var(--under); }
+.match .ms.dn { color: var(--over); }
+.mbar { grid-column: 1 / -1; height: 8px; border-radius: 4px; background: var(--over); overflow: hidden; }
+.mbar i { display: block; height: 100%; background: var(--under); }
+.mpct { grid-column: 1 / -1; display: flex; justify-content: space-between; font-size: 13px; color: var(--muted); font-weight: 700; }
+
+/* chat */
+.tabs button { position: relative; }
+.tabs .dot { position: absolute; top: 6px; left: calc(50% + 6px); min-width: 18px; height: 18px; border-radius: 9px; background: var(--under); color: #fff; font: 700 11px/18px var(--sans); font-style: normal; padding: 0 4px; }
+.chat { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.cm { background: #fff; border: 1px solid var(--line); border-radius: 14px; padding: 10px 12px; max-width: 88%; justify-self: start; display: grid; gap: 2px; overflow-wrap: anywhere; }
+.cm.mine { justify-self: end; background: var(--green3); }
+.cm.auto { justify-self: center; background: transparent; border: 0; text-align: center; color: var(--green); font-weight: 700; }
+.cm.poll { max-width: 100%; justify-self: stretch; }
+.cm.poll .pick { margin: 6px 0; }
+.chatbar { display: flex; gap: 8px; margin-top: 12px; }
+.chatbar input { flex: 1; min-width: 0; min-height: 48px; border: 1.5px solid var(--line); border-radius: 12px; padding: 8px 12px; font: inherit; background: #fff; }
+
+/* tee times */
+.teecard { background: var(--green); color: #fff; border-radius: 16px; padding: 16px; margin-bottom: 10px; }
+.teecard small { color: #cfe0d2; display: block; }
+.teecard b { display: block; font: 700 44px var(--cond); line-height: 1.1; }
+a.btn { text-decoration: none; }

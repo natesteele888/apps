@@ -6,6 +6,7 @@
      each other. Firestore keeps its own copy on the phone, so scoring keeps working with no signal and catches up later.
    - local: the same document in this phone's storage, for the demo and for when the shared database isn't open to us
      (before its rules are published, or offline on first use). Other tabs on this phone see changes live.
+   The chat sits beside the tournament, one record per message (golf_events/<code>/chat/<id>).
    This phone's own list (its tournaments, which player is "me", saved courses, past rounds) is in localStorage only. */
 (function () {
   "use strict";
@@ -124,6 +125,30 @@
   FW.photoGet = async (code, id) => {
     if (FW.placeOf(code) === Local) return LS.get("fw:ph:" + code + ":" + id, null);
     await ready(); const s = await ref(code).collection("ctp").doc(id).get(); return s.exists ? (s.data() || {}).img || null : null;
+  };
+  /* ---------- the chat: golf_events/<code>/chat/<id>, one small record per message, next to the tournament ---------- */
+  // Kept out of the tournament itself so a long chat never slows the board. Local tournaments keep it on this phone.
+  const chatL = {};
+  window.addEventListener("storage", e => { if (e.key && e.key.indexOf("fw:chat:") === 0) { const code = e.key.slice(8); (chatL[code] || []).forEach(f => f(localChat(code))); } });
+  function localChat(code) { const all = LS.get("fw:chat:" + code, {}) || {}; return Object.keys(all).map(id => { const m = C.cleanMsg(all[id]); return m ? Object.assign({ id }, m) : null; }).filter(Boolean).sort((a, b) => a.at - b.at).slice(-150); }
+  function localChatSet(code, id, fn) { const all = LS.get("fw:chat:" + code, {}) || {}; all[id] = fn(all[id]); const ids = Object.keys(all).sort((a, b) => (all[a].at || 0) - (all[b].at || 0)); ids.slice(0, Math.max(0, ids.length - 300)).forEach(k => delete all[k]); if (!LS.set("fw:chat:" + code, all)) throw Object.assign(new Error("full"), { code: "storage" }); (chatL[code] || []).forEach(f => f(localChat(code))); }
+  FW.chatOpen = (code, cb, err) => {
+    if (FW.placeOf(code) === Local) { (chatL[code] = chatL[code] || []).push(cb); setTimeout(() => cb(localChat(code)), 0); return () => { chatL[code] = (chatL[code] || []).filter(f => f !== cb); }; }
+    let off = null, stopped = false;
+    ready().then(() => {
+      if (stopped) return;
+      off = ref(code).collection("chat").orderBy("at").limitToLast(150).onSnapshot(s => cb(s.docs.map(d => { const m = C.cleanMsg(d.data()); return m ? Object.assign({ id: d.id }, m) : null; }).filter(Boolean)), e => err && err(e));
+    }).catch(e => err && err(e));
+    return () => { stopped = true; if (off) off(); };
+  };
+  FW.chatPost = async (code, id, msg) => {
+    const m = C.cleanMsg(msg); if (!m) throw Object.assign(new Error("empty"), { code: "invalid" });
+    if (FW.placeOf(code) === Local) { localChatSet(code, id, () => m); return "ok"; }
+    await ready(); return settle(ref(code).collection("chat").doc(id).set(m), 6000);
+  };
+  FW.chatVote = async (code, id, pid, i) => {
+    if (FW.placeOf(code) === Local) { localChatSet(code, id, cur => { const m = Object.assign({}, cur); m.v = Object.assign({}, m.v, { [pid]: i }); return m; }); return "ok"; }
+    await ready(); return settle(ref(code).collection("chat").doc(id).update({ ["v." + pid]: i }), 6000);
   };
   // Which place holds this tournament on this phone.
   FW.placeOf = code => { const m = FW.mineGet(code); return m && m.local ? Local : Cloud; };

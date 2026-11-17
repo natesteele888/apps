@@ -183,8 +183,13 @@ service cloud.firestore {
     // A tournament holds first and last names of the golfers who typed them in, and nothing else about them.
     // Closest to the pin: ctph lists the marked holes and ctp holds each measured distance (feet), both in the document.
     // A proof photo is its own small document under ctp/, one resized JPEG as text, readable with the code like the rest.
+    // Phase 1 (also not yet published): rally (who's in before it's official), fmt (format), teams, dr (the draft),
+    // m (matchups), pk (who-wins picks) and tt (tee times) ride in the same document, each with a size cap.
+    // The chat is its own small documents under chat/: anyone with the code can read and post; a poll's votes and
+    // the app's own birdie shouts are the only things that can change after posting, and nothing can be deleted.
     function fwOk(d) {
-      return d.keys().hasOnly(['v', 'name', 'created', 'updated', 'rounds', 'cur', 'done', 'course', 'p', 'ctph', 'ctp'])
+      return d.keys().hasOnly(['v', 'name', 'created', 'updated', 'rounds', 'cur', 'done', 'course', 'p', 'ctph', 'ctp',
+          'rally', 'fmt', 'teams', 'dr', 'm', 'pk', 'tt'])
         && d.v == 1 && d.name is string && d.name.size() > 0 && d.name.size() <= 60
         && d.created is number && d.updated is number
         && d.rounds is int && d.rounds >= 1 && d.rounds <= 4
@@ -196,7 +201,26 @@ service cloud.firestore {
         && d.course.holes is list && (d.course.holes.size() == 9 || d.course.holes.size() == 18)
         && d.p is map && d.p.size() <= 120
         && (!('ctph' in d) || (d.ctph is list && d.ctph.size() <= 18))
-        && (!('ctp' in d) || (d.ctp is map && d.ctp.size() <= 72));
+        && (!('ctp' in d) || (d.ctp is map && d.ctp.size() <= 72))
+        && (!('rally' in d) || (d.rally is map && d.rally.keys().hasOnly(['on', 'date', 'note', 'goal', 'r'])
+            && (!('r' in d.rally) || (d.rally.r is map && d.rally.r.size() <= 120))))
+        && (!('fmt' in d) || (d.fmt is map && d.fmt.keys().hasOnly(['kind', 'nt', 'draft', 'clk', 'mt'])))
+        && (!('teams' in d) || (d.teams is map && d.teams.size() <= 8))
+        && (!('dr' in d) || (d.dr is map && d.dr.keys().hasOnly(['on', 'done', 'ord', 'pk', 'at'])
+            && (!('ord' in d.dr) || (d.dr.ord is list && d.dr.ord.size() <= 8))
+            && (!('pk' in d.dr) || (d.dr.pk is list && d.dr.pk.size() <= 120))))
+        && (!('m' in d) || (d.m is map && d.m.size() <= 60))
+        && (!('pk' in d) || (d.pk is map && d.pk.size() <= 120))
+        && (!('tt' in d) || (d.tt is map && d.tt.keys().hasOnly(['date', 'where', 'g'])
+            && (!('g' in d.tt) || (d.tt.g is map && d.tt.g.size() <= 60))));
+    }
+    function fwMsg(d) {
+      return d.keys().hasOnly(['k', 'n', 't', 'at', 'by', 'o', 'v'])
+        && d.k in ['m', 'a', 'p'] && d.n is string && d.n.size() > 0 && d.n.size() <= 30
+        && d.t is string && d.t.size() <= 500 && d.at is number
+        && (!('by' in d) || (d.by is string && d.by.matches('[a-z0-9]{6,16}')))
+        && ((d.k == 'p' && d.o is list && d.o.size() >= 2 && d.o.size() <= 6 && d.v is map && d.v.size() <= 120)
+            || (d.k != 'p' && d.t.size() > 0 && !('o' in d) && !('v' in d)));
     }
     match /golf_events/{code} {
       allow get: if code.matches('[a-z2-7]{20}');
@@ -214,6 +238,16 @@ service cloud.firestore {
           && request.resource.data.updated is number
           && request.resource.data.img is string && request.resource.data.img.size() <= 600000
           && request.resource.data.img.matches('data:image/jpeg;base64,[A-Za-z0-9+/=]+');
+      }
+      match /chat/{id} {
+        allow get, list: if code.matches('[a-z2-7]{20}');
+        allow delete: if false;
+        allow create: if code.matches('[a-z2-7]{20}') && id.matches('[a-z0-9]{8,32}')
+          && exists(/databases/$(database)/documents/golf_events/$(code))
+          && fwMsg(request.resource.data);
+        allow update: if code.matches('[a-z2-7]{20}') && fwMsg(request.resource.data)
+          && ((resource.data.k == 'p' && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['v']))
+              || (resource.data.k == 'a' && request.resource.data.k == 'a'));
       }
     }
     match /gp_weeks/{key} {

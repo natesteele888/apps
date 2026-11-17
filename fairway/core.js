@@ -3,7 +3,8 @@
    A tournament is one plain object (the same shape on the phone and in the shared database):
      { v, name, created, updated, rounds, cur, done, course, p }
      course: { name, tees: [{id, name, color}], holes: [{par, hcp, y: {teeId: yards}}] }
-     p: { playerId: { n: name, tee: teeId, g: group number, st: start hole, at: joined time, s: { "round_hole": strokes } } }
+     p: { playerId: { n: name, tee: teeId, g: group number, st: start hole, at: joined time, s: { "round_hole": strokes }, hc: index, t: team } }
+     and, all optional (Phase 1): rally, fmt, teams, dr, m, pk, tt (see "PHASE 1" below)
    Scores sit under "round_hole" keys (both 1-based), so one phone can change one score without touching anyone else's. */
 (function (root, factory) {
   const C = factory();
@@ -74,6 +75,8 @@
     return out;
   }
   function cleanName(s) { return clip(s, NAME_MAX); }
+  // A handicap index as golfers say it (+2.1 is written -2.1 here), or null when there isn't one.
+  function cleanHc(v) { if (v == null || v === "") return null; const n = Number(String(v).replace(/^\+/, "-")); return Number.isFinite(n) && n >= -10 && n <= 54 ? Math.round(n * 10) / 10 : null; }
 
   function newEvent(o) {
     o = o || {};
@@ -86,7 +89,9 @@
     o = o || {};
     const tees = ev.course.tees;
     const tee = tees.some(t => t.id === o.tee) ? o.tee : (tees[Math.min(1, tees.length - 1)] || tees[0]).id;
-    return { n: cleanName(o.name) || "Player", tee, g: int(o.group, 1, 60, 1), st: int(o.start, 1, ev.course.holes.length, 1), at: o.now || Date.now(), s: {} };
+    const pl = { n: cleanName(o.name) || "Player", tee, g: int(o.group, 1, 60, 1), st: int(o.start, 1, ev.course.holes.length, 1), at: o.now || Date.now(), s: {} };
+    const hc = cleanHc(o.hc); if (hc != null) pl.hc = hc;
+    return pl;
   }
 
   /* ---------- reading a tournament ---------- */
@@ -265,6 +270,233 @@
     return Math.round(ft / 3) + " yds";
   }
 
+  /* ======================================================================
+     PHASE 1: getting a tournament going, the format, the draft, teams, matchups, picks and tee times.
+     Every part is optional on a tournament, so older tournaments read the same as before.
+       rally: { on, date "YYYY-MM-DD", note, goal, r: { id: { n, s "in"|"maybe"|"out", at } } }
+       fmt:   { kind "solo"|"teams"|"match", nt teams, draft "snake"|"straight", clk seconds, mt "singles"|"2v2"|"both"|"none" }
+       teams: { "t1": { n, cap: playerId } }       a player's team comes from the draft (see teamOf), or p.<id>.t
+       dr:    { on, done, ord: [teamId], pk: [playerId], at }   the draft: round-one order and every pick so far
+       m:     { id: { a: [playerId], b: [playerId], r } }      singles (one a side) and 2v2 best ball
+       pk:    { playerId: teamId }                              "who wins?" picks, bragging rights only
+       tt:    { date, where, g: { "1": "08:10" } }             tee times by group
+     ====================================================================== */
+  const KINDS = ["solo", "teams", "match"], DRAFTS = ["snake", "straight"], CLOCKS = [0, 30, 60, 300], MTS = ["singles", "2v2", "both", "none"];
+  const isDate = s => typeof s === "string" && /^20[0-9]{2}-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])$/.test(s);
+  const isTime = s => typeof s === "string" && /^([01][0-9]|2[0-3]):[0-5][0-9]$/.test(s);
+  const isTid = s => typeof s === "string" && /^t[1-8]$/.test(s);
+  const RS = ["in", "maybe", "out"];
+  function cleanRally(x) {
+    if (!x || typeof x !== "object") return null;
+    const out = { on: x.on === true, date: isDate(x.date) ? x.date : "", note: clip(x.note, 140), goal: int(x.goal, 2, MAX_PLAYERS, 12), r: {} };
+    Object.keys(x.r && typeof x.r === "object" ? x.r : {}).filter(isPid).slice(0, MAX_PLAYERS).forEach(id => {
+      const e = x.r[id]; if (!e || typeof e !== "object" || RS.indexOf(e.s) < 0) return;
+      out.r[id] = { n: cleanName(e.n) || "Golfer", s: e.s, at: Number(e.at) || 0 };
+    });
+    return out;
+  }
+  function cleanFmt(x) {
+    x = x && typeof x === "object" ? x : {};
+    return { kind: KINDS.indexOf(x.kind) >= 0 ? x.kind : "solo", nt: int(x.nt, 2, 8, 2), draft: DRAFTS.indexOf(x.draft) >= 0 ? x.draft : "snake",
+      clk: CLOCKS.indexOf(Number(x.clk)) >= 0 ? Number(x.clk) : 60, mt: MTS.indexOf(x.mt) >= 0 ? x.mt : "singles" };
+  }
+  // Rally answers, newest first, with the counts.
+  function rallyList(ev) {
+    const r = (ev.rally && ev.rally.r) || {};
+    const list = Object.keys(r).map(id => Object.assign({ id }, r[id])).sort((a, b) => RS.indexOf(a.s) - RS.indexOf(b.s) || a.at - b.at);
+    return { list, in: list.filter(x => x.s === "in").length, maybe: list.filter(x => x.s === "maybe").length };
+  }
+  // Making it official: everyone who said I'm in becomes a player with the same id (so their phone knows them), four to a group.
+  function officialPatch(ev, now) {
+    now = now || Date.now();
+    const patch = { "rally.on": false }, counts = {};
+    players(ev).forEach(p => { counts[p.g] = (counts[p.g] || 0) + 1; });
+    const starts = {}; players(ev).forEach(p => { if (!starts[p.g]) starts[p.g] = p.st; });
+    let g = 1;
+    rallyList(ev).list.filter(x => x.s === "in" && !ev.p[x.id]).forEach(x => {
+      while ((counts[g] || 0) >= 4) g++;
+      counts[g] = (counts[g] || 0) + 1;
+      patch["p." + x.id] = newPlayer(ev, { name: x.n, group: g, start: starts[g] || 1, now: x.at || now });
+    });
+    return patch;
+  }
+  // The first group with room (four to a group), or a new one, for someone joining.
+  function openGroup(ev) {
+    const gs = groups(ev), g = gs.find(x => x.players.length < 4);
+    return g ? { g: g.g, st: g.start } : { g: gs.length ? Math.max.apply(null, gs.map(x => x.g)) + 1 : 1, st: 1 };
+  }
+
+  /* ---------- teams and the draft ---------- */
+  const teamIds = ev => Object.keys(ev.teams || {}).filter(isTid).sort();
+  // Every pick slot in order (team ids), for this many players besides the captains.
+  function pickSlots(ord, picks, kind) {
+    const out = []; if (!ord.length) return out;
+    for (let i = 0; i < picks; i++) {
+      const rnd = Math.floor(i / ord.length), k = i % ord.length;
+      out.push(kind === "snake" && rnd % 2 === 1 ? ord[ord.length - 1 - k] : ord[k]);
+    }
+    return out;
+  }
+  // A player's team: a captain's own team, else the team that drafted them, else one the organizer set.
+  function teamOf(ev, pid) {
+    const ts = ev.teams || {};
+    for (const t of teamIds(ev)) if (ts[t].cap === pid) return t;
+    const dr = ev.dr;
+    if (dr && Array.isArray(dr.pk)) {
+      const i = dr.pk.indexOf(pid);
+      if (i >= 0) { const slot = pickSlots(dr.ord, i + 1, (ev.fmt || {}).draft)[i]; if (slot) return slot; }
+    }
+    const t = ev.p[pid] && ev.p[pid].t;
+    return isTid(t) && ts[t] ? t : null;
+  }
+  const hcOf = p => (p && Number.isFinite(p.hc) ? p.hc : null);
+  const byHc = (a, b) => (hcOf(a) == null ? 99 : hcOf(a)) - (hcOf(b) == null ? 99 : hcOf(b)) || a.n.localeCompare(b.n);
+  // Where the draft stands: who's on the clock, who's left (best handicap first), and the next few teams up.
+  function draftState(ev, now) {
+    const dr = ev.dr || {}, f = ev.fmt || cleanFmt(), ids = teamIds(ev);
+    const caps = ids.map(t => ev.teams[t].cap), pool = players(ev).filter(p => caps.indexOf(p.id) < 0);
+    const taken = (dr.pk || []).filter(id => ev.p[id]);
+    const avail = pool.filter(p => taken.indexOf(p.id) < 0).sort(byHc);
+    const slots = pickSlots(dr.ord || [], pool.length, f.draft), n = taken.length;
+    const done = !!dr.on && (dr.done || n >= pool.length || !avail.length);
+    const on = dr.on && !done ? slots[n] || null : null;
+    let left = null;
+    if (on && f.clk) left = Math.max(-3600, Math.round(f.clk - ((now || Date.now()) - (dr.at || 0)) / 1000));
+    return { started: !!dr.on, done, on, cap: on ? ev.teams[on].cap : null, pick: n + 1, total: pool.length, avail, next: slots.slice(n + 1, n + 6), left, clk: f.clk };
+  }
+  // The changes for one pick.
+  function pickPatch(ev, pid, now) {
+    const st = draftState(ev, now);
+    if (!st.on || !ev.p[pid] || st.avail.every(p => p.id !== pid)) return null;
+    const pk = ((ev.dr && ev.dr.pk) || []).concat(pid);
+    const patch = { "dr.pk": pk, "dr.at": now || Date.now() };
+    if (pk.length >= st.total) patch["dr.done"] = true;
+    return patch;
+  }
+  // Starting the draft with these captains, in this round-one order.
+  function draftStartPatch(ev, caps, now) {
+    const teams = {}, ord = [];
+    caps.filter(id => ev.p[id]).slice(0, 8).forEach((id, i) => { const t = "t" + (i + 1); teams[t] = { n: "Team " + ev.p[id].n.split(" ").slice(-1)[0], cap: id }; ord.push(t); });
+    return { teams, dr: { on: true, done: false, ord, pk: [], at: now || Date.now() } };
+  }
+  // Captains picked for the organizer: lowest handicaps, or at random.
+  function pickCaptains(ev, n, how, rnd) {
+    const list = players(ev);
+    if (how === "low") return list.sort(byHc).slice(0, n).map(p => p.id);
+    const r = rnd || Math.random, a = list.slice();
+    for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(r() * (i + 1)); const t = a[i]; a[i] = a[j]; a[j] = t; }
+    return a.slice(0, n).map(p => p.id);
+  }
+  // Each team's members (captain first, then in draft order) and its total to par, best first.
+  function teamBoard(ev) {
+    const ids = teamIds(ev); if (!ids.length) return [];
+    const rows = standings(ev), byId = {}; rows.forEach(r => { byId[r.id] = r; });
+    const pkOrder = (ev.dr && ev.dr.pk) || [];
+    const out = ids.map(t => {
+      const members = players(ev).filter(p => teamOf(ev, p.id) === t)
+        .sort((a, b) => (a.id === ev.teams[t].cap ? -1 : b.id === ev.teams[t].cap ? 1 : 0) || pkOrder.indexOf(a.id) - pkOrder.indexOf(b.id));
+      const hcs = members.map(hcOf).filter(v => v != null);
+      const played = members.filter(p => byId[p.id] && byId[p.id].holes);
+      return { id: t, name: ev.teams[t].n, cap: ev.teams[t].cap, members, toPar: played.reduce((a, p) => a + byId[p.id].toPar, 0), holes: played.reduce((a, p) => a + byId[p.id].holes, 0),
+        avg: hcs.length ? Math.round((hcs.reduce((a, b) => a + b, 0) / hcs.length) * 10) / 10 : null };
+    });
+    out.sort((a, b) => (a.holes ? 0 : 1) - (b.holes ? 0 : 1) || a.toPar - b.toPar || a.name.localeCompare(b.name));
+    out.forEach((t, i) => { const first = out.findIndex(x => x.holes && x.toPar === t.toPar); t.pos = !t.holes ? "–" : (out.filter(x => x.holes && x.toPar === t.toPar).length > 1 ? "T" : "") + (first + 1); });
+    return out;
+  }
+
+  /* ---------- matchups: match play, singles or 2v2 best ball ---------- */
+  // Win chance for the side that's `up` with `left` holes to go (each hole won, lost or halved).
+  function phi(z) { const t = 1 / (1 + 0.2316419 * Math.abs(z)), d = 0.3989423 * Math.exp(-z * z / 2); const p = d * t * (0.3193815 + t * (-0.3565638 + t * (1.781478 + t * (-1.821256 + t * 1.330274)))); return z > 0 ? 1 - p : p; }
+  function matchStatus(ev, mt) {
+    const a = (mt.a || []).filter(id => ev.p[id]), b = (mt.b || []).filter(id => ev.p[id]), r = mt.r || ev.cur || 1, n = holeCount(ev);
+    if (!a.length || !b.length) return null;
+    const order = playOrder(n, ev.p[a[0]].st), best = side => h => { const v = side.map(id => strokes(ev.p[id], r, h)); return v.some(x => x == null) ? null : Math.min.apply(null, v); };
+    const sa = best(a), sb = best(b);
+    let up = 0, played = 0, done = false, when = null;
+    for (const h of order) {
+      const x = sa(h), y = sb(h); if (x == null || y == null) break;
+      played++; if (x < y) up++; else if (y < x) up--;
+      if (Math.abs(up) > n - played) { done = true; when = n - played; break; }
+    }
+    const left = n - played;
+    if (!done && left === 0) done = true;
+    let text;
+    if (done) text = up === 0 ? "Halved" : when ? Math.abs(up) + "&" + when : Math.abs(up) + " UP";
+    else text = !played ? "Not started" : up === 0 ? "All square" : Math.abs(up) + " UP";
+    const sd = Math.sqrt(Math.max(0.0001, 0.5 * left));
+    const pa = done ? (up > 0 ? 1 : up < 0 ? 0 : 0.5) : up === 0 ? 0.5 : phi(up / sd);
+    return { a, b, r, up, played, left, done, text, thru: played, lead: up > 0 ? "a" : up < 0 ? "b" : null, pa: Math.round(pa * 100) / 100 };
+  }
+  const matchIds = ev => Object.keys(ev.m || {}).filter(isPid);
+  // Pair two teams by draft order: captain against captain, first pick against first pick, and so on.
+  function autoMatches(ev, kind, newId) {
+    const tb = teamBoard(ev); if (tb.length !== 2) return {};
+    const A = tb.find(t => t.id === "t1") || tb[0], B = tb.find(t => t !== A), out = {}, r = ev.cur || 1, mk = newId || newPid;
+    const n = Math.min(A.members.length, B.members.length);
+    if (kind === "2v2") for (let i = 0; i + 1 < n; i += 2) out[mk()] = { a: [A.members[i].id, A.members[i + 1].id], b: [B.members[i].id, B.members[i + 1].id], r };
+    else for (let i = 0; i < n; i++) out[mk()] = { a: [A.members[i].id], b: [B.members[i].id], r };
+    return out;
+  }
+
+  /* ---------- picks: who wins? ---------- */
+  const picksLocked = ev => players(ev).some(p => Object.keys(p.s || {}).some(k => k.indexOf("1_") === 0));
+  function pickCounts(ev) { const o = {}; Object.keys(ev.pk || {}).forEach(pid => { const t = ev.pk[pid]; if (ev.p[pid] && ev.teams && ev.teams[t]) o[t] = (o[t] || 0) + 1; }); return o; }
+
+  /* ---------- tee times and the calendar file ---------- */
+  function cleanTt(x, n) {
+    if (!x || typeof x !== "object") return null;
+    const g = {};
+    Object.keys(x.g && typeof x.g === "object" ? x.g : {}).forEach(k => { if (/^[1-9][0-9]?$/.test(k) && +k <= 60 && isTime(x.g[k])) g[k] = x.g[k]; });
+    return { date: isDate(x.date) ? x.date : "", where: clip(x.where, 80), g };
+  }
+  const teeTime = (ev, g) => (ev.tt && ev.tt.g && ev.tt.g[String(g)]) || "";
+  // "08:10" → "8:10 AM"
+  function fmtTime(t) { if (!isTime(t)) return ""; let [h, m] = t.split(":").map(Number); const ap = h >= 12 ? "PM" : "AM"; h = h % 12 || 12; return h + ":" + String(m).padStart(2, "0") + " " + ap; }
+  function fmtDate(d) { if (!isDate(d)) return ""; const [y, mo, da] = d.split("-").map(Number); const dt = new Date(Date.UTC(y, mo - 1, da)); return ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"][dt.getUTCDay()] + ", " + ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"][mo - 1] + " " + da; }
+  // Minutes before the tee time for each reminder: the night before at 7 PM, two hours out, leave now, check in.
+  function reminders(time, drive) {
+    const [h, m] = time.split(":").map(Number), mins = h * 60 + m, d = int(drive, 0, 240, 25);
+    return [{ k: "night", label: "The night before", before: mins + (24 * 60 - 19 * 60) }, { k: "two", label: "Two hours out", before: 120 },
+      { k: "leave", label: "Leave now", before: 30 + d }, { k: "check", label: "Check in and warm up", before: 30 }];
+  }
+  const icsEsc = s => String(s).replace(/\\/g, "\\\\").replace(/;/g, "\\;").replace(/,/g, "\\,").replace(/\r?\n/g, "\\n");
+  const icsWhen = (date, time, addMin) => { const [y, mo, d] = date.split("-").map(Number), [h, mi] = time.split(":").map(Number); const t = new Date(Date.UTC(y, mo - 1, d, h, mi + (addMin || 0))); const p = n => String(n).padStart(2, "0"); return t.getUTCFullYear() + p(t.getUTCMonth() + 1) + p(t.getUTCDate()) + "T" + p(t.getUTCHours()) + p(t.getUTCMinutes()) + "00"; };
+  // One calendar event in the phone's own time (no time zone, so it's the course's local time), with the four alarms.
+  function icsFor(ev, g, o) {
+    o = o || {};
+    const time = teeTime(ev, g), date = ev.tt && ev.tt.date; if (!time || !date) return "";
+    const stamp = new Date(o.now || Date.now()).toISOString().replace(/[-:]/g, "").replace(/\.\d+/, "");
+    const dur = holeCount(ev) === 9 ? 135 : 270, rem = reminders(time, o.drive).filter(x => !o.off || o.off.indexOf(x.k) < 0);
+    const lines = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//Fairway//Tee time//EN", "CALSCALE:GREGORIAN", "METHOD:PUBLISH", "BEGIN:VEVENT",
+      "UID:" + (o.uid || "tee") + "-g" + g + "@fairway", "DTSTAMP:" + stamp, "DTSTART:" + icsWhen(date, time), "DTEND:" + icsWhen(date, time, dur),
+      "SUMMARY:" + icsEsc(ev.name + ", group " + g + " tees off"), "LOCATION:" + icsEsc(ev.tt.where || ev.course.name),
+      "DESCRIPTION:" + icsEsc("Group " + g + " at " + fmtTime(time) + "." + (o.link ? " Scores: " + o.link : ""))];
+    rem.forEach(x => lines.push("BEGIN:VALARM", "ACTION:DISPLAY", "DESCRIPTION:" + icsEsc(x.label + ": " + ev.name + " at " + fmtTime(time)), "TRIGGER:-PT" + x.before + "M", "END:VALARM"));
+    lines.push("END:VEVENT", "END:VCALENDAR");
+    return lines.join("\r\n") + "\r\n";
+  }
+  // A maps search for the course (opens the phone's maps app with the drive).
+  const directions = ev => "https://www.google.com/maps/search/?api=1&query=" + encodeURIComponent((ev.tt && ev.tt.where) || ev.course.name);
+
+  /* ---------- the chat: each message its own small record next to the tournament ---------- */
+  function cleanMsg(x) {
+    if (!x || typeof x !== "object") return null;
+    const k = ["m", "a", "p"].indexOf(x.k) >= 0 ? x.k : "m";
+    const t = String(x.t == null ? "" : x.t).replace(/[\u0000-\u0009\u000b-\u001f\u007f]/g, " ").trim().slice(0, 500);
+    const out = { k, n: cleanName(x.n) || "Golfer", t, at: Number(x.at) || 0 };
+    if (isPid(x.by)) out.by = x.by;
+    if (k === "p") { out.o = (Array.isArray(x.o) ? x.o : []).map(s => clip(s, 40)).filter(Boolean).slice(0, 6); out.v = {}; Object.keys(x.v && typeof x.v === "object" ? x.v : {}).filter(isPid).forEach(id => { const i = Math.round(Number(x.v[id])); if (i >= 0 && i < out.o.length) out.v[id] = i; }); if (out.o.length < 2) return null; }
+    if (!out.t && k !== "p") return null;
+    return out;
+  }
+  // What a score says in the chat when it's worth shouting about (birdie or better).
+  function shout(ev, pid, r, h, v) {
+    const pl = ev.p[pid]; if (!pl || !v) return null;
+    const d = v - ev.course.holes[h - 1].par; if (d > -1) return null;
+    return scoreName(d, v) + "! " + pl.n + " on " + h + (ev.rounds > 1 ? " (round " + r + ")" : "") + ".";
+  }
+
   /* ---------- changes: the same dotted paths the shared database takes ---------- */
   // patch keys look like "p.abc123.s.1_7" or "name"; a value of DELETE removes the field.
   const DELETE = { __delete: true };
@@ -291,6 +523,8 @@
     Object.keys(d.p && typeof d.p === "object" ? d.p : {}).filter(isPid).slice(0, MAX_PLAYERS).forEach(id => {
       const x = d.p[id]; if (!x || typeof x !== "object") return;
       const pl = { n: cleanName(x.n) || "Player", tee: ev.course.tees.some(t => t.id === x.tee) ? x.tee : ev.course.tees[0].id, g: int(x.g, 1, 60, 1), st: int(x.st, 1, n, 1), at: Number(x.at) || 0, s: {} };
+      const hc = typeof x.hc === "number" ? cleanHc(x.hc) : null; if (hc != null) pl.hc = hc;
+      if (isTid(x.t)) pl.t = x.t;
       Object.keys(x.s && typeof x.s === "object" ? x.s : {}).forEach(k => {
         const m = /^([1-4])_([0-9]{1,2})$/.exec(k), v = x.s[k];
         if (m && +m[1] <= ev.rounds && +m[2] >= 1 && +m[2] <= n && Number.isInteger(v) && v >= 1 && v <= 20) pl.s[k] = v;
@@ -305,6 +539,32 @@
         const e = cleanCtpEntry(box[pid]); if (e) (ev.ctp[k] = ev.ctp[k] || {})[pid] = e;
       });
     });
+    // Phase 1 parts
+    const rally = cleanRally(d.rally); if (rally) ev.rally = rally;
+    if (d.fmt && typeof d.fmt === "object") ev.fmt = cleanFmt(d.fmt);
+    if (d.teams && typeof d.teams === "object") {
+      ev.teams = {};
+      Object.keys(d.teams).filter(isTid).forEach(t => { const x = d.teams[t]; if (!x || typeof x !== "object") return; ev.teams[t] = { n: clip(x.n, 30) || "Team " + t.slice(1), cap: isPid(x.cap) && ev.p[x.cap] ? x.cap : null }; });
+    }
+    if (d.dr && typeof d.dr === "object") {
+      const seen = {}, ord = (Array.isArray(d.dr.ord) ? d.dr.ord : []).filter(t => isTid(t) && ev.teams && ev.teams[t] && !seen[t] && (seen[t] = 1));
+      const pk = []; (Array.isArray(d.dr.pk) ? d.dr.pk : []).forEach(id => { if (isPid(id) && ev.p[id] && pk.indexOf(id) < 0 && pk.length < MAX_PLAYERS) pk.push(id); });
+      ev.dr = { on: d.dr.on === true, done: d.dr.done === true, ord, pk, at: Number(d.dr.at) || 0 };
+    }
+    if (d.m && typeof d.m === "object") {
+      ev.m = {};
+      Object.keys(d.m).filter(isPid).slice(0, 60).forEach(id => {
+        const x = d.m[id]; if (!x || typeof x !== "object") return;
+        const side = v => { const o = []; (Array.isArray(v) ? v : []).forEach(p => { if (isPid(p) && ev.p[p] && o.indexOf(p) < 0 && o.length < 2) o.push(p); }); return o; };
+        const a = side(x.a), b = side(x.b).filter(p => a.indexOf(p) < 0);
+        if (a.length && b.length) ev.m[id] = { a, b, r: int(x.r, 1, ev.rounds, 1) };
+      });
+    }
+    if (d.pk && typeof d.pk === "object") {
+      ev.pk = {};
+      Object.keys(d.pk).filter(id => isPid(id) && ev.p[id]).forEach(id => { if (isTid(d.pk[id]) && ev.teams && ev.teams[d.pk[id]]) ev.pk[id] = d.pk[id]; });
+    }
+    const tt = cleanTt(d.tt, n); if (tt) ev.tt = tt;
     return ev;
   }
   // What one finished round looks like in this phone's history (for "previous rounds" on a player card).
@@ -321,5 +581,8 @@
     sampleCourse, newCode, isCode, newPid, isPid, cleanCourse, cleanName, newEvent, newPlayer, cleanEvent,
     key, holeCount, coursePar, players, teeOf, yards, teeYards, playOrder, strokes, round, standings, groups,
     fmtPar, tone, scoreName, mark, stats, demoEvent, applyPatch, historyRows, sameName,
-    cleanCtpHoles, cleanCtpEntry, ctpBoard, metres, averageFix, ctpMeasure, fmtFeet };
+    cleanCtpHoles, cleanCtpEntry, ctpBoard, metres, averageFix, ctpMeasure, fmtFeet,
+    cleanHc, isDate, isTime, isTid, cleanRally, cleanFmt, rallyList, officialPatch, openGroup, teamIds, pickSlots, teamOf, draftState, pickPatch,
+    draftStartPatch, pickCaptains, teamBoard, matchStatus, matchIds, autoMatches, picksLocked, pickCounts, cleanTt, teeTime, fmtTime, fmtDate,
+    reminders, icsFor, directions, cleanMsg, shout };
 });
