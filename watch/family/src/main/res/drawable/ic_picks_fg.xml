@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Gameday Picks: a football -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android" android:width="108dp" android:height="108dp" android:viewportWidth="108" android:viewportHeight="108">
+    <path android:fillColor="#FF92400E" android:pathData="M54,36c14,0 22,8 22,18s-8,18 -22,18 -22,-8 -22,-18 8,-18 22,-18z" />
+    <path android:strokeColor="#FFFFFFFF" android:strokeWidth="2.5" android:strokeLineCap="round" android:pathData="M44,54h20M48,50v8M54,50v8M60,50v8" />
+</vector>

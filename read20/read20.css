@@ -152,6 +152,7 @@ h1,h2,h3{margin:0;line-height:1.15}
 .lbl{font-weight:700;margin:14px 0 0}
 .set{background:#faf5e8;border:2px solid var(--line);border-radius:20px;padding:4px 14px 14px;margin:12px 0}
 .set h3{margin:12px 0 4px;font-size:1.1rem}
+.wl-line,.wl-msg{font-size:.9rem;text-align:left;margin:6px 0}.wl-msg{color:var(--soft)}#swl .btn{width:auto;flex:1 1 8em}
 .linkbtn{background:none;border:0;padding:12px 4px;font-weight:700;color:var(--pur);text-align:left;min-height:44px}.linkbtn.danger{color:var(--red)}
 
 /* older readers */

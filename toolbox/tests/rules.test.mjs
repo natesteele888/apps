@@ -503,3 +503,92 @@ test('fairway phase 1: the chat lives under the tournament; votes and birdie sho
   await assertFails(setDoc(doc(anon(), 'golf_events/zzzzzzzzzzzzzzzzzzzz/chat/msg0000000001'), msg));
   await assertFails(getDocs(collection(anon(), 'golf_events')));
 });
+
+// ---------- Watch link (fw_links, fw_pair): the 26-letter link code is the key, no sign-in ----------
+const WL_KEY = 'abcdefghijklmnopqrstuvwxyz';
+const WL_CODE = 'abcd2345';
+const wlNow = () => new Date();
+
+test('watch link: anyone with the link code can create, read and update it, signed in or not', async () => {
+  await assertSucceeds(setDoc(doc(anon(), 'fw_links/' + WL_KEY), { gr: '{"v":2}', updated: wlNow() }));
+  await assertSucceeds(getDoc(doc(anon(), 'fw_links/' + WL_KEY)));
+  await assertSucceeds(updateDoc(doc(anon(), 'fw_links/' + WL_KEY), { w: '{"v":1,"e":[]}' }));
+  await assertSucceeds(updateDoc(doc(stranger(), 'fw_links/' + WL_KEY), { cc: '{}', r20: '{}', pp: '{}', gp: '{}', updated: wlNow() }));
+});
+
+test('watch link: no listing, no deleting, the code must be 26 letters and digits 2-7, and only the known text fields', async () => {
+  await assertSucceeds(setDoc(doc(anon(), 'fw_links/' + WL_KEY), { gr: '{}' }));
+  await assertFails(getDocs(collection(anon(), 'fw_links')));
+  await assertFails(getDocs(collection(stranger(), 'fw_links')));
+  await assertFails(deleteDoc(doc(anon(), 'fw_links/' + WL_KEY)));
+  await assertFails(setDoc(doc(anon(), 'fw_links/short'), { gr: '{}' }));
+  await assertFails(setDoc(doc(anon(), 'fw_links/abcdefghijklmnopqrstuvwxy1'), { gr: '{}' }), '1 is not in the code alphabet');
+  await assertFails(setDoc(doc(anon(), 'fw_links/ABCDEFGHIJKLMNOPQRSTUVWXYZ'), { gr: '{}' }));
+  await assertFails(setDoc(doc(anon(), 'fw_links/' + WL_KEY), { gr: '{}', extra: 'x' }));
+  await assertFails(setDoc(doc(anon(), 'fw_links/' + WL_KEY), { gr: { not: 'text' } }));
+  await assertFails(setDoc(doc(anon(), 'fw_links/' + WL_KEY), { cc: 'x'.repeat(20001) }));
+  await assertFails(setDoc(doc(anon(), 'fw_links/' + WL_KEY), { lk: '{}' }), 'Locker is not on the watch');
+  await assertSucceeds(setDoc(doc(anon(), 'fw_links/' + WL_KEY), { pp: 'x'.repeat(30000) }));
+  await assertFails(setDoc(doc(anon(), 'fw_links/' + WL_KEY), { pp: 'x'.repeat(40001) }));
+  await assertFails(setDoc(doc(anon(), 'fw_links/' + WL_KEY), { gr: '{}', updated: 'yesterday' }));
+});
+
+test('watch link pairing: a note is created once under the watch code, read and removed, never changed or listed', async () => {
+  await assertSucceeds(setDoc(doc(anon(), 'fw_pair/' + WL_CODE), { k: WL_KEY, at: wlNow() }));
+  await assertSucceeds(getDoc(doc(anon(), 'fw_pair/' + WL_CODE)));
+  await assertFails(updateDoc(doc(anon(), 'fw_pair/' + WL_CODE), { k: 'zyxwvutsrqponmlkjihgfedcba' }));
+  await assertFails(getDocs(collection(anon(), 'fw_pair')));
+  await assertSucceeds(deleteDoc(doc(anon(), 'fw_pair/' + WL_CODE)));
+  await assertFails(setDoc(doc(anon(), 'fw_pair/abcd234'), { k: WL_KEY, at: wlNow() }), 'the code is 8 characters');
+  await assertFails(setDoc(doc(anon(), 'fw_pair/' + WL_CODE), { k: 'short', at: wlNow() }));
+  await assertFails(setDoc(doc(anon(), 'fw_pair/' + WL_CODE), { k: WL_KEY, at: wlNow(), x: 1 }));
+  await assertFails(setDoc(doc(anon(), 'fw_pair/' + WL_CODE), { k: WL_KEY }));
+});
+
+test('watch link: a link or pairing code gives no way into anything else', async () => {
+  await assertFails(getDoc(doc(anon(), 'gr_users/' + WL_KEY)));
+  await assertFails(getDoc(doc(anon(), 'r20_shared/' + WL_KEY.slice(0, 20))));
+});
+
+// ---------- Gameday Picks from the watch: an anonymous watch sign-in that a player's phone has okayed ----------
+const WATCH = 'watchAnon0123';
+const watchDb = (uid = WATCH) => env.authenticatedContext(uid, { firebase: { sign_in_provider: 'anonymous' } }).firestore();
+const wPicks = (uid, week, extra = {}) => ({ uid, week, picks: { g1: 'BUF' }, updatedAt: '2026-11-17T12:00:00Z', ...extra });
+
+test('picks from the watch: nothing until the player okays the watch, then only that player\'s own NFL picks', async () => {
+  await env.withSecurityRulesDisabled(async (ctx) => { await setDoc(doc(ctx.firestore(), 'gp_picks/player1_2026-2-12'), wPicks('player1', '2026-2-12')); });
+  await assertFails(getDoc(doc(watchDb(), 'gp_picks/player1_2026-2-12')), 'not okayed yet');
+  await assertFails(setDoc(doc(watchDb(), 'gp_picks/player1_2026-2-12'), wPicks('player1', '2026-2-12')));
+  await assertFails(setDoc(doc(watchDb(), 'gp_watch/' + WATCH), { uid: WATCH, at: 'now' }), 'a watch cannot okay itself');
+  await assertFails(setDoc(doc(stranger(), 'gp_watch/' + WATCH), { uid: 'stranger', at: 'now' }), 'only a player can okay a watch');
+  await assertFails(setDoc(doc(player(), 'gp_watch/' + WATCH), { uid: 'someoneElse', at: 'now' }), 'only for themselves');
+  await assertFails(setDoc(doc(player(), 'gp_watch/' + WATCH), { uid: 'player1', at: 'now', x: 1 }));
+  await assertSucceeds(setDoc(doc(player(), 'gp_watch/' + WATCH), { uid: 'player1', at: '2026-11-17T12:00:00Z' }));
+  await assertSucceeds(getDoc(doc(watchDb(), 'gp_watch/' + WATCH)));
+  await assertFails(getDocs(collection(player(), 'gp_watch')), 'no listing watches');
+
+  await assertSucceeds(getDoc(doc(watchDb(), 'gp_picks/player1_2026-2-12')));
+  await assertSucceeds(getDoc(doc(watchDb(), 'gp_picks/player1_2026-2-13')), 'a week with no picks yet reads as missing, not refused');
+  await assertSucceeds(setDoc(doc(watchDb(), 'gp_picks/player1_2026-2-13'), wPicks('player1', '2026-2-13')));
+  await assertSucceeds(setDoc(doc(watchDb(), 'gp_picks/player1_2026-2-12'), wPicks('player1', '2026-2-12', { picks: { g1: 'NYJ', g2: 'KC' } })));
+  await assertFails(getDocs(collection(watchDb(), 'gp_picks')), 'the watch cannot see anyone else\'s picks');
+  await assertFails(getDoc(doc(watchDb(), 'gp_players/player1')));
+  await assertFails(setDoc(doc(watchDb(), 'gp_picks/player2_2026-2-12'), wPicks('player2', '2026-2-12')), 'another player');
+  await assertFails(setDoc(doc(watchDb(), 'gp_picks/player1_nba-2026-11-09'), wPicks('player1', 'nba-2026-11-09')), 'NFL only');
+  await assertFails(setDoc(doc(watchDb(), 'gp_picks/player1_2026-2-12'), wPicks('player1', '2026-2-12', { extra: 1 })));
+  const many = {}; for (let i = 0; i < 41; i++) many['g' + i] = 'BUF';
+  await assertFails(setDoc(doc(watchDb(), 'gp_picks/player1_2026-2-12'), wPicks('player1', '2026-2-12', { picks: many })));
+  await assertFails(setDoc(doc(watchDb('otherWatch99'), 'gp_picks/player1_2026-2-12'), wPicks('player1', '2026-2-12')), 'a different watch');
+});
+
+test('picks from the watch: another player cannot take over a watch, and a removed player\'s watch stops working', async () => {
+  await assertSucceeds(setDoc(doc(player(), 'gp_watch/' + WATCH), { uid: 'player1', at: '2026-11-17T12:00:00Z' }));
+  await env.withSecurityRulesDisabled(async (ctx) => { await setDoc(doc(ctx.firestore(), 'gp_players/player2'), { name: 'Q', code: 'GOOD', joinedAt: 1 }); });
+  const p2 = env.authenticatedContext('player2', { email: 'p2@example.com', email_verified: true }).firestore();
+  await assertFails(setDoc(doc(p2, 'gp_watch/' + WATCH), { uid: 'player2', at: 'now' }));
+  await assertFails(deleteDoc(doc(p2, 'gp_watch/' + WATCH)));
+  await assertSucceeds(updateDoc(doc(player(), 'gp_watch/' + WATCH), { at: '2026-11-18T12:00:00Z' }));
+  await env.withSecurityRulesDisabled(async (ctx) => { await deleteDoc(doc(ctx.firestore(), 'gp_players/player1')); });
+  await assertFails(setDoc(doc(watchDb(), 'gp_picks/player1_2026-2-12'), wPicks('player1', '2026-2-12')));
+  await assertSucceeds(deleteDoc(doc(owner(), 'gp_watch/' + WATCH)), 'the owner can clear it');
+});

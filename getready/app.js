@@ -5,6 +5,9 @@
   "use strict";
   const C = window.GRCore, DB = window.GRDB, CEL = window.GRCelebrate, CL = window.GRCloud;
   const KEY = "getready.v1";
+  /* The watch link (../watchlink.js): a Wear OS watch shows today's list and ticks items. Nothing is sent unless a watch is linked. */
+  const WL = window.WatchLink;
+  const watch = { soon: 0, busy: false, again: false, last: "", msg: "" };   // last: what was written to the watch this session
   const $ = s => document.querySelector(s);
   const esc = s => String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
   const nowMs = () => (window.__now != null ? window.__now : Date.now());
@@ -31,7 +34,7 @@
     try { localStorage.setItem(KEY, j); failed = false; } catch (e) { failed = true; if (window.nateHealth) window.nateHealth.note("save", "Checklist could not be saved (" + (e && e.name || "error") + ")"); }
     DB.put("state", j).catch(() => {}); // a second copy, in case the phone clears one of the two
     const w = $("#warn"); if (w) w.hidden = !failed;
-    CL.schedule();
+    CL.schedule(); watchSoon();
   }
   /* The cloud copy has been merged in: take it (without bumping the change time) and redraw when nothing is being typed. */
   const canDraw = () => !stack.length && !/^(INPUT|SELECT)$/.test((document.activeElement || {}).tagName || "");
@@ -40,6 +43,7 @@
     S = next; cfgSig = sigOf(S); try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {}
     DB.put("state", JSON.stringify(S)).catch(() => {});
     if (canDraw()) render();
+    watchSoon();
   }
   const photoApi = {
     ids: () => Object.keys(photos), exists: id => !!item(id), get: id => DB.get("photo:" + id),
@@ -218,6 +222,9 @@
     $("#tabname").textContent = ui.tab === "today" ? "" : TABS.find(t => t[0] === ui.tab)[1];
     const v = { today: vToday, log: vLog, list: vList, alarms: vAlarms, more: vMore }[ui.tab]();
     $("#view").innerHTML = '<div class="warn" id="warn" role="alert"' + (failed ? "" : " hidden") + '>⚠️ This phone is not letting the app save. Open Get Ready from the home-screen icon (not a private tab), or free up some space.</div>' + v;
+    if (WL && $("#gwl")) WL.panel($("#gwl"), { intro: "Tick off the list on a Wear OS watch: open Get Ready on the watch. It shows a code. Type it here.",
+      linkedText: "The watch shows today's list. Ticks on the watch land here, and ticks here show on the watch.",
+      btn: "btn", btnPri: "btn pri", onLinked: () => { watch.last = ""; watchSync(); } });
   }
 
   function thumbHtml(it, cls) {
@@ -338,6 +345,7 @@
     const on = cloudOn(), st = CL.status;
     return '<h2 class="sec">Back up &amp; sync</h2><div class="card"><p id="cl">' + (cloudLine() || "Not backed up yet. Everything is on this phone only.") + '</p><p class="fine">Sign in with Google to keep your lists, check marks, streak and pictures safe, and to bring them to a new phone. It is optional.</p><div class="row wrap" style="margin-top:10px">' +
       (on || st === "loading" ? "" : '<button class="btn pri" data-act="cloudin">Sign in with Google</button>') + (st === "ok" || (st === "offline" && CL.email) ? '<button class="btn" data-act="cloudnow">Back up now</button>' : "") + (on ? '<button class="btn" data-act="cloudout">Sign out</button>' : "") + "</div></div>" +
+      (WL ? '<h2 class="sec">Watch</h2><div class="card"><div id="gwl"></div><p class="fine" id="gwm" role="status">' + esc(watch.msg) + "</p></div>" : "") +
       '<h2 class="sec">Something wrong?</h2><div class="card"><p class="fine" style="margin-bottom:8px">Sends a short report (saving, storage, recent errors; no names or pictures) to whoever looks after the app.</p><button class="btn" type="button" onclick="window.nateHealth&&nateHealth.report()">Send a problem report</button></div>' +
       '<h2 class="sec">Sound</h2><div class="card row sp"><span>Beeps and cheers</span><button class="sw" role="switch" aria-checked="' + !!S.sound + '" aria-label="Sound" data-act="sound"></button></div>' +
       '<h2 class="sec">Celebration</h2><p class="mute">When everything is checked off, a random full-screen dance plays. Preview one:</p><div class="chips">' +
@@ -346,7 +354,7 @@
       S.gifs.map(g => '<div class="gifrow"><span>' + esc(g.name) + (g.kind === "url" ? " (link)" : "") + '</span><button class="btn sm" data-act="gifprev" data-id="' + esc(g.id) + '">Preview</button><button class="ibtn danger" data-act="gifdel" data-id="' + esc(g.id) + '" aria-label="Remove ' + esc(g.name) + '">✕</button></div>').join("") +
       '<div class="row wrap" style="margin-top:8px"><button class="btn" data-act="gifadd">Add a GIF from this phone</button><button class="btn" data-act="gifurl">Add a GIF link</button></div></div>' +
       '<h2 class="sec">Today</h2><button class="btn block danger" data-act="resetday">Start today over</button>' +
-      '<p class="fine">Everything here, including photos, stays on this phone. Nothing is uploaded or shared. Clearing this app\'s site data erases it.</p>';
+      '<p class="fine">Everything here, including photos, stays on this phone unless you turn on the backup or link a watch (the watch gets the lists and check marks, never photos). Clearing this app\'s site data erases it.</p>';
   }
 
   /* ---------- clicks ---------- */
@@ -460,6 +468,32 @@
   });
   document.addEventListener("keydown", e => { if (e.key === "Enter" && e.target.id === "newItem") { e.preventDefault(); addItem(e.target.value); } });
 
+  /* ---------- the watch ---------- */
+  function wlOn() { return !!(WL && WL.linked()); }
+  /* Soon after a save that changes what the watch shows, sync once. Nothing while unlinked. */
+  function watchSoon() {
+    if (!wlOn() || watch.soon || JSON.stringify(C.forWatch(S, today())) === watch.last) return;
+    watch.soon = setTimeout(() => { watch.soon = 0; watchSync(); }, 3000);
+  }
+  /* Take the watch's ticks into the checklist, then send the watch the lists and check marks. */
+  async function watchSync() {
+    if (!wlOn()) return; if (watch.busy) { watch.again = true; return; } watch.busy = true;
+    try {
+      const doc = await WL.read(); if (!wlOn()) return;
+      const fresh = WL.fresh(doc, "gr");
+      if (fresh.length) {
+        const r = C.takeWatch(S, fresh, today());
+        WL.took("gr", fresh);
+        if (r.changed.length) { save(); if (canDraw()) render(); if (r.justDone) setTimeout(() => celebrate(), 300); }
+      }
+      const w = C.forWatch(S, today()), k = JSON.stringify(w);
+      if (k !== watch.last) { await WL.write("gr", Object.assign({ at: Date.now() }, w)); watch.last = k; }
+      if (watch.soon) { clearTimeout(watch.soon); watch.soon = 0; }
+      watch.msg = "";
+    } catch (e) { watch.msg = navigator.onLine === false ? "No signal right now. The watch catches up when there is signal." : "Could not reach the watch link just now. It tries again by itself."; }
+    finally { watch.busy = false; const m = $("#gwm"); if (m) m.textContent = watch.msg; if (watch.again) { watch.again = false; watchSync(); } }
+  }
+
   function init() {
     const had = load();
     render();
@@ -472,6 +506,13 @@
     checkReminders(); ui.lastRem = nowMs();
     if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {});
     paintBadge();
+    /* The watch: on open, whenever the app comes back on screen, and every 20 seconds while it is showing. */
+    if (WL) {
+      watchSync();
+      setInterval(() => { if (!document.hidden) watchSync(); }, 20000);
+      document.addEventListener("visibilitychange", () => { if (!document.hidden) watchSync(); });
+      WL.onChange(on => { watch.last = ""; if (on) watchSync(); else if (ui.tab === "more" && canDraw()) render(); });
+    }
     window.GetReady = { state: () => S, render, celebrate }; // for the tests
   }
   init();

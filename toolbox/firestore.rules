@@ -1,8 +1,9 @@
 // Firestore rules for the nates-toolbox Firebase project (Toolbox, Gameday Picks, Read 20, Photo Blueprint, Get Ready, Catch Log).
 // Copy of the live rules from the Firebase console, saved 2026-11-06. Photo Blueprint section changed 2026-11-15
 // (shared sheets lose the name and exact pin), published 2026-11-16. app_me added 2026-11-16 ("this is me" for app numbers),
-// published 2026-11-16. Fairway (golf_events) added 2026-11-17 and not yet published; everything else in the live
-// console rules matches this file.
+// published 2026-11-16. Fairway (golf_events) added 2026-11-17 and not yet published; the watch link (fw_links,
+// fw_pair) and the watch's Gameday Picks access (gp_watch, plus the watch lines in gp_picks) added 2026-11-17 and not yet
+// published; everything else in the live console rules matches this file.
 // OWNER_EMAIL stands in for Nate's sign-in email (this repo is public, so the
 // real address is not committed). Put the real address back before pasting
 // this into the console. Test: cd toolbox && npm install && npm test
@@ -48,7 +49,31 @@ service cloud.firestore {
         && gpName(request.resource.data);
       allow delete: if gpOwner();
     }
+    // A Wear OS watch (the family watch app) makes NFL picks for one player. The watch signs in anonymously; the player's
+    // phone, signed in as that player, okays it in gp_watch/<the watch's id>. The watch may then read and save that one
+    // player's own picks documents, and nothing else in Gameday Picks.
+    function gpWatchFor() { return get(/databases/$(database)/documents/gp_watch/$(request.auth.uid)).data.uid; }
+    function gpWatch() {
+      return request.auth != null && exists(/databases/$(database)/documents/gp_watch/$(request.auth.uid))
+        && exists(/databases/$(database)/documents/gp_players/$(gpWatchFor()));
+    }
+    match /gp_watch/{wuid} {
+      allow get: if request.auth != null && (request.auth.uid == wuid || resource.data.uid == request.auth.uid);
+      allow list: if false;
+      allow create: if gpPlayer() && wuid.matches('[A-Za-z0-9]{10,128}') && wuid != request.auth.uid
+        && request.resource.data.keys().hasOnly(['uid', 'at']) && request.resource.data.uid == request.auth.uid
+        && request.resource.data.at is string && request.resource.data.at.size() <= 40;
+      allow update: if gpPlayer() && resource.data.uid == request.auth.uid
+        && request.resource.data.keys().hasOnly(['uid', 'at']) && request.resource.data.uid == request.auth.uid
+        && request.resource.data.at is string && request.resource.data.at.size() <= 40;
+      allow delete: if request.auth != null && (resource.data.uid == request.auth.uid || gpOwner());
+    }
     match /gp_picks/{id} {
+      allow get: if gpWatch() && id.matches(gpWatchFor() + '_[0-9]{4}-[0-9]+-[0-9]+');
+      allow create, update: if gpWatch() && request.resource.data.uid == gpWatchFor()
+        && id == gpWatchFor() + "_" + request.resource.data.week && request.resource.data.week.matches('[0-9]{4}-[0-9]+-[0-9]+')
+        && request.resource.data.keys().hasOnly(['uid', 'week', 'picks', 'updatedAt'])
+        && request.resource.data.picks is map && request.resource.data.picks.size() <= 40;
       allow read: if gpPlayer();
       allow create, update: if gpPlayer() && request.resource.data.uid == request.auth.uid
         && id == request.auth.uid + "_" + request.resource.data.week
@@ -252,6 +277,31 @@ service cloud.firestore {
     }
     match /gp_weeks/{key} {
       allow read, write: if gpPlayer();
+    }
+    // ---------- Watch link (watchlink.js, watch/family): one phone's family apps and its Wear OS watch ----------
+    // One document per linked phone and watch. The id is a 26-character random code only that phone and watch know: no
+    // sign-in (a watch can't do a Google sign-in), nobody can list the links, nothing can be deleted. Each app's part is
+    // one JSON string; the watch writes only "w", its log of ticks, solves, reading sessions and reps.
+    function fwText(d, f, n) { return !(f in d) || (d[f] is string && d[f].size() <= n); }
+    match /fw_links/{key} {
+      allow get: if key.matches('[a-z2-7]{26}');
+      allow list, delete: if false;
+      allow create, update: if key.matches('[a-z2-7]{26}')
+        && request.resource.data.keys().hasOnly(['gr', 'cc', 'r20', 'pp', 'gp', 'w', 'updated'])
+        && fwText(request.resource.data, 'gr', 400000) && fwText(request.resource.data, 'w', 200000)
+        && fwText(request.resource.data, 'cc', 20000) && fwText(request.resource.data, 'r20', 20000)
+        && fwText(request.resource.data, 'pp', 40000) && fwText(request.resource.data, 'gp', 20000)
+        && (!('updated' in request.resource.data) || request.resource.data.updated is timestamp);
+    }
+    // Linking: the watch shows an 8-letter code; the phone leaves its link code under it for a minute or two, the watch
+    // reads it and deletes it. A note can't be changed or listed, only created once, read and removed.
+    match /fw_pair/{code} {
+      allow get, delete: if code.matches('[a-z2-7]{8}');
+      allow list, update: if false;
+      allow create: if code.matches('[a-z2-7]{8}')
+        && request.resource.data.keys().hasOnly(['k', 'at'])
+        && request.resource.data.k is string && request.resource.data.k.matches('[a-z2-7]{26}')
+        && request.resource.data.at is timestamp;
     }
     // ---------- App numbers: anonymous counts sent by install.js (read on toolbox/numbers.html) ----------
     // One document per phone per app (installs) or per phone per app per week (opens). The id is

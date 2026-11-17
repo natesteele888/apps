@@ -31,6 +31,16 @@ const event = (id, date, away, home, state, done) => ({ id, date, competitions: 
     eq(C.label('nba-' + TODAY, TODAY), 'Today'); eq(C.label('nba-2026-11-10', TODAY), 'Tomorrow'); eq(C.label('nba-2026-11-08', TODAY), 'Yesterday'); eq(C.label('nba-2026-11-12', TODAY), 'Thu 12');
     eq(C.label('2026-2-10', TODAY), 'Wk 10'); eq(C.label('2026-1-2', TODAY), 'Pre 2'); eq(C.label('2026-3-1', TODAY), 'Playoffs 1'); eq(C.nflWeeks(2), 18); eq(C.nflWeeks(3), 5); eq(C.nflWeeks(1), 4);
   });
+  await test('core: the watch gets this player and the NFL standings (top 8, the player kept in), never picks', () => {
+    const players = {}; for (let i = 0; i < 10; i++) players['u' + i] = { name: 'Player' + i };
+    const weeks = { '2026-2-10': { games: { g1: { done: true, winner: 'BUF' }, g2: { done: true, winner: 'KC' } } }, 'nba-2026-11-09': { games: { n1: { done: true, winner: 'BOS' } } } };
+    const picks = { '2026-2-10': { u0: { g1: 'BUF', g2: 'KC' }, u1: { g1: 'BUF' }, u9: { g1: 'NYJ' } }, 'nba-2026-11-09': { u9: { n1: 'BOS' } } };
+    const s = C.watchSummary(players, picks, weeks, 'u9');
+    eq(s.uid, 'u9'); eq(s.name, 'Player9'); eq(s.board.length, 8); eq(s.board[0].name, 'Player0'); eq(s.board[0].w, 2);
+    const me = s.board[7]; eq(me.me, true); eq(me.l, 1, 'only NFL counts'); eq(me.w, 0);
+    assert.ok(!JSON.stringify(s).includes('BUF'), 'no picks go to the watch');
+    eq(C.watchSummary({}, {}, {}, 'x').board.length, 0);
+  });
   await test('core: ESPN events become games; records and team stats count only finals, per league or all', () => {
     const d = { events: [
       event('g1', '2026-11-09T00:00:00Z', team('AAA', 'Alphas', 'Alpha City', '112233', false, '3', false), team('BBB', 'Betas', 'Beta Town', 'aabbcc', true, '5', true), 'post', true),

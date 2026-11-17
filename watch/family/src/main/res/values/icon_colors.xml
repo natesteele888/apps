@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="getready_bg">#FF2F8CFF</color>
+    <color name="cube_bg">#FFE0313A</color>
+    <color name="power_bg">#FFEA580C</color>
+    <color name="picks_bg">#FF166534</color>
+    <color name="read_bg">#FF7C3AED</color>
+</resources>
