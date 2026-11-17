@@ -1,6 +1,6 @@
 {
   "about": "The one list of Nathan's apps. Live links, which apps show where, and each app's App Store listing (text, highlights, screenshots) all come from here. Edit listings and icons in the Toolbox; the sync job copies them here. Don't hand-edit text in store/index.html.",
-  "updated": "2026-11-16",
+  "updated": "2026-11-17",
   "toolbox": "https://natesteele888.github.io/apps/toolbox/",
   "store": "https://natesteele888.github.io/apps/store/",
   "apps": [
@@ -2236,6 +2236,86 @@
         ]
       },
       "store": true
+    },
+    {
+      "id": "fairway",
+      "name": "Fairway",
+      "live": "https://natesteele888.github.io/apps/fairway/",
+      "repo": "natesteele888/apps",
+      "path": "fairway/",
+      "toolboxIds": [],
+      "listing": {
+        "sub": "Live scoring for a golf outing",
+        "cat": "family",
+        "ac": "#0d4a30",
+        "install": true,
+        "access": "Open",
+        "desc": "Run a golf tournament from everyone's phone. Golfers scan a QR code to join, pick their tees and keep score for their group, and the leaderboard updates live with red numbers under par and green over, like the board at Augusta. Follow the field hole by hole, tap a golfer for their player card, build your own course scorecard, and measure closest to the pin with the phone's GPS. No sign-in.",
+        "feats": [
+          [
+            "⛳",
+            "Scan and play",
+            "A QR code or link joins the tournament, no account needed."
+          ],
+          [
+            "🏆",
+            "A leaderboard like the Masters",
+            "Red under par, green over, with position, today and thru."
+          ],
+          [
+            "📍",
+            "Closest to the pin",
+            "Mark the pin and the ball with GPS, or enter a tape measure, with a photo for proof."
+          ]
+        ],
+        "facts": [
+          [
+            "Golfers",
+            "120",
+            "per tournament"
+          ],
+          [
+            "Rounds",
+            "1 to 4",
+            "9 or 18 holes"
+          ],
+          [
+            "Access",
+            "Open",
+            "the QR code is the key"
+          ]
+        ],
+        "parts": [
+          "pwa",
+          "offline",
+          "firebase",
+          "rules",
+          "share",
+          "engine"
+        ],
+        "tie": "The weekend one of the set: a scoreboard the whole golf outing carries in its pockets.",
+        "rel": [
+          "scoreboard",
+          "tournamentpack"
+        ],
+        "for": [
+          "player",
+          "parent"
+        ],
+        "shots": [
+          "mock"
+        ],
+        "caps": [
+          "Join from a QR code or link, pick your tees and your group",
+          "Keep score for your group, hole by hole, with or without signal",
+          "A Masters-style leaderboard and a hole-by-hole board",
+          "Follow the field: who leads and what hole everyone is on",
+          "Player cards with the round's scorecard, stats and past rounds",
+          "Closest to the pin by GPS or tape, with an optional photo",
+          "Build any course: par and yardage by tee, 9 or 18 holes",
+          "Quiet birdsong and piano on the menu, made by the app itself"
+        ]
+      }
     },
     {
       "id": "filmlite",

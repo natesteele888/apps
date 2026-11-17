@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<!-- Copyright (c) 2026 Nate Steele. All rights reserved. Not licensed for copying, hosting or resale. See LICENSE. -->
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Fairway: Live Golf Tournament Scoring</title>
+<meta name="description" content="Run a golf tournament from everyone's phone. Players scan a QR code to join, pick their tees and keep score, and a classic tournament leaderboard updates live.">
+<meta name="theme-color" content="#0d4a30">
+<meta name="color-scheme" content="light">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Fairway">
+<meta name="application-name" content="Fairway">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" type="image/png" sizes="192x192" href="/apps/icons/fairway-192.png">
+<link rel="apple-touch-icon" href="/apps/icons/fairway-192.png">
+<script src="https://natesteele888.github.io/apps/install.js" defer></script><script src="https://natesteele888.github.io/apps/health.js" defer></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Barlow:wght@400;500;600;700&family=Libre+Baskerville:wght@700&display=swap" media="print" onload="this.media='all'">
+<link rel="stylesheet" href="fairway.css">
+</head>
+<body>
+<div id="app"><main id="view" tabindex="-1"></main></div>
+<nav id="tabs" class="tabs" hidden></nav>
+<div id="sheets"></div>
+<div id="cardlayer"></div>
+<div id="toasts" aria-live="polite"></div>
+<noscript><p style="padding:24px;font-family:sans-serif">Fairway needs JavaScript turned on to work.</p></noscript>
+<script src="core.js"></script>
+<script src="qr.js"></script>
+<script src="store.js"></script>
+<script src="sound.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
