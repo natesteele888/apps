@@ -16,6 +16,7 @@ Installable phone apps, hosted on GitHub Pages.
 - [Tournament Pack](https://natesteele888.github.io/apps/tournamentpack/) — tournament schedule, standings with real tiebreakers, bracket and packing list
 - [Walk-Up](https://natesteele888.github.io/apps/walkup/) — record, polish and play each player's walk-up announcement and song
 - [Scoreboard](https://natesteele888.github.io/apps/scoreboard/) — a big-number scoreboard for basketball, baseball and football
+- [Fairway](https://natesteele888.github.io/apps/fairway/) — live golf tournament scoring: QR join, a Masters-style leaderboard, player cards and closest to the pin
 - [Film Lite](https://natesteele888.github.io/apps/filmlite/) — step through a clip, tag the moments and share the notes
 
 Every app stores its data on the phone only. No accounts, nothing uploaded.

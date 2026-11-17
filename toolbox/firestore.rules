@@ -1,7 +1,8 @@
 // Firestore rules for the nates-toolbox Firebase project (Toolbox, Gameday Picks, Read 20, Photo Blueprint, Get Ready, Catch Log).
 // Copy of the live rules from the Firebase console, saved 2026-11-06. Photo Blueprint section changed 2026-11-15
 // (shared sheets lose the name and exact pin), published 2026-11-16. app_me added 2026-11-16 ("this is me" for app numbers),
-// published 2026-11-16. The live console rules match this file.
+// published 2026-11-16. Fairway (golf_events) added 2026-11-17 and not yet published; everything else in the live
+// console rules matches this file.
 // OWNER_EMAIL stands in for Nate's sign-in email (this repo is public, so the
 // real address is not committed). Put the real address back before pasting
 // this into the console. Test: cd toolbox && npm install && npm test
@@ -171,6 +172,48 @@ service cloud.firestore {
         allow create, update: if clCrew(code)
           && request.resource.data.keys().hasOnly(['img', 'updated'])
           && request.resource.data.img is string && request.resource.data.img.size() <= 600000;
+      }
+    }
+    // ---------- Fairway (apps/fairway): golf tournaments, one document per long random code ----------
+    // Added 2026-11-17, NOT YET PUBLISHED. Until it is, the app runs each tournament on one phone.
+    // The document id is a 20-character random code that only people with the tournament's QR code or link know.
+    // No sign-in: golfers scan and play. Anyone who knows the code can read the tournament and add or change scores
+    // (one score is one field, so phones scoring at once don't undo each other). Nobody can list tournaments or delete one.
+    // The shape is checked here, the course can't change after the start, and the app re-checks every score it reads.
+    // A tournament holds first and last names of the golfers who typed them in, and nothing else about them.
+    // Closest to the pin: ctph lists the marked holes and ctp holds each measured distance (feet), both in the document.
+    // A proof photo is its own small document under ctp/, one resized JPEG as text, readable with the code like the rest.
+    function fwOk(d) {
+      return d.keys().hasOnly(['v', 'name', 'created', 'updated', 'rounds', 'cur', 'done', 'course', 'p', 'ctph', 'ctp'])
+        && d.v == 1 && d.name is string && d.name.size() > 0 && d.name.size() <= 60
+        && d.created is number && d.updated is number
+        && d.rounds is int && d.rounds >= 1 && d.rounds <= 4
+        && d.cur is int && d.cur >= 1 && d.cur <= d.rounds
+        && d.done is bool
+        && d.course is map && d.course.keys().hasOnly(['id', 'name', 'tees', 'holes'])
+        && d.course.name is string && d.course.name.size() > 0 && d.course.name.size() <= 60
+        && d.course.tees is list && d.course.tees.size() >= 1 && d.course.tees.size() <= 6
+        && d.course.holes is list && (d.course.holes.size() == 9 || d.course.holes.size() == 18)
+        && d.p is map && d.p.size() <= 120
+        && (!('ctph' in d) || (d.ctph is list && d.ctph.size() <= 18))
+        && (!('ctp' in d) || (d.ctp is map && d.ctp.size() <= 72));
+    }
+    match /golf_events/{code} {
+      allow get: if code.matches('[a-z2-7]{20}');
+      allow list, delete: if false;
+      allow create: if code.matches('[a-z2-7]{20}') && fwOk(request.resource.data);
+      allow update: if code.matches('[a-z2-7]{20}') && fwOk(request.resource.data)
+        && request.resource.data.created == resource.data.created
+        && request.resource.data.course == resource.data.course;
+      match /ctp/{id} {
+        allow get: if code.matches('[a-z2-7]{20}');
+        allow list, delete: if false;
+        allow create, update: if code.matches('[a-z2-7]{20}') && id.matches('[a-z0-9]{6,16}')
+          && exists(/databases/$(database)/documents/golf_events/$(code))
+          && request.resource.data.keys().hasOnly(['img', 'updated'])
+          && request.resource.data.updated is number
+          && request.resource.data.img is string && request.resource.data.img.size() <= 600000
+          && request.resource.data.img.matches('data:image/jpeg;base64,[A-Za-z0-9+/=]+');
       }
     }
     match /gp_weeks/{key} {
