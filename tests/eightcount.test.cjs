@@ -7,7 +7,7 @@ const URL = "http://127.0.0.1:8791/apps/eightcount/";
 const CHROME = require("./lib.cjs").CHROME;
 let passed = 0, failed = 0;
 const ok = (m) => { passed++; console.log("ok  ", m); };
-const bad = (m, e) => { failed++; process.exitCode = 1; console.log("FAIL", m, "\n    ", (e && e.message || e)); };
+const bad = (m, e) => { failed++; process.exitCode = 1; console.log("FAIL", m, "\n      " + String(e && e.message || e).split("\n").slice(0, 6).join("\n      ")); };
 async function step(m, fn) { try { await fn(); ok(m); } catch (e) { bad(m, e); } }
 const wait = (ms) => new Promise(r => setTimeout(r, ms));
 
@@ -171,6 +171,7 @@ const SPY = () => {
     // second phone = a second page (same real clock). Phone B's clock is set 25 ms ahead on purpose.
     await page.goto(URL, { waitUntil: "load" }); await page.waitForSelector(".quick");
     const b = await newPage(ctx, errs);
+    try {
     await b.addInitScript(() => { const d = Date.now; Date.now = () => d() + 25; });
     await b.goto(URL, { waitUntil: "load" }); await b.waitForSelector(".quick");
     for (const p of [page, b]) { await p.click(".rt"); await p.click('[data-act="lock"]'); await p.waitForSelector("#player"); await p.click('[data-rate="100"]'); }
@@ -179,8 +180,9 @@ const SPY = () => {
       await p.evaluate(() => { window.__log = []; const big = document.querySelector("#plBig"); new MutationObserver(() => window.__log.push([performance.timeOrigin + performance.now(), big.textContent, big.className.includes("pre") ? "pre" : big.className.includes("co") ? "co" : "run"])).observe(big, { childList: true, characterData: true, subtree: true, attributes: true }); });
     }
     await Promise.all([page.click('[data-p="arm"]'), b.click('[data-p="arm"]')]);
-    const info = await page.locator("#plSmall").textContent();
-    assert.ok(info.startsWith("Locked in. Counting off at "), info);
+    // the "Locked in" line is painted on the next frame after the sound unlocks, not during the click, so wait for it
+    await page.waitForFunction(() => /^Locked in\. Counting off at /.test(document.querySelector("#plSmall").textContent), null, { timeout: 8000 })
+      .catch(async () => { throw new Error("no Locked in line, it says: " + await page.locator("#plSmall").textContent()); });
     await page.waitForFunction(() => window.__log.filter(x => /^[1-8]$/.test(x[1]) && x[2] === "run").length >= 10, null, { timeout: 40000, polling: 200 });
     await b.waitForFunction(() => window.__log.filter(x => /^[1-8]$/.test(x[1]) && x[2] === "run").length >= 10, null, { timeout: 40000, polling: 200 });
     const la = await page.evaluate(() => window.__log), lb = await b.evaluate(() => window.__log);
@@ -193,12 +195,13 @@ const SPY = () => {
     const seqA = la.filter(x => /^[1-8]$/.test(x[1])).map(x => x[1]).join(""), seqB = lb.filter(x => /^[1-8]$/.test(x[1])).map(x => x[1]).join("");
     assert.strictEqual(seqA.slice(0, 12), seqB.slice(0, 12));
     await page.screenshot({ path: SP + "/shots/ec-lock-running.png" });
-    await b.close();
+    } finally { await b.close().catch(() => {}); }
     await page.goBack(); await page.waitForSelector("#player", { state: "detached" });
   });
 
   /* ---- share link + import in a clean phone ---- */
   await step("share link round trip into a fresh phone", async () => {
+    await page.goto(URL, { waitUntil: "load" }); await page.waitForSelector(".quick");
     await page.evaluate(() => { Object.defineProperty(navigator, "share", { value: undefined, configurable: true }); });
     await page.click('[data-act="rmenu"]'); await page.click('[data-s="share"]');
     await page.waitForSelector("#sheetWrap", { state: "hidden" });
