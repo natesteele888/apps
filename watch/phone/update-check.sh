@@ -40,7 +40,13 @@ adb shell pm grant $PKG android.permission.POST_NOTIFICATIONS
 adb shell appops set $PKG REQUEST_INSTALL_PACKAGES allow
 echo "installed version $(ver)"
 adb shell am start -W -n $PKG/.MainActivity
-tap "Update" 60         # Dugout's "Update Dugout?" pop-up
+if ! tap "Update" 60; then # Dugout's "Update Dugout?" pop-up
+  # Dugout asks GitHub's releases list without signing in, and a shared runner can run out of GitHub's 60 asks an
+  # hour. Print what GitHub says about this runner's allowance so a failure here shows whether that was the cause.
+  echo "GitHub API allowance for this runner:"
+  curl -s https://api.github.com/rate_limit | python3 -I -c 'import json,sys; r=json.load(sys.stdin)["resources"]["core"]; print("  remaining", r["remaining"], "of", r["limit"])' || echo "  couldn't reach api.github.com"
+  exit 1
+fi
 sleep 3
 tap "Update" 120        # Android's "Do you want to update this app?"
 for _ in $(seq 1 90); do v=$(ver); [ "${v:-1}" != 1 ] && break; sleep 1; done
