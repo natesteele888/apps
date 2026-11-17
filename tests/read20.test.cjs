@@ -590,7 +590,7 @@ const TODAY = '2026-11-08';
   });
   await test('readers: settings is short (the reader, then two doors) and the cloud, sharing and file choices sit one step in', async () => {
     const { page } = await mk(); await page.locator('#gear').click(); await page.waitForSelector('.sheet');
-    eq(await page.locator('.sheet .set').count(), 3, 'three groups'); assert.ok(await page.locator('.sheet button:visible:not(.avp)').count() <= 7, 'few buttons: ' + await page.locator('.sheet button:visible:not(.avp)').count());
+    eq(await page.locator('.sheet .set').count(), 3, 'three groups'); assert.ok(await page.locator('#setwatch').isVisible(), 'the watch is one step in too'); eq(await page.locator('#swl').count(), 0); assert.ok(await page.locator('.sheet button:visible:not(.avp)').count() <= 7, 'few buttons: ' + await page.locator('.sheet button:visible:not(.avp)').count());
     for (const id of ['#cin', '#shmake', '#jcode', '#sb', '#sr', '#se']) eq(await page.locator(id).count(), 0, id + ' is not on the first settings screen');
     assert.ok(await page.locator('#setsafe').isVisible()); await page.screenshot({ path: SHOTS + '/read20-settings.png' });
     await page.locator('#setsafe').click(); await page.locator('#cin').waitFor(); eq(await page.locator('.sheet').last().locator('.set').count(), 4, 'online, sharing, one reader\'s own phone, and file'); await page.screenshot({ path: SHOTS + '/read20-safe.png' });
@@ -900,7 +900,7 @@ const TODAY = '2026-11-08';
       { id: 'w3', a: 'r20', at: 1, d: '2026-11-20', min: 15, s: 900 },        // too far ahead: skipped
       { id: 'w4', a: 'r20', at: 2, d: TODAY, min: 500, s: 30000 },             // too long: skipped
       { id: 'w5', a: 'cc', at: 3, puz: '333', t: 41000, p: 0, s: 'R U' }]};  // another app's entry: not Read 20's
-    await page.locator('#gear').click(); await page.locator('#swatch').waitFor();
+    await page.locator('#gear').click(); await page.locator('#setwatch').click(); await page.locator('#swatch').waitFor();
     eq(await page.locator('#swr option').count(), 2, 'a choice of reader on a phone with two'); eq(await page.locator('#swr').inputValue(), alex, 'defaults to the reader open now');
     await page.selectOption('#swr', 'main'); eq(await page.evaluate(() => localStorage.getItem('read20.watchReader')), 'main');
     await linkWatch(page); assert.ok(w.calls.some(c => /^POST fw_pair\?documentId=abcd2345$/.test(c)), w.calls.join());
@@ -913,7 +913,7 @@ const TODAY = '2026-11-08';
     eq(JSON.stringify(Object.assign({}, s1, { at: 0 })), JSON.stringify({ v: 1, at: 0, name: 'Sam', goal: 20, d: TODAY, today: 12, streak: 1 })); assert.ok(s1.at > 0);
     eq(await page.evaluate(() => JSON.parse(localStorage.getItem('steele.watchlink.seen.r20')).sort().join()), 'w1,w2,w3,w4', 'every Read 20 entry is marked taken, the odd ones too');
     // the next syncs (every 30 s while showing, and after a reload) never count them twice, and send nothing when nothing changed
-    await page.locator('#sd').click(); await settle(page); const gets = () => w.calls.filter(c => c.startsWith('GET')).length, g0 = gets();
+    await page.locator('#swdone').click(); await page.locator('#sd').click(); await settle(page); const gets = () => w.calls.filter(c => c.startsWith('GET')).length, g0 = gets();
     await page.clock.runFor(31000); await until(() => gets() > g0); await page.waitForTimeout(300);
     eq(await readerSec(page, 'main', TODAY), 720, 'not doubled'); eq(w.patches.length, 1, 'unchanged numbers are not sent again');
     await page.reload(); await page.waitForSelector('.cover'); await until(() => w.patches.length >= 2); eq(await readerSec(page, 'main', TODAY), 720, 'not doubled after a reload'); eq(r20Patch(w.patches[1]).today, 12);
@@ -928,15 +928,15 @@ const TODAY = '2026-11-08';
     // a local session changes the numbers: the watch hears about it a few seconds later
     await page.locator('#nav button[data-go=""]').click(); await page.waitForSelector('.cover'); await logMin(page, 'Paper', 5); await page.clock.runFor(5000); await until(() => w.patches.length >= 4); eq(r20Patch(w.patches[3]).today, 26);
     // unlink: nothing more is sent
-    await page.locator('#gear').click(); await page.locator('#swl [data-wl="off"]').click(); await page.locator('#sd').click(); const n = w.calls.length; await page.clock.runFor(65000); await page.waitForTimeout(300); eq(w.calls.length, n, 'unlinked: no network');
+    await page.locator('#gear').click(); await page.locator('#setwatch').click(); await page.locator('#swatch').waitFor(); await page.locator('#swl [data-wl="off"]').click(); await page.locator('#swdone').click(); await page.locator('#sd').click(); const n = w.calls.length; await page.clock.runFor(65000); await page.waitForTimeout(300); eq(w.calls.length, n, 'unlinked: no network');
     eq(errors.length, 0, errors.join('|'));
   });
   await test('watch: one reader needs no choice; reaching the goal on the watch gets the party once the settings close; the watch link is never cached', async () => {
     const w = await mkWatchPhone(); const { page } = w;
     w.db.w = { v: 1, e: [{ id: 'k1', a: 'r20', at: Date.parse('2026-11-08T18:00:00'), d: TODAY, min: 20, s: 1201 }] };
-    await page.locator('#gear').click(); await page.locator('#swatch').waitFor(); eq(await page.locator('#swr').count(), 0, 'no reader choice with one reader');
+    await page.locator('#gear').click(); await page.locator('#setwatch').click(); await page.locator('#swatch').waitFor(); eq(await page.locator('#swr').count(), 0, 'no reader choice with one reader');
     await linkWatch(page); await until(() => w.patches.length >= 1); eq(await sec(page), 1200); eq(await page.locator('#party').count(), 0, 'no party on top of Settings');
-    await page.locator('#sd').click(); await page.clock.runFor(1000); await page.locator('#party').waitFor(); eq(r20Patch(w.patches[0]).today, 20); eq(r20Patch(w.patches[0]).name, '');
+    await page.locator('#swdone').click(); eq(await page.locator('#party').count(), 0, 'nor on Settings once the watch closes'); await page.locator('#sd').click(); await page.clock.runFor(1000); await page.locator('#party').waitFor(); eq(r20Patch(w.patches[0]).today, 20); eq(r20Patch(w.patches[0]).name, '');
     assert.ok(/firestore\.googleapis\.com/.test(require('fs').readFileSync(path_.join(__dirname, '../apps/read20/sw.js'), 'utf8')), 'the service worker leaves the watch link alone');
     assert.ok(/\.\.\/watchlink\.js/.test(require('fs').readFileSync(path_.join(__dirname, '../apps/read20/index.html'), 'utf8')));
   });
