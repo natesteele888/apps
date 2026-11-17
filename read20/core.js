@@ -210,6 +210,18 @@
     if (!out.profiles[out.active]) out.active = out.order[0];
     return out;
   };
+  /* ---------- the watch: reading timed on a Wear OS watch comes in through ../watchlink.js ---------- */
+  C.WATCH_TITLE = "Read on the watch";   // how a watch session shows in the log (a "book from home" entry with this title)
+  /* One reading session from the watch's log, checked (it is untrusted): { d, min }, or null when anything is odd.
+     The day must be a real day no more than one day after today (the watch's clock may be a little ahead); minutes 1 to 180. */
+  C.watchEntry = (e, today) => {
+    if (!e || typeof e !== "object" || e.a !== "r20" || typeof e.d !== "string" || !C.parseDay(e.d)) return null;
+    if (!Number.isInteger(e.min) || e.min < 1 || e.min > 180) return null;
+    if (!C.parseDay(today) || C.daysSince(today, e.d) > 1) return null;
+    return { d: e.d, min: e.min };
+  };
+  /* What the watch shows for one reader: first name, nightly goal, minutes read today and the streak (the app adds v and at). */
+  C.watchSummary = (p, today) => ({ name: (p.name || "").split(/\s+/)[0] || "", goal: p.goal, d: today, today: Math.floor(C.daySec(p, today) / 60), streak: C.streak(p, today) });
   C.fmtClock = sec => { sec = Math.max(0, Math.floor(sec)); return Math.floor(sec / 60) + ":" + pad(sec % 60); };
   C.fmtTotal = sec => (sec < 3600 ? Math.round(sec / 60) + " min" : (Math.round(sec / 360) / 10) + " hr");
   C.fmtMin = sec => (sec > 0 && sec < 60 ? "under 1 min" : Math.round(sec / 60) + " min");

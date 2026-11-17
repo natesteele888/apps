@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Steele Family</string>
+    <string name="getready_name">Get Ready</string>
+    <string name="cube_name">Cube Clock</string>
+    <string name="power_name">Power Program</string>
+    <string name="picks_name">Gameday Picks</string>
+    <string name="read_name">Read 20</string>
+</resources>

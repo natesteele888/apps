@@ -190,6 +190,7 @@ body.x-noscroll{overflow:hidden}
 <script src="core.js"></script>
 <script src="stats.js"></script>
 <script src="league.js"></script>
+<script src="../watchlink.js"></script>
 <script>
 "use strict";
 /* Gameday Picks: NFL, MLB, NBA and NHL picks for invited players (NFL by the week, the others by the day).
@@ -217,16 +218,17 @@ function render(){
   // keep the page position and the focused pick button through a redraw
   const y=window.scrollY,fb=document.activeElement,fg=fb&&fb.dataset&&fb.dataset.g,ft=fb&&fb.dataset&&fb.dataset.t;
   $("#app").innerHTML=`<header><div><h1>Gameday Picks</h1><p>Pick a side, every game day, all season.</p></div>
-    <div class="me"><b>${esc(S.me.name)}</b>${rec.total?`${rec.w}-${rec.l} · ${Math.round(rec.w/rec.total*100)}%`:"No results yet"}<br>${S.isOwner?"":`<button class="linkbtn" id="inv">invite friends</button> · `}<button class="linkbtn" id="rename">rename</button> · <button class="linkbtn" id="out">sign out</button> · <button class="linkbtn" type="button" onclick="window.nateHealth&&nateHealth.report()">something wrong?</button></div></header>
+    <div class="me"><b>${esc(S.me.name)}</b>${rec.total?`${rec.w}-${rec.l} · ${Math.round(rec.w/rec.total*100)}%`:"No results yet"}<br>${S.isOwner?"":`<button class="linkbtn" id="inv">invite friends</button> · `}<button class="linkbtn" id="rename">rename</button> · ${WL?`<button class="linkbtn" id="wat">watch</button> · `:""}<button class="linkbtn" id="out">sign out</button> · <button class="linkbtn" type="button" onclick="window.nateHealth&&nateHealth.report()">something wrong?</button></div></header>
     <div class="sports" role="group" aria-label="League">${C.ORDER.map(id=>`<button type="button" data-sport="${id}" aria-pressed="${S.sport===id}">${C.SPORTS[id].emoji} ${C.SPORTS[id].name}</button>`).join("")}</div>
     <nav class="views">${views.map(([k,n])=>`<button data-view="${k}" ${S.view===k?'aria-current="page"':""}>${n}</button>`).join("")}</nav>
     <section id="view"></section>`;
   $("#out").onclick=()=>firebase.auth().signOut();
   $("#rename").onclick=rename;
   if($("#inv"))$("#inv").onclick=()=>share(S.me.code);
+  if($("#wat"))$("#wat").onclick=()=>{S.view="watch";S.team=null;render();window.scrollTo(0,0)};
   document.querySelectorAll("[data-view]").forEach(b=>b.onclick=()=>{if(S.view===b.dataset.view&&!S.team)return;S.view=b.dataset.view;S.team=null;render();window.scrollTo(0,0)});
   document.querySelectorAll("[data-sport]").forEach(b=>b.onclick=()=>{if(S.sport===b.dataset.sport&&!S.team)return;S.sport=b.dataset.sport;S.team=null;store("gp.sport",S.sport);S.sel=null;ensureSel();render()});
-  ({picks:renderPicks,league:renderLeague,board:renderBoard,stats:renderStats,admin:renderAdmin})[S.view]();
+  ({picks:renderPicks,league:renderLeague,board:renderBoard,stats:renderStats,admin:renderAdmin,watch:renderWatch})[S.view]();
   if(fg){const n=[...document.querySelectorAll(".side[data-g]")].find(x=>x.dataset.g===fg&&x.dataset.t===ft);if(n)n.focus({preventScroll:true})}
   window.scrollTo(0,y);
 }
@@ -306,6 +308,7 @@ function subscribeAll(){
   unsubs.push(db.collection("gp_picks").onSnapshot(s=>{S.picks={};s.docs.forEach(d=>{const x=d.data();(S.picks[x.week]=S.picks[x.week]||{})[x.uid]=x.picks||{}});rerender()},fail));
   if(S.isOwner)unsubs.push(db.collection("gp_codes").onSnapshot(s=>{S.codes=s.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>String(b.createdAt).localeCompare(String(a.createdAt)));if(S.view==="admin")rerender()},()=>{}));
   ensureSel();
+  setTimeout(watchSync,4000); // once the players and picks have loaded
 }
 let rr;function rerender(){clearTimeout(rr);rr=setTimeout(()=>{const a=document.activeElement;if(a&&a.tagName==="INPUT")return;render()},60)}
 
@@ -393,6 +396,31 @@ function renderStats(){
     ${list.map(([ab,t])=>`<tr><td><span class="tcell"><span class="mini" style="background:${esc(t.color)};color:${contrast(t.color)}">${esc(ab)}</span>${esc(t.name)}</span></td><td class="num">${t.f}</td><td class="num">${t.f?t.fw+"-"+t.fl:"—"}</td><td class="num">${t.a}</td><td class="num">${t.a?t.aw+"-"+t.al:"—"}</td></tr>`).join("")}</tbody></table>
     <p class="status">"Against" is how often you picked a team's opponent, and how those picks went.</p>`:`<p class="empty">Make some ${sp.name} picks to see your team breakdown.</p>`;
 }
+
+/* ---------- the watch (../watchlink.js): NFL picks from a Wear OS watch ----------
+   The watch signs in on its own (an anonymous Firebase sign-in). This phone, signed in as the player, okays that watch in
+   gp_watch/<watch's id>, and the rules then let the watch read and save this player's own NFL picks, nothing else.
+   The phone also sends the watch the player's name and the NFL standings. Nothing is sent unless a watch is linked. */
+const WL=window.WatchLink,WSTATE={busy:false,again:false,last:"",msg:""};
+function renderWatch(){
+  $("#view").innerHTML=`<div class="card"><h2>Your watch</h2><div id="gwl"></div><p class="status" id="gwm" role="status">${esc(WSTATE.msg)}</p></div>`;
+  WL.panel($("#gwl"),{intro:"Make NFL picks on a Wear OS watch: open Gameday Picks on the watch. It shows a code. Type it here.",
+    linkedText:"The watch shows this week's NFL games. Tap a side on the watch to pick it. Your picks and the standings show in both places.",
+    btn:"btn",btnPri:"btn pri",onLinked:()=>{WSTATE.last="";watchSync()}});
+}
+async function watchSync(){
+  if(!WL||!WL.linked()||!S.user||!S.me)return;if(WSTATE.busy){WSTATE.again=true;return}WSTATE.busy=true;
+  try{
+    const doc=await WL.read();if(!WL.linked())return;
+    const wuid=doc&&doc.w&&typeof doc.w.uid==="string"&&/^[A-Za-z0-9]{10,128}$/.test(doc.w.uid)?doc.w.uid:"";
+    if(wuid&&store("gp.watchOk")!==S.user.uid+"|"+wuid){await db.doc("gp_watch/"+wuid).set({uid:S.user.uid,at:new Date().toISOString()});store("gp.watchOk",S.user.uid+"|"+wuid)}
+    const sum=C.watchSummary(S.players,S.picks,S.weeks,S.user.uid),k=JSON.stringify(sum);
+    if(k!==WSTATE.last){await WL.write("gp",Object.assign({v:1,at:Date.now()},sum));WSTATE.last=k}
+    WSTATE.msg="";
+  }catch(_){WSTATE.msg=navigator.onLine===false?"No signal right now. The watch catches up when there is signal.":"Could not reach the watch link just now. It tries again by itself."}
+  finally{WSTATE.busy=false;const m=$("#gwm");if(m)m.textContent=WSTATE.msg;if(WSTATE.again){WSTATE.again=false;watchSync()}}
+}
+if(WL){setInterval(()=>{if(!document.hidden)watchSync()},30000);document.addEventListener("visibilitychange",()=>{if(!document.hidden)watchSync()});WL.onChange(on=>{WSTATE.last="";if(on)watchSync();else if(S.view==="watch")render()})}
 
 /* ---------- owner: players and invite codes ---------- */
 function inviteLink(code){return location.origin+location.pathname+"?code="+encodeURIComponent(code)}

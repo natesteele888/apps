@@ -94,5 +94,15 @@
     });
     return Object.entries(teams).sort((x, y) => y[1].f - x[1].f || x[1].name.localeCompare(y[1].name));
   }
-  return { SPORTS, ORDER, sport, apiUrl, nflKey, dayKey, sportOf, parseKey, fetchUrl, localDay, addDays, dayList, label, nflWeeks, parseGames, started, record, teamStats };
+  /* What a linked watch shows (../watchlink.js, the "gp" field): this player and the NFL standings, top 8 (with this player
+     kept in when lower). Only first names and records, never picks. */
+  function watchSummary(players, picks, weeks, uid) {
+    const rows = Object.entries(players || {}).map(([u, p]) => ({ u, name: String(p && p.name || "?").slice(0, 24), ...record(picks, weeks, u, "nfl") }))
+      .sort((a, b) => b.w - a.w || (b.total ? b.w / b.total : 0) - (a.total ? a.w / a.total : 0) || a.name.localeCompare(b.name));
+    let top = rows.slice(0, 8); const me = rows.find(r => r.u === uid);
+    if (me && !top.includes(me)) top = top.slice(0, 7).concat(me);
+    return { uid, name: me ? me.name : "", board: top.map(r => ({ name: r.name, w: r.w, l: r.l, me: r.u === uid })) };
+  }
+
+  return { SPORTS, ORDER, sport, apiUrl, nflKey, dayKey, sportOf, parseKey, fetchUrl, localDay, addDays, dayList, label, nflWeeks, parseGames, started, record, teamStats, watchSummary };
 });

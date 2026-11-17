@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <uses-feature android:name="android.hardware.type.watch" />
+    <uses-permission android:name="android.permission.VIBRATE" />
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <!-- everything goes through the watch link on the internet (through the phone on watches without Wi-Fi or LTE) -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+
+    <!-- One install, five apps in the watch's app list. Each works without the others; one link to the phone covers them all. -->
+    <application
+        android:allowBackup="false"
+        android:icon="@mipmap/ic_getready"
+        android:roundIcon="@mipmap/ic_getready"
+        android:label="@string/app_name"
+        android:supportsRtl="true"
+        android:theme="@style/Family">
+        <!-- needs no phone app: it talks to the phone's web apps through the watch link -->
+        <meta-data android:name="com.google.android.wearable.standalone" android:value="true" />
+        <activity android:name=".GetReadyActivity" android:exported="true" android:icon="@mipmap/ic_getready" android:roundIcon="@mipmap/ic_getready"
+            android:label="@string/getready_name" android:launchMode="singleTask" android:taskAffinity="com.steele.family.getready">
+            <intent-filter><action android:name="android.intent.action.MAIN" /><category android:name="android.intent.category.LAUNCHER" /></intent-filter>
+        </activity>
+        <activity android:name=".CubeActivity" android:exported="true" android:icon="@mipmap/ic_cube" android:roundIcon="@mipmap/ic_cube"
+            android:label="@string/cube_name" android:launchMode="singleTask" android:taskAffinity="com.steele.family.cube">
+            <intent-filter><action android:name="android.intent.action.MAIN" /><category android:name="android.intent.category.LAUNCHER" /></intent-filter>
+        </activity>
+        <activity android:name=".PowerActivity" android:exported="true" android:icon="@mipmap/ic_power" android:roundIcon="@mipmap/ic_power"
+            android:label="@string/power_name" android:launchMode="singleTask" android:taskAffinity="com.steele.family.power">
+            <intent-filter><action android:name="android.intent.action.MAIN" /><category android:name="android.intent.category.LAUNCHER" /></intent-filter>
+        </activity>
+        <activity android:name=".PicksActivity" android:exported="true" android:icon="@mipmap/ic_picks" android:roundIcon="@mipmap/ic_picks"
+            android:label="@string/picks_name" android:launchMode="singleTask" android:taskAffinity="com.steele.family.picks">
+            <intent-filter><action android:name="android.intent.action.MAIN" /><category android:name="android.intent.category.LAUNCHER" /></intent-filter>
+        </activity>
+        <activity android:name=".ReadActivity" android:exported="true" android:icon="@mipmap/ic_read" android:roundIcon="@mipmap/ic_read"
+            android:label="@string/read_name" android:launchMode="singleTask" android:taskAffinity="com.steele.family.read">
+            <intent-filter><action android:name="android.intent.action.MAIN" /><category android:name="android.intent.category.LAUNCHER" /></intent-filter>
+        </activity>
+    </application>
+</manifest>

@@ -1,6 +1,7 @@
 name: Dugout watch and phone apps
-# Builds the Dugout phone app and the Wear OS watch app (watch/), runs their tests, and runs Walk-Up's browser tests.
-# The two APKs are attached to each run as "dugout-apks". With the DUGOUT_KEY and DUGOUT_KEY_PASSWORD secrets set, every
+# Builds the Dugout phone app, the Dugout Wear OS watch app and the Steele Family watch app (watch/family: Get Ready,
+# Cube Clock, Power Program, Gameday Picks and Read 20 on the watch), runs their tests, and runs Walk-Up's browser tests.
+# The three APKs are attached to each run as "dugout-apks". With the DUGOUT_KEY and DUGOUT_KEY_PASSWORD secrets set, every
 # build is signed with that same key and, on main, published as a "dugout-v<run number>" release, which Dugout on the
 # phone finds and offers as an update. Without them each run signs with a fresh debug key and nothing is published.
 on:
@@ -58,12 +59,13 @@ jobs:
         env:
           DUGOUT_VERSION: ${{ github.run_number }}
           DUGOUT_KEY_PASSWORD: ${{ secrets.DUGOUT_KEY_PASSWORD }}
-        run: ./gradlew --no-daemon --continue :shared:test :phone:assembleDebug :wear:assembleDebug :wear:lintDebug
+        run: ./gradlew --no-daemon --continue :shared:test :phone:assembleDebug :wear:assembleDebug :wear:lintDebug :family:assembleDebug :family:lintDebug
       - name: Name the APKs
         run: |
           mkdir -p out
           cp phone/build/outputs/apk/debug/phone-debug.apk out/dugout-phone.apk
           cp wear/build/outputs/apk/debug/wear-debug.apk out/dugout-watch.apk
+          cp family/build/outputs/apk/debug/family-debug.apk out/steele-family-watch.apk
       - uses: actions/upload-artifact@v4
         with:
           name: dugout-apks
@@ -118,9 +120,9 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           N: ${{ github.run_number }}
         run: |
-          gh release create "dugout-v$N" out/dugout-phone.apk out/dugout-watch.apk --repo "$GITHUB_REPOSITORY" \
+          gh release create "dugout-v$N" out/dugout-phone.apk out/dugout-watch.apk out/steele-family-watch.apk --repo "$GITHUB_REPOSITORY" \
             --target "$GITHUB_SHA" --title "Dugout $N" --latest \
-            --notes "Built from ${GITHUB_SHA::7}. Android phones and Wear OS watches only (no Apple Watch). One watch app runs on Wear OS 2 (like the Huawei Watch 2) through Wear OS 5 (Pixel Watch, Galaxy Watch 4 and newer); anything that needs a newer watch is switched on only where the watch has it. iPhone users can use Walk-Up on the web, without the watch. Dugout on the phone offers this update by itself. To update the watch app, see watch/README.md."
+            --notes "Built from ${GITHUB_SHA::7}. Android phones and Wear OS watches only (no Apple Watch). One watch app runs on Wear OS 2 (like the Huawei Watch 2) through Wear OS 5 (Pixel Watch, Galaxy Watch 4 and newer); anything that needs a newer watch is switched on only where the watch has it. iPhone users can use Walk-Up on the web, without the watch. Dugout on the phone offers this update by itself. steele-family-watch.apk is the family watch app (Get Ready, Cube Clock, Power Program, Gameday Picks, Read 20). To install or update a watch app, see watch/README.md."
           # Keep the five newest Dugout releases.
           gh release list --repo "$GITHUB_REPOSITORY" --limit 100 --json tagName -q '.[].tagName' | grep '^dugout-v[0-9]*$' \
             | sort -t v -k2 -n -r | tail -n +6 | while read -r t; do gh release delete "$t" --repo "$GITHUB_REPOSITORY" --yes --cleanup-tag; done

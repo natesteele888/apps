@@ -196,6 +196,32 @@
     return C.sanitize(out);
   };
   /* The copy that goes to the cloud: no timer or fired marks. */
+  /* ---------- the watch (../watchlink.js) ---------- */
+  /* What a linked watch needs: the lists and the last 60 days of check marks. No photos, GIFs, reminders or settings. */
+  C.forWatch = (s, today) => {
+    const from = C.addDays(today, -60), days = {};
+    Object.keys(s.days).forEach(k => { if (k >= from) { const r = s.days[k], d = { c: Object.assign({}, r.c), done: r.done ? 1 : 0, m: r.m || 0 }; if (r.l) d.l = r.l; days[k] = d; } });
+    return { v: 1, lists: s.lists.map(l => ({ id: l.id, name: l.name, days: l.days.slice(), items: l.items.map(i => ({ id: i.id, name: i.name, timer: i.timer || 0 })) })), days };
+  };
+  /* Taps made on the watch ({d, i, on, at}), oldest first. A tap counts unless the phone changed that day after it
+     (the same rule the watch uses to show them). Only the last week, and only items on that day's list.
+     Returns the days it changed and whether today just got finished (for the party). */
+  C.takeWatch = (s, entries, today) => {
+    const changed = new Set(), from = C.addDays(today, -7), to = C.addDays(today, 1);
+    (entries || []).slice().sort((a, b) => (a && a.at || 0) - (b && b.at || 0)).forEach(e => {
+      if (!e || typeof e.d !== "string" || !C.parseDay(e.d) || e.d < from || e.d > to) return;
+      if (typeof e.i !== "string" || (e.on !== 0 && e.on !== 1) || typeof e.at !== "number" || !isFinite(e.at)) return;
+      if (!C.itemsFor(s, e.d).some(i => i.id === e.i)) return;
+      const r = rec(s, e.d);
+      if (e.at <= (r.m || 0)) return;
+      if (e.on) r.c[e.i] = 1; else delete r.c[e.i];
+      r.m = e.at; changed.add(e.d);
+    });
+    let justDone = false;
+    changed.forEach(k => { stamp(s.days[k]); if (C.settle(s, k) && k === today) justDone = true; });
+    return { changed: [...changed], justDone };
+  };
+
   C.forCloud = s => JSON.stringify(Object.assign({}, s, { fired: {}, timer: null }));
 
   /* ---------- timers ---------- */

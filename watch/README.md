@@ -136,6 +136,24 @@ These watches have no **Wireless debugging** pairing screen, so the watch instal
 
 Both apps must be signed with the same key, because the watch only talks to a phone app signed the same way. Builds from the `dugout-v…` releases all share one key, so any phone and watch build from there match.
 
+## The Steele Family watch app (for a kid's watch)
+
+`steele-family-watch.apk` (from the same release) is a second, separate watch app with five apps in the watch's list. Each one follows its web app on the phone:
+
+- **Get Ready**: today's checklist. Tap an item to tick it; an item with a timer starts it first, buzzes at the end and ticks itself. Finishing the list throws a small party on the watch and the full one on the phone.
+- **Cube Clock**: tap, 3-2-1, solve, tap to stop. +2 or DNF right after. Every solve lands in Cube Clock's history on the phone, and the watch shows the PB and average of 5.
+- **Power Program**: the next day's workout, one exercise per screen, with timers for timed moves (both sides for "/side" ones). Finished exercises and the finished day are checked off in Power Program on the phone.
+- **Gameday Picks**: this week's NFL games. Tap the left half for the away team, the right half for home. Tap the same side again to take the pick back. Locked games show the score, and the standings are at the bottom.
+- **Read 20**: a reading timer that fills a ring to the goal and buzzes when it's reached. Finish saves the minutes to that reader's log on the phone.
+
+**Install:** the same steps as above, with `adb install steele-family-watch.apk`. It runs on Wear OS 2 through Wear OS 5, round or square, and needs no phone app: it talks to the web apps over the internet (through the phone's connection when the watch has no Wi-Fi).
+
+**Link it once:** open any of the five on the watch. It shows an 8-letter code. On the phone open Get Ready › More › Watch (or Cube Clock › Statistics › Your watch, Read 20 › Settings › Watch, Power Program › Program › Watch, or Gameday Picks › watch under your name) and type the code. One link covers all five, because the web apps share it.
+
+**Where the data goes:** one private document in the nates-toolbox Firestore, named by a 26-character random key that only that phone and that watch know (see `../watchlink.js`). Nothing is in GitHub. Gameday Picks is the one exception: picks are saved in Gameday Picks itself, so the watch signs in on its own and the player's phone okays that watch (the `gp_watch` rules in `toolbox/firestore.rules`).
+
+**Switching it on (once):** publish `toolbox/firestore.rules` in the Firebase console, and for Gameday Picks turn on **Anonymous** sign-in (Authentication › Sign-in method) in the nates-toolbox project.
+
 ## Updates
 
 - **Phone:** Dugout checks for a new version when it opens (at most every half hour) and asks **Update Dugout?** Tap **Update**, then **Update** on Android's own screen. The first time, Android asks you to allow Dugout to install apps. **Watch › Check for updates** looks right away.

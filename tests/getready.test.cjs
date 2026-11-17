@@ -111,6 +111,23 @@ const doAll = (s, k) => C.itemsFor(s, k).forEach(i => { if (!C.isChecked(s, k, i
     const it = ['a', 'b', 'c'].map(id => ({ id, name: id })); eq(C.moveItem(it, 'a', 1).map(x => x.id).join(''), 'bac'); eq(C.moveItem(it, 'a', -1).map(x => x.id).join(''), 'abc'); eq(C.moveItem(it, 'c', 1).map(x => x.id).join(''), 'abc');
     for (let i = 0; i < 200; i++) { const n = C.pick(5, 2); assert.ok(n >= 0 && n < 5 && n !== 2); } eq(C.pick(1, 0), 0); eq(C.pick(5, -1, () => 0.9999), 4);
   });
+  await test('core: the watch gets the lists and recent check marks, and its ticks land unless the phone changed that day later', () => {
+    const s = C.defaults(), ids = C.itemsFor(s, MON).map(i => i.id);
+    C.toggle(s, MON, ids[0]); s.days['2026-08-01'] = { c: { x: 1 }, done: 1, m: 5 };
+    const w = C.forWatch(s, MON);
+    eq(w.lists.length, 2); eq(w.lists[0].items.length, ids.length); assert.deepStrictEqual(Object.keys(w.lists[0].items[0]).sort(), ['id', 'name', 'timer'], 'only what the watch shows, no photos');
+    assert.deepStrictEqual(Object.keys(w.days), [MON], 'only the last 60 days'); eq(w.days[MON].c[ids[0]], 1);
+    assert.ok(!('gifs' in w) && !('reminders' in w));
+    const m = s.days[MON].m, later = m + 1000;
+    let r = C.takeWatch(s, [{ d: MON, i: ids[1], on: 1, at: later }, { d: MON, i: ids[0], on: 0, at: m - 1 }, { d: MON, i: 'nope', on: 1, at: later }, { d: '2020-01-01', i: ids[1], on: 1, at: later }, { d: MON, i: ids[2], on: 'x', at: later }], MON);
+    assert.deepStrictEqual(r.changed, [MON]); eq(C.isChecked(s, MON, ids[1]), true); eq(C.isChecked(s, MON, ids[0]), true, 'a tap older than the phone\'s last change is overruled'); eq(r.justDone, false);
+    assert.ok(s.days[MON].m >= later, 'the day is stamped, so the watch stops laying that tap over');
+    const rest = ids.filter(i => !C.isChecked(s, MON, i)).map((i, n) => ({ d: MON, i, on: 1, at: s.days[MON].m + 10 + n }));
+    r = C.takeWatch(s, rest.reverse(), MON);
+    eq(C.isComplete(s, MON), true); eq(r.justDone, true, 'finishing the list on the watch plays the party on the phone'); eq(C.isDone(s, MON), true);
+    r = C.takeWatch(s, [{ d: MON, i: ids[0], on: 0, at: s.days[MON].m + 50 }], MON);
+    eq(C.isDone(s, MON), false, 'unticking on the watch unfinishes the day'); eq(r.justDone, false);
+  });
   await test('celebration: every dance (including twerk and the Griddy) is finite for a whole minute and really moves', () => {
     assert.ok(X.STYLES.includes('twerk') && X.STYLES.includes('griddy')); for (const st of X.STYLES) assert.ok(X.NAMES[st], st + ' has a name');
     for (const st of X.STYLES) {

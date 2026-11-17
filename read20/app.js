@@ -28,6 +28,9 @@
   /* Saving: the log is written to localStorage on every tick (instant, survives a closed app) and mirrored into
      IndexedDB every few seconds as a second copy. If either one is lost, the other brings the time back. */
   const store = { fail: false, idbAt: 0, ready: false }; // ready: the second copy has been read, so it is safe to write to it
+  /* The watch link (../watchlink.js): a Wear OS watch can time one reader's reading. Nothing is sent unless a watch is linked. */
+  const WL = window.WatchLink, WKEY = "read20.watchReader";
+  const watch = { soon: 0, busy: false, again: false, last: "", msg: "", party: "" };   // party: "<reader>|<day>" whose goal the watch just reached while a pop-up was open   // last: the summary written this session (so an unchanged one is not sent again)
   function idb(mode, fn) {
     return new Promise((res, rej) => {
       try {
@@ -48,7 +51,7 @@
     try { localStorage.setItem(KEY, JSON.stringify(C.serializeRoot(R))); store.fail = false; } catch (e) { store.fail = true; }
     const now = Date.now();
     if (store.ready && (force || now - store.idbAt > 5000)) { store.idbAt = now; const copy = JSON.stringify(C.serializeRoot(R)); idb("readwrite", st => st.put(copy, "log")).catch(() => {}); }
-    paintWarn(); if (CL) CL.schedule();
+    paintWarn(); if (CL) CL.schedule(); watchSoon();
   }
   async function recover() {
     try {
@@ -464,7 +467,7 @@
     let rows = "";
     if (d) {
       Object.keys(d.books).forEach(id => { const b = byId[id], x = d.books[id]; if (!b) return; rows += `<li><span class="le">${b.shelf === "older" ? I(b.topic, 30) : esc(b.cover)}</span><span class="lt">${esc(b.title)}<small>${b.shelf === "older" ? esc(topicName(b.topic)) : "Level " + b.level}${x.fin ? " · finished ✓" : ""}</small></span><span class="lm">${C.fmtMin(x.sec)}</span>${delBtn(`data-bk="${esc(id)}"`, b.title)}</li>`; });
-      d.extra.forEach(x => { rows += `<li><span class="le">📕</span><span class="lt">${esc(x.title)}<small>from home</small></span><span class="lm">${C.fmtMin(x.sec)}</span>${delBtn(`data-xd="${esc(x.dev)}" data-xi="${x.i}"`, x.title)}</li>`; });
+      d.extra.forEach(x => { const w = x.title === C.WATCH_TITLE; rows += `<li><span class="le">${w ? "⌚" : "📕"}</span><span class="lt">${esc(x.title)}<small>${w ? "timed on the watch" : "from home"}</small></span><span class="lm">${C.fmtMin(x.sec)}</span>${delBtn(`data-xd="${esc(x.dev)}" data-xi="${x.i}"`, x.title)}</li>`; });
     }
     $("#detail").innerHTML = `<section class="dcard"><h3>${esc(label)}</h3>${d && d.sec ? `<p class="dtot">${C.fmtMin(d.sec)} total${C.isDone(S, k) ? (teen() ? "" : " ⭐") : ""}</p><ul class="list">${rows}</ul>` : "<p class='dtot'>No reading logged this day.</p>"}</section>`;
     document.querySelectorAll("#detail .del").forEach(b => (b.onclick = () => {
@@ -497,7 +500,7 @@
   /* "then" runs once the pop-up's history entry is given back, so a page change can't land on top of it. */
   function closeOverlay(o, then) {
     const i = overlays.indexOf(o); if (i >= 0) overlays.splice(i, 1); o.remove();
-    if (!overlays.length) { $("#app").inert = false; const f = o.r20From; try { (f && f.isConnected && f !== document.body ? f : $("#view")).focus({ preventScroll: true }); } catch (e) {} } if (then) afterTrip = then; else if (stale && !overlays.length && !ui.book) { stale = false; route(); } syncHistory(); }
+    if (!overlays.length) { $("#app").inert = false; const f = o.r20From; try { (f && f.isConnected && f !== document.body ? f : $("#view")).focus({ preventScroll: true }); } catch (e) {} } if (then) afterTrip = then; else if (stale && !overlays.length && !ui.book) { stale = false; route(); } syncHistory(); if (watch.party && !overlays.length) setTimeout(watchParty, 600); }
   function syncHistory() { clearTimeout(syncTimer); syncTimer = setTimeout(reconcileHistory, 0); }
   function reconcileHistory() {
     if (traveling) return; // the popstate handler tidies up when our own trip back lands
@@ -577,6 +580,9 @@
         ${AU.canSpeak() ? `<label>Reading voice (this ${PH})<select id="svc"></select></label><label>Voice speed<select id="srt">${SPEEDS.map(([v, t]) => `<option value="${v}" ${Math.abs(getRate() - v) < 0.02 ? "selected" : ""}>${t}</option>`).join("")}</select></label><p class="fine left" id="svh">Pick the most natural-sounding one. Voices that say "Enhanced", "Natural" or "Premium" sound the most like a person.</p>` : ""}
         ${R.order.length > 1 && !kid() ? `<button class="linkbtn danger" id="srm">Remove ${esc(who(S))}…</button>` : ""}
       </section>
+      ${WL ? `<section class="set" id="swatch"><h3>${icon("clock", "⌚ ")}Watch</h3>
+        ${R.order.length > 1 ? `<label>The watch times reading for<select id="swr">${R.order.map(i => `<option value="${esc(i)}" ${i === watchId() ? "selected" : ""}>${esc(avOf(i))} ${esc(who(R.profiles[i]))}</option>`).join("")}</select></label>` : ""}
+        <div id="swl"></div><p class="fine left" id="swm" role="status">${esc(watch.msg)}</p></section>` : ""}
       ${kid() ? "" : `<section class="set"><h3>Keep the log safe</h3><p class="fine left">${esc(safe)}</p><button class="btn alt" id="setsafe">Back up and share…</button></section>`}
       <section class="set"><h3>Help</h3>
         <button class="btn alt" id="stest">🔊 Test the sound</button><p class="fine left" id="stm" role="status"></p>
@@ -589,6 +595,13 @@
     $("#sz").value = String(S.size); $("#slv").value = S.lv;
     wireAvatars(o, a => (av = a));
     if ($("#setsafe")) $("#setsafe").onclick = openSafe;
+    if ($("#swl")) {
+      const many = R.order.length > 1;
+      WL.panel($("#swl"), { intro: "Time " + (many ? "a reader's" : who(S) + "'s") + " reading on a watch: open Read 20 on the watch. It shows a code. Type it here.",
+        linkedText: "Reading timed on the watch goes into " + (many ? "the log of the reader picked above" : who(S) + "'s log") + ", and the watch shows tonight's minutes and the streak.",
+        btn: "btn alt", btnPri: "btn", onLinked: () => { setWatchId(watchId()); watch.last = ""; watchSync(); } });
+      if ($("#swr")) $("#swr").onchange = () => { setWatchId($("#swr").value); watch.last = ""; watchSync(); };
+    }
     if ($("#kunlink")) $("#kunlink").onclick = () => { if (confirm("Stop linking this " + PH + "? It keeps the reading it has, but it stops syncing with the parent's phone.")) { CL.unlinkKid(); closeOverlay(o); route(); } };
     $("#srefresh").onclick = refreshApp;
     if ($("#srm")) $("#srm").onclick = () => removeReader(o);
@@ -798,6 +811,52 @@
     r.onerror = () => say("Could not read that file."); r.readAsText(file);
   }
 
+  /* ---------- the watch: reading timed on a linked Wear OS watch lands in one reader's log ---------- */
+  /* Which reader the watch times. Picked in Settings; until then the reader open on the phone, kept once the watch first syncs. */
+  function watchId() { let id = ""; try { id = localStorage.getItem(WKEY) || ""; } catch (e) {} return R.profiles[id] ? id : R.active; }
+  function setWatchId(id) { try { localStorage.setItem(WKEY, id); } catch (e) {} }
+  function wlOn() { return !!(WL && WL.linked()); }
+  /* Soon after a save that changes what the watch shows (a new minute, the goal, the name), sync once. Nothing while unlinked. */
+  function watchSoon() {
+    if (!wlOn() || watch.soon) return;
+    const p = R.profiles[watchId()]; if (!p || JSON.stringify(C.watchSummary(p, today())) === watch.last) return;
+    watch.soon = setTimeout(() => { watch.soon = 0; watchSync(); }, 4000);
+  }
+  /* The goal was reached on the watch: the same party as on the phone, once the screen is clear (it waits for an open pop-up to close). */
+  function watchParty() { const p = watch.party; if (!p || overlays.length || document.querySelector(".overlay")) return; watch.party = ""; if (p === R.active + "|" + dayKey()) celebrate(); }
+  /* Take the watch's new reading sessions into the reader's log (as reading on that day, the same way as "Log a book from home",
+     so the goal, the streak, the backup and a family link all see it), then tell the watch tonight's numbers. */
+  async function watchSync() {
+    if (!wlOn()) return; if (watch.busy) { watch.again = true; return; } watch.busy = true;
+    try {
+      const doc = await WL.read(), id = watchId(); if (!wlOn()) return;   // unlinked while asking
+      setWatchId(id);
+      const fresh = WL.fresh(doc, "r20");
+      if (fresh.length) {
+        const p = R.profiles[id], t = today(); let added = 0, party = false;
+        for (const e of fresh) {
+          const w = C.watchEntry(e, t); if (!w) continue;   // anything odd is skipped (and still marked as taken, so it is not looked at again)
+          const before = C.daySec(p, w.d);
+          if (!C.addManual(p, w.d, C.WATCH_TITLE, w.min)) continue;
+          added++; const d = C.day(p, w.d);
+          if (before < C.goalSec(p) && C.daySec(p, w.d) >= C.goalSec(p) && !d.done) { d.done = 1; count("goals"); if (id === R.active && w.d === dayKey()) party = true; }
+        }
+        if (added) {
+          save(true); count("reads"); store.idbAt = 0;
+          const covered = !!document.querySelector(".overlay");
+          if (ui.book) paintTimer(); else if (!covered) route(); else stale = true;
+          if (party) { watch.party = R.active + "|" + dayKey(); if (!covered) watchParty(); }
+        }
+        WL.took("r20", fresh);
+      }
+      const p = R.profiles[id], sum = C.watchSummary(p, today()), k = JSON.stringify(sum);
+      if (k !== watch.last) { await WL.write("r20", Object.assign({ v: 1, at: Date.now() }, sum)); watch.last = k; }
+      if (watch.soon && k === watch.last) { clearTimeout(watch.soon); watch.soon = 0; }   // the save above asked for a sync that this one already did
+      watch.msg = "";
+    } catch (e) { watch.msg = navigator.onLine === false ? "No signal right now. The watch catches up when there is signal." : "Could not reach the watch link just now. It tries again by itself."; }
+    finally { watch.busy = false; const m = $("#swm"); if (m) m.textContent = watch.msg; if (watch.again) { watch.again = false; watchSync(); } }
+  }
+
   /* ---------- bottom bar ---------- */
   function nav(on) {
     const n = $("#nav"); n.hidden = false;
@@ -824,6 +883,13 @@
     } catch (e) {}
     CL.init({ get: () => R, apply: adopt, applyReader: adoptReader, kidJoin, onchange: cloudChanged });
     route(); recover().then(() => { store.ready = true; save(true); });
+    /* The watch: on open, whenever the app comes back on screen, and every 30 seconds while it is showing. */
+    if (WL) {
+      watchSync();
+      setInterval(() => { if (!document.hidden) watchSync(); }, 30000);
+      document.addEventListener("visibilitychange", () => { if (!document.hidden) watchSync(); });
+      WL.onChange(on => { watch.last = ""; if (on) watchSync(); });
+    }
   }
   window.R20App = { init, _state: () => S, _root: () => R };
 })();
