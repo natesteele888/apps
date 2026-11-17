@@ -119,7 +119,23 @@
       try { localStorage.setItem(KEY, String(Date.now())); } catch (e) {}
       hide();
     };
+    /* An app with its own bar fixed along the bottom (the App Store's tabs): sit just above it, not on top of it. */
+    var under = bottomBar();
+    if (under) { host.style.bottom = under + "px"; root.querySelector(".bar").style.marginBottom = "8px"; }
     document.body.appendChild(host);
+  }
+  function bottomBar() {
+    try {
+      var w = innerWidth, h = innerHeight, els = document.elementsFromPoint(w / 2, h - 2);
+      for (var i = 0; i < els.length; i++) {
+        for (var el = els[i]; el && el !== document.body && el !== document.documentElement; el = el.parentElement) {
+          if (getComputedStyle(el).position !== "fixed") continue;
+          var r = el.getBoundingClientRect();
+          if (r.bottom >= h - 1 && r.width >= w * 0.6 && r.height > 0 && r.height < h * 0.3) return Math.round(h - r.top);
+        }
+      }
+    } catch (e) {}
+    return 0;
   }
   function hide() { if (host) { host.remove(); host = null; } }
 
