@@ -42,7 +42,8 @@ echo "installed version $(ver)"
 # Dugout checks GitHub once when it opens, so wait until the emulator itself can reach GitHub first.
 for i in $(seq 1 60); do
   # the emulator may not answer pings, so a resolved address ("PING api.github.com (1.2.3.4)") counts as online
-  adb shell ping -c 1 -W 2 api.github.com 2>&1 | grep -q "^PING .*(" && { echo "emulator finds api.github.com (after ${i} tries)"; break; }
+  out=$(adb shell ping -c 1 -W 2 api.github.com 2>&1 || true)
+  echo "$out" | grep -q "^PING .*(" && { echo "emulator finds api.github.com (after ${i} tries)"; break; }
   [ "$i" = 60 ] && echo "emulator still can't find api.github.com"
   sleep 2
 done
