@@ -578,11 +578,9 @@
         ${teen() ? "" : `<label>Screen look (this ${PH})<select id="slk">${[["auto", "Match my " + PH], ["light", "Light"], ["dark", "Dark (easy on the eyes in bed)"]].map(([v, t]) => `<option value="${v}" ${getLook() === v ? "selected" : ""}>${t}</option>`).join("")}</select></label>`}
         <label class="chk"><input type="checkbox" id="ss" ${S.say ? "checked" : ""}> Say a word out loud when it is tapped</label>
         ${AU.canSpeak() ? `<label>Reading voice (this ${PH})<select id="svc"></select></label><label>Voice speed<select id="srt">${SPEEDS.map(([v, t]) => `<option value="${v}" ${Math.abs(getRate() - v) < 0.02 ? "selected" : ""}>${t}</option>`).join("")}</select></label><p class="fine left" id="svh">Pick the most natural-sounding one. Voices that say "Enhanced", "Natural" or "Premium" sound the most like a person.</p>` : ""}
+        ${WL ? `<button class="btn alt" id="setwatch">⌚ Time reading on a watch…</button>` : ""}
         ${R.order.length > 1 && !kid() ? `<button class="linkbtn danger" id="srm">Remove ${esc(who(S))}…</button>` : ""}
       </section>
-      ${WL ? `<section class="set" id="swatch"><h3>${icon("clock", "⌚ ")}Watch</h3>
-        ${R.order.length > 1 ? `<label>The watch times reading for<select id="swr">${R.order.map(i => `<option value="${esc(i)}" ${i === watchId() ? "selected" : ""}>${esc(avOf(i))} ${esc(who(R.profiles[i]))}</option>`).join("")}</select></label>` : ""}
-        <div id="swl"></div><p class="fine left" id="swm" role="status">${esc(watch.msg)}</p></section>` : ""}
       ${kid() ? "" : `<section class="set"><h3>Keep the log safe</h3><p class="fine left">${esc(safe)}</p><button class="btn alt" id="setsafe">Back up and share…</button></section>`}
       <section class="set"><h3>Help</h3>
         <button class="btn alt" id="stest">🔊 Test the sound</button><p class="fine left" id="stm" role="status"></p>
@@ -595,13 +593,7 @@
     $("#sz").value = String(S.size); $("#slv").value = S.lv;
     wireAvatars(o, a => (av = a));
     if ($("#setsafe")) $("#setsafe").onclick = openSafe;
-    if ($("#swl")) {
-      const many = R.order.length > 1;
-      WL.panel($("#swl"), { intro: "Time " + (many ? "a reader's" : who(S) + "'s") + " reading on a watch: open Read 20 on the watch. It shows a code. Type it here.",
-        linkedText: "Reading timed on the watch goes into " + (many ? "the log of the reader picked above" : who(S) + "'s log") + ", and the watch shows tonight's minutes and the streak.",
-        btn: "btn alt", btnPri: "btn", onLinked: () => { setWatchId(watchId()); watch.last = ""; watchSync(); } });
-      if ($("#swr")) $("#swr").onchange = () => { setWatchId($("#swr").value); watch.last = ""; watchSync(); };
-    }
+    if ($("#setwatch")) $("#setwatch").onclick = openWatch;
     if ($("#kunlink")) $("#kunlink").onclick = () => { if (confirm("Stop linking this " + PH + "? It keeps the reading it has, but it stops syncing with the parent's phone.")) { CL.unlinkKid(); closeOverlay(o); route(); } };
     $("#srefresh").onclick = refreshApp;
     if ($("#srm")) $("#srm").onclick = () => removeReader(o);
@@ -624,6 +616,21 @@
     try { const ks = await caches.keys(); await Promise.all(ks.filter(k => k.startsWith("read20-")).map(k => caches.delete(k))); } catch (e) {}
     try { const rs = await navigator.serviceWorker.getRegistrations(); await Promise.all(rs.map(r => r.unregister())); } catch (e) {}
     save(true); location.reload();
+  }
+
+  /* ---------- the watch, one step in from settings: which reader it times, and the link ---------- */
+  function openWatch() {
+    const many = R.order.length > 1;
+    const o = sheet(`<h2>${icon("clock", "⌚ ")}Watch</h2>
+      <section class="set" id="swatch">
+        ${many ? `<label>The watch times reading for<select id="swr">${R.order.map(i => `<option value="${esc(i)}" ${i === watchId() ? "selected" : ""}>${esc(avOf(i))} ${esc(who(R.profiles[i]))}</option>`).join("")}</select></label>` : ""}
+        <div id="swl"></div><p class="fine left" id="swm" role="status">${esc(watch.msg)}</p></section>
+      <div class="row"><button class="btn" id="swdone">Done</button></div>`);
+    WL.panel($("#swl"), { intro: "Time " + (many ? "a reader's" : who(S) + "'s") + " reading on a watch: open Read 20 on the watch. It shows a code. Type it here.",
+      linkedText: "Reading timed on the watch goes into " + (many ? "the log of the reader picked above" : who(S) + "'s log") + ", and the watch shows tonight's minutes and the streak.",
+      btn: "btn alt", btnPri: "btn", onLinked: () => { setWatchId(watchId()); watch.last = ""; watchSync(); } });
+    if ($("#swr")) $("#swr").onchange = () => { setWatchId($("#swr").value); watch.last = ""; watchSync(); };
+    $("#swdone").onclick = () => closeOverlay(o);
   }
 
   /* ---------- keep the log safe: online backup, sharing with another home, files ---------- */
