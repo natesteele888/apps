@@ -65,10 +65,11 @@
   /* ---------- rules (per sport) ---------- */
   var DEFAULTS = {
     basketball: { periods: 4, periodSec: 480, otSec: 180, bonusAt: 5, timeouts: 2, toReset: "half", foulReset: "period", otTimeouts: 1 },
-    football: { periods: 4, periodSec: 720, otSec: 300, timeouts: 3, otTimeouts: 1, firstDown: 10 },
-    baseball: { innings: 6, extra: true, mercyRuns: 0, mercyInning: 4, pitch: false },
+    football: { periods: 4, periodSec: 720, otSec: 300, timeouts: 3, otTimeouts: 1, firstDown: 10, flag: false },
+    baseball: { innings: 6, extra: true, mercyRuns: 0, mercyInning: 4, pitch: false, runLimit: 0, openLast: true, timeLimit: 0 },
     generic: {}
   };
+  var FLAG = { periods: 2, periodSec: 1200, otSec: 300, timeouts: 2, otTimeouts: 1, firstDown: 10, flag: true };
   function sanitizeCfg(sport, c) {
     c = isObj(c) ? c : {};
     var d = DEFAULTS[sport] || {}, o = {};
@@ -82,7 +83,9 @@
       o.foulReset = c.foulReset === "half" ? "half" : "period";
       o.otTimeouts = int(c.otTimeouts, 0, 9, d.otTimeouts);
     } else if (sport === "football") {
-      o.periods = 4;
+      o.flag = c.flag === true;                                   // flag football: two halves, 6/2/1 scoring, fewer timeouts
+      if (o.flag) d = FLAG;
+      o.periods = d.periods;
       o.periodSec = int(c.periodSec, 10, 5999, d.periodSec);
       o.otSec = int(c.otSec, 10, 5999, d.otSec);
       o.timeouts = int(c.timeouts, 0, 9, d.timeouts);
@@ -94,6 +97,9 @@
       o.mercyRuns = int(c.mercyRuns, 0, 50, d.mercyRuns);
       o.mercyInning = int(c.mercyInning, 1, 9, d.mercyInning);
       o.pitch = c.pitch === true;
+      o.runLimit = int(c.runLimit, 0, 20, d.runLimit);           // most runs a team can score in one half inning (0 = no limit)
+      o.openLast = c.openLast === undefined ? d.openLast : c.openLast === true;  // the last inning (and extras) has no run limit
+      o.timeLimit = int(c.timeLimit, 0, 300, d.timeLimit);       // minutes from the first pitch; no new inning starts after it (0 = off)
     }
     return o;
   }
@@ -149,6 +155,7 @@
       v: 1, id: typeof o.id === "string" && ID_RE.test(o.id) ? o.id : uid(), sport: sport, created: now,
       date: isYMD(o.date) ? o.date : ymd(new Date(now)), cfg: cfg, teams: sanitizeTeams(o.teams), score: [0, 0], u: []
     };
+    var lk = sanitizeLink(o.link); if (lk) g.link = lk;
     if (sport === "basketball" || sport === "football") {
       g.period = 1; g.clock = stopped(cfg.periodSec * 1000); g.to = [cfg.timeouts, cfg.timeouts]; g.poss = -1; g.pts = [];
       if (sport === "basketball") g.fouls = [0, 0];
@@ -156,6 +163,7 @@
     } else if (sport === "baseball") {
       g.inning = 1; g.half = "top"; g.balls = 0; g.strikes = 0; g.outs = 0;
       g.inn = [[0], [0]]; g.hits = [0, 0]; g.errs = [0, 0]; g.pitches = [0, 0]; g.final = false; g.onDeck = { name: "", num: "" };
+      g.bases = [false, false, false]; g.firstPitch = null;
     } else { g.label = ""; }
     return g;
   }
@@ -213,7 +221,7 @@
     return inn.map(function (r) { if (r.length >= k) return r; var x = r.slice(); while (x.length < k) x.push(0); return x; });
   }
   function bsEndHalf(n) {
-    n.balls = 0; n.strikes = 0; n.outs = 0;
+    n.balls = 0; n.strikes = 0; n.outs = 0; n.bases = [false, false, false];
     var cfg = n.cfg, home = n.score[0], away = n.score[1];
     if (n.half === "top") {
       if (n.inning >= cfg.innings && home > away) { n.final = true; return; }
@@ -233,31 +241,80 @@
     if (halves === 2 * m - 1) return diff >= g.cfg.mercyRuns;
     return false;
   }
+  /* runs the batting team has scored in this half inning */
+  function halfRuns(g) { return g.sport === "baseball" ? (g.inn[batIdx(g)][g.inning - 1] || 0) : 0; }
+  /* the inning run limit (youth leagues: often 5 a half inning, the last inning open). Only ever a banner. */
+  function runLimitOn(g) {
+    if (g.sport !== "baseball" || !(g.cfg.runLimit > 0)) return false;
+    return !(g.cfg.openLast && g.inning >= g.cfg.innings);
+  }
+  function runLimitHit(g) { return !g.final && runLimitOn(g) && halfRuns(g) >= g.cfg.runLimit; }
+  /* the game time limit: "no new inning after N minutes", counted from the first pitch.
+     Returns null when it is off, otherwise { limit, started, elapsed, left, over } in ms. */
+  function timeInfo(g, t) {
+    if (g.sport !== "baseball" || !(g.cfg.timeLimit > 0)) return null;
+    var limit = g.cfg.timeLimit * 60000;
+    if (typeof g.firstPitch !== "number") return { limit: limit, started: false, elapsed: 0, left: limit, over: false };
+    var el = Math.max(0, (typeof t === "number" && isFinite(t) ? t : Date.now()) - g.firstPitch);
+    return { limit: limit, started: true, elapsed: el, left: Math.max(0, limit - el), over: el >= limit };
+  }
+  /* 1:45 style, for minutes that run past an hour */
+  function fmtHM(ms) { var m = Math.max(0, Math.ceil((ms || 0) / 60000)); return Math.floor(m / 60) + ":" + pad2(m % 60); }
+  function timeText(g, t) {
+    var ti = timeInfo(g, t); if (!ti) return "";
+    if (!ti.started) return "Time limit " + fmtHM(ti.limit) + ", starts at the first pitch";
+    if (ti.over) return "Time is up: no new inning";
+    var sec = Math.ceil(ti.left / 1000);
+    return "No new inning in " + (ti.left >= 3600000 ? fmtHM(ti.left) : Math.floor(sec / 60) + ":" + pad2(sec % 60));
+  }
+  var PITCH_ACTS = { ball: 1, strike: 1, foul: 1, out: 1, hit: 1, error: 1 };
+  /* a run for the batting team in this inning, with the walk-off check */
+  function addRun(n, g, B, d) {
+    var idx = n.inning - 1, row = n.inn[B].slice(), cur = row[idx] || 0, v = clamp(cur + d, 0, 99);
+    if (v === cur) return false;
+    row[idx] = v; n.inn = B ? [n.inn[0], row] : [row, n.inn[1]]; n.score = sums(n.inn);
+    if (!g.final && d > 0 && n.half === "bot" && n.inning >= n.cfg.innings && n.score[0] > n.score[1]) n.final = true; // walk-off
+    return true;
+  }
+  /* ball four: the batter takes first and every forced runner moves up one. Bases loaded scores a run. */
+  function walk(n, g, B) {
+    var b = n.bases;
+    if (!b[0] && !b[1] && !b[2]) { n.bases = [true, false, false]; return; }
+    if (b[0] && b[1] && b[2]) { n.bases = [true, true, true]; addRun(n, g, B, 1); return; }
+    n.bases = [true, b[0] || b[1], b[0] && b[1] ? true : b[2]];
+  }
   function bsApply(g, a) {
     var T = a.type;
-    if (g.final && T !== "run" && T !== "set" && T !== "reopen" && T !== "setInning" && T !== "onDeck") return g;
+    if (g.final && T !== "run" && T !== "set" && T !== "reopen" && T !== "setInning" && T !== "onDeck" && T !== "timeSet") return g;
     var n = assign({}, g), B = batIdx(g), F = 1 - B;
+    // the time limit counts from the first pitch (or first run, for a game picked up late)
+    if (typeof g.firstPitch !== "number" && typeof a.t === "number" && isFinite(a.t) && (PITCH_ACTS[T] || (T === "run" && int(a.d, -99, 99, 1) > 0))) n.firstPitch = a.t;
     var pitchUp = function () { if (g.cfg.pitch) n.pitches = pair(n.pitches, F, Math.min(999, n.pitches[F] + 1)); };
     var tm = a.team === 0 || a.team === 1 ? a.team : null;
     switch (T) {
-      case "ball": pitchUp(); n.balls = g.balls + 1; if (n.balls >= 4) { n.balls = 0; n.strikes = 0; } return n;
+      case "ball": pitchUp(); n.balls = g.balls + 1; if (n.balls >= 4) { n.balls = 0; n.strikes = 0; walk(n, g, B); } return n;
       case "strike": pitchUp(); n.strikes = g.strikes + 1; if (n.strikes >= 3) bsAddOut(n); return n;
       case "foul": if (g.strikes >= 2 && !g.cfg.pitch) return g; pitchUp(); if (g.strikes < 2) n.strikes = g.strikes + 1; return n;
       case "out": pitchUp(); bsAddOut(n); return n;
       case "hit": n.hits = pair(g.hits, tm === null ? B : tm, Math.min(99, g.hits[tm === null ? B : tm] + 1)); n.balls = 0; n.strikes = 0; pitchUp(); return n;
       case "error": n.errs = pair(g.errs, tm === null ? F : tm, Math.min(99, g.errs[tm === null ? F : tm] + 1)); n.balls = 0; n.strikes = 0; pitchUp(); return n;
       case "endHalf": bsEndHalf(n); return n;
-      case "run": {
-        var d = int(a.d, -99, 99, 1), idx = g.inning - 1, row = g.inn[B].slice(), cur = row[idx] || 0, v = clamp(cur + d, 0, 99);
-        if (v === cur) return g;
-        row[idx] = v; n.inn = B ? [g.inn[0], row] : [row, g.inn[1]]; n.score = sums(n.inn);
-        if (!g.final && d > 0 && g.half === "bot" && g.inning >= g.cfg.innings && n.score[0] > n.score[1]) n.final = true; // walk-off
-        return n;
+      case "run": return addRun(n, g, B, int(a.d, -99, 99, 1)) ? n : g;
+      case "base": {
+        var bi = a.base === 0 || a.base === 1 || a.base === 2 ? a.base : null; if (bi === null) return g;
+        var nb = g.bases.slice(); nb[bi] = !nb[bi]; return set(g, { bases: nb });
+      }
+      case "timeSet": {
+        // "minutes played so far": restarts the time-limit count; a negative or blank clears it
+        if (typeof a.t !== "number" || !isFinite(a.t)) return g;
+        var ms = a.ms === null || a.ms === undefined || a.ms === "" ? null : int(a.ms, 0, 300 * 60000, null);
+        var fp = ms === null ? null : a.t - ms;
+        return fp === g.firstPitch ? g : set(g, { firstPitch: fp });
       }
       case "setInning": {
         var inn = int(a.inning, 1, MAX_PERIOD, null), half = a.half === "bot" ? "bot" : "top";
         if (inn === null || (inn === g.inning && half === g.half && !g.final && !g.balls && !g.strikes && !g.outs)) return g;
-        n.inning = inn; n.half = half; n.balls = 0; n.strikes = 0; n.outs = 0; n.final = false; n.inn = growInn(g.inn, inn); return n;
+        n.inning = inn; n.half = half; n.balls = 0; n.strikes = 0; n.outs = 0; n.final = false; n.inn = growInn(g.inn, inn); n.bases = [false, false, false]; return n;
       }
       case "reopen": if (!g.final) return g; n.final = false; return n;
       case "set": return setApply(g, a);
@@ -355,7 +412,7 @@
 
   /* ---------- undo ---------- */
   var UNDOABLE = {};
-  ["score", "foul", "timeout", "period", "poss", "ball", "strike", "out", "run", "hit", "error", "endHalf", "setInning", "reopen", "set",
+  ["score", "foul", "timeout", "period", "poss", "ball", "strike", "out", "run", "hit", "error", "endHalf", "setInning", "reopen", "set", "base", "timeSet",
     "nextDown", "turnover", "firstDown", "down", "togo", "ballOn"].forEach(function (k) { UNDOABLE[k] = 1; });
   function step(g, a) {
     var n = apply(g, a);
@@ -390,7 +447,9 @@
       case "timeout": return nm + (int(a.d, -1, 1, -1) > 0 ? " timeout given back" : " timeout");
       case "period": return int(a.d, -1, 1, 1) < 0 ? "Back to " + periodWord(g, g.period - 1).toLowerCase() : "Start " + periodWord(g, g.period + 1).toLowerCase();
       case "poss": { var pv = possNext(g, a.team); return pv < 0 ? "Possession cleared" : "Possession: " + g.teams[pv].n; }
-      case "ball": return g.balls === 3 ? "Ball four (walk)" : "Ball";
+      case "ball": return g.balls === 3 ? "Ball four (walk)" + (g.bases && g.bases[0] && g.bases[1] && g.bases[2] ? ", run scores" : "") : "Ball";
+      case "base": { var bn = int(a.base, 0, 2, 0); return (g.bases && g.bases[bn] ? "Runner off " : "Runner on ") + ["1st", "2nd", "3rd"][bn]; }
+      case "timeSet": return a.ms === null || a.ms === undefined || a.ms === "" ? "Time limit count cleared" : "Time limit count set to " + Math.round(int(a.ms, 0, 300 * 60000, 0) / 60000) + " min played";
       case "strike": return g.strikes === 2 ? "Strike three (out)" : "Strike";
       case "out": return "Out";
       case "run": return g.teams[B].n + " run " + signed(int(a.d, -99, 99, 1));
@@ -426,6 +485,7 @@
     if (p.sport !== "baseball" || p === n) return null;
     if (n.final && !p.final) return "FINAL";
     if (mercy(n) && !mercy(p)) return "MERCY";
+    if (runLimitHit(n) && !runLimitHit(p)) return "LIMIT";
     if (n.half !== p.half || n.inning !== p.inning) return a.type === "setInning" ? null : "SIDE";
     if (a.type === "strike" && p.strikes === 2) return "K";
     if (a.type === "out") return "OUT";
@@ -493,7 +553,7 @@
   }
 
   /* ---------- sanitize (anything read from storage or a backup file) ---------- */
-  var PATCH_KEYS = ["score", "teams", "cfg", "period", "clock", "fouls", "to", "poss", "pts", "down", "togo", "ballOn", "inning", "half", "balls", "strikes", "outs", "inn", "hits", "errs", "pitches", "final", "label"];
+  var PATCH_KEYS = ["score", "teams", "cfg", "period", "clock", "fouls", "to", "poss", "pts", "down", "togo", "ballOn", "inning", "half", "balls", "strikes", "outs", "inn", "hits", "errs", "pitches", "final", "label", "bases", "firstPitch"];
   function intPair(x, lo, hi, d0, d1) { x = Array.isArray(x) ? x : []; return [int(x[0], lo, hi, d0), int(x[1], lo, hi, d1)]; }
   function sanitizeUndo(u) {
     if (!Array.isArray(u)) return [];
@@ -504,7 +564,7 @@
   function sanitizeGame(raw) {
     if (!isObj(raw) || SPORT_IDS.indexOf(raw.sport) < 0) return null;
     var sp = raw.sport;
-    var g = newGame(sp, { id: raw.id, cfg: raw.cfg, teams: raw.teams, now: typeof raw.created === "number" && isFinite(raw.created) ? raw.created : undefined, date: raw.date });
+    var g = newGame(sp, { id: raw.id, cfg: raw.cfg, teams: raw.teams, now: typeof raw.created === "number" && isFinite(raw.created) ? raw.created : undefined, date: raw.date, link: raw.link });
     g.created = typeof raw.created === "number" && isFinite(raw.created) ? raw.created : g.created;
     if (sp !== "baseball") g.score = intPair(raw.score, 0, MAX_SCORE, 0, 0);
     if (sp === "basketball" || sp === "football") {
@@ -530,14 +590,51 @@
       g.final = raw.final === true;
       var od = isObj(raw.onDeck) ? raw.onDeck : {};
       g.onDeck = { name: str(od.name, 24).trim(), num: str(od.num, 4).trim() };
+      var rb = Array.isArray(raw.bases) ? raw.bases : [];
+      g.bases = [rb[0] === true, rb[1] === true, rb[2] === true];
+      g.firstPitch = typeof raw.firstPitch === "number" && isFinite(raw.firstPitch) ? raw.firstPitch : null;
     } else { g.label = str(raw.label, 24).trim(); }
     g.u = sanitizeUndo(raw.u);
     return g;
   }
 
+  /* Finishing right after the side changed (a time-limit or called game): the new inning was never played,
+     so drop it rather than show the away team a 0 for it. Only when nothing at all has happened in it. */
+  function trimUnplayed(g) {
+    if (g.sport !== "baseball" || g.final || g.half !== "top" || g.inning < 2) return g;
+    var x = g.inning - 1;
+    if (g.balls || g.strikes || g.outs || (g.inn[1][x] || 0) || (g.inn[0][x] || 0) || (g.bases && (g.bases[0] || g.bases[1] || g.bases[2]))) return g;
+    return set(g, { inning: x, half: "bot", inn: [g.inn[0].slice(0, x), g.inn[1].slice(0, x)] });
+  }
+
+  /* ---------- keeping score for a Tournament Pack game ----------
+     Both apps live on the same site, so they share this phone's localStorage. Tournament Pack leaves a request under
+     "apps.handoff.<token>" and opens Scoreboard with ?keep=<token>; when that game is finished Scoreboard leaves the
+     final under "apps.handoff.<token>.result" and Tournament Pack picks it up. Nothing leaves the phone. */
+  var LINK_TOKEN = /^[A-Za-z0-9_-]{6,40}$/, LINK_MAX_AGE = 24 * 3600 * 1000;
+  var LINK_SPORT = { baseball: ["baseball", null], softball: ["baseball", null], basketball: ["basketball", null], flag: ["football", { flag: true }] };
+  function sanitizeLink(x) {
+    if (!isObj(x) || !LINK_TOKEN.test(x.token) || !ID_RE.test(x.tid) || !ID_RE.test(x.gid)) return null;
+    return { token: x.token, tid: x.tid, gid: x.gid };
+  }
+  /* the request Tournament Pack left, checked: { sport, cfg (or null for this phone's own rules), teams: [a, b], link } or null */
+  function linkRequest(raw, token, now) {
+    if (!isObj(raw) || raw.v !== 1 || raw.token !== token || !LINK_TOKEN.test(token)) return null;
+    var at = Number(raw.at); now = typeof now === "number" ? now : Date.now();
+    if (!isFinite(at) || at > now + 60000 || now - at > LINK_MAX_AGE) return null;
+    var map = LINK_SPORT[raw.sport], link = sanitizeLink(raw); if (!map || !link) return null;
+    var a = str(raw.a, 16).trim(), b = str(raw.b, 16).trim(); if (!a || !b) return null;
+    return { sport: map[0], cfg: map[1], teams: [{ n: a }, { n: b }], link: link, names: [str(raw.a, 60).trim(), str(raw.b, 60).trim()] };
+  }
+  /* the final to hand back: left team is the first team in Tournament Pack */
+  function linkResult(g, now) {
+    if (!g || !g.link) return null;
+    return { v: 1, token: g.link.token, tid: g.link.tid, gid: g.link.gid, sa: g.score[0], sb: g.score[1], at: typeof now === "number" ? now : Date.now() };
+  }
+
   /* ---------- finished games, preferences, backups ---------- */
   function makeRecent(g, status, now, sample) {
-    var c = sanitizeGame(assign({}, g, { u: [], clock: g.clock ? freeze(g.clock, now) : undefined }));
+    var c = sanitizeGame(assign({}, trimUnplayed(g), { u: [], clock: g.clock ? freeze(g.clock, now) : undefined }));
     c.status = status === "stopped" ? "stopped" : "final";
     c.ended = typeof now === "number" && isFinite(now) ? now : Date.now();
     if (sample) c.sample = true;
@@ -604,8 +701,9 @@
     sanitizeCfg: sanitizeCfg, sanitizeTeams: sanitizeTeams, newGame: newGame, apply: apply, step: step, undo: undo, canUndo: canUndo, undoLog: undoLog,
     stopped: stopped, remaining: remaining, freeze: freeze, expired: expired, buzzDue: buzzDue, fmtClock: fmtClock, periodLen: periodLen,
     periodScores: periodScores, periodAbbr: periodAbbr, periodWord: periodWord, bonus: bonus, batIdx: batIdx, mercy: mercy,
+    halfRuns: halfRuns, runLimitOn: runLimitOn, runLimitHit: runLimitHit, timeInfo: timeInfo, timeText: timeText, fmtHM: fmtHM, trimUnplayed: trimUnplayed,
     label: label, flashFor: flashFor, lineScore: lineScore, statusText: statusText, resultText: resultText, summary: summary, progressText: progressText,
-    sanitizeGame: sanitizeGame, makeRecent: makeRecent, sanitizeRecent: sanitizeRecent, addRecent: addRecent,
+    sanitizeGame: sanitizeGame, makeRecent: makeRecent, linkRequest: linkRequest, linkResult: linkResult, sanitizeLink: sanitizeLink, sanitizeRecent: sanitizeRecent, addRecent: addRecent,
     defaultPrefs: defaultPrefs, sanitizePrefs: sanitizePrefs, makeBackup: makeBackup, validateBackup: validateBackup, sampleGames: sampleGames
   };
   root.SBCore = api;
