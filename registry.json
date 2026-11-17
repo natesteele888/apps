@@ -1,6 +1,6 @@
 {
   "about": "The one list of Nathan's apps. Live links, which apps show where, and each app's App Store listing (text, highlights, screenshots) all come from here. Edit listings and icons in the Toolbox; the sync job copies them here. Don't hand-edit text in store/index.html.",
-  "updated": "2026-11-16",
+  "updated": "2026-11-17",
   "toolbox": "https://natesteele888.github.io/apps/toolbox/",
   "store": "https://natesteele888.github.io/apps/store/",
   "apps": [
@@ -79,12 +79,20 @@
         ],
         "autoShots": [],
         "latest": {
-          "d": "Nov 16, 2026",
-          "t": "Toolbox rules: note that the app_me change is published",
-          "url": "https://github.com/natesteele888/apps/commit/4bb87f99f8704612a4420ace13c0147096dd45b9"
+          "d": "Nov 17, 2026",
+          "t": "Keep the install pop-up off floating bottom buttons",
+          "url": "https://github.com/natesteele888/apps/commit/879f5311186e0c5337f0d745c6779937dcc46e4c"
         },
-        "version": "1.3.8",
+        "version": "1.4.0",
         "history": [
+          {
+            "v": "1.4.0",
+            "t": "Keep the install pop-up off floating bottom buttons"
+          },
+          {
+            "v": "1.3.9",
+            "t": "Lift the install pop-up above an app's bottom tab bar"
+          },
           {
             "v": "1.3.8",
             "t": "Toolbox rules: note that the app_me change is published"
@@ -96,14 +104,6 @@
           {
             "v": "1.3.5",
             "t": "Toolbox: show the Loading screen before the Firebase code arrives"
-          },
-          {
-            "v": "1.3.4",
-            "t": "Photo Blueprint: shared sheets no longer show the owner's name or exact spot"
-          },
-          {
-            "v": "1.3.3",
-            "t": "Load the fonts without holding up six apps"
           }
         ]
       }
@@ -328,12 +328,20 @@
         ],
         "autoShots": [],
         "latest": {
-          "d": "Nov 15, 2026",
-          "t": "Gameday Picks: paint the page before the Firebase code arrives",
-          "url": "https://github.com/natesteele888/apps/commit/67ebcfa3185eb68095e4da71db6f57fbe69a124b"
+          "d": "Nov 17, 2026",
+          "t": "Keep the install pop-up off floating bottom buttons",
+          "url": "https://github.com/natesteele888/apps/commit/879f5311186e0c5337f0d745c6779937dcc46e4c"
         },
-        "version": "1.1.3",
+        "version": "1.1.5",
         "history": [
+          {
+            "v": "1.1.5",
+            "t": "Keep the install pop-up off floating bottom buttons"
+          },
+          {
+            "v": "1.1.4",
+            "t": "Lift the install pop-up above an app's bottom tab bar"
+          },
           {
             "v": "1.1.3",
             "t": "Gameday Picks: paint the page before the Firebase code arrives"
@@ -345,14 +353,6 @@
           {
             "v": "1.1.1",
             "t": "Add a copyright notice and an all-rights-reserved LICENSE"
-          },
-          {
-            "v": "1.1.0",
-            "t": "Gameday Picks: player stats on every team page"
-          },
-          {
-            "v": "1.0.9",
-            "t": "Gameday Picks: scout a team before you pick, and a Standings tab with the playoff picture and team pages"
           }
         ],
         "caps": [
@@ -560,12 +560,16 @@
         ],
         "autoShots": [],
         "latest": {
-          "d": "Nov 10, 2026",
-          "t": "Gridiron Hub: make the Full schedule, All Programs and Email us links easy to tap",
-          "url": "https://github.com/natesteele888/ASL-Bengals/commit/e718e681997d7b01047a6ee3b7f9a577babcba38"
+          "d": "Nov 16, 2026",
+          "t": "Make the For Coaches page's form and course links easy to tap",
+          "url": "https://github.com/natesteele888/ASL-Bengals/commit/ee7a22c140f3303fcfa5a6e913f47771d5fa9b67"
         },
-        "version": "1.5.7",
+        "version": "1.5.8",
         "history": [
+          {
+            "v": "1.5.8",
+            "t": "Make the For Coaches page's form and course links easy to tap"
+          },
           {
             "v": "1.5.7",
             "t": "Gridiron Hub: make the Full schedule, All Programs and Email us links easy to tap"
@@ -581,10 +585,6 @@
           {
             "v": "1.5.4",
             "t": "Gridiron Hub: show the Milford logo, point three stray pages at the real ones"
-          },
-          {
-            "v": "1.5.3",
-            "t": "Gridiron Hub: account page and team photo rules"
           }
         ],
         "caps": [
@@ -766,11 +766,19 @@
         "autoShots": [],
         "latest": {
           "d": "Nov 16, 2026",
-          "t": "Roster: Card photo button for Steele Cards, with team-only rules for approved photos",
-          "url": "https://github.com/natesteele888/lybs-ballclub/commit/09d73b92c2cbd43b6637b1a6c70aca4f1880a71f"
+          "t": "Center the league name over the sign-in box when it wraps",
+          "url": "https://github.com/natesteele888/lybs-ballclub/commit/0e5ea38ce4d64c7608738792d1325804c85b75ad"
         },
-        "version": "1.27.1",
+        "version": "1.27.3",
         "history": [
+          {
+            "v": "1.27.3",
+            "t": "Center the league name over the sign-in box when it wraps"
+          },
+          {
+            "v": "1.27.2",
+            "t": "Show one 'Couldn't load' message at a time, not a stack"
+          },
           {
             "v": "1.27.0",
             "t": "Roster: Card photo button for Steele Cards, with team-only rules for approved photos"
@@ -782,14 +790,6 @@
           {
             "v": "1.26.5",
             "t": "Roster: walk-up song requests with coach approval, alerts and a league song library"
-          },
-          {
-            "v": "1.26.4",
-            "t": "Field tablets: let a walk-up tablet read game-day data, and walk-up songs per player"
-          },
-          {
-            "v": "1.26.3",
-            "t": "Age page: make the year buttons big enough to tap on a phone"
           }
         ],
         "caps": [
@@ -1061,12 +1061,16 @@
         ],
         "autoShots": [],
         "latest": {
-          "d": "Nov 14, 2026",
-          "t": "Leaderboard: plain no-signal message, and reconnect when the signal comes back",
-          "url": "https://github.com/natesteele888/cube-clock/commit/41a506bf6251b822d4a2d3ef70477806cfd8937b"
+          "d": "Nov 17, 2026",
+          "t": "Statistics: stretch the last stat tile instead of leaving a grey box",
+          "url": "https://github.com/natesteele888/cube-clock/commit/a03dc2a882ed5629af6c425a6459cac8dc2e62de"
         },
-        "version": "1.2.9",
+        "version": "1.3.0",
         "history": [
+          {
+            "v": "1.3.0",
+            "t": "Statistics: stretch the last stat tile instead of leaving a grey box"
+          },
           {
             "v": "1.2.9",
             "t": "Leaderboard: plain no-signal message, and reconnect when the signal comes back"
@@ -1082,10 +1086,6 @@
           {
             "v": "1.2.6",
             "t": "Cube Clock: keep the timer's top buttons on screen on an upright phone"
-          },
-          {
-            "v": "1.2.5",
-            "t": "Cube Clock: keep the top buttons on screen on small phones"
           }
         ],
         "caps": [
