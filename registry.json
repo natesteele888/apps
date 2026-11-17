@@ -2135,7 +2135,7 @@
         "ac": "#29d3e0",
         "install": true,
         "access": "Open",
-        "desc": "Keep score for basketball, baseball, football or anything else, with a big clock, fouls, timeouts and a baseball count. Lock the screen so a stray tap cannot change the score, and undo any mistake. Everything stays on your phone.",
+        "desc": "Keep score for basketball, baseball, football or anything else, with a big clock, fouls, timeouts and a baseball count with runners on base. Youth rules are built in: a run limit per inning and a no-new-inning time limit that counts down from the first pitch. Lock the screen so a stray tap cannot change the score, and undo any mistake. Everything stays on your phone.",
         "feats": [
           [
             "⏱️",
@@ -2228,7 +2228,8 @@
         ],
         "caps": [
           "Big scores, fouls, timeouts and a clock you can read from the stands",
-          "Baseball with innings, balls, strikes and outs",
+          "Baseball with innings, balls, strikes, outs and runners on base",
+          "A run limit per inning and a no-new-inning time limit for youth games",
           "Football with down and distance, and who has the ball",
           "Undo any mistake, one change at a time",
           "Lock the screen so a bumped phone cannot change the score",
