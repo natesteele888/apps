@@ -281,6 +281,42 @@ const ranks = (res) => res.rows.map(r => r.team + ':' + r.rank + (r.tied ? 't' :
     assert.ok(sc.win.best <= sc.win.worst); assert.ok(sc.lose.best <= sc.lose.worst); assert.ok(sc.win.best < sc.lose.best);
   });
 
+  await test('outlook: every result still to play, other teams included, with the bracket cut', async () => {
+    const t = C.sampleTournament(TODAY), cfg = Object.assign({}, t.rules, { sport: t.sport });
+    const o = C.outlook(t.games, cfg, 'Our Team', { cut: 4 });
+    eq(o.enumerated, true); eq(o.mine, 2); eq(o.cut, 4);
+    // win out: seed 1. Win one: 3-2, and other games can still push us to 4th. Lose out: 2-3, and if D beats C and E beats B,
+    // B, C, D, E and we are all .500 behind F, so we can fall to 6th: the old estimate (others frozen) said 4th.
+    deq(o.rows.map(r => [r.wins, r.of, r.best, r.worst, r.cut]), [[2, 2, 1, 1, 'in'], [1, 2, 1, 4, 'in'], [0, 2, 4, 6, 'maybe']]);
+    deq(o.all, { best: 1, worst: 6, cut: 'maybe' });
+    eq(C.outlook(t.games, cfg, 'Our Team').rows[0].cut, null, 'no cut line: no In/Out');
+    eq(C.outlook(t.games, cfg, ''), null);
+  });
+
+  await test('outlook: clinched, eliminated, and too many games to check', async () => {
+    const won = C.outlook([P('A', 'B', 2, 0), P('A', 'C', 3, 1), P('B', 'C')], BASE, 'A', { cut: 1 });
+    deq([won.mine, won.theirs, won.rows.length, won.rows[0].of, won.all], [0, 1, 1, 0, { best: 1, worst: 1, cut: 'in' }], 'clinched with others still playing');
+    const lost = C.outlook([P('B', 'A', 2, 0), P('C', 'A', 3, 1), P('B', 'C')], BASE, 'A', { cut: 1 });
+    deq(lost.all, { best: 3, worst: 3, cut: 'out' }, 'can not reach the top 1');
+    // 8 teams, nothing played: 21 other games is far too many to check, so others stay as they are (unplayed)
+    const ts = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'], gs = [];
+    ts.forEach((x, i) => ts.slice(i + 1).forEach(y => gs.push(P(x, y))));
+    const t0 = Date.now(), big = C.outlook(gs, BASE, 'A', { cut: 4 });
+    assert.ok(Date.now() - t0 < 1500, 'took ' + (Date.now() - t0));
+    deq([big.enumerated, big.mine, big.theirs, big.rows.length], [false, 7, 21, 8]);
+    deq([big.rows[0].best, big.rows[0].worst], [1, 1], 'win all 7: first');
+  });
+
+  await test('whatIf: typed scores for unplayed pool games move the standings, nothing else', async () => {
+    const g1 = P('A', 'B', 1, 0), g2 = P('A', 'C'), g3 = P('B', 'C');
+    const r = C.whatIf([g1, g2, g3], BASE, { [g2.id]: { sa: 0, sb: 2 }, [g1.id]: { sa: 0, sb: 9 }, [g3.id]: { sa: 'x', sb: 2 } });
+    eq(r.used, 1, 'only the unplayed game with a real score counts');
+    const row = k => r.rows.filter(x => x.key === C.teamKey(k))[0];
+    deq([row('A').w, row('A').l, row('C').w, row('C').rank], [1, 1, 1, 1]);
+    eq(C.whatIf([g1, g2], BASE, null).used, 0);
+    eq(g2.status, 'scheduled', 'the real games are not changed');
+  });
+
   /* ---------- bracket ---------- */
   const T = (size, seeds) => C.sanitizeTournament({ id: 'brt1', name: 'T', sport: 'baseball', start: '2026-11-07', end: '2026-11-08', team: 'C', games: [], bracket: { size, seeds }, pack: [] });
   const BG = (slot, a, b, sa, sb, extra) => Object.assign({ id: 'b' + slot, kind: 'bracket', slot, date: '2026-11-08', time: '', field: '', label: '', a: a || '', b: b || '', status: sa == null ? 'scheduled' : 'final', sa: sa == null ? null : sa, sb: sb == null ? null : sb, innings: null, forfeit: '' }, extra || {});
@@ -791,9 +827,12 @@ const ranks = (res) => res.rows.map(r => r.team + ':' + r.rank + (r.tied ? 't' :
       eq(await page.locator('.trow.us').count(), 1);
       eq(await txt(page, '.card.stand .big'), 'Seed 2 of 5 teams · 2-1');
       const sc = await txt(page, '.scen');
-      assert.ok(/If we win out.*2 games left, all wins.*seed 1/.test(sc), sc);
-      assert.ok(/If we lose out.*all 2 games lost.*seed 4/.test(sc), sc);
-      assert.ok(/Estimate/.test(await txt(page, '.card:has(.scen) .label')));
+      assert.ok(/If we win out.*2-0 the rest of the way.*seed 1 In/.test(sc), sc);
+      assert.ok(/If we win 1 of 2.*seed 1 to 4 In/.test(sc), sc);
+      // other teams' games count too: losing out can drop us to 6th, which is still a maybe for the top 4
+      assert.ok(/If we lose out.*0-2 the rest of the way.*seed 4 to 6 Depends/.test(sc), sc);
+      assert.ok(/top 4 make the bracket\. Still alive: anywhere from seed 1 to 6/.test(await txt(page, '.cutline')));
+      assert.ok(!/Estimate/.test(await txt(page, '.card:has(.scen) .label')), 'every result was checked, so no Estimate label');
       // team record line: Team B 2-1, .667, 18 runs for, 10 against, diff +8
       assert.ok(/\.667 · 18 runs for, 10 against · diff \+8/.test(await txt(page, '.stand-list li:nth-child(1) .st')), await txt(page, '.stand-list li:nth-child(1) .st'));
       eq(await page.locator('.tag.info').count(), 3, 'the three teams that needed a tiebreaker are tagged');
@@ -860,19 +899,44 @@ const ranks = (res) => res.rows.map(r => r.team + ':' + r.rank + (r.tied ? 't' :
     });
   });
 
-  await test('what do we need: after our last pool game is scored the estimate is replaced by the final seed', async () => {
+  await test('what do we need: it follows each of our scores, and says when we have clinched', async () => {
     await app({ tours: [mkTour({ id: 'wn1' })], open: true }, async page => {
       await page.locator('.game.ours', { hasText: 'Team E' }).click(); await openSheetWait(page);
       await fillGame(page, { final: true, sa: 5, sb: 2 }); await saveSheet(page); await noSheets(page);
       await tabTo(page, 'standings');
-      assert.ok(/1 game left, all wins.*seed 1/.test(await txt(page, '.scen')), 'one game left after the first is scored');
+      assert.ok(/If we win.*1-0 the rest of the way.*seed 1 In.*If we lose.*0-1 the rest of the way.*seed 2 to 4 In/.test(await txt(page, '.scen')), 'one game left after the first is scored');
+      assert.ok(/Clinched: Our Team finishes in the top 4/.test(await txt(page, '.cutline')));
       await tabTo(page, 'games');
       await page.locator('.game.ours', { hasText: 'Team F' }).click(); await openSheetWait(page);
       await fillGame(page, { final: true, sa: 6, sb: 1 }); await saveSheet(page); await noSheets(page);
       await tabTo(page, 'standings');
       eq(await txt(page, '.card.stand .big'), 'Seed 1 of 6 teams · 4-1');
-      assert.ok(/No pool games left for Our Team/.test(await txt(page, '.card.soft')), await txt(page, '#view'));
-      eq(await page.locator('.scen').count(), 0);
+      // our games are done, two games between other teams are not: the card says where that leaves us
+      assert.ok(/Our pool games are done.*Other teams still have games.*seed 1 In/.test(await txt(page, '.scen')), await txt(page, '#view'));
+      assert.ok(/including the 2 games between other teams/.test(await txt(page, '.card:has(.scen)')));
+    });
+  });
+
+  await test('try some scores: made-up scores move the standings live, and nothing is saved', async () => {
+    await app({ tours: [mkTour({ id: 'wi1' })], open: true }, async page => {
+      await tabTo(page, 'standings');
+      await page.click('[data-act="whatif-open"]'); await openSheetWait(page);
+      eq(await page.locator(sheetSel + ' .wi-game').count(), 4, 'the 4 pool games still to play');
+      eq(await page.locator(sheetSel + ' .wi-game.us').count(), 2, 'ours are marked');
+      assert.ok(/Type a score/.test(await txt(page, sheetSel + ' .wi-out')));
+      // we lose both, 0-3
+      for (const opp of ['Team E', 'Team F']) {
+        const li = page.locator(sheetSel + ' .wi-game.us', { hasText: opp });
+        await li.locator('input[data-side="a"]').fill('0'); await li.locator('input[data-side="b"]').fill('3');
+      }
+      assert.ok(/Our Team would be seed 4, in the bracket\./.test(await txt(page, sheetSel + ' .wi-head')), await txt(page, sheetSel + ' .wi-head'));
+      eq(await page.locator(sheetSel + ' .wi-table li.cut').count(), 1, 'the cut line is drawn under seed 4');
+      eq(await page.locator(sheetSel + ' .wi-table li.us').count(), 1);
+      await page.click(sheetSel + ' [data-clear]');
+      assert.ok(/Type a score/.test(await txt(page, sheetSel + ' .wi-out')));
+      await page.click(sheetSel + ' .sh-foot [data-close]'); await noSheets(page);
+      const saved = await page.evaluate(() => TP.cur().games.filter(g => g.kind === 'pool' && g.status !== 'final').length);
+      eq(saved, 4, 'nothing was saved');
     });
   });
 

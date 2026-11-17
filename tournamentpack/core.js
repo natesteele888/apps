@@ -453,6 +453,75 @@
     return out;
   }
 
+  /* Every way the rest of pool play can go, other teams' games included.
+     For each number of our remaining games we win (all of them down to none), the best and worst seed over every result
+     of every other pool game still to play (win, loss, or tie when ties are on), tried at a 1-run and at a big margin.
+     opts.cut: how many teams make the bracket (0 = no cut line). opts.limit: most standings to work out (keeps a phone fast).
+     When there are too many games left to check every result, the other games stay as they are now (enumerated: false). */
+  function outlook(games, config, us, opts) {
+    opts = opts || {};
+    var uk = teamKey(us); if (!uk) return null;
+    var res = standings(games, config), rules = res.rules, cut = int(opts.cut, 0, 64, 0), limit = int(opts.limit, 1, 200000, 4000);
+    var pool = (games || []).filter(function (g) { return g && g.kind === "pool" && g.a && g.b; });
+    var left = pool.filter(function (g) { return g.status !== "final"; });
+    var mine = left.filter(function (g) { return teamKey(g.a) === uk || teamKey(g.b) === uk; });
+    var theirs = left.filter(function (g) { return mine.indexOf(g) < 0; });
+    var outcomesPer = rules.tiesAllowed ? 3 : 2, big = rules.cap > 0 ? rules.cap : 10;
+    var cost = Math.pow(2, mine.length) * Math.pow(outcomesPer, theirs.length) * 2;
+    var enumerated = cost <= limit, others = enumerated ? theirs : [];
+    var n = mine.length, rows = [], k;
+    for (k = n; k >= 0; k--) rows.push({ wins: k, of: n, best: Infinity, worst: 0, count: 0 });
+    var all = { best: Infinity, worst: 0 };
+    var idx = {}; pool.forEach(function (g, i) { idx[g.id] = i; });
+    function finalScore(g, winSide, margin) {
+      // winSide: "a" | "b" | "t"
+      var hi = margin, lo = 0;
+      if (winSide === "t") return { sa: 1, sb: 1 };
+      return winSide === "a" ? { sa: hi, sb: lo } : { sa: lo, sb: hi };
+    }
+    var base = (games || []).slice();
+    for (var mask = 0; mask < (1 << n); mask++) {
+      var wins = 0; for (var b = 0; b < n; b++) if (mask & (1 << b)) wins++;
+      var row = rows[n - wins];
+      var combos = Math.pow(outcomesPer, others.length);
+      for (var c = 0; c < combos; c++) {
+        [1, big].forEach(function (margin) {
+          var over = {}, x = c, i;
+          for (i = 0; i < n; i++) {
+            var g = mine[i], usA = teamKey(g.a) === uk, won = !!(mask & (1 << i));
+            over[g.id] = finalScore(g, won === usA ? "a" : "b", margin);
+          }
+          for (i = 0; i < others.length; i++) { var o = x % outcomesPer; x = Math.floor(x / outcomesPer); over[others[i].id] = finalScore(others[i], o === 0 ? "a" : o === 1 ? "b" : "t", margin); }
+          var g2 = base.map(function (g) { var v = over[g.id]; return v ? Object.assign({}, g, { status: "final", forfeit: "", sa: v.sa, sb: v.sb }) : g; });
+          var r = rowFor(standings(g2, config), us);
+          if (!r || r.rank == null) return;
+          row.best = Math.min(row.best, r.rank); row.worst = Math.max(row.worst, r.rankTo); row.count++;
+          all.best = Math.min(all.best, r.rank); all.worst = Math.max(all.worst, r.rankTo);
+        });
+      }
+    }
+    function tag(best, worst) { if (!cut) return null; return worst <= cut ? "in" : best > cut ? "out" : "maybe"; }
+    rows = rows.filter(function (r) { return r.count > 0; }).map(function (r) { return { wins: r.wins, of: r.of, best: r.best, worst: r.worst, cut: tag(r.best, r.worst) }; });
+    var clinch = null;
+    if (all.worst > 0) clinch = { best: all.best, worst: all.worst, cut: tag(all.best, all.worst) };
+    return { mine: n, theirs: theirs.length, enumerated: enumerated, cut: cut, rows: rows, all: clinch, ties: rules.tiesAllowed };
+  }
+
+  /* Standings as they would be if the typed scores were final. picks: { gameId: { sa, sb } } for pool games not final yet. */
+  function whatIf(games, config, picks) {
+    picks = isObj(picks) ? picks : {};
+    var used = 0;
+    var g2 = (games || []).map(function (g) {
+      var p = picks[g.id];
+      if (!g || g.kind !== "pool" || g.status === "final" || !isObj(p)) return g;
+      var sa = scoreInt(p.sa), sb = scoreInt(p.sb);
+      if (sa === null || sb === null) return g;
+      used++;
+      return Object.assign({}, g, { status: "final", forfeit: "", sa: sa, sb: sb });
+    });
+    var r = standings(g2, config); r.used = used; return r;
+  }
+
   /* ---------- bracket ---------- */
   var BRACKETS = {
     4: { names: ["Semifinal", "Final"], r1: [[1, 4], [2, 3]] },
@@ -813,7 +882,7 @@
     teamKey: teamKey, cleanName: cleanName, critName: critName, defaultRules: defaultRules, sanitizeRules: sanitizeRules, explainRules: explainRules,
     sanitizeGame: sanitizeGame, effScore: effScore, capDiff: capDiff, cmpGames: cmpGames, sortGames: sortGames, groupByDay: groupByDay, isOurs: isOurs, ourSide: ourSide, oppName: oppName,
     resultFor: resultFor, gameMinutes: gameMinutes, gapInfo: gapInfo, ourGames: ourGames, nextGame: nextGame, needsScore: needsScore,
-    standings: standings, standingsFor: standingsFor, headToHead: headToHead, rowFor: rowFor, scenarios: scenarios, fmtPct: fmtPct, joinNames: joinNames,
+    standings: standings, standingsFor: standingsFor, headToHead: headToHead, rowFor: rowFor, scenarios: scenarios, outlook: outlook, whatIf: whatIf, fmtPct: fmtPct, joinNames: joinNames,
     bracketTree: bracketTree, nextSlot: nextSlot, cascade: cascade, previewBracket: previewBracket, slotTitle: slotTitle, ourPath: ourPath, seedsFromStandings: seedsFromStandings, sanitizeBracket: sanitizeBracket,
     packTemplate: packTemplate, sanitizePack: sanitizePack, packProgress: packProgress,
     sanitizeTournament: sanitizeTournament, sanitizeSettings: sanitizeSettings, newTournament: newTournament, makeBackup: makeBackup, validateBackup: validateBackup,

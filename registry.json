@@ -1902,7 +1902,7 @@
         "ac": "#36c48a",
         "install": true,
         "access": "Open",
-        "desc": "Keep a whole tournament weekend in one place: every game with an arrive-by time, pool standings with tiebreakers you can reorder, and a bracket for 4, 6 or 8 teams. Check off a packing list, keep notes on where you are staying and eating, and download your games as a calendar file with reminders. Everything stays on your phone and it works without a signal once it has loaded.",
+        "desc": "Keep a whole tournament weekend in one place: every game with an arrive-by time, pool standings with tiebreakers you can reorder, what your team needs to make the bracket, and a bracket for 4, 6 or 8 teams. Check off a packing list, keep notes on where you are staying and eating, and download your games as a calendar file with reminders. Everything stays on your phone and it works without a signal once it has loaded.",
         "feats": [
           [
             "⏰",
@@ -1912,7 +1912,7 @@
           [
             "📊",
             "Standings that explain",
-            "Tiebreakers run in order and each step is shown, with an estimate of your seed if you win out or lose out."
+            "Tiebreakers run in order and each step is shown, with your seed range if you win out, split or lose out, counting every other game still to play."
           ],
           [
             "🎒",
@@ -1998,6 +1998,8 @@
           "Every game with arrive-by times, and how long you get to rest",
           "Pool standings that follow the real tiebreakers",
           "See exactly why one team ranks ahead of another",
+    "Know if you're in: every result still to play is checked against the bracket cut line",
+    "Type made-up scores for the games left and watch the standings move",
           "The bracket fills in as winners advance, with your path marked",
           "A packing list for the weekend, checked off as you go"
         ]
