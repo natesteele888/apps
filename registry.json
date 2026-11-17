@@ -80,30 +80,30 @@
         "autoShots": [],
         "latest": {
           "d": "Nov 17, 2026",
-          "t": "Keep the install pop-up off floating bottom buttons",
-          "url": "https://github.com/natesteele888/apps/commit/879f5311186e0c5337f0d745c6779937dcc46e4c"
+          "t": "Steele Family watch app: Get Ready, Cube Clock, Power Program, Gameday Picks and Read 20 on a Wear OS watch",
+          "url": "https://github.com/natesteele888/apps/commit/6380e3c83fba1d7a2afbc7ef15bd9632c8401ba6"
         },
-        "version": "1.4.0",
+        "version": "1.4.8",
         "history": [
           {
-            "v": "1.4.0",
+            "v": "1.4.8",
+            "t": "Steele Family watch app: Get Ready, Cube Clock, Power Program, Gameday Picks and Read 20 on a Wear OS watch"
+          },
+          {
+            "v": "1.4.4",
+            "t": "Fairway Phase 1: get a tournament going, teams and draft, matchups, chat, tee times"
+          },
+          {
+            "v": "1.4.3",
             "t": "Keep the install pop-up off floating bottom buttons"
           },
           {
-            "v": "1.3.9",
+            "v": "1.4.2",
             "t": "Lift the install pop-up above an app's bottom tab bar"
           },
           {
-            "v": "1.3.8",
-            "t": "Toolbox rules: note that the app_me change is published"
-          },
-          {
-            "v": "1.3.7",
-            "t": "App numbers: \"This is me\" link, and a new-phone badge for the LYBS Dashboard and Ballclub"
-          },
-          {
-            "v": "1.3.5",
-            "t": "Toolbox: show the Loading screen before the Firebase code arrives"
+            "v": "1.4.1",
+            "t": "Add Fairway: live golf tournament scoring"
           }
         ]
       }
@@ -190,12 +190,16 @@
         ],
         "autoShots": [],
         "latest": {
-          "d": "Nov 15, 2026",
-          "t": "Load the fonts without holding up six apps",
-          "url": "https://github.com/natesteele888/apps/commit/036fbc3def826df877e2c87aa48c4c7526c7ccb8"
+          "d": "Nov 16, 2026",
+          "t": "Where Do I Go?: org in a box (any league's name, colors, logo and teams from settings)",
+          "url": "https://github.com/natesteele888/apps/commit/bf46c2ba9da76043164e15e0c2c8d22ccdf440c3"
         },
-        "version": "1.5.2",
+        "version": "1.5.3",
         "history": [
+          {
+            "v": "1.5.3",
+            "t": "Where Do I Go?: org in a box (any league's name, colors, logo and teams from settings)"
+          },
           {
             "v": "1.5.2",
             "t": "Load the fonts without holding up six apps"
@@ -211,10 +215,6 @@
           {
             "v": "1.4.9",
             "t": "Where Do I Go?: run LYBS Ballclub's Situations trainer, so it's always the newest"
-          },
-          {
-            "v": "1.4.8",
-            "t": "Every app: a health check on open, a problem log, and a Something wrong? report"
           }
         ],
         "caps": [
@@ -329,11 +329,15 @@
         "autoShots": [],
         "latest": {
           "d": "Nov 17, 2026",
-          "t": "Keep the install pop-up off floating bottom buttons",
-          "url": "https://github.com/natesteele888/apps/commit/879f5311186e0c5337f0d745c6779937dcc46e4c"
+          "t": "Steele Family watch app: Get Ready, Cube Clock, Power Program, Gameday Picks and Read 20 on a Wear OS watch",
+          "url": "https://github.com/natesteele888/apps/commit/6380e3c83fba1d7a2afbc7ef15bd9632c8401ba6"
         },
-        "version": "1.1.5",
+        "version": "1.1.6",
         "history": [
+          {
+            "v": "1.1.6",
+            "t": "Steele Family watch app: Get Ready, Cube Clock, Power Program, Gameday Picks and Read 20 on a Wear OS watch"
+          },
           {
             "v": "1.1.5",
             "t": "Keep the install pop-up off floating bottom buttons"
@@ -349,10 +353,6 @@
           {
             "v": "1.1.2",
             "t": "Load the fonts without holding up six apps"
-          },
-          {
-            "v": "1.1.1",
-            "t": "Add a copyright notice and an all-rights-reserved LICENSE"
           }
         ],
         "caps": [
@@ -560,12 +560,24 @@
         ],
         "autoShots": [],
         "latest": {
-          "d": "Nov 16, 2026",
-          "t": "Make the For Coaches page's form and course links easy to tap",
-          "url": "https://github.com/natesteele888/ASL-Bengals/commit/ee7a22c140f3303fcfa5a6e913f47771d5fa9b67"
+          "d": "Nov 17, 2026",
+          "t": "Gridiron Hub role preview: make the Back to Gridiron Hub link easy to tap",
+          "url": "https://github.com/natesteele888/ASL-Bengals/commit/4417e1c915587f99b81b4f7d74588fd46ed0c78e"
         },
-        "version": "1.5.8",
+        "version": "1.6.1",
         "history": [
+          {
+            "v": "1.6.1",
+            "t": "Gridiron Hub role preview: make the Back to Gridiron Hub link easy to tap"
+          },
+          {
+            "v": "1.6.0",
+            "t": "Gridiron Hub: load the fonts without holding up the first screen"
+          },
+          {
+            "v": "1.5.9",
+            "t": "Gridiron Hub: role preview demo for ASL leadership"
+          },
           {
             "v": "1.5.8",
             "t": "Make the For Coaches page's form and course links easy to tap"
@@ -573,18 +585,6 @@
           {
             "v": "1.5.7",
             "t": "Gridiron Hub: make the Full schedule, All Programs and Email us links easy to tap"
-          },
-          {
-            "v": "1.5.6",
-            "t": "Gridiron Hub: open with no signal after the very first visit"
-          },
-          {
-            "v": "1.5.5",
-            "t": "Gridiron Hub: make the menu button and Sign up switch easy to tap"
-          },
-          {
-            "v": "1.5.4",
-            "t": "Gridiron Hub: show the Milford logo, point three stray pages at the real ones"
           }
         ],
         "caps": [
@@ -1062,11 +1062,15 @@
         "autoShots": [],
         "latest": {
           "d": "Nov 17, 2026",
-          "t": "Statistics: stretch the last stat tile instead of leaving a grey box",
-          "url": "https://github.com/natesteele888/cube-clock/commit/a03dc2a882ed5629af6c425a6459cac8dc2e62de"
+          "t": "Your watch: Cube Clock on a Wear OS watch",
+          "url": "https://github.com/natesteele888/cube-clock/commit/5de3e8ca1d124193f309b483b790dd6c497314c6"
         },
-        "version": "1.3.0",
+        "version": "1.3.1",
         "history": [
+          {
+            "v": "1.3.1",
+            "t": "Your watch: Cube Clock on a Wear OS watch"
+          },
           {
             "v": "1.3.0",
             "t": "Statistics: stretch the last stat tile instead of leaving a grey box"
@@ -1082,10 +1086,6 @@
           {
             "v": "1.2.7",
             "t": "Cube Clock: add the shared Something wrong? report and note failed saves"
-          },
-          {
-            "v": "1.2.6",
-            "t": "Cube Clock: keep the timer's top buttons on screen on an upright phone"
           }
         ],
         "caps": [
@@ -1967,39 +1967,39 @@
         ],
         "autoShots": [],
         "latest": {
-          "d": "Nov 12, 2026",
-          "t": "Add a copyright notice and an all-rights-reserved LICENSE",
-          "url": "https://github.com/natesteele888/apps/commit/25fd10682c4fe1ef072b42512df48ff23a75faea"
+          "d": "Nov 17, 2026",
+          "t": "Party games, flag football and keep score between Tournament Pack and Scoreboard",
+          "url": "https://github.com/natesteele888/apps/commit/ef445f99d7084cae240302dc69e3a25f6db3478d"
         },
-        "version": "1.0.5",
+        "version": "1.0.9",
         "history": [
+          {
+            "v": "1.0.9",
+            "t": "Party games, flag football and keep score between Tournament Pack and Scoreboard"
+          },
+          {
+            "v": "1.0.8",
+            "t": "Tournament Pack: outlook tags get their own classes"
+          },
+          {
+            "v": "1.0.7",
+            "t": "Tournament Pack: readable In / Out / Depends tags on the outlook rows"
+          },
+          {
+            "v": "1.0.6",
+            "t": "Tournament Pack: know if you're in the bracket, and try some scores"
+          },
           {
             "v": "1.0.5",
             "t": "Add a copyright notice and an all-rights-reserved LICENSE"
-          },
-          {
-            "v": "1.0.4",
-            "t": "Every app: a health check on open, a problem log, and a Something wrong? report"
-          },
-          {
-            "v": "1.0.3",
-            "t": "Tournament Pack: keep game times inside their column"
-          },
-          {
-            "v": "1.0.2",
-            "t": "Tournament Pack: works offline after the first visit"
-          },
-          {
-            "v": "1.0.1",
-            "t": "Tournament Pack: schedule, standings with real tiebreakers, bracket and packing list"
           }
         ],
         "caps": [
           "Every game with arrive-by times, and how long you get to rest",
           "Pool standings that follow the real tiebreakers",
           "See exactly why one team ranks ahead of another",
-    "Know if you're in: every result still to play is checked against the bracket cut line",
-    "Type made-up scores for the games left and watch the standings move",
+          "Know if you're in: every result still to play is checked against the bracket cut line",
+          "Type made-up scores for the games left and watch the standings move",
           "The bracket fills in as winners advance, with your path marked",
           "A packing list for the weekend, checked off as you go"
         ]
@@ -2201,12 +2201,24 @@
         ],
         "autoShots": [],
         "latest": {
-          "d": "Nov 13, 2026",
-          "t": "Scoreboard: big scores shrink to fit their half; Recent games lines wrap",
-          "url": "https://github.com/natesteele888/apps/commit/2544bfcf5a8426bcd97bef222ef1b36950476482"
+          "d": "Nov 17, 2026",
+          "t": "Party games, flag football and keep score between Tournament Pack and Scoreboard",
+          "url": "https://github.com/natesteele888/apps/commit/ef445f99d7084cae240302dc69e3a25f6db3478d"
         },
-        "version": "1.0.5",
+        "version": "1.0.8",
         "history": [
+          {
+            "v": "1.0.8",
+            "t": "Party games, flag football and keep score between Tournament Pack and Scoreboard"
+          },
+          {
+            "v": "1.0.7",
+            "t": "Scoreboard: 44px bases on small and sideways phones; tests follow v3 and the mercy Finish button"
+          },
+          {
+            "v": "1.0.6",
+            "t": "Scoreboard baseball: runners on base, a run limit per inning, and a game time limit"
+          },
           {
             "v": "1.0.5",
             "t": "Scoreboard: big scores shrink to fit their half; Recent games lines wrap"
@@ -2214,18 +2226,6 @@
           {
             "v": "1.0.4",
             "t": "Add a copyright notice and an all-rights-reserved LICENSE"
-          },
-          {
-            "v": "1.0.3",
-            "t": "Every app: a health check on open, a problem log, and a Something wrong? report"
-          },
-          {
-            "v": "1.0.2",
-            "t": "Scoreboard: cast to a TV, plus an on-deck lower third"
-          },
-          {
-            "v": "1.0.1",
-            "t": "Scoreboard: big-number scoring for basketball, baseball and football"
           }
         ],
         "caps": [
@@ -2317,6 +2317,30 @@
           "Closest to the pin by GPS or tape, with an optional photo",
           "Build any course: par and yardage by tee, 9 or 18 holes",
           "Quiet birdsong and piano on the menu, made by the app itself"
+        ],
+        "latest": {
+          "d": "Nov 17, 2026",
+          "t": "Fairway: make the small text buttons easy to tap",
+          "url": "https://github.com/natesteele888/apps/commit/d4d916335ac7e8f2d5e69cfafc08af11e25fd98a"
+        },
+        "version": "1.0.4",
+        "history": [
+          {
+            "v": "1.0.4",
+            "t": "Fairway: make the small text buttons easy to tap"
+          },
+          {
+            "v": "1.0.3",
+            "t": "Fairway: full-screen layers and sized panels work on older phones"
+          },
+          {
+            "v": "1.0.2",
+            "t": "Fairway Phase 1: get a tournament going, teams and draft, matchups, chat, tee times"
+          },
+          {
+            "v": "1.0.1",
+            "t": "Add Fairway: live golf tournament scoring"
+          }
         ]
       }
     },
@@ -2507,8 +2531,12 @@
           "store/shots/read20-5.webp",
           "store/shots/read20-6.webp"
         ],
-        "version": "1.3.9",
+        "version": "1.4.0",
         "history": [
+          {
+            "v": "1.4.0",
+            "t": "Steele Family watch app: Get Ready, Cube Clock, Power Program, Gameday Picks and Read 20 on a Wear OS watch"
+          },
           {
             "v": "1.3.9",
             "t": "Read 20 desktop: four books across on a 1366-wide laptop"
@@ -2524,16 +2552,12 @@
           {
             "v": "1.3.6",
             "t": "Read 20: remove an entry from the log (with confirmation)"
-          },
-          {
-            "v": "1.3.5",
-            "t": "Read 20: fix the slow, cut-off first Storytime page"
           }
         ],
         "latest": {
-          "d": "Nov 15, 2026",
-          "t": "Read 20 desktop: four books across on a 1366-wide laptop",
-          "url": "https://github.com/natesteele888/apps/commit/8d2309c97bc17161490ad92dff751a26548e082b"
+          "d": "Nov 17, 2026",
+          "t": "Steele Family watch app: Get Ready, Cube Clock, Power Program, Gameday Picks and Read 20 on a Wear OS watch",
+          "url": "https://github.com/natesteele888/apps/commit/6380e3c83fba1d7a2afbc7ef15bd9632c8401ba6"
         },
         "caps": [
           "Every child gets their own profile, streak and shelf",
@@ -2619,8 +2643,12 @@
           "store/shots/getready-5.webp",
           "store/shots/getready-6.webp"
         ],
-        "version": "1.0.7",
+        "version": "1.0.8",
         "history": [
+          {
+            "v": "1.0.8",
+            "t": "Steele Family watch app: Get Ready, Cube Clock, Power Program, Gameday Picks and Read 20 on a Wear OS watch"
+          },
           {
             "v": "1.0.7",
             "t": "Get Ready: no buzz before the first tap (fixes red CI)"
@@ -2636,16 +2664,12 @@
           {
             "v": "1.0.4",
             "t": "Every app: a health check on open, a problem log, and a Something wrong? report"
-          },
-          {
-            "v": "1.0.3",
-            "t": "Get Ready: Google sign-in backup, and always load the freshest copy"
           }
         ],
         "latest": {
-          "d": "Nov 16, 2026",
-          "t": "Get Ready: no buzz before the first tap (fixes red CI)",
-          "url": "https://github.com/natesteele888/apps/commit/71e6c4d65155cdde04f26ccf7fc8e8316b6fdf5d"
+          "d": "Nov 17, 2026",
+          "t": "Steele Family watch app: Get Ready, Cube Clock, Power Program, Gameday Picks and Read 20 on a Wear OS watch",
+          "url": "https://github.com/natesteele888/apps/commit/6380e3c83fba1d7a2afbc7ef15bd9632c8401ba6"
         },
         "caps": [
           "Check things off with a picture of each item beside it",
