@@ -224,6 +224,34 @@ function rng(seed) { return function () { seed |= 0; seed = seed + 0x6D2B79F5 | 
     const f5 = G('football', { cfg: { firstDown: 5 } }); eq(f5.togo, 5);
   });
 
+  await test('core: flag football is two halves with fewer timeouts, and its own rules can still be changed', () => {
+    const f = G('football', { cfg: { flag: true } });
+    eq(f.cfg.flag, true); eq(f.cfg.periods, 2); eq(f.cfg.periodSec, 1200); eq(f.cfg.timeouts, 2); eq(C.periodAbbr(f), '1H');
+    const f2 = G('football', { cfg: { flag: true, periodSec: 900, timeouts: 1 } }); eq(f2.cfg.periodSec, 900); eq(f2.cfg.timeouts, 1);
+    const t = G('football'); eq(t.cfg.flag, false); eq(t.cfg.periods, 4);
+    eq(G('football', { cfg: { flag: 'yes' } }).cfg.flag, false, 'only true turns it on');
+  });
+
+  await test('core: a Tournament Pack game: the request is checked, and the final goes back with the same ids', () => {
+    const now = NOW, ok = { v: 1, token: 'abc123xyz', tid: 'tour1', gid: 'pg01', sport: 'flag', a: 'Red Rockets', b: 'Blue Sharks of the Bay', at: now - 1000 };
+    const r = C.linkRequest(ok, 'abc123xyz', now);
+    eq(r.sport, 'football'); deq(r.cfg, { flag: true }); deq(r.teams, [{ n: 'Red Rockets' }, { n: 'Blue Sharks of t' }]); deq(r.link, { token: 'abc123xyz', tid: 'tour1', gid: 'pg01' });
+    eq(C.linkRequest(Object.assign({}, ok, { sport: 'basketball' }), 'abc123xyz', now).sport, 'basketball');
+    eq(C.linkRequest(Object.assign({}, ok, { sport: 'softball' }), 'abc123xyz', now).sport, 'baseball');
+    eq(C.linkRequest(ok, 'othertoken', now), null, 'token must match');
+    eq(C.linkRequest(Object.assign({}, ok, { at: now - 25 * 3600 * 1000 }), 'abc123xyz', now), null, 'too old');
+    eq(C.linkRequest(Object.assign({}, ok, { sport: 'curling' }), 'abc123xyz', now), null);
+    eq(C.linkRequest(Object.assign({}, ok, { a: '   ' }), 'abc123xyz', now), null);
+    eq(C.linkRequest(Object.assign({}, ok, { tid: '<x>' }), 'abc123xyz', now), null);
+    eq(C.linkRequest(Object.assign({}, ok, { v: 2 }), 'abc123xyz', now), null);
+    let g = G('football', { cfg: r.cfg, teams: r.teams, link: r.link });
+    g = run(g, [{ type: 'score', team: 0, d: 6 }, { type: 'score', team: 0, d: 1 }, { type: 'score', team: 1, d: 6 }]);
+    deq(C.linkResult(g, 77), { v: 1, token: 'abc123xyz', tid: 'tour1', gid: 'pg01', sa: 7, sb: 6, at: 77 });
+    eq(C.linkResult(G('football'), 77), null, 'a game of its own sends nothing');
+    deq(C.sanitizeGame(JSON.parse(JSON.stringify(g))).link, r.link, 'the link survives a reload');
+    eq(C.sanitizeGame(Object.assign(JSON.parse(JSON.stringify(g)), { link: { token: 'x', tid: 'tour1', gid: 'pg01' } })).link, undefined);
+  });
+
   await test('core: generic scoring and label', () => {
     let g = run(G('generic'), [{ type: 'score', team: 0, d: 10 }, { type: 'score', team: 0, d: 5 }, { type: 'score', team: 1, d: 1 }, { type: 'score', team: 0, d: -10 }]);
     deq(g.score, [5, 1]);
@@ -1313,8 +1341,8 @@ function rng(seed) { return function () { seed |= 0; seed = seed + 0x6D2B79F5 | 
   await test('Offline: after one visit the service worker serves the whole app with no network, and only prunes its own caches', async () => {
     const { ctx, page, errors } = await fresh({ np: { sw: true }, init: () => { if (!sessionStorage.getItem('__c')) { sessionStorage.setItem('__c', '1'); caches.open('situations-v99').then(c => c.put('/x', new Response('x'))); caches.open('scoreboard-v0').then(c => c.put('/y', new Response('y'))); } } });
     await page.evaluate(() => navigator.serviceWorker.ready.then(() => 1));
-    await page.waitForFunction(async () => { const k = await caches.keys(); return k.includes('scoreboard-v3') && !k.includes('scoreboard-v0') && (await (await caches.open('scoreboard-v3')).keys()).length >= 8; }, null, { timeout: 10000 });
-    const cached = await page.evaluate(async () => (await (await caches.open('scoreboard-v3')).keys()).map(r => new URL(r.url).pathname));
+    await page.waitForFunction(async () => { const k = await caches.keys(); return k.includes('scoreboard-v4') && !k.includes('scoreboard-v0') && (await (await caches.open('scoreboard-v4')).keys()).length >= 8; }, null, { timeout: 10000 });
+    const cached = await page.evaluate(async () => (await (await caches.open('scoreboard-v4')).keys()).map(r => new URL(r.url).pathname));
     for (const f of ['/apps/scoreboard/', '/apps/scoreboard/core.js', '/apps/scoreboard/ui.js', '/apps/scoreboard/rules.js', '/apps/scoreboard/share.js', '/apps/scoreboard/board.js', '/apps/scoreboard/app.js', '/apps/scoreboard/scoreboard.css', '/apps/scoreboard/manifest.json']) assert.ok(cached.includes(f), 'cached ' + f + ' in ' + cached.join());
     await reload(page); await page.waitForTimeout(400);
     assert.ok(await page.evaluate(() => !!navigator.serviceWorker.controller), 'the page is controlled by the worker');
@@ -1404,7 +1432,7 @@ function rng(seed) { return function () { seed |= 0; seed = seed + 0x6D2B79F5 | 
     files.forEach(f => assert.ok(fs.statSync(path.join(dir, f)).size < 60 * 1024, f + ' is ' + fs.statSync(path.join(dir, f)).size + ' bytes'));
     const sw = fs.readFileSync(path.join(dir, 'sw.js'), 'utf8');
     files.filter(f => f !== 'sw.js' && !/\.(png)$/.test(f)).forEach(f => assert.ok(f === 'index.html' ? sw.includes('"./"') : sw.includes('"' + f + '"'), 'sw.js lists ' + f));
-    assert.ok(sw.includes('const CACHE = "scoreboard-v3"') && sw.includes('startsWith("scoreboard-")'));
+    assert.ok(sw.includes('const CACHE = "scoreboard-v4"') && sw.includes('startsWith("scoreboard-")'));
     const man = JSON.parse(fs.readFileSync(path.join(dir, 'manifest.json'), 'utf8'));
     eq(man.orientation, 'any'); eq(man.display, 'standalone'); assert.ok(man.icons.length >= 2 && man.name && man.short_name);
     const code = files.filter(f => /\.(js|html)$/.test(f) && f !== 'sw.js').map(f => fs.readFileSync(path.join(dir, f), 'utf8')).join('\n');

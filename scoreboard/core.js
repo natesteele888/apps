@@ -65,10 +65,11 @@
   /* ---------- rules (per sport) ---------- */
   var DEFAULTS = {
     basketball: { periods: 4, periodSec: 480, otSec: 180, bonusAt: 5, timeouts: 2, toReset: "half", foulReset: "period", otTimeouts: 1 },
-    football: { periods: 4, periodSec: 720, otSec: 300, timeouts: 3, otTimeouts: 1, firstDown: 10 },
+    football: { periods: 4, periodSec: 720, otSec: 300, timeouts: 3, otTimeouts: 1, firstDown: 10, flag: false },
     baseball: { innings: 6, extra: true, mercyRuns: 0, mercyInning: 4, pitch: false, runLimit: 0, openLast: true, timeLimit: 0 },
     generic: {}
   };
+  var FLAG = { periods: 2, periodSec: 1200, otSec: 300, timeouts: 2, otTimeouts: 1, firstDown: 10, flag: true };
   function sanitizeCfg(sport, c) {
     c = isObj(c) ? c : {};
     var d = DEFAULTS[sport] || {}, o = {};
@@ -82,7 +83,9 @@
       o.foulReset = c.foulReset === "half" ? "half" : "period";
       o.otTimeouts = int(c.otTimeouts, 0, 9, d.otTimeouts);
     } else if (sport === "football") {
-      o.periods = 4;
+      o.flag = c.flag === true;                                   // flag football: two halves, 6/2/1 scoring, fewer timeouts
+      if (o.flag) d = FLAG;
+      o.periods = d.periods;
       o.periodSec = int(c.periodSec, 10, 5999, d.periodSec);
       o.otSec = int(c.otSec, 10, 5999, d.otSec);
       o.timeouts = int(c.timeouts, 0, 9, d.timeouts);
@@ -152,6 +155,7 @@
       v: 1, id: typeof o.id === "string" && ID_RE.test(o.id) ? o.id : uid(), sport: sport, created: now,
       date: isYMD(o.date) ? o.date : ymd(new Date(now)), cfg: cfg, teams: sanitizeTeams(o.teams), score: [0, 0], u: []
     };
+    var lk = sanitizeLink(o.link); if (lk) g.link = lk;
     if (sport === "basketball" || sport === "football") {
       g.period = 1; g.clock = stopped(cfg.periodSec * 1000); g.to = [cfg.timeouts, cfg.timeouts]; g.poss = -1; g.pts = [];
       if (sport === "basketball") g.fouls = [0, 0];
@@ -560,7 +564,7 @@
   function sanitizeGame(raw) {
     if (!isObj(raw) || SPORT_IDS.indexOf(raw.sport) < 0) return null;
     var sp = raw.sport;
-    var g = newGame(sp, { id: raw.id, cfg: raw.cfg, teams: raw.teams, now: typeof raw.created === "number" && isFinite(raw.created) ? raw.created : undefined, date: raw.date });
+    var g = newGame(sp, { id: raw.id, cfg: raw.cfg, teams: raw.teams, now: typeof raw.created === "number" && isFinite(raw.created) ? raw.created : undefined, date: raw.date, link: raw.link });
     g.created = typeof raw.created === "number" && isFinite(raw.created) ? raw.created : g.created;
     if (sp !== "baseball") g.score = intPair(raw.score, 0, MAX_SCORE, 0, 0);
     if (sp === "basketball" || sp === "football") {
@@ -601,6 +605,31 @@
     var x = g.inning - 1;
     if (g.balls || g.strikes || g.outs || (g.inn[1][x] || 0) || (g.inn[0][x] || 0) || (g.bases && (g.bases[0] || g.bases[1] || g.bases[2]))) return g;
     return set(g, { inning: x, half: "bot", inn: [g.inn[0].slice(0, x), g.inn[1].slice(0, x)] });
+  }
+
+  /* ---------- keeping score for a Tournament Pack game ----------
+     Both apps live on the same site, so they share this phone's localStorage. Tournament Pack leaves a request under
+     "apps.handoff.<token>" and opens Scoreboard with ?keep=<token>; when that game is finished Scoreboard leaves the
+     final under "apps.handoff.<token>.result" and Tournament Pack picks it up. Nothing leaves the phone. */
+  var LINK_TOKEN = /^[A-Za-z0-9_-]{6,40}$/, LINK_MAX_AGE = 24 * 3600 * 1000;
+  var LINK_SPORT = { baseball: ["baseball", null], softball: ["baseball", null], basketball: ["basketball", null], flag: ["football", { flag: true }] };
+  function sanitizeLink(x) {
+    if (!isObj(x) || !LINK_TOKEN.test(x.token) || !ID_RE.test(x.tid) || !ID_RE.test(x.gid)) return null;
+    return { token: x.token, tid: x.tid, gid: x.gid };
+  }
+  /* the request Tournament Pack left, checked: { sport, cfg (or null for this phone's own rules), teams: [a, b], link } or null */
+  function linkRequest(raw, token, now) {
+    if (!isObj(raw) || raw.v !== 1 || raw.token !== token || !LINK_TOKEN.test(token)) return null;
+    var at = Number(raw.at); now = typeof now === "number" ? now : Date.now();
+    if (!isFinite(at) || at > now + 60000 || now - at > LINK_MAX_AGE) return null;
+    var map = LINK_SPORT[raw.sport], link = sanitizeLink(raw); if (!map || !link) return null;
+    var a = str(raw.a, 16).trim(), b = str(raw.b, 16).trim(); if (!a || !b) return null;
+    return { sport: map[0], cfg: map[1], teams: [{ n: a }, { n: b }], link: link, names: [str(raw.a, 60).trim(), str(raw.b, 60).trim()] };
+  }
+  /* the final to hand back: left team is the first team in Tournament Pack */
+  function linkResult(g, now) {
+    if (!g || !g.link) return null;
+    return { v: 1, token: g.link.token, tid: g.link.tid, gid: g.link.gid, sa: g.score[0], sb: g.score[1], at: typeof now === "number" ? now : Date.now() };
   }
 
   /* ---------- finished games, preferences, backups ---------- */
@@ -674,7 +703,7 @@
     periodScores: periodScores, periodAbbr: periodAbbr, periodWord: periodWord, bonus: bonus, batIdx: batIdx, mercy: mercy,
     halfRuns: halfRuns, runLimitOn: runLimitOn, runLimitHit: runLimitHit, timeInfo: timeInfo, timeText: timeText, fmtHM: fmtHM, trimUnplayed: trimUnplayed,
     label: label, flashFor: flashFor, lineScore: lineScore, statusText: statusText, resultText: resultText, summary: summary, progressText: progressText,
-    sanitizeGame: sanitizeGame, makeRecent: makeRecent, sanitizeRecent: sanitizeRecent, addRecent: addRecent,
+    sanitizeGame: sanitizeGame, makeRecent: makeRecent, linkRequest: linkRequest, linkResult: linkResult, sanitizeLink: sanitizeLink, sanitizeRecent: sanitizeRecent, addRecent: addRecent,
     defaultPrefs: defaultPrefs, sanitizePrefs: sanitizePrefs, makeBackup: makeBackup, validateBackup: validateBackup, sampleGames: sampleGames
   };
   root.SBCore = api;

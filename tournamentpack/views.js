@@ -30,7 +30,10 @@
       '<button type="button" class="icon-btn" data-act="tour-menu" data-fk="menu" aria-label="Tournament menu">' + I.dots + "</button></div>";
   };
   V.nav = function () {
-    return '<div class="nav-in">' + TABS.map(function (x) {
+    var t = TP.cur(), tabs = TABS;
+    // party games: the big Play screen first, then only what a party needs
+    if (t && t.party) tabs = [["play", "Play", I.play]].concat(TABS.filter(function (x) { return x[0] === "games" || x[0] === (t.bracket.size ? "bracket" : "standings") || x[0] === "pack"; }));
+    return '<div class="nav-in">' + tabs.map(function (x) {
       return '<button type="button" data-act="tab" data-tab="' + x[0] + '" data-fk="tab-' + x[0] + '"' + (S.tab === x[0] ? ' aria-current="page"' : "") + ">" + x[2] + "<span>" + x[1] + "</span></button>";
     }).join("") + "</div>";
   };
@@ -48,6 +51,7 @@
       return h + '<section class="welcome"><h2 class="tagline">Everything for tournament weekend</h2>' +
         '<p class="lead">Keep the game schedule with arrive-by times, pool standings that apply the real tiebreakers, the bracket, and what to pack, all in one place.</p>' +
         '<div class="stack"><button type="button" class="btn block" data-act="tour-new" data-fk="new">New tournament</button>' +
+        '<button type="button" class="btn ghost block" data-act="party-new" data-fk="party">Party games: type the teams and play</button>' +
         '<button type="button" class="btn ghost block" data-act="sample" data-fk="sample">Load a sample tournament</button></div>' +
         '<p class="privacy-note">' + I.shield + "<span>Everything stays on this phone. No accounts, no sign-in. Clearing the browser's data erases it, so download a backup now and then.</span></p>" +
         '<p class="mute center">Already have a backup file? <label class="link-btn">Restore it<input type="file" accept="application/json,.json" data-restore aria-label="Choose a Tournament Pack backup file"></label></p></section>';
@@ -67,6 +71,7 @@
     if (cur.length) h += '<ul class="tlist">' + cur.map(card).join("") + "</ul>";
     else h += '<p class="mute">Nothing coming up. Start a new tournament below.</p>';
     h += '<button type="button" class="btn block" data-act="tour-new" data-fk="new" style="margin-top:12px">' + I.plus + "New tournament</button>";
+    h += '<button type="button" class="btn ghost block" data-act="party-new" data-fk="party" style="margin-top:8px">Party games: type the teams and play</button>';
     if (past.length) h += '<div class="sec-title"><h2>Past</h2></div><ul class="tlist">' + past.map(card).join("") + "</ul>";
     return h;
   };
@@ -119,7 +124,8 @@
       '<div class="nv">vs ' + esc(C.oppName(t, g)) + "</div>" +
       '<p class="nm">' + esc(C.fmtDay(g.date)) + (g.time ? " · " + esc(C.fmtTime(g.time)) : "") + (g.field ? " · " + esc(g.field) : "") + "</p>" +
       (ab ? '<p class="arr big">Arrive by ' + esc(C.fmtTime(ab.time)) + (ab.date !== g.date ? " (the day before)" : "") + ' <small>(' + warm + " min warm-up)</small></p>" : "") +
-      '<button type="button" class="btn small" data-act="game-edit" data-id="' + esc(g.id) + '">' + (started ? "Enter the score" : "Open game") + "</button></article>";
+      '<div class="row wrap"><button type="button" class="btn small" data-act="game-edit" data-id="' + esc(g.id) + '">' + (started ? "Enter the score" : "Open game") + "</button>" +
+      (g.a && g.b ? '<button type="button" class="btn small ghost" data-act="keep-score" data-id="' + esc(g.id) + '">Keep score</button>' : "") + "</div></article>";
   }
   V.games = function (t) {
     var now = C.nowParts(), h = nextCard(t, now), slots = slotLabels(t), gm = C.gameMinutes(t);

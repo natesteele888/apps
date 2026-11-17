@@ -199,8 +199,10 @@
     const mid = '<section class="mid" aria-label="Clock, quarter and down">' + clockHTML(g, t) +
       '<button type="button" class="dd" data-act="b-down" data-fk="dd" aria-label="' + ord(g.down) + " and " + (g.togo === 0 ? "goal" : g.togo) + (g.ballOn ? ", ball on " + esc(g.ballOn) : "") + '. Tap to change."><span class="dd-m">' + ddTxt + "</span>" +
       '<span class="dd-s">' + (g.ballOn ? "BALL ON " + esc(g.ballOn.toUpperCase()) : "TAP TO SET BALL SPOT") + "</span></button>" + endBanner(g) + "</section>";
-    const ctl = i => cluster(g, i, scoreBtn(g, i, 6) + scoreBtn(g, i, 3) + scoreBtn(g, i, 2) + scoreBtn(g, i, 1) + scoreBtn(g, i, -1) +
-      cb("T.O.", { data: { act: "a", t: "timeout", team: i, d: -1 }, dis: g.to[i] <= 0, aria: g.teams[i].n + " timeout (" + g.to[i] + " left)" }));
+    const toBtn = (i, span) => cb("T.O.", { span: span, data: { act: "a", t: "timeout", team: i, d: -1 }, dis: g.to[i] <= 0, aria: g.teams[i].n + " timeout (" + g.to[i] + " left)" });
+    // flag football: touchdown 6, then 1 or 2 for the extra point; no field goals
+    const ctl = i => cluster(g, i, g.cfg.flag ? scoreBtn(g, i, 6) + scoreBtn(g, i, 2) + scoreBtn(g, i, 1) + scoreBtn(g, i, -1) + toBtn(i, [2, 1]) :
+      scoreBtn(g, i, 6) + scoreBtn(g, i, 3) + scoreBtn(g, i, 2) + scoreBtn(g, i, 1) + scoreBtn(g, i, -1) + toBtn(i));
     const midc = '<div class="c-mid fb">' + clockBtn(g) + cb('<span class="s1">NEXT</span><span>' + esc(C.periodAbbr(g, g.period + 1)) + "</span>", { cls: "per stk" + (!g.clock.run && g.clock.left <= 0 ? " attn" : ""), span: [2, 1], data: { act: "a", t: "period", d: 1 }, aria: "Start " + C.periodWord(g, g.period + 1).toLowerCase() }) +
       undoBtn(g, [2, 1]) + cb("<span>Next down</span>", { span: [3, 1], data: { act: "nextdown" }, aria: "Next down" }) + cb("<span>1st &amp; " + g.cfg.firstDown + "</span>", { span: [3, 1], data: { act: "a", t: "firstDown" }, aria: "First down" }) + "</div>";
     return { face: teamBlock(g, 0, "", ext(0)) + mid + teamBlock(g, 1, "", ext(1)), ctl: ctl(0) + midc + ctl(1) };

@@ -11,7 +11,8 @@
   var SPORTS = [
     { id: "baseball", label: "Baseball", icon: "⚾", unit: "runs", gameMin: 90 },
     { id: "softball", label: "Softball", icon: "🥎", unit: "runs", gameMin: 90 },
-    { id: "basketball", label: "Basketball", icon: "🏀", unit: "points", gameMin: 60 }
+    { id: "basketball", label: "Basketball", icon: "🏀", unit: "points", gameMin: 60 },
+    { id: "flag", label: "Flag football", icon: "🏈", unit: "points", gameMin: 40 }
   ];
   function sportInfo(id) { return SPORTS.filter(function (s) { return s.id === id; })[0] || SPORTS[0]; }
 
@@ -139,8 +140,8 @@
     return c.name.replace("runs", u).replace("Run", u === "points" ? "Point" : "Run");
   }
   function defaultRules(sport) {
-    var bb = sport === "basketball";
-    return { order: CRIT_IDS.slice(), off: [], tiesAllowed: true, cap: bb ? 15 : 8, forfeitWin: bb ? 2 : 7 };
+    var bb = sport === "basketball", fl = sport === "flag";
+    return { order: CRIT_IDS.slice(), off: [], tiesAllowed: true, cap: bb ? 15 : fl ? 21 : 8, forfeitWin: bb ? 2 : fl ? 6 : 7 };
   }
   function sanitizeRules(r, sport) {
     var d = defaultRules(sport || (isObj(r) && r.sport) || "baseball");
@@ -178,13 +179,15 @@
       slot: kind === "bracket" && typeof g.slot === "string" && SLOT_RE.test(g.slot) ? g.slot : "",
       date: isYMD(g.date) ? g.date : "", time: parseTime(g.time), field: cleanName(g.field, 60), label: cleanName(g.label, 40),
       a: cleanName(g.a), b: cleanName(g.b), status: g.status === "final" ? "final" : "scheduled",
-      sa: scoreInt(g.sa), sb: scoreInt(g.sb), innings: int(g.innings, 1, 30, null), forfeit: g.forfeit === "a" || g.forfeit === "b" ? g.forfeit : ""
+      sa: scoreInt(g.sa), sb: scoreInt(g.sb), innings: int(g.innings, 1, 30, null), forfeit: g.forfeit === "a" || g.forfeit === "b" ? g.forfeit : "",
+      lsa: scoreInt(g.lsa), lsb: scoreInt(g.lsb)   // the score so far, kept on the Play screen while the game is on
     };
     if (kind === "bracket" && !o.slot) return null;
     if (kind === "pool" && (!o.a || !o.b || teamKey(o.a) === teamKey(o.b))) return null;
     if (o.forfeit) o.status = "final";
     if (o.status === "final" && !o.forfeit && (o.sa == null || o.sb == null)) o.status = "scheduled";
     if (o.status !== "final") { o.sa = null; o.sb = null; o.innings = null; o.forfeit = ""; }
+    if (o.status === "final" || o.lsa == null || o.lsb == null) { delete o.lsa; delete o.lsb; }
     if (o.forfeit) { o.sa = null; o.sb = null; }
     return o;
   }
@@ -656,6 +659,12 @@
       "Comfort": ["Sunscreen", "Folding chairs", "Pop-up tent", "Bug spray", "Rain gear", "Laundry bag"],
       "Admin": ["Cash for entry fees", "Roster and player cards", "First-aid kit", "Phone charger", "Hotel confirmation"]
     },
+    flag: {
+      "Gear": ["Flag belts and flags", "Footballs", "Cones for the field", "Pinnies in two colors", "Cleats or sneakers", "Mouthguards"],
+      "Food & Drink": ["Water bottles", "Cooler with ice", "Snacks and fruit", "Sports drinks"],
+      "Comfort": ["Sunscreen", "Folding chairs", "Pop-up tent", "Towel"],
+      "Admin": ["Team list", "Prizes or medals", "First-aid kit", "Phone charger"]
+    },
     basketball: {
       "Gear": ["Gear bag", "Basketball shoes", "Two jerseys (light and dark)", "Shorts", "Ankle braces", "Extra socks", "Warm-up shirt"],
       "Food & Drink": ["Water bottles", "Cooler with ice", "Snacks and fruit", "Sports drinks"],
@@ -664,7 +673,7 @@
     }
   };
   function packTemplate(sport) {
-    var src = sport === "basketball" ? PACK.basketball : PACK.ball, out = [];
+    var src = sport === "basketball" ? PACK.basketball : sport === "flag" ? PACK.flag : PACK.ball, out = [];
     GROUPS.forEach(function (g) { (src[g] || []).forEach(function (text) { out.push({ id: uid(), text: text, group: g, done: false }); }); });
     if (sport === "softball") out.splice(8, 0, { id: uid(), text: "Hair ties", group: "Gear", done: false });
     return out;
@@ -695,6 +704,7 @@
       notes: { lodging: str(nt.lodging, 4000), food: str(nt.food, 4000), map: str(nt.map, 4000), other: str(nt.other, 4000) },
       rules: sanitizeRules(o.rules, sport), games: [], bracket: sanitizeBracket(o.bracket), pack: sanitizePack(o.pack)
     };
+    if (o.party === true) t.party = true;   // made with Party games: opens on the Play screen
     var seen = {};
     (Array.isArray(o.games) ? o.games : []).slice(0, 400).forEach(function (g) {
       var s = sanitizeGame(g);
@@ -847,6 +857,95 @@
     return L.join("\n");
   }
 
+  /* ---------- party games: type the teams, pick round robin or a bracket, go ---------- */
+  /* Round robin by the circle method: every team plays every other once. Returns rounds of [a, b] pairs; with an odd
+     number of teams one team sits out each round. */
+  function roundRobin(names) {
+    var list = names.slice(); if (list.length < 2) return [];
+    if (list.length % 2) list.push(null);
+    var n = list.length, rounds = [];
+    for (var r = 0; r < n - 1; r++) {
+      var games = [];
+      for (var i = 0; i < n / 2; i++) {
+        var a = list[i], b = list[n - 1 - i];
+        if (a !== null && b !== null) games.push(r % 2 ? [b, a] : [a, b]);
+      }
+      rounds.push(games);
+      list.splice(1, 0, list.pop());   // keep the first team still, turn the rest
+    }
+    return rounds;
+  }
+  /* The team names typed for a party, one per line (or commas): cleaned, blank and repeated names dropped, 16 at most. */
+  function partyTeams(text) {
+    var out = [], seen = {};
+    String(text || "").split(/[\n,]+/).forEach(function (x) { var n = cleanName(x); if (n && !seen[teamKey(n)] && out.length < 16) { seen[teamKey(n)] = 1; out.push(n); } });
+    return out;
+  }
+  function addMin(hhmm, m) { var t = parseTime(hhmm) || "12:00", mins = (+t.slice(0, 2)) * 60 + (+t.slice(3)) + m; mins = ((mins % 1440) + 1440) % 1440; return pad(Math.floor(mins / 60)) + ":" + pad(mins % 60); }
+  /* opts: { name, sport, teams: [names], format: "rr" | "bracket", date, start "HH:MM", gameMin, fields } -> a tournament, or { error } */
+  function partyTournament(opts) {
+    opts = isObj(opts) ? opts : {};
+    var teams = (Array.isArray(opts.teams) ? opts.teams : []).map(function (x) { return cleanName(x); }).filter(Boolean);
+    if (teams.length < 2) return { error: "Type at least two teams." };
+    var format = opts.format === "bracket" ? "bracket" : "rr";
+    if (format === "bracket" && !BRACKETS[teams.length]) return { error: "A bracket takes 4, 6 or 8 teams. You have " + teams.length + ". Pick round robin, or add or take away a team." };
+    var sport = SPORTS.some(function (s) { return s.id === opts.sport; }) ? opts.sport : "flag";
+    var date = isYMD(opts.date) ? opts.date : todayStr(), start = parseTime(opts.start) || "12:00";
+    var len = int(opts.gameMin, 5, 120, 15), fields = int(opts.fields, 1, 4, 1), games = [], n = 0, slot = 0;
+    function place(list) {   // list of { a, b, slot? }: fill the fields, then the next time
+      for (var i = 0; i < list.length; i += fields) {
+        list.slice(i, i + fields).forEach(function (x, k) {
+          n++;
+          var g = { id: "pg" + (n < 10 ? "0" : "") + n, kind: x.slot ? "bracket" : "pool", date: date, time: addMin(start, slot * len), field: fields > 1 ? "Field " + (k + 1) : "", a: x.a || "", b: x.b || "", status: "scheduled", label: "" };
+          if (x.slot) g.slot = x.slot;
+          games.push(g);
+        });
+        slot++;
+      }
+    }
+    var bracket = { size: 0, seeds: [] };
+    if (format === "rr") roundRobin(teams).forEach(function (rd) { place(rd.map(function (p) { return { a: p[0], b: p[1] }; })); });
+    else {
+      var spec = BRACKETS[teams.length];
+      bracket = { size: teams.length, seeds: teams.slice() };
+      for (var r = 1; r <= spec.names.length; r++) {
+        var cnt = spec.r1.length / Math.pow(2, r - 1), list = [];
+        for (var i = 1; i <= cnt; i++) if (r > 1 || (spec.r1[i - 1][0] && spec.r1[i - 1][1])) list.push({ slot: "r" + r + "m" + i });
+        place(list);
+      }
+    }
+    var t = sanitizeTournament({ id: uid(), name: cleanName(opts.name, 60) || "Party games", sport: sport, start: date, end: date, team: "", gameMin: len, created: todayStr(),
+      rules: defaultRules(sport), games: games, bracket: bracket, pack: [], party: true });
+    return t;
+  }
+  /* the games that are on now: the earliest time that still has a game to finish (one per field) */
+  function playNow(t) {
+    var left = sortGames(t.games.filter(function (g) { return g.status !== "final" && g.a && g.b; }));
+    if (!left.length) return [];
+    var first = left[0];
+    return left.filter(function (g) { return g.date === first.date && g.time === first.time; });
+  }
+
+  /* ---------- keep score in Scoreboard (same phone, same site storage; see scoreboard/link.js) ---------- */
+  var TOKEN_RE = /^[A-Za-z0-9_-]{6,40}$/;
+  function keepRequest(t, g, token, now) {
+    if (!t || !g || g.status === "final" || !g.a || !g.b || !TOKEN_RE.test(token)) return null;
+    return { v: 1, token: token, tid: t.id, gid: g.id, sport: t.sport, a: g.a, b: g.b, at: typeof now === "number" ? now : Date.now() };
+  }
+  /* A final Scoreboard handed back: { t: the tournament with it applied } or { skip: why } */
+  function applyResult(t, r) {
+    if (!t || !isObj(r) || r.v !== 1 || r.tid !== t.id) return { skip: "other" };
+    var g = t.games.filter(function (x) { return x.id === r.gid; })[0];
+    var sa = scoreInt(r.sa), sb = scoreInt(r.sb);
+    if (!g || sa === null || sb === null) return { skip: "gone" };
+    if (g.status === "final") return { skip: g.sa === sa && g.sb === sb ? "same" : "already" };
+    if (g.kind === "bracket" && sa === sb) return { skip: "tie", game: g, sa: sa, sb: sb };
+    var c = clone(t);
+    c.games.forEach(function (x) { if (x.id === g.id) { x.status = "final"; x.sa = sa; x.sb = sb; x.forfeit = ""; delete x.lsa; delete x.lsb; } });
+    c.games = cascade(c).games;
+    return { t: c, game: g, sa: sa, sb: sb };
+  }
+
   /* ---------- sample tournament (placeholder names only) ---------- */
   function sampleTournament(today) {
     today = isYMD(today) ? today : todayStr();
@@ -886,6 +985,7 @@
     bracketTree: bracketTree, nextSlot: nextSlot, cascade: cascade, previewBracket: previewBracket, slotTitle: slotTitle, ourPath: ourPath, seedsFromStandings: seedsFromStandings, sanitizeBracket: sanitizeBracket,
     packTemplate: packTemplate, sanitizePack: sanitizePack, packProgress: packProgress,
     sanitizeTournament: sanitizeTournament, sanitizeSettings: sanitizeSettings, newTournament: newTournament, makeBackup: makeBackup, validateBackup: validateBackup,
+    roundRobin: roundRobin, partyTeams: partyTeams, partyTournament: partyTournament, playNow: playNow, keepRequest: keepRequest, applyResult: applyResult,
     renameTeam: renameTeam, teamNames: teamNames, icsFor: icsFor, summaryText: summaryText, dateRange: dateRange, sampleTournament: sampleTournament
   };
   root.TPCore = api;
