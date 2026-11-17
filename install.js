@@ -119,21 +119,45 @@
       try { localStorage.setItem(KEY, String(Date.now())); } catch (e) {}
       hide();
     };
-    /* An app with its own bar fixed along the bottom (the App Store's tabs): sit just above it, not on top of it. */
-    var under = bottomBar();
-    if (under) { host.style.bottom = under + "px"; root.querySelector(".bar").style.marginBottom = "8px"; }
+    /* An app with its own bar fixed along the bottom (the App Store's tabs, Defensive Coach's floating buttons): sit just above it, not on top of it. */
+    lift();
     document.body.appendChild(host);
   }
+  function lift() {
+    if (!host) return;
+    var under = bottomBar(), bar = (host.shadowRoot || host).querySelector(".bar");
+    host.style.bottom = under ? under + "px" : "0";
+    if (bar) bar.style.marginBottom = under ? "8px" : "";
+  }
+  /* A screen change can bring a bottom bar in after the card is up (Defensive Coach's field opens from Tools), so look again. */
+  function relift() { if (host) setTimeout(lift, 350); }
+  document.addEventListener("click", relift, true);
+  window.addEventListener("popstate", relift);
+  window.addEventListener("resize", relift);
   function bottomBar() {
     try {
-      var w = innerWidth, h = innerHeight, els = document.elementsFromPoint(w / 2, h - 2);
-      for (var i = 0; i < els.length; i++) {
-        for (var el = els[i]; el && el !== document.body && el !== document.documentElement; el = el.parentElement) {
-          if (getComputedStyle(el).position !== "fixed") continue;
-          var r = el.getBoundingClientRect();
-          if (r.bottom >= h - 1 && r.width >= w * 0.6 && r.height > 0 && r.height < h * 0.3) return Math.round(h - r.top);
-        }
+      var w = innerWidth, h = innerHeight, top = h;
+      /* Look along the bottom, then just above whatever was found (a menu that opens over the buttons), up to 4 times. */
+      for (var pass = 0; pass < 4; pass++) {
+        var edge = top, found = edge;
+        [2, 24, 44].forEach(function (dy) { [0.5, 0.25, 0.75].forEach(function (fx) {
+          var els = document.elementsFromPoint(w * fx, edge - dy);
+          for (var i = 0; i < els.length; i++) {
+            for (var el = els[i]; el && el !== document.body && el !== document.documentElement; el = el.parentElement) {
+              if (el === host || getComputedStyle(el).position !== "fixed") continue;
+              var r = el.getBoundingClientRect();
+              if (!(r.height > 0 && r.height < h * 0.6 && r.top < edge)) continue;
+              /* A full-width bar on the bottom edge, or a floating row of buttons near it. */
+              var edgeBar = edge === h && r.bottom >= h - 1 && r.width >= w * 0.6 && r.height < h * 0.3;
+              var buttons = r.bottom >= edge - 48 && (el.matches("button,a,[role=button]") || el.querySelector("button,a,[role=button]"));
+              if ((edgeBar || buttons) && r.top < found) found = r.top;
+            }
+          }
+        }); });
+        if (found >= edge) break;
+        top = found;
       }
+      if (top < h) return Math.round(h - top);
     } catch (e) {}
     return 0;
   }
