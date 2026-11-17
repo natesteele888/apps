@@ -16,6 +16,7 @@ class FamilyCoreTest {
         {"id":"school","name":"School days","days":[1,2,3,4,5],"items":[{"id":"teeth","name":"Brush teeth","timer":120},{"id":"bag","name":"School bag","timer":0}]},
         {"id":"weekend","name":"Weekend","days":[0,6],"items":[{"id":"w1","name":"Water bottle","timer":0}]}],
         "days":{"2026-11-06":{"c":{"teeth":1,"bag":1},"done":1,"m":100},"2026-11-05":{"c":{"teeth":1,"bag":1},"done":1,"m":90},
+                "2026-11-07":{"c":{"w1":1},"done":1,"m":110},"2026-11-08":{"c":{"w1":1},"done":1,"m":120},
                 "2026-11-09":{"c":{"teeth":1},"done":0,"m":500}}}"""
 
     @Test fun getReadyListsAndDays() {
@@ -25,7 +26,8 @@ class FamilyCoreTest {
         assertEquals("Weekend", GrCore.listFor(s, "2026-11-08")!!.name)
         assertEquals(1, GrCore.count(s, MON))
         assertFalse(GrCore.complete(s, MON))
-        assertEquals(2, GrCore.streak(s, MON), "an unfinished Monday doesn't break Thu+Fri, and the weekend has its own list")
+        assertEquals(4, GrCore.streak(s, MON), "an unfinished Monday doesn't break Thu, Fri and the weekend (which has its own list)")
+        assertEquals(0, GrCore.streak(GrCore.parse(phone.replace("\"2026-11-08\"", "\"2026-11-01\"")), MON), "a missed Sunday (it has a list) breaks it")
         assertEquals("2 min", GrCore.timerLabel(120)); assertEquals("30 sec", GrCore.timerLabel(30))
         assertTrue(GrCore.parse("not json").empty)
     }
@@ -34,7 +36,7 @@ class FamilyCoreTest {
         val s = GrCore.parse(phone)
         val after = GrCore.withTaps(s, listOf(GrCore.Tap(MON, "bag", true, 600)))
         assertTrue(GrCore.complete(after, MON)); assertTrue(after.days[MON]!!.done)
-        assertEquals(3, GrCore.streak(after, MON))
+        assertEquals(5, GrCore.streak(after, MON))
         val old = GrCore.withTaps(s, listOf(GrCore.Tap(MON, "teeth", false, 400)))
         assertTrue(GrCore.checked(old, MON, "teeth"), "a tap older than the phone's last change to the day is already taken or overruled")
         val undo = GrCore.withTaps(s, listOf(GrCore.Tap(MON, "bag", true, 600), GrCore.Tap(MON, "bag", false, 700)))
