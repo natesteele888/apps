@@ -1,7 +1,7 @@
 // Fairway: network first, so updates show up right away; the last saved copy when there's no signal on the course.
 // Caches the app and the Firebase code it needs to start. Scores stay in Firestore's own copy on the phone, never here.
-const CACHE = "fairway-v1";
-const SHELL = ["./", "manifest.json", "fairway.css", "core.js", "qr.js", "store.js", "sound.js", "app.js", "/apps/icons/fairway-192.png", "/apps/icons/fairway-512.png", "../install.js", "../health.js"];
+const CACHE = "fairway-v2";
+const SHELL = ["./", "manifest.json", "fairway.css", "core.js", "qr.js", "store.js", "sound.js", "teams.js", "app.js", "/apps/icons/fairway-192.png", "/apps/icons/fairway-512.png", "../install.js", "../health.js"];
 // Same version as store.js loads: change them together.
 const FIREBASE = ["app", "firestore"].map(n => `https://www.gstatic.com/firebasejs/11.6.0/firebase-${n}-compat.js`);
 // Save the page at install: the first visit happens before this worker exists. Each file on its own so one miss can't block it.

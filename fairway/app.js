@@ -1,7 +1,9 @@
 /* Copyright (c) 2026 Nate Steele. All rights reserved. Not licensed for copying, hosting or resale. See LICENSE. */
-/* Fairway: the screens. Home (start, join, demo, your tournaments and courses), a new tournament, the course builder,
-   joining from a QR code or link, and a tournament's five tabs: Board, Field, Score, Course and More. Tapping a player
-   anywhere opens their card, which flips over to their stats, their scorecard and their earlier rounds. */
+/* Fairway: the screens. Home (get one going, start, join, demo, your tournaments and courses), a new tournament, the
+   course builder, joining from a QR code or link, and a tournament's five tabs: Board (leaders, hole by hole, field and
+   course), Score, Teams, Chat and Share. While a tournament is still being got going it shows Going, Chat and Share.
+   Tapping a player anywhere opens their card, which flips over to their stats, their scorecard and their earlier rounds.
+   The Phase 1 screens (going, join, setup, draft, teams, matchups, chat, tee times) live in teams.js. */
 (function () {
   "use strict";
   const C = window.FairwayCore, FW = window.FW;
@@ -26,6 +28,9 @@
     field: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 21V3l10 4-10 4" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>',
     score: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 19l1-4L16 5l3 3L9 18l-4 1z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>',
     course: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20c3-6 6-2 8-8s5-8 8-8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><circle cx="18" cy="17" r="2.2" fill="currentColor"/></svg>',
+    teams: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="8" cy="8" r="3" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="16.5" cy="9" r="2.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M2.5 19c.6-3.4 2.8-5 5.5-5s4.9 1.6 5.5 5M13.5 14.6c.9-.4 1.9-.6 3-.6 2.4 0 4.2 1.4 4.8 4.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>',
+    chat: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v11H9l-5 4z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>',
+    going: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12l4 4 10-10" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>',
     more: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="6" height="6" fill="none" stroke="currentColor" stroke-width="2"/><rect x="14" y="4" width="6" height="6" fill="none" stroke="currentColor" stroke-width="2"/><rect x="4" y="14" width="6" height="6" fill="none" stroke="currentColor" stroke-width="2"/><path d="M14 14h2v2h-2zM18 18h2v2h-2zM14 18h2M18 14h2" stroke="currentColor" stroke-width="2"/></svg>'
   };
 
@@ -61,7 +66,7 @@
   });
 
   /* ---------- the live connection to one tournament ---------- */
-  function stopLive() { if (S.unsub) { S.unsub(); S.unsub = null; } }
+  function stopLive() { if (S.unsub) { S.unsub(); S.unsub = null; } FW.phase1.chatStop(); }
   function openEvent(code) {
     stopLive();
     const m = FW.mineGet(code);
@@ -74,6 +79,7 @@
       if (S.place === FW.cloud) S.live = meta && meta.pending ? "saving" : meta && meta.cache ? "offline" : "live";
       soft();
     }, err => { S.live = FW.denied(err) ? "denied" : "error"; window.nateHealth && nateHealth.note("sync", "tournament link: " + (err && (err.code || err.message))); soft(); });
+    FW.phase1.chatStart(code);
   }
   // A new copy arrived: redraw, unless someone is typing (then redraw once they're done).
   function soft() {
@@ -125,7 +131,11 @@
   }
   function teeDot(t) { return `<span class="tdot" style="background:${hex(t && t.color)}" aria-hidden="true"></span>`; }
   function teeLabel(course, t) { const y = C.teeYards(course, t.id); return `${teeDot(t)}${esc(t.name)}${y ? ` <small>${y.toLocaleString()} yds</small>` : ""}`; }
-  function me() { const m = FW.mineGet(S.code); return m && m.me && S.ev && S.ev.p[m.me] ? Object.assign({ id: m.me }, S.ev.p[m.me]) : null; }
+  function me() {
+    const m = FW.mineGet(S.code); if (!m || !S.ev) return null;
+    const id = m.me && S.ev.p[m.me] ? m.me : m.rid && S.ev.p[m.rid] ? m.rid : null;
+    return id ? Object.assign({ id }, S.ev.p[id]) : null;
+  }
   const isOrg = () => { const m = FW.mineGet(S.code); return !!(m && m.org); };
   function statusText(x) { return x.done ? "F" : x.thru ? "Thru " + x.thru : "Tee " + (x.order[0] || 1); }
 
@@ -138,7 +148,8 @@
       <div class="crest" aria-hidden="true"><svg viewBox="0 0 64 64"><circle cx="32" cy="32" r="30" fill="none" stroke="currentColor" stroke-width="2"/><path d="M26 48V14l16 7-16 7" fill="currentColor"/><ellipse cx="32" cy="48" rx="13" ry="3" fill="none" stroke="currentColor" stroke-width="2"/></svg></div>
       <h1>Fairway</h1><p class="tag">Live golf tournament scoring</p></header>
       <section class="pad">
-        <button type="button" class="btn primary block" id="new">Start a tournament</button>
+        <button type="button" class="btn primary block" id="rally">Get a tournament going</button>
+        <button type="button" class="btn block" id="new">Start one now</button>
         <button type="button" class="btn block" id="join">Join a tournament</button>
         <button type="button" class="btn ghost block" id="demo">See the demo board</button>
       </section>
@@ -152,7 +163,8 @@
         ${courses.map(c => `<li><button type="button" class="row" data-course="${esc(c.id)}"><span><b>${esc(c.name)}</b><small>${c.holes.length} holes · par ${C.coursePar(c)} · ${c.tees.length} tee${c.tees.length > 1 ? "s" : ""}</small></span></button></li>`).join("")}
       </ul><button type="button" class="btn ghost block" id="build">Build a course</button></section>
       <footer class="foot"><button type="button" class="link" onclick="window.nateHealth&&nateHealth.report()">Something wrong?</button><small>${esc(C.VERSION)}</small></footer>`;
-    $("#new", v).onclick = () => go("new");
+    $("#new", v).onclick = () => go("new", { newMode: "now" });
+    $("#rally", v).onclick = () => go("new", { newMode: "rally" });
     $("#join", v).onclick = joinSheet;
     $("#demo", v).onclick = openDemo;
     $("#build", v).onclick = () => editCourse(null);
@@ -200,7 +212,7 @@
   }
   function startJoin(code) {
     if (FW.mineGet(code)) { openEvent(code); go("event", { tab: "board" }); return; }
-    S.code = code; S.ev = null; S.live = "connecting"; go("join");
+    S.code = code; S.ev = null; S.live = "connecting"; S.joinStep = null; go("join");
   }
 
   /* ======================================================================
@@ -221,39 +233,9 @@
         wireTop(v); $("#retry", v).onclick = () => { S.evCode = null; render(); }; return;
       }
     }
-    const ev = S.ev, course = ev.course, gs = C.groups(ev), list = C.players(ev);
-    const lastTee = FW.LS.get("fw:tee", null), tee = course.tees.some(t => t.id === lastTee) ? lastTee : course.tees[Math.min(1, course.tees.length - 1)].id;
-    const nextG = gs.length ? Math.max.apply(null, gs.map(g => g.g)) + 1 : 1;
-    v.innerHTML = `${topbar("Join")}
-      <section class="pad"><div class="evhead"><h1>${esc(ev.name)}</h1><p>${esc(course.name)} · ${course.holes.length} holes · par ${C.coursePar(course)}${ev.rounds > 1 ? ` · ${ev.rounds} rounds` : ""}</p></div></section>
-      <form class="pad" id="jf" autocomplete="off">
-        <label class="fld"><span>Your name</span><input id="jn" maxlength="${C.NAME_MAX}" required value="${esc(FW.LS.get("fw:name", ""))}" placeholder="First and last"></label>
-        <fieldset class="fld"><legend>Your tees</legend><div class="tees">${course.tees.map(t => `<label class="tee"><input type="radio" name="tee" value="${esc(t.id)}" ${t.id === tee ? "checked" : ""}><span>${teeLabel(course, t)}</span></label>`).join("")}</div></fieldset>
-        <label class="fld"><span>Your group</span><select id="jg">${gs.map(g => `<option value="${g.g}">Group ${g.g}: ${esc(g.players.map(p => p.n.split(" ")[0]).join(", "))}${g.players.length >= 4 ? " (full)" : ""}</option>`).join("")}<option value="new" ${gs.length ? "" : "selected"}>New group (${nextG})</option></select></label>
-        <label class="fld" id="jsw"><span>Starting hole</span><select id="js">${course.holes.map((h, i) => `<option value="${i + 1}">Hole ${i + 1}</option>`).join("")}</select></label>
-        <button type="submit" class="btn primary block">Join and keep score</button>
-        <p class="err" id="jerr" role="alert"></p>
-      </form>
-      ${list.length ? `<section class="pad"><h2 class="sec">Already on the list?</h2><p class="msg">If the organizer added you, tap your name.</p><ul class="list">${list.map(p => `<li><button type="button" class="row" data-me="${esc(p.id)}"><span><b>${esc(p.n)}</b><small>Group ${p.g} · ${esc(C.teeOf(ev, p).name)} tees</small></span></button></li>`).join("")}</ul></section>` : ""}
-      <section class="pad"><button type="button" class="btn ghost block" id="watch">Just watch the board</button></section>`;
-    wireTop(v);
-    const sync = () => { $("#jsw", v).hidden = $("#jg", v).value !== "new"; };
-    $("#jg", v).onchange = sync; sync();
-    $("#jf", v).onsubmit = async e => {
-      e.preventDefault();
-      const name = C.cleanName($("#jn", v).value); if (!name) { $("#jerr", v).textContent = "Type your name so the board can show it."; return; }
-      const teeId = ($("input[name=tee]:checked", v) || {}).value, gv = $("#jg", v).value;
-      const group = gv === "new" ? nextG : +gv, grp = gs.find(g => g.g === group);
-      const pl = C.newPlayer(ev, { name, tee: teeId, group, start: grp ? grp.start : +$("#js", v).value });
-      const pid = C.newPid();
-      FW.LS.set("fw:name", name); FW.LS.set("fw:tee", pl.tee);
-      FW.mineSet(code, { name: ev.name, me: pid, org: false });
-      openEvent(code); if (!S.ev) S.ev = ev;
-      write({ ["p." + pid]: pl });
-      S.group = group; go("event", { tab: "score" }, true);
-    };
-    $$("[data-me]", v).forEach(b => b.onclick = () => { FW.mineSet(code, { name: ev.name, me: b.dataset.me, org: false }); openEvent(code); go("event", { tab: "score" }, true); });
-    $("#watch", v).onclick = () => { FW.mineSet(code, { name: ev.name, me: null, org: false }); openEvent(code); go("event", { tab: "board" }, true); };
+    const ev = S.ev;
+    if (ev.rally && ev.rally.on) { FW.mineSet(code, { name: ev.name, me: null, org: false }); openEvent(code); go("event", { tab: "going" }, true); return; }
+    FW.phase1.viewJoin(v, ev);
   }
   function topbar(title, right) { return `<div class="top"><button type="button" class="iconbtn" id="back" aria-label="Back">${ICON.back}</button><h1>${esc(title)}</h1>${right || "<span></span>"}</div>`; }
   function wireTop(v) { const b = $("#back", v); if (b) b.onclick = () => { if (history.state && history.state.fw && history.length > 1) history.back(); else go("home", {}, true); }; wireSound(); const l = $("#livebtn", v); if (l) l.onclick = liveExplain; }
@@ -264,15 +246,23 @@
   function viewNew(v) {
     const courses = [C.sampleCourse()].concat(FW.courses());
     const pick = S.newCourse && courses.some(c => c.id === S.newCourse) ? S.newCourse : courses[courses.length > 1 ? 1 : 0].id;
-    v.innerHTML = `${topbar("New tournament", soundBtn())}<form class="pad" id="nf" autocomplete="off">
+    const rally = S.newMode === "rally", kind = S.newKind || "teams";
+    v.innerHTML = `${topbar(rally ? "Get one going" : "New tournament", soundBtn())}<form class="pad" id="nf" autocomplete="off">
+      ${rally ? `<p class="msg">Throw out a date and see who's in. Make it official once enough people are.</p>` : ""}
       <label class="fld"><span>Tournament name</span><input id="nn" maxlength="${C.EVENT_MAX}" required placeholder="Saturday Scramble"></label>
+      ${rally ? `<label class="fld"><span>Date</span><input type="date" id="nd"></label>
+        <label class="fld"><span>How many do you want?</span><input id="ngoal" type="number" min="2" max="120" inputmode="numeric" value="12"></label>
+        <label class="fld"><span>A note for everyone (optional)</span><input id="nnote" maxlength="140" placeholder="Morning tee time, captains and a draft if we get 12"></label>` : ""}
+      <p class="stepno">How do you want to play?</p>
+      <div class="pick" id="nkind">${[["teams", "Teams with a draft", "Captains pick their teams"], ["solo", "Everyone for themselves", "Lowest score wins"], ["match", "Match play", "Head to head, hole by hole"]].map(([k, t, d]) => `<button type="button" class="pk${kind === k ? " on" : ""}" data-nk="${k}"><span class="grow"><b>${t}</b><small>${d}</small></span><span class="ck" aria-hidden="true"></span></button>`).join("")}</div>
       <fieldset class="fld"><legend>Course</legend><div class="opts">${courses.map(c => `<label class="opt"><input type="radio" name="course" value="${esc(c.id)}" ${c.id === pick ? "checked" : ""}><span><b>${esc(c.name)}</b><small>${c.holes.length} holes · par ${C.coursePar(c)} · ${c.tees.map(t => esc(t.name)).join(", ")}</small></span></label>`).join("")}</div>
         <button type="button" class="btn ghost small" id="nb">Build a new course</button></fieldset>
       <fieldset class="fld"><legend>Rounds</legend><div class="seg" role="radiogroup">${[1, 2, 3, 4].map(n => `<label><input type="radio" name="rounds" value="${n}" ${n === 1 ? "checked" : ""}><span>${n}</span></label>`).join("")}</div></fieldset>
       <fieldset class="fld"><legend>Are you playing?</legend>
         <label class="fld"><span>Your name (leave empty if you're only running it)</span><input id="nme" maxlength="${C.NAME_MAX}" value="${esc(FW.LS.get("fw:name", ""))}"></label>
         <div id="ntees"></div></fieldset>
-      <button type="submit" class="btn primary block">Start and get the QR code</button><p class="err" id="nerr" role="alert"></p></form>`;
+      <button type="submit" class="btn primary block">${rally ? "Get it going" : "Start and get the QR code"}</button><p class="err" id="nerr" role="alert"></p></form>`;
+    $$("[data-nk]", v).forEach(b => b.onclick = () => { S.newKind = b.dataset.nk; $$("[data-nk]", v).forEach(x => x.classList.toggle("on", x === b)); });
     wireTop(v);
     const drawTees = () => {
       const c = courses.find(x => x.id === ($("input[name=course]:checked", v) || {}).value) || courses[0];
@@ -287,8 +277,14 @@
       const course = courses.find(x => x.id === ($("input[name=course]:checked", v) || {}).value) || courses[0];
       const ev = C.newEvent({ name: $("#nn", v).value, course, rounds: +($("input[name=rounds]:checked", v) || {}).value || 1 });
       const code = C.newCode(), name = C.cleanName($("#nme", v).value);
-      let pid = null;
-      if (name) { pid = C.newPid(); ev.p[pid] = C.newPlayer(ev, { name, tee: ($("input[name=ntee]:checked", v) || {}).value, group: 1, start: 1 }); FW.LS.set("fw:name", name); FW.LS.set("fw:tee", ev.p[pid].tee); }
+      ev.fmt = C.cleanFmt({ kind: S.newKind || "teams", nt: 2 });
+      let pid = null, rid = null;
+      if (rally) {
+        const date = ($("#nd", v) || {}).value || "";
+        ev.rally = C.cleanRally({ on: true, date, goal: $("#ngoal", v).value, note: $("#nnote", v).value, r: {} });
+        if (C.isDate(date)) ev.tt = { date, where: "", g: {} };
+        if (name) { rid = C.newPid(); ev.rally.r[rid] = { n: name, s: "in", at: Date.now() }; FW.LS.set("fw:name", name); }
+      } else if (name) { pid = C.newPid(); ev.p[pid] = C.newPlayer(ev, { name, tee: ($("input[name=ntee]:checked", v) || {}).value, group: 1, start: 1 }); FW.LS.set("fw:name", name); FW.LS.set("fw:tee", ev.p[pid].tee); }
       let local = false;
       try { await FW.cloud.create(code, ev); }
       catch (err) {
@@ -296,9 +292,9 @@
         try { await FW.local.create(code, ev); } catch (e2) { btn.disabled = false; $("#nerr", v).textContent = "This phone's storage is full, so the tournament couldn't be saved."; return; }
         toast(FW.denied(err) ? "The shared scoreboard isn't switched on yet, so this one runs on this phone." : "No signal, so this one runs on this phone for now.");
       }
-      FW.mineSet(code, { name: ev.name, me: pid, org: true, local });
-      FW.cacheSet(code, ev);
-      openEvent(code); go("event", { tab: "more" }, true);
+      FW.mineSet(code, Object.assign({ name: ev.name, me: pid, org: true, local }, rid ? { rid } : {}));
+      FW.cacheSet(code, ev); S.newKind = null;
+      openEvent(code); go("event", { tab: rally ? "going" : "more" }, true);
     };
   }
 
@@ -364,10 +360,14 @@
     wireTop(v);
     $("#back", v).onclick = () => go("home", {}, false);
     const body = $("#tab", v);
-    ({ board: tabBoard, field: tabField, score: tabScore, course: tabCourse, more: tabMore }[S.tab] || tabBoard)(body, ev);
-    const tabs = $("#tabs");
+    const going = !!(ev.rally && ev.rally.on);
+    const list = going ? [["going", "Going"], ["chat", "Chat"], ["more", "Share"]] : [["board", "Board"], ["score", "Score"], ["teams", "Teams"], ["chat", "Chat"], ["more", "Share"]];
+    if (S.tab === "field" || S.tab === "course") { S.boardMode = S.tab; S.tab = "board"; }
+    if (!list.some(x => x[0] === S.tab)) S.tab = list[0][0];
+    ({ board: tabBoard, score: tabScore, teams: FW.phase1.tabTeams, chat: FW.phase1.tabChat, going: FW.phase1.tabGoing, more: tabMore }[S.tab] || tabBoard)(body, ev);
+    const tabs = $("#tabs"), unread = S.tab === "chat" ? 0 : FW.phase1.unread(S.code);
     tabs.hidden = false;
-    tabs.innerHTML = [["board", "Board"], ["field", "Field"], ["score", "Score"], ["course", "Course"], ["more", "Share"]].map(([k, l]) => `<button type="button" data-tab="${k}" aria-current="${S.tab === k}">${ICON[k]}<span>${l}</span></button>`).join("");
+    tabs.innerHTML = list.map(([k, l]) => `<button type="button" data-tab="${k}" aria-current="${S.tab === k}">${ICON[k]}<span>${l}</span>${k === "chat" && unread ? `<i class="dot" aria-label="${unread} new">${unread > 9 ? "9+" : unread}</i>` : ""}</button>`).join("");
     $$("[data-tab]", tabs).forEach(b => b.onclick = () => { if (S.tab === b.dataset.tab) return; S.tab = b.dataset.tab; try { history.replaceState({ fw: "event", code: S.code, tab: S.tab }, "", "?t=" + S.code); } catch (e) { /* ignore */ } render(); window.scrollTo(0, 0); });
     $$("[data-player]", body).forEach(b => b.onclick = () => openCard(b.dataset.player));
   }
@@ -375,7 +375,10 @@
   /* ---------- Board: the leaders, and the classic hole-by-hole board ---------- */
   function tabBoard(el, ev) {
     const rows = C.standings(ev), r = S.boardRound || Math.min(ev.cur, ev.rounds), n = C.holeCount(ev);
-    const seg = `<div class="pills" role="group" aria-label="Board"><button type="button" class="pill" data-bm="leaders" aria-pressed="${S.boardMode === "leaders"}">Leaders</button><button type="button" class="pill" data-bm="holes" aria-pressed="${S.boardMode === "holes"}">Hole by hole</button></div>`;
+    const seg = `<div class="pills" role="group" aria-label="Board">${[["leaders", "Leaders"], ["holes", "Hole by hole"], ["field", "Field"], ["course", "Course"]].map(([k, l]) => `<button type="button" class="pill" data-bm="${k}" aria-pressed="${S.boardMode === k}">${l}</button>`).join("")}</div>`;
+    if (S.boardMode === "field" || S.boardMode === "course") {
+      el.innerHTML = seg + `<div id="bsub"></div>`; (S.boardMode === "field" ? tabField : tabCourse)($("#bsub", el), ev); wireBoard(el); return;
+    }
     if (!rows.length) { el.innerHTML = seg + emptyField(); wireBoard(el); return; }
     let html;
     if (S.boardMode === "holes") {
@@ -457,7 +460,10 @@
     $("#next", el).onclick = () => { S.hole = order[idx + 1]; render(); };
     $$(".scorer li", el).forEach(li => {
       const pid = li.dataset.pid, cur = C.strokes(ev.p[pid], r, h);
-      const set = val => write({ ["p." + pid + ".s." + C.key(r, h)]: val == null ? C.DELETE : val });
+      const set = val => {
+        write({ ["p." + pid + ".s." + C.key(r, h)]: val == null ? C.DELETE : val });
+        const sh = val != null && !S.ev.demo && C.shout(S.ev, pid, r, h, val); if (sh) FW.phase1.autoPost(sh, "a" + pid + "r" + r + "h" + h);
+      };
       $(".val", li).onclick = () => { if (cur == null) set(hole.par); };
       $(".minus", li).onclick = () => set(cur == null ? hole.par - 1 : Math.max(1, cur - 1));
       $(".plus", li).onclick = () => set(cur == null ? hole.par + 1 : Math.min(20, cur + 1));
@@ -511,7 +517,8 @@
         : `<div class="share"><h2>${m.demo ? "This is the demo" : "On this phone only"}</h2><p class="msg">${m.demo ? "Made-up players on a made-up course, so you can try every screen. Score a few holes, tap players, flip their cards." : "This tournament runs on this phone, so there's no QR code to share. Pass the phone around to score, or put the board up on it."}</p>${m.demo ? `<button type="button" class="btn block" id="resetdemo">Start the demo over</button>` : ""}</div>`}
       ${!mine && canShare ? `<button type="button" class="btn primary block" id="joinme">Join and keep score</button>` : ""}
       ${mine ? `<p class="msg">You're <b>${esc(mine.n)}</b>, group ${mine.g}. <button type="button" class="link" id="notme">Not you?</button></p>` : ""}
-      ${org ? manageHtml(ev, list) : `<p class="msg">Changing rounds and players is on the phone that started this tournament.</p>`}
+      ${ev.rally && ev.rally.on ? "" : FW.phase1.teeHtml(ev, org)}
+      ${org ? `<button type="button" class="btn block" id="setup">Set it up</button>` + manageHtml(ev, list) : `<p class="msg">Changing rounds and players is on the phone that started this tournament.</p>`}
       <button type="button" class="btn ghost danger block" id="forget">Remove from this phone</button></div>`;
     const cp = $("#copy", el); if (cp) cp.onclick = async () => { try { await navigator.clipboard.writeText(link); toast("Link copied"); } catch (e) { sheet("Copy the link", `<textarea class="copybox" readonly rows="3">${esc(link)}</textarea>`); } };
     const sh = $("#sharebtn", el); if (sh) sh.onclick = () => navigator.share({ title: ev.name, text: "Join " + ev.name + " on Fairway", url: link }).catch(() => {});
@@ -523,6 +530,8 @@
       if (!confirm(local ? "Remove this tournament from this phone? It only lives here, so its scores go too." : "Remove this tournament from this phone? Its scores stay on the shared board, and the link still opens it.")) return;
       const code = S.code; stopLive(); FW.mineDrop(code); go("home", {}, true);
     };
+    FW.phase1.wireTee(el, ev);
+    const su = $("#setup", el); if (su) su.onclick = FW.phase1.setupSheet;
     if (org) wireManage(el, ev);
   }
   function manageHtml(ev, list) {
@@ -550,6 +559,7 @@
     sheet(p ? "Edit player" : "Add a player", `<form id="pf" autocomplete="off">
       <label class="fld"><span>Name</span><input id="pn" maxlength="${C.NAME_MAX}" required value="${esc(p ? p.n : "")}"></label>
       <label class="fld"><span>Tees</span><select id="pt">${ev.course.tees.map(t => `<option value="${esc(t.id)}" ${(p ? p.tee : FW.LS.get("fw:tee", "")) === t.id ? "selected" : ""}>${esc(t.name)}</option>`).join("")}</select></label>
+      <label class="fld"><span>Handicap index (optional)</span><input id="phc" inputmode="decimal" maxlength="5" value="${p && Number.isFinite(p.hc) ? (p.hc < 0 ? "+" + Math.abs(p.hc) : p.hc) : ""}" placeholder="12.4"></label>
       <label class="fld"><span>Group</span><input id="pg" type="number" min="1" max="60" inputmode="numeric" value="${grp}"></label>
       <label class="fld"><span>Starting hole</span><select id="ps">${ev.course.holes.map((h, i) => `<option value="${i + 1}" ${(p ? p.st : ((gs.find(g => g.g === grp) || {}).start || 1)) === i + 1 ? "selected" : ""}>Hole ${i + 1}</option>`).join("")}</select></label>
       <button type="submit" class="btn primary block">${p ? "Save" : "Add"}</button>
@@ -560,8 +570,9 @@
         e.preventDefault();
         const name = C.cleanName($("#pn", box).value); if (!name) return;
         const g = Math.min(60, Math.max(1, parseInt(gIn.value, 10) || 1)), st = +sIn.value || 1, tee = $("#pt", box).value;
-        if (p) write({ ["p." + pid + ".n"]: name, ["p." + pid + ".tee"]: tee, ["p." + pid + ".g"]: g, ["p." + pid + ".st"]: st });
-        else { if (C.players(ev).length >= C.MAX_PLAYERS) { toast("That's the most players one tournament holds.", "error"); return; } write({ ["p." + C.newPid()]: C.newPlayer(ev, { name, tee, group: g, start: st }) }); }
+        const hc = C.cleanHc($("#phc", box).value);
+        if (p) write({ ["p." + pid + ".n"]: name, ["p." + pid + ".tee"]: tee, ["p." + pid + ".g"]: g, ["p." + pid + ".st"]: st, ["p." + pid + ".hc"]: hc == null ? C.DELETE : hc });
+        else { if (C.players(ev).length >= C.MAX_PLAYERS) { toast("That's the most players one tournament holds.", "error"); return; } write({ ["p." + C.newPid()]: C.newPlayer(ev, { name, tee, group: g, start: st, hc }) }); }
         closeSheet(); toast(p ? "Saved" : "Added " + name);
       };
       const rm = $("#prm", box); if (rm) rm.onclick = () => { if (!confirm("Remove " + p.n + " and their scores?")) return; write({ ["p." + pid]: C.DELETE }); closeSheet(); };
@@ -754,6 +765,7 @@
     $$("[data-keep]", v).forEach(el => { const k = keep[el.dataset.keep]; if (k) { el.scrollLeft = k[0]; el.scrollTop = k[1]; } });
   }
   FW.debug = { S, render };
+  FW.ui = { S, esc, write, render, soft, badge: soft, sheet, closeSheet, toast, me, isOrg, teeDot, parText, go, linkFor, openEvent, topbar, wireTop };
 
   /* ---------- start: a link with ?t=<code> joins or opens that tournament ---------- */
   (function start() {
