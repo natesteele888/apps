@@ -16,12 +16,19 @@ import re, sys, xml.etree.ElementTree as ET
 want = sys.argv[1].lower()
 try: root = ET.parse(sys.argv[2]).getroot()
 except Exception: sys.exit(0)
+# The API 35 emulator sometimes shows "Pixel Launcher isn't responding" over everything. Answer Wait so the
+# test sees the app underneath instead of failing on the emulator's own pop-up.
+if any("isn't responding" in n.get("text", "") for n in root.iter("node")):
+    want = "wait"
 for n in root.iter("node"):
     if n.get("text", "").strip().lower() == want and n.get("enabled") == "true":
         a, b, c, d = map(int, re.findall(r"\d+", n.get("bounds")))
         print((a + c) // 2, (b + d) // 2); break
 PY
 )
+    if [ -n "$xy" ] && grep -q "isn't responding" /tmp/ui.xml; then
+      echo "emulator pop-up: tapping Wait at $xy"; adb shell input tap $xy; sleep 1; continue
+    fi
     if [ -n "$xy" ]; then echo "tap '$1' at $xy"; adb shell input tap $xy; return 0; fi
     sleep 1
   done
@@ -32,8 +39,25 @@ adb install "$OLD"
 adb shell pm grant $PKG android.permission.POST_NOTIFICATIONS
 adb shell appops set $PKG REQUEST_INSTALL_PACKAGES allow
 echo "installed version $(ver)"
+# Dugout checks GitHub once when it opens, so wait until the emulator itself can reach GitHub first.
+for i in $(seq 1 60); do
+  # the emulator may not answer pings, so a resolved address ("PING api.github.com (1.2.3.4)") counts as online
+  out=$(adb shell ping -c 1 -W 2 api.github.com 2>&1 || true)
+  echo "$out" | grep -q "^PING .*(" && { echo "emulator finds api.github.com (after ${i} tries)"; break; }
+  [ "$i" = 60 ] && echo "emulator still can't find api.github.com"
+  sleep 2
+done
+adb logcat -c
 adb shell am start -W -n $PKG/.MainActivity
-tap "Update" 60         # Dugout's "Update Dugout?" pop-up
+if ! tap "Update" 60; then # Dugout's "Update Dugout?" pop-up
+  # Dugout asks GitHub's releases list without signing in, and a shared runner can run out of GitHub's 60 asks an
+  # hour. Print what GitHub says about this runner's allowance so a failure here shows whether that was the cause.
+  echo "GitHub API allowance for this runner:"
+  echo "emulator network:"; adb shell ping -c 1 -W 2 api.github.com 2>&1 | head -2 || true
+  echo "Dugout's log:"; adb logcat -d 2>/dev/null | grep -iE "dugout|AndroidRuntime|UnknownHost|SSL|Cleartext" | tail -25 || true
+  curl -s https://api.github.com/rate_limit | python3 -I -c 'import json,sys; r=json.load(sys.stdin)["resources"]["core"]; print("  remaining", r["remaining"], "of", r["limit"])' || echo "  couldn't reach api.github.com"
+  exit 1
+fi
 sleep 3
 tap "Update" 120        # Android's "Do you want to update this app?"
 for _ in $(seq 1 90); do v=$(ver); [ "${v:-1}" != 1 ] && break; sleep 1; done
