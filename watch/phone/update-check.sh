@@ -52,9 +52,9 @@ adb shell am start -W -n $PKG/.MainActivity
 if ! tap "Update" 60; then # Dugout's "Update Dugout?" pop-up
   # Dugout asks GitHub's releases list without signing in, and a shared runner can run out of GitHub's 60 asks an
   # hour. Print what GitHub says about this runner's allowance so a failure here shows whether that was the cause.
-  echo "GitHub API allowance for this runner:"
   echo "emulator network:"; adb shell ping -c 1 -W 2 api.github.com 2>&1 | head -2 || true
   echo "Dugout's log:"; adb logcat -d 2>/dev/null | grep -iE "dugout|AndroidRuntime|UnknownHost|SSL|Cleartext" | tail -25 || true
+  echo "GitHub API allowance for this runner:"
   curl -s https://api.github.com/rate_limit | python3 -I -c 'import json,sys; r=json.load(sys.stdin)["resources"]["core"]; print("  remaining", r["remaining"], "of", r["limit"])' || echo "  couldn't reach api.github.com"
   exit 1
 fi
