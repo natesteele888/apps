@@ -19,8 +19,9 @@
     lastNextKey = nextKey();
   }
   TP.render = render;
+  TP.openTour = function (id) { openTour(id); };
   function scrollTop() { try { window.scrollTo(0, 0); } catch (e) { /* ignore */ } }
-  function openTour(id) { S.view = "tournament"; S.tid = id; S.tab = "games"; S.packEdit = false; render(); scrollTop(); TP.syncHistory(); }
+  function openTour(id) { S.view = "tournament"; S.tid = id; S.tab = S.tours[id] && S.tours[id].party ? "play" : "games"; S.packEdit = false; render(); scrollTop(); TP.syncHistory(); }
   function goList() { flushNotes(); S.view = "list"; S.tid = null; S.packEdit = false; render(); scrollTop(); TP.syncHistory(); }
   TP.leavePage = function () { flushNotes(); S.view = "list"; S.tid = null; S.packEdit = false; render(); scrollTop(); };
 
@@ -230,9 +231,10 @@
         '<div class="cols2"><div class="field"><label class="label" for="g-field">Field or court</label><input type="text" id="g-field" maxlength="60" autocomplete="off" placeholder="Field 3"></div><div class="field"><label class="label" for="g-label">Round label</label><input type="text" id="g-label" maxlength="40" autocomplete="off" placeholder="Pool play"></div></div>' +
         '<div class="field"><span class="label">Status</span>' + pillsHtml("status", [["scheduled", "Scheduled"], ["final", "Final"]], st.status, "Status") + "</div>" +
         '<div class="f-res"><div class="cols2 f-scores"><div class="field"><label class="label" id="g-la" for="g-sa">Score</label><input type="number" id="g-sa" inputmode="numeric" min="0" max="999"></div><div class="field"><label class="label" id="g-lb" for="g-sb">Score</label><input type="number" id="g-sb" inputmode="numeric" min="0" max="999"></div></div>' +
-        (t.sport !== "basketball" ? '<div class="field"><label class="label" for="g-inn">Innings played, only if the game was shortened</label><input type="number" id="g-inn" inputmode="numeric" min="1" max="30" placeholder="Full game"><div class="hint">For a time-limit or called game. Leave blank for a full game.</div></div>' : "") +
+        (C.sportInfo(t.sport).unit === "runs" ? '<div class="field"><label class="label" for="g-inn">Innings played, only if the game was shortened</label><input type="number" id="g-inn" inputmode="numeric" min="1" max="30" placeholder="Full game"><div class="hint">For a time-limit or called game. Leave blank for a full game.</div></div>' : "") +
         '<div class="field"><label class="label" for="g-forf">Forfeit</label><select id="g-forf"><option value="">No forfeit</option><option value="a">Side 1 forfeited</option><option value="b">Side 2 forfeited</option></select><div class="hint" id="g-forfinfo"></div></div></div>' +
         '<p class="errmsg" id="g-err" role="alert" hidden></p>' +
+        (editing && g.status !== "final" && g.a && g.b ? '<button type="button" class="btn ghost block" data-act="keep-score" data-id="' + esc(g.id) + '" style="margin-top:8px">Keep score in Scoreboard</button>' : "") +
         (editing ? '<button type="button" class="btn danger block" data-del style="margin-top:8px">Delete this game</button>' : ""),
       footer: '<button type="button" class="btn ghost" data-close>Cancel</button><button type="button" class="btn" data-save>' + (editing ? "Save game" : "Add game") + "</button>",
       onOpen: function (api) {

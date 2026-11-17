@@ -1902,7 +1902,7 @@
         "ac": "#36c48a",
         "install": true,
         "access": "Open",
-        "desc": "Keep a whole tournament weekend in one place: every game with an arrive-by time, pool standings with tiebreakers you can reorder, what your team needs to make the bracket, and a bracket for 4, 6 or 8 teams. Check off a packing list, keep notes on where you are staying and eating, and download your games as a calendar file with reminders. Everything stays on your phone and it works without a signal once it has loaded.",
+        "desc": "Keep a whole tournament weekend in one place: every game with an arrive-by time, pool standings with tiebreakers you can reorder, what your team needs to make the bracket, and a bracket for 4, 6 or 8 teams. Check off a packing list, keep notes on where you are staying and eating, and download your games as a calendar file with reminders. Having a party? Type the teams, pick everyone-plays-everyone or a bracket, and play on a big screen, with flag football, 2 on 2 or any size team. Any game can be scored in Scoreboard and the final comes back on its own. Everything stays on your phone and it works without a signal once it has loaded.",
         "feats": [
           [
             "⏰",
@@ -2137,7 +2137,7 @@
         "ac": "#29d3e0",
         "install": true,
         "access": "Open",
-        "desc": "Keep score for basketball, baseball, football or anything else, with a big clock, fouls, timeouts and a baseball count with runners on base. Youth rules are built in: a run limit per inning and a no-new-inning time limit that counts down from the first pitch. Lock the screen so a stray tap cannot change the score, and undo any mistake. Everything stays on your phone.",
+        "desc": "Keep score for basketball, baseball, tackle or flag football, or anything else, with a big clock, fouls, timeouts and a baseball count with runners on base. Youth rules are built in: a run limit per inning and a no-new-inning time limit that counts down from the first pitch. Lock the screen so a stray tap cannot change the score, and undo any mistake. Keep score for a Tournament Pack game and the final goes back to it when the game ends. Everything stays on your phone.",
         "feats": [
           [
             "⏱️",

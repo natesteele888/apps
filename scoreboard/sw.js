@@ -1,9 +1,9 @@
 // Network first, so updates show up right away; falls back to the last saved copy when offline.
-const CACHE = "scoreboard-v3";
+const CACHE = "scoreboard-v4";
 // Save the page itself at install. Without this, the first visit caches nothing
 // (the page loaded before the worker existed), so opening it offline right after
 // installing fails. Each file is added on its own so one miss can't block install.
-const SHELL = ["./", "manifest.json", "scoreboard.css", "core.js", "ui.js", "rules.js", "share.js", "board.js", "app.js", "/apps/icons/scoreboard-192.png", "/apps/icons/scoreboard-512.png"];
+const SHELL = ["./", "manifest.json", "scoreboard.css", "core.js", "ui.js", "rules.js", "share.js", "board.js", "link.js", "app.js", "/apps/icons/scoreboard-192.png", "/apps/icons/scoreboard-512.png"];
 self.addEventListener("install", e => {
   self.skipWaiting();
   e.waitUntil(caches.open(CACHE).then(c => Promise.all(SHELL.map(u => c.add(new Request(u, {cache: "reload"})).catch(() => {})))));

@@ -4,7 +4,7 @@
   "use strict";
   const SB = window.SB, C = SB.C, $ = SB.$, $$ = SB.$$, esc = SB.esc;
 
-  const PRESET_MIN = { basketball: [6, 8, 10, 12, 15, 20], football: [8, 10, 12, 15] };
+  const PRESET_MIN = { basketball: [6, 8, 10, 12, 15, 20], football: [8, 10, 12, 15, 20, 25] };
 
   function lengthHTML(label, sec, sport) {
     const mm = Math.floor(sec / 60), ss = sec % 60;
@@ -31,7 +31,9 @@
         '<div class="field"><span class="label">Timeouts refill</span>' + SB.pills("toReset", [["half", "Each half"], ["game", "Never (whole game)"]], cfg.toReset, "Timeout refill") + "</div>";
     }
     if (sport === "football") {
-      return lengthHTML("Quarter length", cfg.periodSec, sport) +
+      return '<div class="field"><span class="label">Kind of football</span>' + SB.pills("flag", [[0, "Tackle"], [1, "Flag"]], cfg.flag ? 1 : 0, "Tackle or flag football") +
+        '<span class="hint">Flag is played in two halves and scores 6 for a touchdown, then 1 or 2 for the extra point.</span></div>' +
+        lengthHTML(cfg.flag ? "Half length" : "Quarter length", cfg.periodSec, sport) +
         '<label class="field"><span class="label">Overtime length (minutes)</span><input type="number" inputmode="numeric" id="r-ot" min="1" max="20" value="' + ot + '" data-orig="' + ot + '"></label>' +
         SB.numField("r-to", "Timeouts per team, each half", cfg.timeouts, 0, 9) +
         SB.numField("r-fd", "Yards for a first down", cfg.firstDown, 1, 99);
@@ -64,6 +66,13 @@
     }
     const mn = $("#r-min", root), sc = $("#r-sec", root);
     if (!mn) return;
+    // switching tackle and flag fills in that kind's usual length and timeouts (both can still be changed)
+    root.addEventListener("click", e => {
+      const b = e.target.closest('[data-pills="flag"] button'); if (!b) return;
+      const flag = b.dataset.v === "1", to = $("#r-to", root), lab = $("#r-len-l", root);
+      mn.value = flag ? 20 : 12; sc.value = "00"; if (to) to.value = flag ? 2 : 3; if (lab) lab.textContent = flag ? "Half length" : "Quarter length";
+      mn.dispatchEvent(new Event("input"));
+    });
     const sync = () => {
       const m = Number(mn.value), s = Number(sc.value);
       $$('[data-pills="preset"] button', root).forEach(b => b.setAttribute("aria-pressed", String(s === 0 && Number(b.dataset.v) === m)));
@@ -91,7 +100,7 @@
       o.foulReset = SB.pillVal(root, "foulReset") || cur.foulReset;
       o.toReset = SB.pillVal(root, "toReset") || cur.toReset;
     }
-    if (sport === "football") o.firstDown = num("r-fd", cur.firstDown);
+    if (sport === "football") { o.firstDown = num("r-fd", cur.firstDown); o.flag = SB.pillVal(root, "flag") === "1"; }
     if (sport === "baseball") {
       o.innings = Number(SB.pillVal(root, "innings")) || cur.innings;
       o.extra = SB.switchVal(root, "extra");
