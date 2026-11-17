@@ -1,8 +1,9 @@
 // Network first, so updates show up right away; falls back to the last saved copy when offline.
 // The trainer itself lives in LYBS Ballclub (/lybs-ballclub/ on this same site), so its
 // engine, look and rule files are saved here too, under this app's own cache.
-const CACHE = "situations-v20";
-const SHELL = ["./", "manifest.json", "/apps/icons/situations-192.png", "/apps/icons/situations-512.png",
+// A league's settings file (orgs/<slug>.json), its logo and setup.js are saved the first time they load.
+const CACHE = "situations-v21";
+const SHELL = ["./", "manifest.json", "org.js", "/apps/icons/situations-192.png", "/apps/icons/situations-512.png",
   "/lybs-ballclub/js/situations.js", "/lybs-ballclub/css/situations.css",
   "/lybs-ballclub/data/situations.csv", "/lybs-ballclub/data/responsibilities.csv"];
 self.addEventListener("install", e => {
