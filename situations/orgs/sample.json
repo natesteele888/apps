@@ -1,0 +1,16 @@
+{
+  "name": "Sample Valley Youth Baseball",
+  "abbreviation": "SVYB",
+  "footer": "A made-up league that shows how another org sets up Where Do I Go?",
+  "branding": {
+    "logoUrl": "sample/logo.svg",
+    "primaryColor": "#e04e39",
+    "secondaryColor": "#101a33"
+  },
+  "teams": [
+    { "name": "Hawks", "color": "#e04e39" },
+    { "name": "Owls", "color": "#f2b705" },
+    { "name": "Foxes", "color": "#ff8a3d" },
+    { "name": "Herons", "color": "#4fb3e0" }
+  ]
+}
