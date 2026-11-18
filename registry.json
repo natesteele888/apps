@@ -1,6 +1,6 @@
 {
   "about": "The one list of Nathan's apps. Live links, which apps show where, and each app's App Store listing (text, highlights, screenshots) all come from here. Edit listings and icons in the Toolbox; the sync job copies them here. Don't hand-edit text in store/index.html.",
-  "updated": "2026-11-17",
+  "updated": "2026-11-18",
   "toolbox": "https://natesteele888.github.io/apps/toolbox/",
   "store": "https://natesteele888.github.io/apps/store/",
   "apps": [
@@ -765,31 +765,31 @@
         ],
         "autoShots": [],
         "latest": {
-          "d": "Nov 16, 2026",
-          "t": "Center the league name over the sign-in box when it wraps",
-          "url": "https://github.com/natesteele888/lybs-ballclub/commit/0e5ea38ce4d64c7608738792d1325804c85b75ad"
+          "d": "Nov 18, 2026",
+          "t": "Share to Social: suggest this team's sponsors in the thank-you box",
+          "url": "https://github.com/natesteele888/lybs-ballclub/commit/077f835fb73557988798796d6fe470c28a09316d"
         },
-        "version": "1.27.3",
+        "version": "1.27.8",
         "history": [
+          {
+            "v": "1.27.8",
+            "t": "Share to Social: suggest this team's sponsors in the thank-you box"
+          },
+          {
+            "v": "1.27.7",
+            "t": "Rules deploy: stop with a plain message when the database secrets aren't set"
+          },
+          {
+            "v": "1.27.6",
+            "t": "Public info: Try again retries the panel instead of going back to sign-in"
+          },
+          {
+            "v": "1.27.4",
+            "t": "Roster: See card shows the real Steele Cards card once a card photo is approved"
+          },
           {
             "v": "1.27.3",
             "t": "Center the league name over the sign-in box when it wraps"
-          },
-          {
-            "v": "1.27.2",
-            "t": "Show one 'Couldn't load' message at a time, not a stack"
-          },
-          {
-            "v": "1.27.0",
-            "t": "Roster: Card photo button for Steele Cards, with team-only rules for approved photos"
-          },
-          {
-            "v": "1.26.7",
-            "t": "GameChanger schedule job: fix the import that crashed every run"
-          },
-          {
-            "v": "1.26.5",
-            "t": "Roster: walk-up song requests with coach approval, alerts and a league song library"
           }
         ],
         "caps": [
@@ -950,12 +950,16 @@
         ],
         "autoShots": [],
         "latest": {
-          "d": "Nov 16, 2026",
-          "t": "Power Program: an empty Save Check-In no longer logs a blank check-in",
-          "url": "https://github.com/natesteele888/fitness-hub/commit/a2deafecf573dd6ae4e467c4952e84a892160ab0"
+          "d": "Nov 18, 2026",
+          "t": "Power Program on the watch: today's workout goes to the watch, its ticks come back",
+          "url": "https://github.com/natesteele888/fitness-hub/commit/ba7af7df9a2ed0a108debe656beb98367ad6bc38"
         },
-        "version": "1.4.1",
+        "version": "1.4.2",
         "history": [
+          {
+            "v": "1.4.2",
+            "t": "Power Program on the watch: today's workout goes to the watch, its ticks come back"
+          },
           {
             "v": "1.4.1",
             "t": "Power Program: an empty Save Check-In no longer logs a blank check-in"
@@ -971,10 +975,6 @@
           {
             "v": "1.3.8",
             "t": "Power Program: keep the check-in units on screen on a small phone"
-          },
-          {
-            "v": "1.3.7",
-            "t": "Power Program: make Reset all progress a full-size tap"
           }
         ],
         "caps": [
@@ -1061,12 +1061,20 @@
         ],
         "autoShots": [],
         "latest": {
-          "d": "Nov 17, 2026",
-          "t": "Your watch: Cube Clock on a Wear OS watch",
-          "url": "https://github.com/natesteele888/cube-clock/commit/5de3e8ca1d124193f309b483b790dd6c497314c6"
+          "d": "Nov 18, 2026",
+          "t": "Watch link copy: add the schedule field, same as the apps original",
+          "url": "https://github.com/natesteele888/cube-clock/commit/b9f97b73e99dc2555628cccd2e99ddf170cc49d1"
         },
-        "version": "1.3.1",
+        "version": "1.3.3",
         "history": [
+          {
+            "v": "1.3.3",
+            "t": "Watch link copy: add the schedule field, same as the apps original"
+          },
+          {
+            "v": "1.3.2",
+            "t": "Statistics: say the watch hint once"
+          },
           {
             "v": "1.3.1",
             "t": "Your watch: Cube Clock on a Wear OS watch"
@@ -1078,14 +1086,6 @@
           {
             "v": "1.2.9",
             "t": "Leaderboard: plain no-signal message, and reconnect when the signal comes back"
-          },
-          {
-            "v": "1.2.8",
-            "t": "Statistics: say 1 solve, not 1 solves"
-          },
-          {
-            "v": "1.2.7",
-            "t": "Cube Clock: add the shared Something wrong? report and note failed saves"
           }
         ],
         "caps": [
@@ -1189,12 +1189,24 @@
         ],
         "autoShots": [],
         "latest": {
-          "d": "Nov 16, 2026",
-          "t": "2027 tab: five count tiles in one row; hide the empty photo box",
-          "url": "https://github.com/natesteele888/sponsor-banner-inventory/commit/bc40742dca33b10c9b963432ed8e64d8ffcd054b"
+          "d": "Nov 18, 2026",
+          "t": "Ballclub door: coaches get their own team's sponsor names only",
+          "url": "https://github.com/natesteele888/sponsor-banner-inventory/commit/5564d8b58cdad2daa4eb73e6bdd7eafa1c0be228"
         },
-        "version": "1.3.0",
+        "version": "1.3.3",
         "history": [
+          {
+            "v": "1.3.3",
+            "t": "Ballclub door: coaches get their own team's sponsor names only"
+          },
+          {
+            "v": "1.3.2",
+            "t": "Sponsors: keep team picks in Script Properties, not a new Sheet tab"
+          },
+          {
+            "v": "1.3.1",
+            "t": "LYBS Sponsors: live sponsorship sheet tab with team picks"
+          },
           {
             "v": "1.3.0",
             "t": "2027 tab: five count tiles in one row; hide the empty photo box"
@@ -1202,18 +1214,6 @@
           {
             "v": "1.2.9",
             "t": "Load the fonts without holding up the sponsor form and banner list"
-          },
-          {
-            "v": "1.2.8",
-            "t": "Sponsor info form: catch a mistyped email before it sends"
-          },
-          {
-            "v": "1.2.6",
-            "t": "2027 intake: sponsor emails are drafts only, and nothing happens until payment is in"
-          },
-          {
-            "v": "1.2.5",
-            "t": "Add 2027 sponsor banner intake: hourly sponsor check, info email, reply form, 2027 tab"
           }
         ],
         "caps": [
@@ -2317,8 +2317,8 @@
           "Closest to the pin by GPS or tape, with an optional photo",
           "Build any course: par and yardage by tee, 9 or 18 holes",
           "A pencil sketch of every hole, yardage-book style, with 100, 150 and 200 marks",
-   "Jack the caddie: a tip on every hole and a word on every score, from clean to super crude, always clean for kids",
-   "Birdsong and piano on the menu, softer birdsong while you score, and it never stops your music"
+          "Jack the caddie: a tip on every hole and a word on every score, from clean to super crude, always clean for kids",
+          "Birdsong and piano on the menu, softer birdsong while you score, and it never stops your music"
         ],
         "latest": {
           "d": "Nov 17, 2026",
@@ -2916,6 +2916,16 @@
           }
         ]
       }
+    },
+    {
+      "id": "snackshack",
+      "name": "Snack Shack Screen",
+      "live": "https://natesteele888.github.io/apps/snackshack/",
+      "repo": "natesteele888/apps",
+      "path": "snackshack/",
+      "toolboxIds": [],
+      "private": true,
+      "store": false
     }
   ],
   "comingSoon": []

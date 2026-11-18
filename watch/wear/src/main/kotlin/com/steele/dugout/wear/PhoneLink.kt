@@ -76,10 +76,10 @@ object PhoneLink : MessageClient.OnMessageReceivedListener, DataClient.OnDataCha
         } catch (e: Exception) { /* no phone */ }
     }
 
-    fun putPitch(json: String) {
+    /** the watch's pitch log to the phone; works with the apps closed too (a press on the Pitch Count tile) */
+    fun putPitch(ctx: Context, json: String) {
         val req = PutDataRequest.create(Paths.PITCH).setData(json.toByteArray(Charsets.UTF_8)).setUrgent()
-        val s = scope ?: return
-        s.launch { try { Wearable.getDataClient(app).putDataItem(req).await() } catch (e: Exception) { /* synced on the next change */ } }
+        try { Wearable.getDataClient(ctx.applicationContext).putDataItem(req) } catch (e: Exception) { /* synced on the next change */ }
     }
 
     override fun onMessageReceived(ev: MessageEvent) {

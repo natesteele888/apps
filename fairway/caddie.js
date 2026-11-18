@@ -2,10 +2,9 @@
 /* Jack, the caddie. A few words on each hole (how far, what to hit, what to watch for) and a reaction to every score
    entered on this phone. Jack is written here, line by line: no AI service, no account, nothing leaves the phone, so he
    works with no signal and on old phones.
-   How salty he talks is a setting with four levels: Clean, A little salty, Salty as hell and Super crude. Anything past
-   Clean needs a grown-up to say so, Super crude needs a second yes, and two locks keep him clean no matter what:
-   a kid's phone (unlocking it takes a grown-up's maths question) and a family event (the organizer's switch, for every
-   phone in that tournament). He roasts shots, never people's looks, and nothing he says is sexual.
+   How salty he talks follows Jack's settings (jack.js and core.js cleanJack): Clean, A little, A lot and Super crude,
+   with the kid lock and the adult check there. The app also keeps him clean for every phone in a family event (the
+   organizer's switch). He roasts shots, never people's looks, and nothing he says is sexual.
    lineFor() is plain (no page needed), so the tests can check that no clean line ever swears. */
 (function (root, make) {
   const M = make();
@@ -14,8 +13,8 @@
   "use strict";
   const LEVELS = [
     { id: 0, name: "Clean", sub: "Not one bad word. Always on for kids." },
-    { id: 1, name: "A little salty", sub: "The odd hell and crap." },
-    { id: 2, name: "Salty as hell", sub: "Swears like a regular in the cart barn." },
+    { id: 1, name: "A little", sub: "The odd hell and crap." },
+    { id: 2, name: "A lot", sub: "Swears like a regular in the cart barn." },
     { id: 3, name: "Super crude", sub: "Nonstop. Roasts every bad swing. Grown-ups only." }
   ];
   const SWEARS = /\b(fuck\w*|shit\w*|damn\w*|hell|ass|asses|crap\w*|bitch\w*|piss\w*|bastard\w*|goddamn\w*|dick\w*|bullshit)\b/i;
@@ -109,15 +108,6 @@
     return yards <= 95 ? "A wedge" : yards <= 125 ? "A 9-iron" : yards <= 140 ? "An 8-iron" : yards <= 155 ? "A 7-iron" : yards <= 170 ? "A 6-iron" : yards <= 185 ? "A 5-iron" : yards <= 205 ? "A hybrid" : "A fairway wood";
   }
   const fmtTp = n => (n === 0 ? "even" : n < 0 ? n + "" : "+" + n);
-  // How salty Jack is right now: either lock wins, and anything past Clean needs a grown-up's yes on this phone.
-  function level(o) {
-    o = o || {};
-    if (o.kid || o.fam) return 0;
-    const lv = clamp(Math.round(Number(o.lvl) || 0), 0, 3);
-    if (lv > 0 && !o.adult) return 0;
-    if (lv === 3 && !o.crude) return 2;
-    return lv;
-  }
   function fill(t, x) {
     const first = String(x.n || "").trim().split(/\s+/)[0] || "partner";
     return t.replace(/\{p\}/g, x.p || "").replace(/\{y\}/g, x.y ? x.y + " yards" : "no yardage on the card").replace(/\{club\}/g, club(x.y))
@@ -143,8 +133,5 @@
     const r = rnd == null ? Math.random() : rnd;
     return { kind: k, text: fill(set[Math.floor(r * set.length) % set.length], x) };
   }
-  // A grown-up check for turning a kid's phone back: two numbers to multiply, the way kids' apps do it.
-  function gate(rnd) { const a = 12 + Math.floor((rnd == null ? Math.random() : rnd) * 8), b = 6 + Math.floor(((rnd == null ? Math.random() : rnd) * 7919) % 4); return { q: a + " × " + b, a: a * b }; }
-
-  return { LEVELS, LINES: L, SWEARS, level, lineFor, kindOf, club, gate, fill };
+  return { LEVELS, LINES: L, SWEARS, lineFor, kindOf, club, fill };
 });

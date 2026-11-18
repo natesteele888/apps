@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- What the Scores tile looks like, in the watch's list of tiles: two game cards, the first one blue for Lunenburg -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android" android:width="192dp" android:height="192dp" android:viewportWidth="192" android:viewportHeight="192">
+    <path android:fillColor="#FF000000" android:pathData="M96,0a96,96 0,1 1,0 192a96,96 0,1 1,0 -192z" />
+    <path android:fillColor="#FFFBBF24" android:pathData="M60,40h72v8h-72z" />
+    <path android:fillColor="#FF1E3A8A" android:pathData="M37,62h118a12,12 0,0 1,12 12v24a12,12 0,0 1,-12 12h-118a12,12 0,0 1,-12 -12v-24a12,12 0,0 1,12 -12z" />
+    <path android:fillColor="#FFFFFFFF" android:pathData="M37,72h70v7h-70zM143,72h10v7h-10zM37,90h56v7h-56zM143,90h10v7h-10z" />
+    <path android:fillColor="#FF1E293B" android:pathData="M37,116h118a12,12 0,0 1,12 12v24a12,12 0,0 1,-12 12h-118a12,12 0,0 1,-12 -12v-24a12,12 0,0 1,12 -12z" />
+    <path android:fillColor="#FF94A3B8" android:pathData="M37,126h62v7h-62zM143,126h10v7h-10zM37,144h70v7h-70zM143,144h10v7h-10z" />
+</vector>

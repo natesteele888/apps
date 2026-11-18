@@ -428,11 +428,103 @@ input:focus, select:focus, textarea:focus { outline: 0; border-color: var(--gree
 .teecard b { display: block; font: 700 44px var(--cond); line-height: 1.1; }
 a.btn { text-decoration: none; }
 
+/* round bingo: a 3 by 3 card, big enough to read at a glance */
+.bgo { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 4px 0 10px; }
+.bgo button { min-height: 86px; border-radius: 12px; border: 2px solid var(--line); background: #fff; color: var(--ink); font: 700 16px/1.15 var(--cond); text-transform: uppercase; padding: 8px 6px; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
+.bgo button small { display: block; font: 600 10px/1.2 var(--sans); text-transform: none; margin-top: 4px; opacity: .8; }
+.bgo button.hit { background: var(--green); border-color: var(--green); color: #fff; }
+.bgo button.free { background: #c9a227; border-color: #c9a227; color: #3a2c06; }
+.bgo button.win { background: var(--under); border-color: var(--under); color: #fff; }
+.bgo button:disabled { cursor: default; }
+/* side games */
+.owes .ritem span { line-height: 1.3; }
+.betg { background: var(--paper); border: 1px solid var(--line); border-radius: 12px; padding: 10px 14px; margin: 0 0 8px; }
+.betg-h { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.betg ul { margin: 6px 0 0; padding-left: 18px; color: var(--muted); font-size: 14.5px; }
+.betg li { margin: 2px 0; }
+.betrow select { width: auto; min-width: 116px; min-height: 40px; padding: 6px 8px; }
+.betck { display: flex; align-items: center; gap: 10px; font-weight: 700; flex: 1; min-height: 40px; cursor: pointer; }
+.betck input { width: 22px; height: 22px; min-height: 0; padding: 0; flex: none; accent-color: var(--green); }
+/* hole review under the scorer */
+.hreview { background: var(--paper); border: 1px solid var(--line); border-radius: 14px; padding: 12px 14px; margin: 0 0 12px; display: grid; gap: 8px; }
+.hr-h { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.hr-h b { font-size: 17px; color: var(--green); }
+.hreview .msg { margin: 0; }
+.hrrow { display: grid; grid-template-columns: 76px 1fr; align-items: center; gap: 8px; }
+.hrrow > span { font-weight: 700; font-size: 14px; }
+.hrseg { display: flex; gap: 4px; flex-wrap: wrap; }
+.hrseg button { flex: 1; min-width: 40px; min-height: 40px; padding: 4px 6px; border: 1.5px solid var(--line); border-radius: 10px; background: #fff; font: inherit; font-weight: 700; font-size: 14px; cursor: pointer; }
+.hrseg button[aria-pressed="true"] { background: var(--green); border-color: var(--green); color: #fff; }
+.hrnext { border-top: 1px solid var(--line); padding-top: 8px; }
+.hrnext span { display: grid; }
+.hrnext small { color: var(--muted); }
+.hrjack { border: 2px solid var(--gold); background: #fffaf0; border-radius: 12px; padding: 8px 12px; }
+.hrjack small { font-weight: 700; color: #7a5c00; text-transform: uppercase; letter-spacing: .08em; font-size: 11.5px; }
+.hrjack p { margin: 2px 0 0; }
+/* Jack and caddie notes */
+.jackbar { display: flex; width: 100%; justify-content: space-between; align-items: center; gap: 10px; text-align: left; margin: 0 0 10px; padding: 10px 14px; border-radius: 14px; border: 1.5px solid var(--green); background: var(--paper); color: var(--ink); cursor: pointer; font: inherit; }
+.jackbar b, .jackbar small { display: block; }
+.jackbar small { color: var(--muted); overflow-wrap: anywhere; }
+.jackbar .chev { font-weight: 700; color: var(--green); white-space: nowrap; }
+.hrnote { color: var(--ink) !important; font-style: italic; margin-top: 2px; }
+.hrseg button:disabled { opacity: .4; cursor: default; }
+.ritem .x { flex: none; width: 40px; height: 40px; border: 0; background: none; font-size: 24px; color: var(--danger); cursor: pointer; }
+/* round recap and season race */
+.recap { background: var(--green); color: #fff; border-radius: 16px; padding: 14px 16px; margin: 0 0 12px; display: grid; gap: 2px; }
+.recap .rc-eye { color: var(--gold); font-weight: 700; text-transform: uppercase; letter-spacing: .1em; font-size: 12px; }
+.recap .rc-champ { font-size: 22px; }
+.recap .rc-line { color: #cfe0d2; }
+.recap ul { list-style: none; margin: 10px 0 4px; padding: 0; display: grid; gap: 6px; }
+.recap li { display: grid; grid-template-columns: auto 1fr; gap: 8px; align-items: start; font-size: 14.5px; }
+.recap .msg { color: #cfe0d2; margin: 0; }
+.recap .btn { background: var(--gold); border-color: var(--gold); color: #1b1b1b; }
+.season { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.season li { display: grid; grid-template-columns: 28px 1fr auto; align-items: center; gap: 10px; padding: 10px 14px; background: var(--paper); border: 1px solid var(--line); border-radius: 12px; }
+.season li.mine { background: #fff8e1; }
+.season .pos { font-weight: 800; color: var(--green); text-align: center; }
+.season .nm small { display: block; color: var(--muted); }
+.season .pts { font-variant-numeric: tabular-nums; }
+/* my bag */
+.bag .ritem { gap: 8px; }
+.bag input[type=number] { width: 76px; min-height: 40px; padding: 6px 8px; text-align: right; flex: none; }
+.bag small { color: var(--muted); flex: none; }
+/* hole map */
+.hmap { position: relative; width: 100%; height: 0; border-radius: 12px; overflow: hidden; background: #e8efe6; border: 1px solid var(--line); cursor: crosshair; }
+.hmap img, .hmap svg { position: absolute; left: 0; top: 0; width: 100%; height: 100%; }
+.hmap img { object-fit: fill; }
+.hmap.none { height: auto; padding: 24px 16px; cursor: default; text-align: center; color: var(--muted); }
+.hmap .mline { stroke: #fff; stroke-width: .6; stroke-dasharray: 1.6 1.2; }
+.hmap .mtee { fill: #fff; stroke: #1b1b1b; stroke-width: .5; }
+.hmap .mgreen { fill: none; stroke: #fff; stroke-width: .9; }
+.hmap .mtap { fill: var(--gold); stroke: #1b1b1b; stroke-width: .4; }
+.hmap .myou { fill: #1f6fd1; stroke: #fff; stroke-width: .8; }
+.gyds { display: grid; grid-template-columns: 1fr 1.3fr 1fr; gap: 6px; text-align: center; margin: 8px 0; }
+.gyds div { background: var(--paper); border: 1px solid var(--line); border-radius: 12px; padding: 6px 4px; }
+.gyds small { display: block; color: var(--muted); font-size: 12px; }
+.gyds b { font-size: 22px; font-variant-numeric: tabular-nums; }
+.gyds .mid { background: var(--green); color: #fff; border-color: var(--green); }
+.gyds .mid small { color: #cfe0d2; }
+.gyds .mid b { font-size: 30px; }
+.filebtn { position: relative; overflow: hidden; }
+.filebtn input { position: absolute; left: 0; top: 0; right: 0; bottom: 0; opacity: 0; width: 100%; height: 100%; min-height: 0; cursor: pointer; }
+.mapbar { border-color: var(--gold); background: #fffaf0; }
+/* who's where */
+.where { background: #e8efe6; border: 1px solid var(--line); border-radius: 14px; padding: 6px; }
+.where svg { display: block; width: 100%; height: auto; }
+.where .wh line { stroke: #9cc58a; stroke-width: 3.2; stroke-linecap: round; }
+.where .wh .wgr { fill: #6fa955; }
+.where .wh text { font: 700 3.6px var(--sans); fill: var(--muted); text-anchor: middle; }
+.where .wdot circle { fill: var(--green); stroke: #fff; stroke-width: .8; }
+.where .wdot text { font: 800 4px var(--sans); fill: #fff; text-anchor: middle; }
+.where .wdot.mine circle { fill: var(--gold); }
+.where .wdot.mine text { fill: #1b1b1b; }
+.wlist { list-style: none; margin: 8px 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 14px; }
+.wlist li.mine { color: var(--green); font-weight: 700; }
 /* ---------- the hole map sketch and Jack the caddie (Score screen) ---------- */
 .hplus { display: grid; grid-template-columns: 92px 1fr; gap: 10px; align-items: stretch; margin: 0 0 10px; }
-.hmap { padding: 0; border: 1.5px solid var(--line); border-radius: 12px; background: #f7f3e6; overflow: hidden; cursor: pointer; min-height: 150px; display: block; }
-.hmap svg, .mapbig svg { display: block; width: 100%; height: 100%; }
-.hmap svg { height: 172px; }
+.sketch { padding: 0; border: 1.5px solid var(--line); border-radius: 12px; background: #f7f3e6; overflow: hidden; cursor: pointer; min-height: 150px; display: block; }
+.sketch svg, .mapbig svg { display: block; width: 100%; height: 100%; }
+.sketch svg { height: 172px; }
 .mapbig { background: #f7f3e6; border: 1.5px solid var(--line); border-radius: 12px; height: min(62vh, 520px); padding: 6px; }
 .maplegend { margin: 10px 0 0; font-weight: 600; }
 .jack { background: var(--paper); border: 1.5px solid var(--line); border-radius: 14px; padding: 10px 12px; display: flex; flex-direction: column; gap: 6px; min-width: 0; }

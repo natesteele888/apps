@@ -5,4 +5,7 @@
     <string name="pitch_name">Pitch Count</string>
     <string name="gc_name">GC Scores</string>
     <string name="scores_name">Scores</string>
+    <string name="pitch_tile_about">The pitch count, with +1 and Undo right on the tile</string>
+    <string name="scores_tile_about">Today\'s MAC League scores, Lunenburg first</string>
+    <string name="face_score_name">Live score</string>
 </resources>

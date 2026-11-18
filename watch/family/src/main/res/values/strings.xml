@@ -6,4 +6,9 @@
     <string name="power_name">Power Program</string>
     <string name="picks_name">Gameday Picks</string>
     <string name="read_name">Read 20</string>
+    <string name="practice_name">Practice Clock</string>
+    <string name="schedule_name">Schedule</string>
+    <string name="fairway_name">Fairway</string>
+    <!-- the name in the app list, and what to say to the watch's assistant: "Hey Google, open Spelling Genie" -->
+    <string name="spell_name">Spelling Genie</string>
 </resources>

@@ -29,6 +29,7 @@
     score: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 19l1-4L16 5l3 3L9 18l-4 1z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>',
     course: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20c3-6 6-2 8-8s5-8 8-8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><circle cx="18" cy="17" r="2.2" fill="currentColor"/></svg>',
     teams: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="8" cy="8" r="3" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="16.5" cy="9" r="2.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M2.5 19c.6-3.4 2.8-5 5.5-5s4.9 1.6 5.5 5M13.5 14.6c.9-.4 1.9-.6 3-.6 2.4 0 4.2 1.4 4.8 4.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>',
+    games: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M9.3 4v16M14.7 4v16M4 9.3h16M4 14.7h16" stroke="currentColor" stroke-width="1.6"/></svg>',
     chat: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v11H9l-5 4z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>',
     going: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12l4 4 10-10" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>',
     more: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="6" height="6" fill="none" stroke="currentColor" stroke-width="2"/><rect x="14" y="4" width="6" height="6" fill="none" stroke="currentColor" stroke-width="2"/><rect x="4" y="14" width="6" height="6" fill="none" stroke="currentColor" stroke-width="2"/><path d="M14 14h2v2h-2zM18 18h2v2h-2zM14 18h2M18 14h2" stroke="currentColor" stroke-width="2"/></svg>'
@@ -361,10 +362,10 @@
     $("#back", v).onclick = () => go("home", {}, false);
     const body = $("#tab", v);
     const going = !!(ev.rally && ev.rally.on);
-    const list = going ? [["going", "Going"], ["chat", "Chat"], ["more", "Share"]] : [["board", "Board"], ["score", "Score"], ["teams", "Teams"], ["chat", "Chat"], ["more", "Share"]];
+    const list = going ? [["going", "Going"], ["chat", "Chat"], ["more", "Share"]] : [["board", "Board"], ["score", "Score"], ["teams", "Teams"], ["games", "Games"], ["chat", "Chat"], ["more", "Share"]];
     if (S.tab === "field" || S.tab === "course") { S.boardMode = S.tab; S.tab = "board"; }
     if (!list.some(x => x[0] === S.tab)) S.tab = list[0][0];
-    ({ board: tabBoard, score: tabScore, teams: FW.phase1.tabTeams, chat: FW.phase1.tabChat, going: FW.phase1.tabGoing, more: tabMore }[S.tab] || tabBoard)(body, ev);
+    ({ board: tabBoard, score: tabScore, teams: FW.phase1.tabTeams, games: FW.games.tab, chat: FW.phase1.tabChat, going: FW.phase1.tabGoing, more: tabMore }[S.tab] || tabBoard)(body, ev);
     const tabs = $("#tabs"), unread = S.tab === "chat" ? 0 : FW.phase1.unread(S.code);
     tabs.hidden = false;
     tabs.innerHTML = list.map(([k, l]) => `<button type="button" data-tab="${k}" aria-current="${S.tab === k}">${ICON[k]}<span>${l}</span>${k === "chat" && unread ? `<i class="dot" aria-label="${unread} new">${unread > 9 ? "9+" : unread}</i>` : ""}</button>`).join("");
@@ -382,22 +383,22 @@
     if (!rows.length) { el.innerHTML = seg + emptyField(); wireBoard(el); return; }
     let html;
     if (S.boardMode === "holes") {
-      const pars = ev.course.holes.map(h => h.par);
+      const pars = ev.course.holes.map(h => h.par), bn = C.boardNames(rows);
       html = `${ev.rounds > 1 ? `<div class="pills small" role="group" aria-label="Round">${Array.from({ length: ev.rounds }, (_, i) => `<button type="button" class="pill" data-br="${i + 1}" aria-pressed="${r === i + 1}">Round ${i + 1}</button>`).join("")}</div>` : ""}
         <div class="board holes"><div class="bhead">Leaders</div><div class="cardwrap" data-keep="hbh"><table class="hbh"><thead>
           <tr><th class="nm">Hole</th>${pars.map((_, i) => `<th>${i + 1}</th>`).join("")}</tr>
           <tr class="parrow"><th class="nm">Par</th>${pars.map(p => `<td>${p}</td>`).join("")}</tr></thead><tbody>
           ${rows.map(row => { const x = row.rounds[r - 1];
-            return `<tr><th class="nm"><button type="button" data-player="${esc(row.id)}"><span class="pos">${esc(row.pos)}</span>${esc(row.name)}</button></th>${pars.map((_, i) => { const h = i + 1, v = x.run[h]; return `<td class="${v == null ? "" : C.tone(v)}${x.last === h && !x.done ? " now" : ""}">${v == null ? "" : esc(v === 0 ? "E" : Math.abs(v))}</td>`; }).join("")}</tr>`; }).join("")}
+            return `<tr><th class="nm"><button type="button" data-player="${esc(row.id)}"><span class="pos">${esc(row.pos)}</span>${esc(bn[row.id])}</button></th>${pars.map((_, i) => { const h = i + 1, v = x.run[h]; return `<td class="${v == null ? "" : C.tone(v)}${x.last === h && !x.done ? " now" : ""}">${v == null ? "" : esc(v === 0 ? "E" : Math.abs(v))}</td>`; }).join("")}</tr>`; }).join("")}
         </tbody></table></div><p class="legend"><span class="tp under">Red</span> under par, <span class="tp over">green</span> over par, black even. Each number is the player's score to par after that hole${n === 18 ? "" : ""}.</p></div>`;
     } else {
-      const R = ev.rounds;
+      const R = ev.rounds, bn = C.boardNames(rows);
       html = `<div class="board"><div class="bhead">Leaders</div><table class="lb"><thead><tr><th>Pos</th><th class="pn">Player</th><th>To par</th><th>Thru</th>${R > 1 ? Array.from({ length: R }, (_, i) => `<th class="rd">R${i + 1}</th>`).join("") : ""}<th>Tot</th></tr></thead><tbody>
-        ${rows.map(row => `<tr data-player="${esc(row.id)}" tabindex="0" role="button" aria-label="${esc(row.name)}, ${esc(row.pos)}, ${esc(C.fmtPar(row.toPar))}"><td class="pos">${esc(row.pos)}</td><td class="pn">${teeDot(C.teeOf(ev, row.pl))}${esc(row.name)}</td><td class="big">${row.holes ? parText(row.toPar) : ""}</td><td class="thru">${esc(row.today.done ? "F" : row.today.thru || "–")}</td>${R > 1 ? row.rounds.map(x => `<td class="rd">${x.done ? x.strokes : x.started ? `<span class="tp ${C.tone(x.toPar)} sm">${esc(C.fmtPar(x.toPar))}</span>` : ""}</td>`).join("") : ""}<td class="tot">${row.total || ""}</td></tr>`).join("")}
-      </tbody></table></div><p class="legend">Tap a player for their card. <span class="tp under">Red</span> is under par, <span class="tp over">green</span> over.</p>${ctpPanel(ev, r)}`;
+        ${rows.map(row => `<tr data-player="${esc(row.id)}" tabindex="0" role="button" aria-label="${esc(row.name)}, ${esc(row.pos)}, ${esc(C.fmtPar(row.toPar))}"><td class="pos">${esc(row.pos)}</td><td class="pn">${teeDot(C.teeOf(ev, row.pl))}${esc(bn[row.id])}</td><td class="big">${row.holes ? parText(row.toPar) : ""}</td><td class="thru">${esc(row.today.done ? "F" : row.today.thru || "–")}</td>${R > 1 ? row.rounds.map(x => `<td class="rd">${x.done ? x.strokes : x.started ? `<span class="tp ${C.tone(x.toPar)} sm">${esc(C.fmtPar(x.toPar))}</span>` : ""}</td>`).join("") : ""}<td class="tot">${row.total || ""}</td></tr>`).join("")}
+      </tbody></table></div><p class="legend">Tap a name for their card. <span class="tp under">Red</span> is under par, <span class="tp over">green</span> over.</p>${ctpPanel(ev, r)}`;
     }
-    el.innerHTML = seg + html;
-    wireBoard(el);
+    el.innerHTML = seg + (S.boardMode === "holes" ? "" : FW.recap.html(ev, r)) + html;
+    wireBoard(el); FW.recap.wire(el, ev, r);
     $$("tr[data-player]", el).forEach(t => t.onkeydown = e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openCard(t.dataset.player); } });
   }
   function wireBoard(el) {
@@ -445,10 +446,12 @@
         <div class="hy">${ev.course.tees.filter(t => g.players.some(p => p.tee === t.id)).map(t => `<span>${teeDot(t)}${C.yards(ev.course, h, t.id) || "–"} yds</span>`).join("")}</div></div>
       ${caddieRow(ev, g, r, h, mine)}
       ${(ev.ctph || []).indexOf(h) >= 0 ? (() => { const x = C.ctpBoard(ev, r).find(y => y.h === h); return `<button type="button" class="ctpbar" id="ctpopen"><span><b>Closest to the pin</b><small>${x.best ? esc(x.best.name) + ", " + esc(C.fmtFeet(x.best.d)) : "Nobody measured yet"}</small></span><span class="chev">Measure</span></button>`; })() : ""}
+      ${mine && mine.g === g.g ? FW.map.holeHtml(ev, h) + FW.jack.holeHtml(ev, h) : ""}
       <ul class="scorer">${g.players.map((p, i) => { const v = rs[i].scores[h - 1], d = v == null ? null : v - hole.par, t = C.teeOf(ev, p);
         return `<li data-pid="${esc(p.id)}"><button type="button" class="sname" data-player="${esc(p.id)}">${teeDot(t)}<span><b>${esc(p.n)}</b><small>${rs[i].thru ? parText(rs[i].toPar) + " thru " + rs[i].thru : "No scores yet"}${mine && mine.id === p.id ? " · you" : ""}</small></span></button>
           <div class="stepper"><button type="button" class="minus" aria-label="One less for ${esc(p.n)}">−</button><button type="button" class="val ${v == null ? "empty" : C.mark(d)}" aria-label="${v == null ? "Set par for " + esc(p.n) : esc(p.n) + ": " + v}">${v == null ? "Par?" : v}</button><button type="button" class="plus" aria-label="One more for ${esc(p.n)}">+</button></div>
           <small class="sword ${d == null ? "" : C.tone(d)}">${v == null ? "" : esc(C.scoreName(d, v))}${v != null ? ` <button type="button" class="link clr" aria-label="Clear ${esc(p.n)}'s score">clear</button>` : ""}</small></li>`; }).join("")}</ul>
+      ${mine && mine.g === g.g ? FW.review.html(ev, mine, r, h) : ""}
       <div class="navrow"><button type="button" class="btn" id="prev" ${idx <= 0 ? "disabled" : ""}>‹ Hole ${order[idx - 1] || ""}</button><button type="button" class="btn ${allIn ? "primary" : ""}" id="next" ${idx >= order.length - 1 ? "disabled" : ""}>Hole ${order[idx + 1] || ""} ›</button></div>
       <h2 class="sec">Group ${g.g} card</h2>${groupCard(ev, g.players, r, order, h)}
       ${!mine && !isOrg() ? `<p class="msg">You're watching. To keep score for this group, tap Join on the Share tab.</p>` : ""}`;
@@ -460,6 +463,7 @@
     const strip = $(".strip", el), on = strip && $("[aria-pressed=true]", strip); if (on && strip.scrollTo) strip.scrollLeft = Math.max(0, on.offsetLeft - strip.clientWidth / 2 + on.clientWidth / 2);
     $("#prev", el).onclick = () => { S.hole = order[idx - 1]; render(); };
     $("#next", el).onclick = () => { S.hole = order[idx + 1]; render(); };
+    if (mine && mine.g === g.g) { FW.review.wire(el, ev, mine, r, h); FW.jack.wire(el, ev, mine, h); FW.map.wire(el, ev, mine, h); }
     $$(".scorer li", el).forEach(li => {
       const pid = li.dataset.pid, cur = C.strokes(ev.p[pid], r, h);
       const set = val => {
@@ -488,7 +492,7 @@
   function tabCourse(el, ev) {
     const c = ev.course, mine = me(), n = c.holes.length;
     const halves = n === 18 ? [[1, 9, "Out"], [10, 18, "In"]] : [[1, n, "Tot"]];
-    el.innerHTML = `<div class="pad0"><h2 class="sec">${esc(c.name)} <small>par ${C.coursePar(c)}</small></h2>
+    el.innerHTML = `<div class="pad0">${FW.where.html(ev)}<h2 class="sec">${esc(c.name)} <small>par ${C.coursePar(c)}</small></h2>
       <ul class="teesum">${c.tees.map(t => `<li class="${mine && mine.tee === t.id ? "mine" : ""}">${teeLabel(c, t)}${mine && mine.tee === t.id ? " <i class='chip'>Your tees</i>" : ""}</li>`).join("")}</ul>
       ${halves.map(([a, b, lbl]) => { const hs = []; for (let k = a; k <= b; k++) hs.push(k);
         return `<div class="cardwrap" data-keep="cc${a}"><table class="sc course"><thead><tr><th class="nm">Hole</th>${hs.map(k => `<th>${k}</th>`).join("")}<th>${lbl}</th></tr></thead><tbody>
@@ -520,6 +524,7 @@
         : `<div class="share"><h2>${m.demo ? "This is the demo" : "On this phone only"}</h2><p class="msg">${m.demo ? "Made-up players on a made-up course, so you can try every screen. Score a few holes, tap players, flip their cards." : "This tournament runs on this phone, so there's no QR code to share. Pass the phone around to score, or put the board up on it."}</p>${m.demo ? `<button type="button" class="btn block" id="resetdemo">Start the demo over</button>` : ""}</div>`}
       ${!mine && canShare ? `<button type="button" class="btn primary block" id="joinme">Join and keep score</button>` : ""}
       ${mine ? `<p class="msg">You're <b>${esc(mine.n)}</b>, group ${mine.g}. <button type="button" class="link" id="notme">Not you?</button></p>` : ""}
+      ${mine && FW.watch ? FW.watch.panelHtml() : ""}
       ${ev.rally && ev.rally.on ? "" : FW.phase1.teeHtml(ev, org)}
       ${org ? `<button type="button" class="btn block" id="setup">Set it up</button>` + manageHtml(ev, list) : `<p class="msg">Changing rounds and players is on the phone that started this tournament.</p>`}
       <button type="button" class="btn ghost danger block" id="forget">Remove from this phone</button></div>`;
@@ -528,6 +533,7 @@
     const bq = $("#bigqr", el); if (bq) bq.onclick = () => { const o = document.createElement("div"); o.className = "bigqr"; o.innerHTML = `<h2>${esc(ev.name)}</h2>${qrSvg(link)}<p>Scan to join · tap to close</p>`; o.onclick = () => o.remove(); document.body.appendChild(o); };
     const jm = $("#joinme", el); if (jm) jm.onclick = () => { S.ev = ev; S.evCode = S.code; stopLive(); go("join"); };
     const nm = $("#notme", el); if (nm) nm.onclick = () => { FW.mineSet(S.code, { me: null }); render(); };
+    if (mine && FW.watch) FW.watch.wire(el);
     const rd = $("#resetdemo", el); if (rd) rd.onclick = () => { FW.local.create(S.code, C.demoEvent()); toast("Demo reset"); };
     $("#forget", el).onclick = () => {
       if (!confirm(local ? "Remove this tournament from this phone? It only lives here, so its scores go too." : "Remove this tournament from this phone? Its scores stay on the shared board, and the link still opens it.")) return;
@@ -589,10 +595,10 @@
      THE HOLE MAP AND JACK THE CADDIE (holemap.js draws, caddie.js talks)
      ====================================================================== */
   const M = window.FairwayMap, J = window.FairwayJack;
-  const JKEY = "fw:jack";
-  const jackSet = () => Object.assign({ on: true, lvl: 0, adult: false, crude: false, kid: false, voice: false }, FW.LS.get(JKEY, {}) || {});
-  const jackSave = o => { FW.LS.set(JKEY, Object.assign(jackSet(), o)); };
-  const jackLevel = () => { const j = jackSet(); return J.level({ lvl: j.lvl, adult: j.adult, crude: j.crude, kid: j.kid, fam: !!(S.ev && S.ev.fam) }); };
+  // Jack's level comes from his settings (jack.js: Clean, A little, A lot, Super crude, the kid lock and the adult
+  // check). The organizer's Family event switch keeps him clean on every phone in the tournament.
+  const LV = { clean: 0, little: 1, lot: 2, crude: 3 };
+  const jackLevel = () => (S.ev && S.ev.fam) ? 0 : (LV[C.jackLevel(FW.jack.settings())] || 0);
   // Whose hole it is on this screen: you, if you're in this group, or the group's first player.
   const subjectOf = (g, mine) => (mine && g.players.find(p => p.id === mine.id)) || g.players[0];
   function holeSketch(ev, h, teeId, big) {
@@ -605,79 +611,39 @@
     return J.lineFor({ kind: "tee", par: hole.par, y: C.yards(ev.course, h, sub.tee), hcp: hole.hcp, n: sub.n, h }, jackLevel());
   }
   function caddieRow(ev, g, r, h, mine) {
-    if (!M || !J) return "";
-    const sub = subjectOf(g, mine), j = jackSet(), key = [S.code, r, g.g, h].join(":");
+    if (!M || !J || !FW.jack) return "";
+    const sub = subjectOf(g, mine), js = FW.jack.settings(), key = [S.code, r, g.g, h, jackLevel()].join(":");
     if (!S.jack || S.jack.key !== key) S.jack = Object.assign({ key }, teeLine(ev, g, r, h, mine));
-    const lv = jackLevel(), lock = j.kid ? "Kid's phone: clean" : ev.fam ? "Family event: clean" : J.LEVELS[lv].name;
+    const lock = js.kid ? "Kid's profile: clean" : ev.fam ? "Family event: clean" : C.JACK_LANGS[jackLevel()][1];
     return `<div class="hplus">
-      <button type="button" class="hmap" id="hmap" aria-label="Hole ${h} map, a sketch. Tap to make it bigger">${holeSketch(ev, h, sub.tee, false)}</button>
-      ${j.on ? `<div class="jack" aria-live="polite"><div class="jhead"><span class="jface" aria-hidden="true">J</span><span><b>Jack</b><small>${esc(lock)}</small></span><button type="button" class="link" id="jset">Settings</button></div>
+      <button type="button" class="sketch" id="hsketch" aria-label="Hole ${h} sketch. Tap to make it bigger">${holeSketch(ev, h, sub.tee, false)}</button>
+      <div class="jack" aria-live="polite"><div class="jhead"><span class="jface" aria-hidden="true">J</span><span><b>Jack</b><small>${esc(lock)}</small></span><button type="button" class="link" id="jkset">Settings</button></div>
         <p class="jline" id="jline">${esc(S.jack.text)}</p>
-        <div class="jbtns"><button type="button" class="btn small" id="jask">Ask Jack</button>${j.voice && "speechSynthesis" in window ? `<button type="button" class="btn small ghost" id="jsay">Say it again</button>` : ""}</div></div>`
-      : `<div class="jack off"><p class="msg small">Jack the caddie is off on this phone.</p><button type="button" class="btn small" id="jset">Turn Jack on</button></div>`}
+        <div class="jbtns"><button type="button" class="btn small" id="jask">Ask Jack</button>${"speechSynthesis" in window ? `<button type="button" class="btn small ghost" id="jsay">Say it</button>` : ""}</div></div>
     </div>`;
   }
   function wireCaddie(el, ev, g, r, h, mine) {
-    const mp = $("#hmap", el); if (mp) mp.onclick = () => mapSheet(ev, g, h, mine);
-    const st = $("#jset", el); if (st) st.onclick = jackSheet;
-    const ask = $("#jask", el); if (ask) ask.onclick = () => { const k = S.jack && S.jack.key; S.jack = Object.assign({ key: k }, teeLine(ev, g, r, h, mine)); const ln = $("#jline", el); if (ln) ln.textContent = S.jack.text; say(S.jack.text); };
-    const ag = $("#jsay", el); if (ag) ag.onclick = () => say(S.jack && S.jack.text);
+    const mp = $("#hsketch", el); if (mp) mp.onclick = () => sketchSheet(ev, g, h, mine);
+    const st = $("#jkset", el); if (st) st.onclick = () => FW.jack.settingsSheet(() => { closeSheet(); S.jack = null; render(); });
+    const ask = $("#jask", el); if (ask) ask.onclick = () => { const k = S.jack && S.jack.key; S.jack = Object.assign({ key: k }, teeLine(ev, g, r, h, mine)); const ln = $("#jline", el); if (ln) ln.textContent = S.jack.text; };
+    const ag = $("#jsay", el); if (ag) ag.onclick = () => S.jack && FW.jack.say(S.jack.text);
   }
   // Jack's word on a score just entered on this phone (the screen redraws right after, with it in place).
   function jackReact(ev, pid, r, h, cur, val) {
-    const j = jackSet(); if (!J || !j.on) return;
+    if (!J || !FW.jack) return;
     const p = ev.p[pid], par = ev.course.holes[h - 1].par, x = C.round(ev, Object.assign({ id: pid }, p), r);
     const tp = x.toPar - (cur == null ? 0 : cur - par) + (val - par), thru = x.thru + (cur == null ? 1 : 0);
     const rows = C.standings(ev), lead = rows.length > 1 && rows[0].id === pid;
     const line = J.lineFor({ kind: "score", par, diff: val - par, tp, thru, n: p.n, h, lead }, jackLevel());
-    S.jack = Object.assign({ key: [S.code, r, S.group, h].join(":") }, line);
-    say(line.text);
+    S.jack = Object.assign({ key: [S.code, r, S.group, h, jackLevel()].join(":") }, line);
   }
-  // Out loud, when this phone has it on. Phones send speech to whatever plays sound right now: earbuds when they're in.
-  function say(text) {
-    const j = jackSet(); if (!text || !j.on || !j.voice || !("speechSynthesis" in window)) return;
-    try { speechSynthesis.cancel(); const u = new SpeechSynthesisUtterance(text); u.rate = 1.02; u.pitch = 0.9; u.lang = "en-US"; speechSynthesis.speak(u); } catch (e) { /* no voice on this phone */ }
-  }
-  function mapSheet(ev, g, h, mine) {
-    const sub = subjectOf(g, mine), hole = ev.course.holes[h - 1], y = C.yards(ev.course, h, sub.tee);
+  function sketchSheet(ev, g, h, mine) {
+    const sub = subjectOf(g, mine), hole = ev.course.holes[h - 1], y = C.yards(ev.course, h, sub.tee), own = mine && mine.g === g.g;
     sheet("Hole " + h, `<div class="mapbig">${holeSketch(ev, h, sub.tee, true)}</div>
       <p class="maplegend"><b>Par ${hole.par}</b>${y ? ` · ${y} yds from the ${esc(C.teeOf(ev, sub).name)} tees` : ""} · Handicap ${hole.hcp}</p>
-      <p class="msg small">A pencil sketch drawn from the hole's par and yardage, not the real layout. Numbers on the fairway are yards to the middle of the green.</p>`);
-  }
-  function jackSheet() {
-    const j = jackSet(), fam = !!(S.ev && S.ev.fam), lv = jackLevel();
-    const levels = j.kid || fam ? `<p class="lockmsg">${j.kid ? "This is a kid's phone, so Jack stays clean." : "The organizer made this a family event, so Jack stays clean on every phone."}</p>`
-      : `<fieldset class="fld"><legend>How Jack talks</legend><div class="opts">${J.LEVELS.map(l => `<label class="opt"><input type="radio" name="jlv" value="${l.id}" ${lv === l.id ? "checked" : ""}><span><b>${esc(l.name)}</b><small>${esc(l.sub)}</small></span></label>`).join("")}</div></fieldset>
-        <div id="jadult" ${lv > 0 || j.lvl > 0 ? "" : "hidden"}><label class="check"><input type="checkbox" id="jgrown" ${j.adult ? "checked" : ""}><span>I'm an adult and this isn't a kid's phone</span></label></div>`;
-    sheet("Jack the caddie", `<label class="check"><input type="checkbox" id="jon" ${j.on ? "checked" : ""}><span>Show Jack on the Score screen</span></label>
-      <label class="check"><input type="checkbox" id="jvoice" ${j.voice ? "checked" : ""} ${"speechSynthesis" in window ? "" : "disabled"}><span>Jack talks out loud</span></label>
-      <p class="msg small">${"speechSynthesis" in window ? "He talks through whatever your phone is playing sound on, so your earbuds when they're in. Music on a speaker may dip for a second while he talks." : "This phone has no voice for Jack, so he'll stay on the screen."}</p>
-      ${levels}<p class="err" id="jerr"></p>
-      <h3 class="sub">Kid's phone</h3>
-      ${j.kid ? `<p class="msg small">Locked: Jack stays clean here. A grown-up can unlock it.</p><button type="button" class="btn block" id="junlock">Unlock (grown-ups)</button>`
-        : `<p class="msg small">Lock this phone so Jack is always clean, whatever anyone picks. Unlocking takes a grown-up.</p><button type="button" class="btn block" id="jlock">Lock this phone for a kid</button>`}`, box => {
-      $("#jon", box).onchange = e => { jackSave({ on: e.target.checked }); render(); };
-      $("#jvoice", box).onchange = e => { jackSave({ voice: e.target.checked }); render(); if (e.target.checked) say("Jack here. Let's go play some golf."); };
-      const grown = $("#jgrown", box);
-      if (grown) grown.onchange = () => { jackSave({ adult: grown.checked }); if (!grown.checked) jackSave({ crude: false }); render(); };
-      $$("input[name=jlv]", box).forEach(rb => rb.onchange = () => {
-        const v = +rb.value; $("#jerr", box).textContent = "";
-        $("#jadult", box).hidden = v === 0;
-        if (v > 0 && !jackSet().adult) { $("#jerr", box).textContent = "Tick the grown-up box first, then pick it again."; $("input[name=jlv][value='" + jackLevel() + "']", box).checked = true; return; }
-        if (v === 3 && !jackSet().crude) {
-          if (!confirm("Super crude Jack swears nonstop and roasts every bad shot. Grown-ups only. Turn it on?")) { $("input[name=jlv][value='" + jackLevel() + "']", box).checked = true; return; }
-          jackSave({ crude: true });
-        }
-        jackSave({ lvl: v }); S.jack = null; render(); toast("Jack: " + J.LEVELS[v].name);
-      });
-      const lk = $("#jlock", box); if (lk) lk.onclick = () => { jackSave({ kid: true, lvl: 0, crude: false, adult: false }); S.jack = null; closeSheet(); render(); toast("Locked for a kid: Jack stays clean"); };
-      const un = $("#junlock", box); if (un) un.onclick = () => {
-        const q = J.gate();
-        const ans = prompt("Grown-ups: what is " + q.q + "?");
-        if (ans == null) return;
-        if (parseInt(String(ans).replace(/[^0-9]/g, ""), 10) === q.a) { jackSave({ kid: false }); closeSheet(); jackSheet(); toast("Unlocked"); }
-        else toast("That's not it, so it stays locked.", "error");
-      };
+      <p class="msg small">A pencil sketch drawn from the hole's par and yardage, not the real layout. Numbers on the fairway are yards to the middle of the green.${own ? " For the real hole, add your own picture on the hole map." : ""}</p>
+      ${own ? `<button type="button" class="btn block" id="skmap">Open the hole map</button>` : ""}`, box => {
+      const b = $("#skmap", box); if (b) b.onclick = () => { closeSheet(); FW.map.sheet(ev, mine, h); };
     });
   }
 
