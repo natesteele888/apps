@@ -73,10 +73,11 @@
             </intent-filter>
         </activity>
 
-        <!-- Live score on the watch face (long-press the face › Customize › tap a slot › Dugout › Live score): GC Scores' team. Android 8+ only. -->
+        <!-- Live score on the watch face (long-press the face › Customize › tap a slot › Dugout › Live score): GC Scores' team. Android 8+ only: @bool/face_on switches it off before that, which tools:targetApi tells lint. -->
         <service
             android:name=".GcScoreComplication"
             android:enabled="@bool/face_on"
+            tools:targetApi="26"
             android:exported="true"
             android:icon="@drawable/ic_face_gc"
             android:label="@string/face_score_name"
