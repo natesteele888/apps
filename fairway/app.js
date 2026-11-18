@@ -382,19 +382,19 @@
     if (!rows.length) { el.innerHTML = seg + emptyField(); wireBoard(el); return; }
     let html;
     if (S.boardMode === "holes") {
-      const pars = ev.course.holes.map(h => h.par);
+      const pars = ev.course.holes.map(h => h.par), bn = C.boardNames(rows);
       html = `${ev.rounds > 1 ? `<div class="pills small" role="group" aria-label="Round">${Array.from({ length: ev.rounds }, (_, i) => `<button type="button" class="pill" data-br="${i + 1}" aria-pressed="${r === i + 1}">Round ${i + 1}</button>`).join("")}</div>` : ""}
         <div class="board holes"><div class="bhead">Leaders</div><div class="cardwrap" data-keep="hbh"><table class="hbh"><thead>
           <tr><th class="nm">Hole</th>${pars.map((_, i) => `<th>${i + 1}</th>`).join("")}</tr>
           <tr class="parrow"><th class="nm">Par</th>${pars.map(p => `<td>${p}</td>`).join("")}</tr></thead><tbody>
           ${rows.map(row => { const x = row.rounds[r - 1];
-            return `<tr><th class="nm"><button type="button" data-player="${esc(row.id)}"><span class="pos">${esc(row.pos)}</span>${esc(row.name)}</button></th>${pars.map((_, i) => { const h = i + 1, v = x.run[h]; return `<td class="${v == null ? "" : C.tone(v)}${x.last === h && !x.done ? " now" : ""}">${v == null ? "" : esc(v === 0 ? "E" : Math.abs(v))}</td>`; }).join("")}</tr>`; }).join("")}
+            return `<tr><th class="nm"><button type="button" data-player="${esc(row.id)}"><span class="pos">${esc(row.pos)}</span>${esc(bn[row.id])}</button></th>${pars.map((_, i) => { const h = i + 1, v = x.run[h]; return `<td class="${v == null ? "" : C.tone(v)}${x.last === h && !x.done ? " now" : ""}">${v == null ? "" : esc(v === 0 ? "E" : Math.abs(v))}</td>`; }).join("")}</tr>`; }).join("")}
         </tbody></table></div><p class="legend"><span class="tp under">Red</span> under par, <span class="tp over">green</span> over par, black even. Each number is the player's score to par after that hole${n === 18 ? "" : ""}.</p></div>`;
     } else {
-      const R = ev.rounds;
+      const R = ev.rounds, bn = C.boardNames(rows);
       html = `<div class="board"><div class="bhead">Leaders</div><table class="lb"><thead><tr><th>Pos</th><th class="pn">Player</th><th>To par</th><th>Thru</th>${R > 1 ? Array.from({ length: R }, (_, i) => `<th class="rd">R${i + 1}</th>`).join("") : ""}<th>Tot</th></tr></thead><tbody>
-        ${rows.map(row => `<tr data-player="${esc(row.id)}" tabindex="0" role="button" aria-label="${esc(row.name)}, ${esc(row.pos)}, ${esc(C.fmtPar(row.toPar))}"><td class="pos">${esc(row.pos)}</td><td class="pn">${teeDot(C.teeOf(ev, row.pl))}${esc(row.name)}</td><td class="big">${row.holes ? parText(row.toPar) : ""}</td><td class="thru">${esc(row.today.done ? "F" : row.today.thru || "–")}</td>${R > 1 ? row.rounds.map(x => `<td class="rd">${x.done ? x.strokes : x.started ? `<span class="tp ${C.tone(x.toPar)} sm">${esc(C.fmtPar(x.toPar))}</span>` : ""}</td>`).join("") : ""}<td class="tot">${row.total || ""}</td></tr>`).join("")}
-      </tbody></table></div><p class="legend">Tap a player for their card. <span class="tp under">Red</span> is under par, <span class="tp over">green</span> over.</p>${ctpPanel(ev, r)}`;
+        ${rows.map(row => `<tr data-player="${esc(row.id)}" tabindex="0" role="button" aria-label="${esc(row.name)}, ${esc(row.pos)}, ${esc(C.fmtPar(row.toPar))}"><td class="pos">${esc(row.pos)}</td><td class="pn">${teeDot(C.teeOf(ev, row.pl))}${esc(bn[row.id])}</td><td class="big">${row.holes ? parText(row.toPar) : ""}</td><td class="thru">${esc(row.today.done ? "F" : row.today.thru || "–")}</td>${R > 1 ? row.rounds.map(x => `<td class="rd">${x.done ? x.strokes : x.started ? `<span class="tp ${C.tone(x.toPar)} sm">${esc(C.fmtPar(x.toPar))}</span>` : ""}</td>`).join("") : ""}<td class="tot">${row.total || ""}</td></tr>`).join("")}
+      </tbody></table></div><p class="legend">Tap a name for their card. <span class="tp under">Red</span> is under par, <span class="tp over">green</span> over.</p>${ctpPanel(ev, r)}`;
     }
     el.innerHTML = seg + html;
     wireBoard(el);
