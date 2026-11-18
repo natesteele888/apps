@@ -141,7 +141,8 @@ const PNG = {
     await stubFeed(page);
     await page.addInitScript(n => { window.__now = n; }, NOW);
     await page.goto(server.url + 'screen.html?f=' + FEED_ID + '&sec=60');
-    await page.waitForFunction(() => window.__snack && window.__snack.playable().length >= 6, null, { timeout: 15000 });
+    // Files come one at a time: wait for the whole first pull, not just the first six.
+    await page.waitForFunction(() => window.__snack && window.__snack.playable().length >= 6 && !window.__snack.S.fetching, null, { timeout: 15000 });
     const files = calls.filter(c => /^(file|slide):/.test(c)).sort();
     eq(files.join(','), 'file:f-blue,file:f-gd,file:f-night,file:f-red,file:f-spon,slide:deck~p1,slide:deck~p2', 'every playable file once; drafts and too-big files skipped');
     // one full pass from a fresh queue
