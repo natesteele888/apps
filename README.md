@@ -17,6 +17,7 @@ Installable phone apps, hosted on GitHub Pages.
 - [Walk-Up](https://natesteele888.github.io/apps/walkup/) — record, polish and play each player's walk-up announcement and song
 - [Scoreboard](https://natesteele888.github.io/apps/scoreboard/) — a big-number scoreboard for basketball, baseball and football
 - [Fairway](https://natesteele888.github.io/apps/fairway/) — live golf tournament scoring: QR join, a Masters-style leaderboard, player cards and closest to the pin
+- [Steele Usage](https://natesteele888.github.io/apps/usage/) — GitHub Actions minutes at a glance: used, left, which repos used them and when they reset (the read-only token stays on the phone)
 - [Film Lite](https://natesteele888.github.io/apps/filmlite/) — step through a clip, tag the moments and share the notes
 
 Every app stores its data on the phone only. No accounts, nothing uploaded.
