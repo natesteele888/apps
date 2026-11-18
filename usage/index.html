@@ -1,0 +1,519 @@
+<!doctype html>
+<html lang="en">
+<head>
+<!-- Copyright (c) 2026 Nate Steele. All rights reserved. Not licensed for copying, hosting or resale. See LICENSE. -->
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Steele Usage</title>
+<meta name="application-name" content="Steele Usage">
+<meta name="description" content="GitHub Actions minutes at a glance: how much of the month is used, which repos used it, and when it resets.">
+<meta name="theme-color" content="#0B0F17">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Usage">
+<meta name="referrer" content="no-referrer">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="/apps/icons/usage-192.png">
+<link rel="icon" href="/apps/icons/usage-192.png" sizes="192x192">
+<script src="https://natesteele888.github.io/apps/install.js" defer></script><script src="https://natesteele888.github.io/apps/health.js" defer></script>
+<!-- Privacy: the GitHub token and the numbers stay in this phone's storage only. The only server this page talks to is api.github.com. -->
+<style>
+:root{
+  --bg:#0B0F17; --panel:#141A26; --panel-2:#1B2232; --line:rgba(170,190,230,.13); --line-2:rgba(170,190,230,.24);
+  --text:#EEF2FA; --text-2:#A6B0C6; --text-3:#717C94;
+  --ok:#3FD6A0; --warn:#FFB547; --bad:#FF6E5E; --accent:#6EA8FF; --empty:#283044;
+  --radius:22px; --body:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+}
+*{box-sizing:border-box}
+html,body{margin:0;min-height:100%}
+body{background:var(--bg);color:var(--text);font:15px/1.4 var(--body);-webkit-font-smoothing:antialiased;padding-bottom:calc(24px + env(safe-area-inset-bottom,0px))}
+button,input,select{font:inherit;color:inherit}
+button{cursor:pointer}
+.hidden{display:none!important}
+.wrap{max-width:560px;margin:0 auto;padding:calc(12px + env(safe-area-inset-top,0px)) 14px 0}
+header{display:flex;align-items:center;gap:10px;margin:2px 2px 12px}
+.brand{display:flex;align-items:center;gap:9px;flex:1;min-width:0}
+.brand svg{flex:none}
+.brand h1{font-size:21px;margin:0;letter-spacing:-.01em;white-space:nowrap}
+.brand h1 b{color:var(--accent)}
+.iconbtn{background:var(--panel);border:1px solid var(--line);border-radius:12px;width:42px;height:42px;display:grid;place-items:center;flex:none}
+.iconbtn svg{width:22px;height:22px;stroke:var(--text-2);fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.iconbtn.spin svg{animation:spin .9s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:18px;margin-bottom:12px}
+/* hero */
+.hero .lbl{color:var(--text-2);font-size:17px}
+.hero .big{font-size:64px;font-weight:800;letter-spacing:.02em;line-height:1.05;margin:4px 0 6px;font-variant-numeric:tabular-nums}
+.hero .big.ok{color:var(--ok)} .hero .big.warn{color:var(--warn)} .hero .big.bad{color:var(--bad)}
+.hero .tip{display:flex;gap:8px;align-items:flex-start;color:var(--ok);font-size:13.5px;font-weight:600;margin:6px 0 10px}
+.hero .tip svg{flex:none;margin-top:1px}
+.hero .tip.warn{color:var(--warn)}
+.hero .foot{color:var(--text-2);font-size:15px}
+/* meter */
+.meter{border-color:var(--line-2);position:relative;overflow:hidden}
+.meter.bad{border-color:rgba(255,110,94,.6)} .meter.warn{border-color:rgba(255,181,71,.5)}
+.mhead{display:flex;align-items:center;gap:9px;margin-bottom:10px}
+.mhead .logo{width:30px;height:30px;border-radius:8px;background:#fff;display:grid;place-items:center;flex:none}
+.mhead .nm{font-weight:700;font-size:18px}
+.badge{background:var(--panel-2);color:var(--text-2);border-radius:8px;padding:2px 8px;font-size:13px;font-weight:600;white-space:nowrap}
+.mhead .when{margin-left:auto;color:var(--text-3);font-size:13px;display:flex;align-items:center;gap:6px;white-space:nowrap}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--ok);display:inline-block}
+.dot.stale{background:var(--warn)} .dot.err{background:var(--bad)}
+.mrow{display:grid;grid-template-columns:auto 1fr;grid-template-areas:"pct name" "bar bar" "sub sub";column-gap:10px;row-gap:6px;padding:8px 0}
+.mrow+.mrow{border-top:1px solid var(--line)}
+.mrow .pct{grid-area:pct;font-weight:800;font-size:24px;font-variant-numeric:tabular-nums}
+.mrow .pct.ok{color:var(--text)} .mrow .pct.warn{color:var(--warn)} .mrow .pct.bad{color:var(--bad)}
+.mrow .name{grid-area:name;align-self:center;font-weight:600;font-size:17px}
+.mrow .name small{color:var(--text-3);font-weight:500;font-size:13px;margin-left:4px}
+.mrow .bar{grid-area:bar}
+.mrow .sub{grid-area:sub;color:var(--text-2);font-size:13.5px;display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap}
+.segs{position:relative;display:grid;grid-template-columns:repeat(12,1fr);gap:4px;padding-bottom:9px}
+.seg{height:16px;border-radius:4px;background:var(--empty)}
+.seg.ok{background:var(--ok)} .seg.warn{background:var(--warn)} .seg.bad{background:var(--bad)}
+.tri{position:absolute;bottom:0;width:0;height:0;border-left:7px solid transparent;border-right:7px solid transparent;border-bottom:9px solid #fff;transform:translateX(-50%)}
+.mfoot{display:flex;flex-wrap:wrap;gap:6px 12px;color:var(--text-3);font-size:13px;margin-top:6px}
+.mfoot b{color:var(--text-2);font-weight:600}
+/* boxed sections */
+.box{border:1px solid var(--line-2);background:transparent}
+.boxhead{display:flex;align-items:center;gap:8px;font-weight:700;font-size:14.5px;margin-bottom:12px}
+.boxhead svg{flex:none}
+.boxhead .spacer{flex:1}
+.tabs{display:flex;background:var(--panel-2);border-radius:10px;padding:3px;gap:2px}
+.tabs button{border:0;background:none;color:var(--text-3);font-size:12.5px;font-weight:700;padding:5px 9px;border-radius:8px}
+.tabs button.on{background:var(--accent);color:#08122A}
+.inner{border:1px solid var(--line);border-radius:16px;padding:12px;background:#0F1420}
+.inner+.inner{margin-top:10px}
+.chartlbl{display:flex;gap:10px;align-items:center;color:var(--text-2);font-size:12.5px;margin-bottom:6px}
+.chartlbl b{color:var(--accent)}
+.key{display:inline-flex;align-items:center;gap:5px}
+.key i{display:inline-block;width:14px;height:3px;border-radius:2px;background:var(--accent)}
+.key i.dash{background:repeating-linear-gradient(90deg,var(--bad) 0 4px,transparent 4px 7px)}
+.key i.dot2{background:repeating-linear-gradient(90deg,var(--text-3) 0 2px,transparent 2px 5px)}
+svg.chart{display:block;width:100%;height:auto}
+.repo{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 10px;padding:8px 0}
+.repo+.repo{border-top:1px solid var(--line)}
+.repo .rn{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.repo .rm{color:var(--text-2);font-variant-numeric:tabular-nums;text-align:right;white-space:nowrap}
+.repo .rb{grid-column:1/-1;height:7px;border-radius:4px;background:var(--empty);overflow:hidden}
+.repo .rb i{display:block;height:100%;border-radius:4px;background:var(--accent)}
+.sched{display:flex;flex-direction:column;gap:8px;color:var(--text-2)}
+.sched div{display:flex;gap:8px;align-items:center}
+.sched b{color:var(--text)}
+.empty{color:var(--text-3);font-size:14px}
+/* pills */
+.pills{display:flex;flex-wrap:wrap;gap:10px;margin:18px 0 10px}
+.pill{border:1px solid var(--line-2);background:transparent;border-radius:14px;padding:10px 14px;display:inline-flex;align-items:center;gap:8px;color:var(--text-2);font-weight:600}
+.pill.on{background:#fff;color:#0B0F17;border-color:#fff}
+.pill.muted{opacity:.7}
+.status{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;color:var(--text-3);font-size:12.5px;margin:4px 2px}
+/* setup + sheets */
+.setup h2{margin:0 0 6px;font-size:22px}
+.setup p{color:var(--text-2);margin:6px 0}
+.steps{margin:10px 0 14px;padding-left:22px;color:var(--text-2)}
+.steps li{margin:5px 0}
+.steps b{color:var(--text)}
+.field{display:flex;flex-direction:column;gap:6px;margin:10px 0}
+.field label{font-size:13px;color:var(--text-2);font-weight:600}
+.field input,.field select{background:#0F1420;border:1px solid var(--line-2);border-radius:12px;padding:12px;color:var(--text);width:100%}
+.btn{border:0;border-radius:12px;padding:12px 16px;font-weight:700;background:var(--accent);color:#08122A}
+.btn.ghost{background:transparent;border:1px solid var(--line-2);color:var(--text)}
+.btn.sm{padding:8px 12px;font-size:14px}
+.btn.danger{background:transparent;border:1px solid rgba(255,110,94,.6);color:var(--bad)}
+.row2{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}
+.err{background:rgba(255,110,94,.1);border:1px solid rgba(255,110,94,.45);color:#FFC3BB;border-radius:14px;padding:12px 14px;margin-bottom:12px;font-size:14px}
+.err b{color:#fff}
+.scrim{position:fixed;inset:0;background:rgba(0,0,0,.55);display:flex;align-items:flex-end;justify-content:center;z-index:50}
+.sheet{background:var(--panel);border:1px solid var(--line-2);border-radius:22px 22px 0 0;width:100%;max-width:560px;max-height:88vh;overflow:auto;padding:18px 18px calc(22px + env(safe-area-inset-bottom,0px))}
+.sheet h3{margin:0 0 8px;font-size:19px}
+.setrow{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 0;border-top:1px solid var(--line)}
+.setrow span{color:var(--text-2)}
+.note{color:var(--text-3);font-size:13px}
+.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom));transform:translateX(-50%);background:#fff;color:#0B0F17;padding:10px 16px;border-radius:12px;font-weight:600;z-index:60;max-width:calc(100% - 32px)}
+@media (max-width:360px){.hero .big{font-size:52px}.brand h1{font-size:18px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="brand">
+      <svg width="30" height="30" viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r="15" fill="#141A26" stroke="#6EA8FF" stroke-width="2"/><path d="M7 20a9 9 0 0 1 18 0" fill="none" stroke="#283044" stroke-width="4" stroke-linecap="round"/><path d="M7 20a9 9 0 0 1 12.5-8.3" fill="none" stroke="#3FD6A0" stroke-width="4" stroke-linecap="round"/><path d="M16 20l5-7" stroke="#fff" stroke-width="2.4" stroke-linecap="round"/><circle cx="16" cy="20" r="2.4" fill="#fff"/></svg>
+      <h1>Steele <b>Usage</b></h1>
+    </div>
+    <button class="iconbtn" id="refreshBtn" type="button" aria-label="Refresh now"><svg viewBox="0 0 24 24"><path d="M20 11a8 8 0 1 0-2.3 5.7"/><path d="M20 4v7h-7"/></svg></button>
+    <button class="iconbtn" id="settingsBtn" type="button" aria-label="Settings"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></button>
+  </header>
+
+  <div id="errBox" class="err hidden" role="alert"></div>
+
+  <section id="setup" class="card setup hidden">
+    <h2>Hook up GitHub</h2>
+    <p>This shows your GitHub Actions minutes. It needs a read-only key from GitHub. It stays on this phone and is only ever sent to GitHub.</p>
+    <ol class="steps">
+      <li>On GitHub, open <b>Settings</b> › <b>Developer settings</b> › <b>Fine-grained tokens</b> › <b>Generate new token</b>.</li>
+      <li>Name it <b>Usage</b>. Expiration: <b>1 year</b>.</li>
+      <li>Under <b>Permissions</b>, open <b>Account</b>, find <b>Plan</b> and set it to <b>Read-only</b>. Nothing else.</li>
+      <li>Tap <b>Generate token</b>, copy it, paste it below.</li>
+    </ol>
+    <div class="field"><label for="setupUser">GitHub username</label><input id="setupUser" autocomplete="off" autocapitalize="off" spellcheck="false"></div>
+    <div class="field"><label for="setupToken">Token</label><input id="setupToken" type="password" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="github_pat_…"></div>
+    <div class="row2"><button class="btn" id="setupSave" type="button">Save and load</button><button class="btn ghost" id="setupDemo" type="button">Show sample numbers</button></div>
+  </section>
+
+  <main id="main" class="hidden">
+    <section class="card hero" id="hero">
+      <div class="lbl" id="heroLbl"></div>
+      <div class="big" id="heroBig"></div>
+      <div class="tip" id="heroTip"></div>
+      <div class="foot" id="heroFoot"></div>
+    </section>
+
+    <section class="card meter" id="meter">
+      <div class="mhead">
+        <span class="logo" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 16 16"><path fill="#0B0F17" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></svg></span>
+        <span class="nm">Actions</span><span class="badge" id="planBadge"></span>
+        <span class="when"><span class="dot" id="freshDot"></span><span id="whenTxt"></span></span>
+      </div>
+      <div class="mrow">
+        <div class="pct" id="monthPct"></div><div class="name">This month <small id="monthUsed"></small></div>
+        <div class="bar" id="monthBar"></div>
+        <div class="sub"><span id="monthLeft"></span><span id="monthReset"></span></div>
+      </div>
+      <div class="mrow">
+        <div class="pct" id="todayPct"></div><div class="name">Today <small id="todayUsed"></small></div>
+        <div class="bar" id="todayBar"></div>
+        <div class="sub"><span id="todayNote"></span><span id="todayReset"></span></div>
+      </div>
+      <div class="mfoot" id="mfoot"></div>
+    </section>
+
+    <section class="card box">
+      <div class="boxhead">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#6EA8FF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l5-6 4 4 8-9"/><path d="M15 6h5v5"/></svg>
+        <span>Trend &amp; reset</span><span class="spacer"></span>
+        <div class="tabs" role="tablist"><button type="button" data-view="total" class="on">Running total</button><button type="button" data-view="day">Per day</button></div>
+      </div>
+      <div class="inner">
+        <div class="chartlbl" id="chartLbl"></div>
+        <div id="chart"></div>
+      </div>
+      <div class="inner sched" id="sched"></div>
+    </section>
+
+    <section class="card box">
+      <div class="boxhead">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#6EA8FF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>
+        <span>What used the minutes</span>
+      </div>
+      <div id="repos"></div>
+    </section>
+
+    <div class="pills">
+      <button class="pill muted" id="claudePill" type="button">＋ Claude · coming later</button>
+      <button class="pill" id="wakePill" type="button">☀ Keep screen on</button>
+    </div>
+    <div class="status"><span id="statusLeft"></span><span id="statusRight"></span></div>
+  </main>
+</div>
+
+<script>
+/* ---------- state ---------- */
+const K = { user:'usage.user', token:'usage.token', plan:'usage.plan', every:'usage.every', cache:'usage.cache', demo:'usage.demo', view:'usage.view', readings:'usage.readings' };
+const get = (k, d) => { try { const v = localStorage.getItem(k); return v == null ? d : v; } catch (e) { return d; } };
+const put = (k, v) => { try { v == null ? localStorage.removeItem(k) : localStorage.setItem(k, v); } catch (e) {} };
+const now = () => (window.__now ? new Date(window.__now + (Date.now() - window.__bootReal)) : new Date());
+window.__bootReal = Date.now();
+const S = {
+  user: get(K.user, 'natesteele888'), token: get(K.token, ''), plan: +get(K.plan, '2000') || 2000,
+  every: +get(K.every, '10') || 10, demo: get(K.demo, '') === '1', view: get(K.view, 'total'),
+  data: null, fetchedAt: 0, loading: false, error: '', nextAt: 0, wake: null
+};
+try { const c = JSON.parse(get(K.cache, 'null')); if (c && c.data) { S.data = c.data; S.fetchedAt = c.at; } } catch (e) {}
+const $ = id => document.getElementById(id);
+const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const fmt = n => Math.round(n).toLocaleString('en-US');
+const MON = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const DOW = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+
+/* ---------- the billing month (GitHub resets included minutes at midnight UTC on the 1st) ---------- */
+function period(t = now()) {
+  const y = t.getUTCFullYear(), m = t.getUTCMonth();
+  const start = Date.UTC(y, m, 1), end = Date.UTC(y, m + 1, 1);
+  return { y, m, start, end, days: Math.round((end - start) / 864e5), dayStart: Date.UTC(y, m, t.getUTCDate()) };
+}
+function span(ms, compact) {
+  ms = Math.max(0, ms); const d = Math.floor(ms / 864e5), h = Math.floor(ms % 864e5 / 36e5), m = Math.floor(ms % 36e5 / 6e4);
+  if (compact) return d ? d + 'd' + h + 'h' : h ? h + 'h' + m + 'm' : m + 'm';
+  return d ? d + ' d ' + h + ' h' : h ? h + ' h ' + m + ' min' : m + ' min';
+}
+function clock(ms) { const t = new Date(ms); let h = t.getHours(), mi = t.getMinutes(); const ap = h < 12 ? 'AM' : 'PM'; h = h % 12 || 12; return h + (mi ? ':' + String(mi).padStart(2, '0') : '') + ' ' + ap; }
+function dayLabel(ms) { const t = new Date(ms); return DOW[t.getDay()] + ' ' + MON[t.getMonth()] + ' ' + t.getDate(); }
+function ago(ms) { const s = Math.round((now() - ms) / 1000); if (s < 60) return 'just now'; const m = Math.round(s / 60); if (m < 60) return m + ' min ago'; const h = Math.round(m / 60); return h < 48 ? h + ' h ago' : Math.round(h / 24) + ' d ago'; }
+
+/* ---------- reading GitHub's usage report ---------- */
+/* Minutes count against the free 2,000 at different rates: Linux 1x, Windows 2x, macOS 10x. */
+function weight(sku) { sku = String(sku || '').toLowerCase(); return /mac/.test(sku) ? 10 : /windows/.test(sku) ? 2 : 1; }
+function osOf(sku) { sku = String(sku || '').toLowerCase(); return /mac/.test(sku) ? 'macOS' : /windows/.test(sku) ? 'Windows' : 'Linux'; }
+function parseUsage(json, p) {
+  const items = (json && Array.isArray(json.usageItems)) ? json.usageItems : [];
+  const out = { used: 0, raw: 0, billed: 0, os: {}, repos: {}, daily: {}, source: 'usage' };
+  for (const it of items) {
+    if (String(it.product || '').toLowerCase() !== 'actions') continue;
+    if (!/minute/i.test(String(it.unitType || ''))) continue;
+    const q = +it.quantity || 0, w = weight(it.sku), counted = q * w;
+    const t = Date.parse(it.date); if (isNaN(t) || t < p.start || t >= p.end) continue;
+    out.used += counted; out.raw += q; out.billed += +it.netAmount || 0;
+    const os = osOf(it.sku); out.os[os] = (out.os[os] || 0) + q;
+    const r = String(it.repositoryName || 'other').split('/').pop() || 'other';
+    out.repos[r] = (out.repos[r] || 0) + counted;
+    const d = new Date(t).getUTCDate(); out.daily[d] = (out.daily[d] || 0) + counted;
+  }
+  return out;
+}
+function parseLegacy(json) {
+  const b = json.minutes_used_breakdown || {}, os = {};
+  if (b.UBUNTU) os.Linux = b.UBUNTU; if (b.WINDOWS) os.Windows = b.WINDOWS; if (b.MACOS) os.macOS = b.MACOS;
+  return { used: +json.total_minutes_used || 0, raw: +json.total_minutes_used || 0, billed: 0, os, repos: {}, daily: {}, source: 'legacy',
+    plan: +json.included_minutes || 0 };
+}
+async function gh(path) {
+  const r = await fetch('https://api.github.com' + path, { headers: {
+    'Accept': 'application/vnd.github+json', 'Authorization': 'Bearer ' + S.token, 'X-GitHub-Api-Version': '2022-11-28' }, cache: 'no-store' });
+  let body = null; try { body = await r.json(); } catch (e) {}
+  return { ok: r.ok, status: r.status, body };
+}
+function explain(status, body) {
+  const msg = body && body.message ? String(body.message).slice(0, 160) : '';
+  if (status === 401) return '<b>GitHub didn’t accept the token.</b> It may be mistyped or expired. Open Settings and paste a fresh one.';
+  if (status === 403) return '<b>The token can’t read billing.</b> Make a new fine-grained token with Account › <b>Plan: Read-only</b>.' + (msg ? '<br><span class="note">GitHub says: ' + esc(msg) + '</span>' : '');
+  if (status === 404) return '<b>GitHub couldn’t find usage for “' + esc(S.user) + '”.</b> Check the username in Settings.';
+  if (status === 0) return '<b>Couldn’t reach GitHub.</b> Check the connection. Showing the last numbers.';
+  return '<b>GitHub answered ' + status + '.</b> ' + esc(msg);
+}
+async function load(manual) {
+  if (S.loading) return;
+  if (S.demo) { S.data = demoData(); S.fetchedAt = +now(); S.error = ''; scheduleNext(); render(); return; }
+  if (!S.token) { render(); return; }
+  S.loading = true; $('refreshBtn').classList.add('spin');
+  const p = period();
+  try {
+    let res = await gh('/users/' + encodeURIComponent(S.user) + '/settings/billing/usage?year=' + p.y + '&month=' + (p.m + 1));
+    let data = null;
+    if (res.ok) data = parseUsage(res.body, p);
+    else if (res.status === 404 || res.status === 410 || res.status === 422) {
+      const old = await gh('/users/' + encodeURIComponent(S.user) + '/settings/billing/actions');
+      if (old.ok) data = parseLegacy(old.body); else res = old;
+    }
+    if (data) {
+      data.month = p.y + '-' + (p.m + 1); S.data = data; S.fetchedAt = +now(); S.error = '';
+      put(K.cache, JSON.stringify({ at: S.fetchedAt, data }));
+      addReading(data.used);
+      if (manual) toast('Updated');
+    } else { S.error = explain(res.status, res.body); if (window.nateHealth) try { nateHealth.note('sync', 'github ' + res.status); } catch (e) {} }
+  } catch (e) {
+    S.error = explain(0);
+    if (window.nateHealth) try { nateHealth.note('sync', 'github unreachable'); } catch (x) {}
+  }
+  S.loading = false; $('refreshBtn').classList.remove('spin'); scheduleNext(); render();
+}
+function scheduleNext() { S.nextAt = +now() + S.every * 6e4; }
+/* Readings this month, for the trend when GitHub only gives a month total. Kept on the phone, newest 300. */
+function addReading(used) {
+  let r = []; try { r = JSON.parse(get(K.readings, '[]')) || []; } catch (e) {}
+  const p = period(); r = r.filter(x => x.t >= p.start); r.push({ t: +now(), u: used }); put(K.readings, JSON.stringify(r.slice(-300)));
+}
+
+/* ---------- sample numbers (no token needed) ---------- */
+function demoData() {
+  const p = period(), today = now().getUTCDate(), daily = {};
+  const pattern = [46, 88, 120, 62, 18, 9, 140, 210, 96, 74, 30, 12, 160, 188, 130, 55, 44, 70, 90, 66, 120, 40, 22, 90, 110, 50, 30, 60, 80, 20, 10];
+  let used = 0;
+  for (let d = 1; d <= today; d++) { let v = pattern[(d - 1) % pattern.length]; if (d === today) v = Math.round(v * ((now() - p.dayStart) / 864e5)); daily[d] = v; used += v; }
+  const shares = [['web-apps', .46], ['league-site', .24], ['brain-sync', .17], ['reports', .09], ['watch-build', .04]];
+  const repos = {}; shares.forEach(([n, s]) => repos[n] = Math.round(used * s));
+  return { used, raw: used, billed: 0, os: { Linux: used }, repos, daily, source: 'demo', month: p.y + '-' + (p.m + 1) };
+}
+
+/* ---------- drawing ---------- */
+function level(pct) { return pct >= 1 ? 'bad' : pct >= .75 ? 'warn' : 'ok'; }
+function segs(frac, marker, lv) {
+  const n = 12, on = Math.min(n, Math.round(Math.min(1, frac) * n));
+  let h = '<div class="segs" role="img" aria-label="' + Math.round(frac * 100) + ' percent used">';
+  for (let i = 0; i < n; i++) h += '<span class="seg ' + (i < on ? lv : '') + '"></span>';
+  if (marker != null) h += '<span class="tri" style="left:' + (Math.max(0, Math.min(1, marker)) * 100).toFixed(2) + '%" title="Where we are in the period"></span>';
+  return h + '</div>';
+}
+function render() {
+  const hasData = !!S.data && (S.demo || S.token);
+  $('setup').classList.toggle('hidden', hasData || S.loading);
+  $('main').classList.toggle('hidden', !hasData);
+  $('errBox').classList.toggle('hidden', !S.error); $('errBox').innerHTML = S.error;
+  if (!hasData) { $('setupUser').value = S.user; return; }
+  const d = S.data, p = period(), t = +now();
+  const plan = S.plan, used = d.used, pct = used / plan, lv = level(pct);
+  const elapsed = (t - p.start) / (p.end - p.start), toReset = p.end - t;
+  const rate = used / Math.max(1, t - p.start);                 /* minutes per ms */
+  const runOut = used < plan && rate > 0 ? p.start + plan / rate : null;
+  /* hero */
+  const big = $('heroBig'), tip = $('heroTip');
+  if (pct >= 1) {
+    $('heroLbl').textContent = 'Until Actions minutes are back';
+    big.textContent = span(toReset, true); big.className = 'big bad';
+    tip.className = 'tip'; tip.innerHTML = bolt() + '<span>Public repos still run free. Private repo workflows wait for the reset.</span>';
+  } else {
+    $('heroLbl').textContent = 'Actions minutes left this month';
+    big.textContent = fmt(plan - used); big.className = 'big ' + lv;
+    if (runOut && runOut < p.end) { tip.className = 'tip warn'; tip.innerHTML = bolt() + '<span>At this pace you run out ' + esc(dayLabel(runOut)) + ', ' + span(p.end - runOut) + ' before the reset.</span>'; }
+    else { tip.className = 'tip'; tip.innerHTML = bolt() + '<span>On pace to last the month.</span>'; }
+  }
+  $('heroFoot').textContent = 'Resets ' + dayLabel(p.end) + ' at ' + clock(p.end) + ' · in ' + span(toReset);
+  /* meter */
+  $('meter').className = 'card meter ' + (lv === 'ok' ? '' : lv);
+  $('planBadge').textContent = (d.plan && d.source === 'legacy' ? fmt(d.plan) : fmt(plan)) + ' min';
+  $('monthPct').textContent = Math.round(pct * 100) + '%'; $('monthPct').className = 'pct ' + lv;
+  $('monthUsed').textContent = fmt(used) + ' of ' + fmt(plan);
+  $('monthBar').innerHTML = segs(pct, elapsed, lv);
+  $('monthLeft').textContent = pct >= 1 ? 'Out of minutes' : fmt(plan - used) + ' left';
+  $('monthReset').textContent = span(toReset) + ' · ' + MON[new Date(p.end).getMonth()] + ' ' + new Date(p.end).getDate();
+  const perDay = plan / p.days, hasDaily = Object.keys(d.daily).length > 0;
+  const today = d.daily[now().getUTCDate()] || 0, tPct = today / perDay, tLv = level(tPct);
+  $('todayPct').textContent = hasDaily ? Math.round(tPct * 100) + '%' : '–'; $('todayPct').className = 'pct ' + tLv;
+  $('todayUsed').textContent = hasDaily ? fmt(today) + ' of ~' + fmt(perDay) + ' a day' : '';
+  $('todayBar').innerHTML = segs(hasDaily ? tPct : 0, (t - p.dayStart) / 864e5, tLv);
+  $('todayNote').textContent = hasDaily ? (today > perDay ? 'Over the daily pace' : 'Within the daily pace') : 'GitHub sent no daily detail';
+  $('todayReset').textContent = 'Day ends ' + clock(p.dayStart + 864e5);
+  const osTxt = Object.entries(d.os).filter(x => x[1] > 0).map(([k, v]) => '<span>' + k + ' <b>' + fmt(v) + '</b>' + (k !== 'Linux' ? ' ×' + weight(k) : '') + '</span>').join('');
+  $('mfoot').innerHTML = (osTxt || '<span>No runs yet this month</span>') + '<span>Billed <b>$' + (d.billed || 0).toFixed(2) + '</b></span>' + (S.demo ? '<span><b>Sample numbers</b></span>' : '');
+  /* chart, schedule, repos */
+  drawChart(d, p, plan);
+  $('sched').innerHTML = '<div>' + clockIco() + '<b>' + esc(dayLabel(p.end)) + ', ' + clock(p.end) + '</b> (' + span(toReset) + ') · Actions minutes reset</div>' +
+    (runOut && runOut < p.end ? '<div>' + clockIco() + '<span>' + esc(dayLabel(runOut)) + ' (' + span(runOut - t) + ') · runs out at this pace</span></div>' : '');
+  drawRepos(d);
+  tickStatus();
+}
+function bolt() { return '<svg width="16" height="18" viewBox="0 0 16 18" aria-hidden="true"><path d="M9 0L1 10h6l-1 8 8-10H8z" fill="currentColor"/></svg>'; }
+function clockIco() { return '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#6EA8FF" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>'; }
+function drawRepos(d) {
+  const list = Object.entries(d.repos).filter(x => x[1] > 0).sort((a, b) => b[1] - a[1]).slice(0, 6);
+  if (!list.length) { $('repos').innerHTML = '<p class="empty">' + (d.source === 'legacy' ? 'GitHub only sent a month total, so there’s no repo breakdown.' : 'No Actions minutes used yet this month.') + '</p>'; return; }
+  const top = list[0][1], tot = Object.values(d.repos).reduce((a, b) => a + b, 0) || 1;
+  $('repos').innerHTML = list.map(([n, v]) => '<div class="repo"><span class="rn">' + esc(n) + '</span><span class="rm">' + fmt(v) + ' min · ' + Math.round(v / tot * 100) + '%</span><span class="rb"><i style="width:' + (v / top * 100).toFixed(1) + '%"></i></span></div>').join('');
+}
+function drawChart(d, p, plan) {
+  const W = 340, H = 130, L = 30, R = 6, T = 8, B = 18, iw = W - L - R, ih = H - T - B;
+  const today = now().getUTCDate(), x = day => L + (day - 1) / Math.max(1, p.days - 1) * iw;
+  let pts = [], vals = [];
+  const hasDaily = Object.keys(d.daily).length > 0;
+  if (hasDaily) { let run = 0; for (let i = 1; i <= today; i++) { const v = d.daily[i] || 0; run += v; vals.push(v); pts.push([i, run]); } }
+  else { let r = []; try { r = JSON.parse(get(K.readings, '[]')) || []; } catch (e) {} r.filter(z => z.t >= p.start).forEach(z => pts.push([1 + (z.t - p.start) / 864e5, z.u])); }
+  const view = S.view === 'day' && hasDaily ? 'day' : 'total';
+  document.querySelectorAll('.tabs button').forEach(b => b.classList.toggle('on', b.dataset.view === view));
+  let svg = '<svg class="chart" viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="Actions minutes this month">';
+  const grid = (v, max) => T + ih - v / max * ih;
+  if (view === 'total') {
+    const max = Math.max(plan * 1.08, ...pts.map(q => q[1]));
+    [0, .5, 1].forEach(f => { const y = grid(plan * f, max); svg += '<line x1="' + L + '" x2="' + (W - R) + '" y1="' + y + '" y2="' + y + '" stroke="rgba(170,190,230,.10)"/><text x="' + (L - 4) + '" y="' + (y + 3) + '" fill="#717C94" font-size="9" text-anchor="end">' + (f ? fmt(plan * f / 1000 * 10) / 10 + 'k' : '0') + '</text>'; });
+    const yl = grid(plan, max); svg += '<line x1="' + L + '" x2="' + (W - R) + '" y1="' + yl + '" y2="' + yl + '" stroke="#FF6E5E" stroke-dasharray="4 3" stroke-width="1.4"/>';
+    svg += '<line x1="' + L + '" y1="' + grid(0, max) + '" x2="' + (W - R) + '" y2="' + yl + '" stroke="#717C94" stroke-dasharray="2 3" stroke-width="1.2"/>';
+    if (pts.length) {
+      const line = pts.map((q, i) => (i ? 'L' : 'M') + x(q[0]).toFixed(1) + ' ' + grid(q[1], max).toFixed(1)).join(' ');
+      const last = pts[pts.length - 1];
+      svg += '<path d="' + line + ' L' + x(last[0]).toFixed(1) + ' ' + grid(0, max) + ' L' + x(pts[0][0]).toFixed(1) + ' ' + grid(0, max) + 'Z" fill="rgba(110,168,255,.12)"/>';
+      svg += '<path d="' + line + '" fill="none" stroke="#6EA8FF" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"/>';
+      svg += '<circle cx="' + x(last[0]).toFixed(1) + '" cy="' + grid(last[1], max).toFixed(1) + '" r="4" fill="#6EA8FF"/>';
+    }
+    $('chartLbl').innerHTML = '<b>Month</b><span class="key"><i></i>Used</span><span class="key"><i class="dot2"></i>Even pace</span><span class="key"><i class="dash"></i>' + fmt(plan) + ' limit</span>';
+  } else {
+    const per = plan / p.days, max = Math.max(per * 1.5, ...vals) * 1.05, bw = iw / p.days * .7;
+    [0, per].forEach(v => { const y = grid(v, max); svg += '<text x="' + (L - 4) + '" y="' + (y + 3) + '" fill="#717C94" font-size="9" text-anchor="end">' + fmt(v) + '</text>'; });
+    vals.forEach((v, i) => { const h = v / max * ih; svg += '<rect x="' + (x(i + 1) - bw / 2).toFixed(1) + '" y="' + (T + ih - h).toFixed(1) + '" width="' + bw.toFixed(1) + '" height="' + Math.max(0, h).toFixed(1) + '" rx="2" fill="' + (v > per ? '#FFB547' : '#6EA8FF') + '"/>'; });
+    const yp = grid(per, max); svg += '<line x1="' + L + '" x2="' + (W - R) + '" y1="' + yp + '" y2="' + yp + '" stroke="#717C94" stroke-dasharray="2 3"/>';
+    $('chartLbl').innerHTML = '<b>Per day</b><span class="key"><i></i>Minutes</span><span class="key"><i class="dot2"></i>~' + fmt(per) + ' a day keeps you under</span>';
+  }
+  [1, 8, 15, 22, p.days].forEach(dd => { svg += '<text x="' + x(dd).toFixed(1) + '" y="' + (H - 4) + '" fill="#717C94" font-size="9" text-anchor="middle">' + MON[p.m] + ' ' + dd + '</text>'; });
+  if (!pts.length) svg += '<text x="' + (L + iw / 2) + '" y="' + (T + ih / 2) + '" fill="#717C94" font-size="11" text-anchor="middle">The line builds as the app checks in</text>';
+  $('chart').innerHTML = svg + '</svg>';
+}
+function tickStatus() {
+  if (!S.data) return;
+  const t = +now(), age = t - S.fetchedAt;
+  $('whenTxt').textContent = S.fetchedAt ? ago(S.fetchedAt) : '';
+  $('freshDot').className = 'dot' + (S.error ? ' err' : age > 3 * S.every * 6e4 ? ' stale' : '');
+  $('statusLeft').textContent = (S.demo ? 'Sample numbers · ' : '') + 'Updated ' + (S.fetchedAt ? ago(S.fetchedAt) : 'never');
+  const left = Math.max(0, S.nextAt - t);
+  $('statusRight').textContent = 'Refresh in ' + Math.floor(left / 6e4) + ':' + String(Math.floor(left % 6e4 / 1000)).padStart(2, '0');
+}
+
+/* ---------- sheets, toast, settings ---------- */
+function toast(msg) { const t = document.createElement('div'); t.className = 'toast'; t.setAttribute('role', 'status'); t.textContent = msg; document.body.appendChild(t); setTimeout(() => t.remove(), 2200); }
+function sheet(html) {
+  const s = document.createElement('div'); s.className = 'scrim';
+  s.innerHTML = '<div class="sheet" role="dialog" aria-modal="true">' + html + '</div>';
+  s.addEventListener('click', e => { if (e.target === s) s.remove(); });
+  document.body.appendChild(s); return s;
+}
+function openSettings() {
+  const s = sheet('<h3>Settings</h3>' +
+    '<div class="field"><label for="sUser">GitHub username</label><input id="sUser" value="' + esc(S.user) + '" autocomplete="off" autocapitalize="off" spellcheck="false"></div>' +
+    '<div class="field"><label for="sToken">Token ' + (S.token ? '(saved, ends …' + esc(S.token.slice(-4)) + ')' : '(none yet)') + '</label><input id="sToken" type="password" placeholder="Paste a new token to replace it" autocomplete="off" autocapitalize="off" spellcheck="false"></div>' +
+    '<div class="field"><label for="sPlan">Free minutes a month</label><input id="sPlan" type="number" inputmode="numeric" min="1" value="' + S.plan + '"></div>' +
+    '<div class="field"><label for="sEvery">Check GitHub every</label><select id="sEvery">' + [5, 10, 15, 30, 60].map(v => '<option value="' + v + '"' + (v === S.every ? ' selected' : '') + '>' + v + ' minutes</option>').join('') + '</select></div>' +
+    '<div class="setrow"><span>Show sample numbers</span><input type="checkbox" id="sDemo" ' + (S.demo ? 'checked' : '') + ' style="width:22px;height:22px;accent-color:#6EA8FF"></div>' +
+    '<div class="setrow"><span>Something wrong with the app?</span><button class="btn sm ghost" id="sHealth" type="button">Report</button></div>' +
+    '<div class="setrow"><span>Remove the token from this phone</span><button class="btn sm danger" id="sForget" type="button">Forget</button></div>' +
+    '<div class="row2"><button class="btn" id="sSave" type="button">Save</button></div>' +
+    '<p class="note" style="margin-top:12px">The token and your numbers are saved only on this phone and only ever go to GitHub. Make the token read-only with just Account › Plan.</p>');
+  s.querySelector('#sSave').onclick = () => {
+    const u = s.querySelector('#sUser').value.trim(), tk = s.querySelector('#sToken').value.trim();
+    if (u && u !== S.user) { S.user = u; put(K.user, u); S.data = null; put(K.cache, null); put(K.readings, null); }
+    if (tk) { S.token = tk; put(K.token, tk); }
+    S.plan = Math.max(1, +s.querySelector('#sPlan').value || 2000); put(K.plan, String(S.plan));
+    S.every = +s.querySelector('#sEvery').value || 10; put(K.every, String(S.every));
+    const demo = s.querySelector('#sDemo').checked; if (demo !== S.demo) { S.demo = demo; put(K.demo, demo ? '1' : null); S.data = null; if (!demo) { try { const c = JSON.parse(get(K.cache, 'null')); if (c) { S.data = c.data; S.fetchedAt = c.at; } } catch (e) {} } }
+    s.remove(); render(); load(true);
+  };
+  s.querySelector('#sHealth').onclick = () => { s.remove(); if (window.nateHealth) window.nateHealth.report(); };
+  s.querySelector('#sForget').onclick = () => { S.token = ''; put(K.token, null); put(K.cache, null); put(K.readings, null); S.data = null; S.demo = false; put(K.demo, null); S.error = ''; s.remove(); render(); toast('Token removed from this phone'); };
+}
+
+/* ---------- keep screen on (Android lets go when the app is hidden, so it asks again on return) ---------- */
+async function grabWake() {
+  try { S.wake = await navigator.wakeLock.request('screen'); S.wake.addEventListener('release', () => { S.wake = null; }); }
+  catch (e) { S.wake = null; }
+}
+async function toggleWake() {
+  if (S.wantWake) { S.wantWake = false; if (S.wake) try { await S.wake.release(); } catch (e) {} S.wake = null; }
+  else if ('wakeLock' in navigator) { await grabWake(); S.wantWake = !!S.wake; if (!S.wake) toast('Couldn’t keep the screen on'); }
+  else toast('This browser can’t keep the screen on');
+  wakeUi();
+}
+function wakeUi() { $('wakePill').classList.toggle('on', !!S.wantWake); $('wakePill').setAttribute('aria-pressed', S.wantWake ? 'true' : 'false'); }
+
+/* ---------- wire up ---------- */
+$('refreshBtn').onclick = () => load(true);
+$('settingsBtn').onclick = openSettings;
+$('setupSave').onclick = () => {
+  const u = $('setupUser').value.trim(), tk = $('setupToken').value.trim();
+  if (!tk) { toast('Paste the token first'); return; }
+  if (u) { S.user = u; put(K.user, u); }
+  S.token = tk; put(K.token, tk); S.demo = false; put(K.demo, null); $('setupToken').value = ''; load(true);
+};
+$('setupDemo').onclick = () => { S.demo = true; put(K.demo, '1'); load(); };
+$('claudePill').onclick = () => toast('Claude usage has no public feed yet. It’ll get its own card when one exists.');
+$('wakePill').onclick = toggleWake;
+document.querySelectorAll('.tabs button').forEach(b => b.onclick = () => { S.view = b.dataset.view; put(K.view, S.view); if (S.data) drawChart(S.data, period(), S.plan); });
+document.addEventListener('visibilitychange', async () => {
+  if (document.hidden) return;
+  if (S.wantWake && !S.wake) grabWake();
+  if (+now() >= S.nextAt) load();
+});
+setInterval(() => {
+  if (document.hidden) return;
+  if (S.nextAt && +now() >= S.nextAt) load(); else if (S.data) { const p = period(); if (S.data.month && S.data.month !== p.y + '-' + (p.m + 1)) load(); else { tickStatus(); if (new Date(+now()).getSeconds() === 0) render(); } }
+}, 1000);
+if (/[?&]demo\b/.test(location.search)) { S.demo = true; put(K.demo, '1'); }
+render(); scheduleNext(); load();
+if ('serviceWorker' in navigator && (location.protocol === 'https:' || /^(localhost|127\.0\.0\.1)$/.test(location.hostname))) navigator.serviceWorker.register('sw.js').catch(() => {});
+</script>
+</body>
+</html>
