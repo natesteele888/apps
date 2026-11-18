@@ -942,6 +942,23 @@
     return { holes, marked, fw: fwOf ? [fwHit, fwOf] : null, putts: pHoles ? putts : null, pHoles, three, pen: marked ? pen : null, sand: marked ? sand : null,
       best: best && worst && best.d < worst.d ? best : null, worst: best && worst && best.d < worst.d ? worst : null };
   }
+  // A plain-text scorecard for Messages: the course and par, then each golfer's total and their holes nine by nine.
+  function cardText(ev, list, r, date) {
+    const n = holeCount(ev), c = ev.course, d = date ? " · " + date : "";
+    const halves = n === 18 ? [[1, 9, "Out"], [10, 18, "In"]] : [[1, n, "Holes " + holeNo(c, 1) + "-" + holeNo(c, n)]];
+    const lines = [c.name + d + " (par " + coursePar(c) + ")"];
+    list.forEach(pl => {
+      const x = round(ev, pl, r); if (!x.started) return;
+      lines.push("", pl.n + ": " + x.strokes + " (" + fmtPar(x.toPar) + ")" + (x.done ? "" : " thru " + x.thru));
+      halves.forEach(([a, b, lbl]) => {
+        const hs = []; for (let k = a; k <= b; k++) hs.push(x.scores[k - 1]);
+        if (hs.every(v => v == null)) return;
+        lines.push(lbl + ": " + hs.map(v => (v == null ? "-" : v)).join(" ") + " = " + hs.reduce((s, v) => s + (v || 0), 0));
+      });
+    });
+    lines.push("", "Scored with Fairway");
+    return lines.join("\n");
+  }
   function nextHole(ev, pl, r, h) {
     const order = playOrder(holeCount(ev), pl.st), i = order.indexOf(h);
     if (i < 0 || i >= order.length - 1) return null;
@@ -1332,7 +1349,7 @@
   }
 
   return { VERSION, MAX_PLAYERS, MAX_ROUNDS, MAX_TEES, NAME_MAX, EVENT_MAX, TEE_COLORS, DEMO_NAMES, DELETE,
-    courseHc, strokesBy, stableford, roundNumbers, nineOf, holeNo, HOLE_ART, holeArt, sampleCourse, monoosnockCourse, readyCourses, parOf, parsFor, parText, newCode, isCode, newPid, isPid, cleanCourse, cleanName, newEvent, newPlayer, cleanEvent,
+    courseHc, strokesBy, stableford, roundNumbers, cardText, nineOf, holeNo, HOLE_ART, holeArt, sampleCourse, monoosnockCourse, readyCourses, parOf, parsFor, parText, newCode, isCode, newPid, isPid, cleanCourse, cleanName, newEvent, newPlayer, cleanEvent,
     key, holeCount, coursePar, players, teeOf, yards, teeYards, playOrder, strokes, round, standings, groups,
     fmtPar, tone, scoreName, mark, stats, demoEvent, applyPatch, historyRows, myRounds, sameName, boardNames,
     cleanCtpHoles, cleanCtpEntry, ctpBoard, metres, averageFix, ctpMeasure, fmtFeet,

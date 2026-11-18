@@ -538,7 +538,7 @@
         <small>${g.players.map((p, i) => esc(tname(p) || p.n) + " " + rs[i].strokes + " (" + esc(C.fmtPar(rs[i].toPar)) + ")").join(" · ")}</small>
         <small>${quick ? "Saved to Your rounds on the home screen. You can still fix a score below." : "Check the card below. Final standings are on the Board."}</small>
         ${mine && g.players.some(p => p.id === mine.id) ? numbersHtml(ev, mine, r) : ""}
-        <button type="button" class="btn small" id="rdgo">${quick ? "Back to home" : "See the board"}</button></div>` : "";
+        <div class="row2"><button type="button" class="btn small" id="rdgo">${quick ? "Back to home" : "See the board"}</button><button type="button" class="btn small" id="rdtxt">Send the card</button></div></div>` : "";
     el.innerHTML = `${finHtml}${gs.length > 1 ? `<div class="pills small" role="group" aria-label="Group">${gs.map(x => `<button type="button" class="pill" data-g="${x.g}" aria-pressed="${x.g === g.g}">Group ${x.g}</button>`).join("")}</div>` : ""}
       ${ev.rounds > 1 ? `<div class="pills small" role="group" aria-label="Round">${Array.from({ length: ev.rounds }, (_, i) => `<button type="button" class="pill" data-sr="${i + 1}" aria-pressed="${r === i + 1}">Round ${i + 1}${i + 1 === ev.cur ? " (now)" : ""}</button>`).join("")}</div>` : ""}
       <div class="strip" data-keep="strip" role="group" aria-label="Hole">${order.map(k => { const done = rs.every(x => x.scores[k - 1] != null), some = rs.some(x => x.scores[k - 1] != null); return `<button type="button" data-h="${k}" aria-pressed="${k === h}" class="${done ? "done" : some ? "part" : ""}">${C.holeNo(ev.course, k)}</button>`; }).join("")}</div>
@@ -556,6 +556,12 @@
       <h2 class="sec">Group ${g.g} card</h2>${groupCard(ev, g.players, r, order, h)}
       ${!mine && !isOrg() ? `<p class="msg">You're watching. To keep score for this group, tap Join on the Share tab.</p>` : ""}`;
     const co = $("#ctpopen", el); if (co) co.onclick = () => ctpList(h, r);
+    // the group's card as plain text, for Messages or anywhere: the share menu, or copy where there isn't one
+    const rt = $("#rdtxt", el); if (rt) rt.onclick = async () => {
+      const text = C.cardText(ev, g.players, r, new Date(ev.created || Date.now()).toLocaleDateString(undefined, { month: "short", day: "numeric" }));
+      if (navigator.share) { navigator.share({ title: ev.name, text }).catch(() => {}); return; }
+      try { await navigator.clipboard.writeText(text); toast("Card copied"); } catch (e) { sheet("Copy the card", `<textarea class="copybox" readonly rows="10">${esc(text)}</textarea>`); }
+    };
     const rd = $("#rdgo", el); if (rd) rd.onclick = () => { if (quick) go("home", {}, false); else { S.tab = "board"; render(); window.scrollTo(0, 0); } };
     wireCaddie(el, ev, g, r, h, mine);
     $$("[data-g]", el).forEach(b => b.onclick = () => { S.group = +b.dataset.g; S.hole = null; render(); });
