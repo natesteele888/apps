@@ -210,6 +210,20 @@ const pl = (ev, id) => Object.assign({ id }, ev.p[id]);
     ev.fmt.kind = 'teams'; eq(C.teamsSplit(ev), false, 'only a scramble needs it');
   });
 
+  await test('core: Stableford points, gross and net, and the board ranked by points', () => {
+    eq(C.stableford(4, 4, 0), 2); eq(C.stableford(3, 4, 0), 3); eq(C.stableford(2, 4, 0), 4); eq(C.stableford(5, 4, 0), 1);
+    eq(C.stableford(9, 4, 0), 0, 'never below zero'); eq(C.stableford(5, 4, 1), 2, 'a handicap stroke makes a bogey worth a par'); eq(C.stableford(null, 4, 0), 0);
+    const ev = C.newEvent({ name: 'SF', course: C.sampleCourse(), now: NOW });
+    ev.p.aaaaaa1 = C.newPlayer(ev, { name: 'Al Ace', tee: ev.course.tees[0].id, now: NOW });
+    ev.p.bbbbbb1 = C.newPlayer(ev, { name: 'Bo Bogey', tee: ev.course.tees[0].id, now: NOW + 1 });
+    const par = h => ev.course.holes[h - 1].par;
+    // Al: birdie, then a 10 (zero points). Bo: two bogeys. By strokes Bo leads; by points Al does (3 to 2).
+    ev.p.aaaaaa1.s['1_1'] = par(1) - 1; ev.p.aaaaaa1.s['1_2'] = 10;
+    ev.p.bbbbbb1.s['1_1'] = par(1) + 1; ev.p.bbbbbb1.s['1_2'] = par(2) + 1;
+    eq(C.standings(ev)[0].id, 'bbbbbb1');
+    const sp = C.standings(ev, { pts: true }); eq(sp[0].id, 'aaaaaa1'); eq(sp[0].pts, 3); eq(sp[1].pts, 2); eq(sp[0].rounds[0].pts, 3);
+  });
+
   await test('core: hole art that comes with the app, by course, and the same pictures for a front or back nine', () => {
     const c = C.monoosnockCourse();
     eq(C.holeArt(c, 1), null, 'no pictures listed yet');

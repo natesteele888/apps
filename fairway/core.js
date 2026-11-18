@@ -204,8 +204,11 @@
   function round(ev, pl, r) {
     const n = holeCount(ev), order = playOrder(n, pl.st), sc = [], pars = parsFor(ev.course, pl.tee);
     const ch = courseHc(ev.course, pl), gets = strokesBy(ev.course, ch || 0);
-    let tot = 0, par = 0, thru = 0, given = 0;
-    for (let h = 1; h <= n; h++) { const v = strokes(pl, r, h); sc.push(v); if (v != null) { tot += v; par += pars[h - 1]; thru++; given += gets[h - 1]; } }
+    let tot = 0, par = 0, thru = 0, given = 0, pts = 0, ptsNet = 0;
+    for (let h = 1; h <= n; h++) {
+      const v = strokes(pl, r, h); sc.push(v);
+      if (v != null) { tot += v; par += pars[h - 1]; thru++; given += gets[h - 1]; pts += stableford(v, pars[h - 1], 0); ptsNet += stableford(v, pars[h - 1], gets[h - 1]); }
+    }
     const next = order.find(h => sc[h - 1] == null) || null;
     // the last hole they finished, in their own order (where the board's marker sits)
     let last = null; for (const h of order) if (sc[h - 1] != null) last = h;
@@ -213,19 +216,24 @@
     const run = {}; let acc = 0;
     order.forEach(h => { const v = sc[h - 1]; if (v != null) { acc += v - pars[h - 1]; run[h] = acc; } });
     // net: strokes take off the strokes this golfer gets on the holes they've played (gross for a golfer with no index)
-    return { r, pars, ch, gets, scores: sc, strokes: tot, par, toPar: tot - par, net: tot - given - par, thru, done: thru === n, started: thru > 0, next, last, order, run, out: half(ev, sc, 0), inn: n === 18 ? half(ev, sc, 9) : null };
+    return { r, pars, ch, gets, scores: sc, strokes: tot, par, toPar: tot - par, net: tot - given - par, pts, ptsNet, thru, done: thru === n, started: thru > 0, next, last, order, run, out: half(ev, sc, 0), inn: n === 18 ? half(ev, sc, 9) : null };
   }
+  // Stableford points for one hole: 2 for par, 1 more for each stroke under, 1 less for each over, never below 0.
+  // gets: the handicap strokes on that hole, for net points.
+  function stableford(v, par, gets) { return v == null ? 0 : Math.max(0, 2 + par + (gets || 0) - v); }
   function half(ev, sc, from) { let t = 0, any = false; for (let i = from; i < from + 9 && i < sc.length; i++) if (sc[i] != null) { t += sc[i]; any = true; } return any ? t : null; }
 
   // Everyone, in place order. The overall to par adds up every hole played in every round.
   // With { net: true } the board ranks by net to par (each golfer's handicap strokes taken off), else by gross.
+  // With { pts: true } it ranks by Stableford points, most first (net points with net).
   function standings(ev, opt) {
-    const net = !!(opt && opt.net), by = row => (net ? row.net : row.toPar);
+    const net = !!(opt && opt.net), sf = !!(opt && opt.pts);
+    const by = row => (sf ? -(net ? row.ptsNet : row.pts) : net ? row.net : row.toPar);
     const rows = players(ev).map(pl => {
-      const rs = []; let toPar = 0, total = 0, holes = 0, nt = 0;
-      for (let r = 1; r <= ev.rounds; r++) { const x = round(ev, pl, r); rs.push(x); toPar += x.toPar; total += x.strokes; holes += x.thru; nt += x.net; }
+      const rs = []; let toPar = 0, total = 0, holes = 0, nt = 0, pts = 0, ptsNet = 0;
+      for (let r = 1; r <= ev.rounds; r++) { const x = round(ev, pl, r); rs.push(x); toPar += x.toPar; total += x.strokes; holes += x.thru; nt += x.net; pts += x.pts; ptsNet += x.ptsNet; }
       const today = rs[Math.min(ev.cur, ev.rounds) - 1];
-      return { id: pl.id, pl, name: pl.n, rounds: rs, toPar, net: nt, ch: rs[0] ? rs[0].ch : null, total, holes, today };
+      return { id: pl.id, pl, name: pl.n, rounds: rs, toPar, net: nt, pts, ptsNet, ch: rs[0] ? rs[0].ch : null, total, holes, today };
     });
     rows.sort((a, b) => (a.holes ? 0 : 1) - (b.holes ? 0 : 1) || by(a) - by(b) || b.holes - a.holes || a.name.localeCompare(b.name));
     rows.forEach((row, i) => {
@@ -1303,7 +1311,7 @@
   }
 
   return { VERSION, MAX_PLAYERS, MAX_ROUNDS, MAX_TEES, NAME_MAX, EVENT_MAX, TEE_COLORS, DEMO_NAMES, DELETE,
-    courseHc, strokesBy, nineOf, holeNo, HOLE_ART, holeArt, sampleCourse, monoosnockCourse, readyCourses, parOf, parsFor, parText, newCode, isCode, newPid, isPid, cleanCourse, cleanName, newEvent, newPlayer, cleanEvent,
+    courseHc, strokesBy, stableford, nineOf, holeNo, HOLE_ART, holeArt, sampleCourse, monoosnockCourse, readyCourses, parOf, parsFor, parText, newCode, isCode, newPid, isPid, cleanCourse, cleanName, newEvent, newPlayer, cleanEvent,
     key, holeCount, coursePar, players, teeOf, yards, teeYards, playOrder, strokes, round, standings, groups,
     fmtPar, tone, scoreName, mark, stats, demoEvent, applyPatch, historyRows, myRounds, sameName, boardNames,
     cleanCtpHoles, cleanCtpEntry, ctpBoard, metres, averageFix, ctpMeasure, fmtFeet,
