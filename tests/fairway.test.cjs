@@ -122,6 +122,23 @@ const pl = (ev, id) => Object.assign({ id }, ev.p[id]);
     deq(C.TEAM_SCORING, ['total', 'best1', 'best2']);
   });
 
+  await test('core: your rounds: newest first, best and average for each course, by the name you play under', () => {
+    const h = [
+      { code: 'a', course: 'Monoosnock Country Club', date: 3, r: 1, strokes: 84, toPar: 14, name: 'Pat Golfer', n: 18 },
+      { code: 'b', course: 'Monoosnock Country Club', date: 2, r: 1, strokes: 80, toPar: 10, name: 'pat golfer', n: 18 },
+      { code: 'c', course: 'Monoosnock Country Club', date: 1, r: 1, strokes: 41, toPar: 6, name: 'Pat Golfer', n: 9 },
+      { code: 'd', course: 'Other Place', date: 4, r: 1, strokes: 90, toPar: 18, name: 'Pat Golfer' },
+      { code: 'e', course: 'Other Place', date: 5, r: 1, strokes: 70, toPar: -2, name: 'Someone Else', n: 18 }
+    ];
+    const m = C.myRounds(h, 'Pat Golfer');
+    deq(m.list.map(x => x.code), ['d', 'a', 'b', 'c']);
+    eq(m.courses[0].course, 'Monoosnock Country Club'); eq(m.courses[0].holes, 18); eq(m.courses[0].count, 2); eq(m.courses[0].avg, 82); eq(m.courses[0].best.strokes, 80);
+    eq(m.courses.length, 3, 'nine-hole rounds are their own line'); eq(C.myRounds(h, 'Nobody').list.length, 0);
+    const ev = C.newEvent({ name: 'R', course: C.monoosnockCourse(), now: NOW }); ev.p.aaaaaa1 = C.newPlayer(ev, { name: 'Pat Golfer', tee: 'green', now: NOW });
+    for (let k = 1; k <= 18; k++) ev.p.aaaaaa1.s['1_' + k] = 4;
+    const rows = C.historyRows(ev, 'zz'); eq(rows.length, 1); eq(rows[0].n, 18); eq(rows[0].strokes, 72);
+  });
+
   await test('core: to-par words and colors match the Masters board (red under, green over)', () => {
     eq(C.fmtPar(0), 'E'); eq(C.fmtPar(-3), '-3'); eq(C.fmtPar(2), '+2');
     eq(C.tone(-1), 'under'); eq(C.tone(1), 'over'); eq(C.tone(0), 'even');

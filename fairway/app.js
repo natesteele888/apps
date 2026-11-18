@@ -143,6 +143,15 @@
   /* ======================================================================
      HOME
      ====================================================================== */
+  // Your finished rounds on this phone (by the name you play under): best and average for each course, and the last few.
+  function myRoundsHtml() {
+    const name = FW.LS.get("fw:name", ""); if (!name) return "";
+    const m = C.myRounds(FW.history(), name); if (!m.list.length) return "";
+    const fmtD = d => new Date(d).toLocaleDateString(undefined, { month: "short", day: "numeric" });
+    return `<section class="pad"><h2 class="sec">Your rounds <small>${m.list.length} finished</small></h2>
+      <ul class="list">${m.courses.slice(0, 3).map(c => `<li class="ritem"><span><b>${esc(c.course)}</b><small>${c.holes} holes · ${c.count} round${c.count > 1 ? "s" : ""}${c.count > 1 ? " · average " + c.avg : ""}</small></span><span class="mybest"><b>${c.best.strokes}</b><small>best ${esc(C.fmtPar(c.best.toPar))}</small></span></li>`).join("")}</ul>
+      <ul class="list rounds">${m.list.slice(0, 5).map(h => `<li><span><b>${esc(fmtD(h.date))}</b><small>${esc(h.course)}</small></span><span>${h.strokes} ${parText(h.toPar)}</span></li>`).join("")}</ul></section>`;
+  }
   function viewHome(v) {
     const mine = FW.mine(), courses = FW.courses();
     v.innerHTML = `<header class="hero"><div class="hero-top"><span></span>${soundBtn()}</div>
@@ -160,6 +169,7 @@
         const sub = ev ? `${esc(ev.course.name)} · ${C.players(ev).length} players` : "Tap to open";
         return `<li><button type="button" class="row" data-open="${esc(m.code)}"><span><b>${esc((ev && ev.name) || m.name || "Tournament")}</b><small>${sub}</small></span><span class="chips">${m.demo ? '<i class="chip">Demo</i>' : ""}${m.round ? '<i class="chip">Round</i>' : m.org ? '<i class="chip">Yours</i>' : ""}${m.local && !m.demo ? '<i class="chip">This phone</i>' : ""}</span></button></li>`;
       }).join("")}</ul></section>` : ""}
+      ${myRoundsHtml()}
       <section class="pad"><h2 class="sec">Courses</h2><ul class="list">
         ${C.readyCourses().filter(c => !courses.some(x => x.id === c.id)).map(c => `<li><button type="button" class="row" data-course="${esc(c.id)}"><span><b>${esc(c.name)}</b><small>${c.holes.length} holes · ${C.parText(c)} · ${c.tees.map(t => esc(t.name)).join(", ")}</small></span><i class="chip">Ready</i></button></li>`).join("")}
         <li><button type="button" class="row" data-course="sample"><span><b>${esc(C.sampleCourse().name)}</b><small>18 holes · par 72 · 4 tees</small></span><i class="chip">Sample</i></button></li>

@@ -1154,7 +1154,7 @@
       const out = [];
       for (let r = 1; r <= ev.rounds; r++) {
         const x = round(ev, pl, r); if (!x.done) continue;
-        const row = { code, event: ev.name, course: ev.course.name, date: ev.created, r, strokes: x.strokes, toPar: x.toPar, name: pl.n };
+        const row = { code, event: ev.name, course: ev.course.name, date: ev.created, r, strokes: x.strokes, toPar: x.toPar, name: pl.n, n: holeCount(ev) };
         if (winTeam && winTeam.members.some(m => m.id === pl.id)) row.tw = true;
         if (topSg[r] === pl.id) row.sg = true;
         if (bingoState(ev, pl.id, r).line) row.bg = true;
@@ -1162,6 +1162,18 @@
       }
       return out;
     }).reduce((a, b) => a.concat(b), []);
+  }
+  // One golfer's finished rounds on this phone (by name), newest first, and per course their best and average.
+  function myRounds(hist, name) {
+    const list = (hist || []).filter(h => h && sameName(h.name, name) && Number.isFinite(h.strokes)).sort((a, b) => b.date - a.date || b.r - a.r);
+    const by = {};
+    list.forEach(h => { const k = h.course + "|" + (h.n || 18); (by[k] = by[k] || { course: h.course, holes: h.n || 18, rounds: [] }).rounds.push(h); });
+    const courses = Object.keys(by).map(k => {
+      const c = by[k], best = c.rounds.slice().sort((a, b) => a.strokes - b.strokes || a.date - b.date)[0];
+      const avg = Math.round((c.rounds.reduce((a, h) => a + h.strokes, 0) / c.rounds.length) * 10) / 10;
+      return { course: c.course, holes: c.holes, count: c.rounds.length, best, avg, last: c.rounds[0].date };
+    }).sort((a, b) => b.count - a.count || b.last - a.last);
+    return { list, courses };
   }
   const sameName = (a, b) => cleanName(a).toLowerCase() === cleanName(b).toLowerCase();
   // Board names the way a TV leaderboard shows them: the last name, with a first initial only when two share it.
@@ -1177,7 +1189,7 @@
   return { VERSION, MAX_PLAYERS, MAX_ROUNDS, MAX_TEES, NAME_MAX, EVENT_MAX, TEE_COLORS, DEMO_NAMES, DELETE,
     courseHc, strokesBy, sampleCourse, monoosnockCourse, readyCourses, parOf, parsFor, parText, newCode, isCode, newPid, isPid, cleanCourse, cleanName, newEvent, newPlayer, cleanEvent,
     key, holeCount, coursePar, players, teeOf, yards, teeYards, playOrder, strokes, round, standings, groups,
-    fmtPar, tone, scoreName, mark, stats, demoEvent, applyPatch, historyRows, sameName, boardNames,
+    fmtPar, tone, scoreName, mark, stats, demoEvent, applyPatch, historyRows, myRounds, sameName, boardNames,
     cleanCtpHoles, cleanCtpEntry, ctpBoard, metres, averageFix, ctpMeasure, fmtFeet,
     cleanHc, isDate, isTime, isTid, cleanRally, cleanFmt, rallyList, officialPatch, openGroup, teamIds, pickSlots, teamOf, draftState, pickPatch,
     draftStartPatch, pickCaptains, teamBoard, TEAM_SCORING, matchStatus, matchIds, autoMatches, picksLocked, pickCounts, cleanTt, teeTime, fmtTime, fmtDate,
