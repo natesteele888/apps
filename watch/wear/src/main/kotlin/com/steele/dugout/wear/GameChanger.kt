@@ -45,12 +45,15 @@ import com.google.android.gms.wearable.DataEventBuffer
 import com.google.android.gms.wearable.PutDataRequest
 import com.google.android.gms.wearable.Wearable
 import com.steele.dugout.shared.Gc
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
 import java.net.HttpURLConnection
@@ -85,13 +88,17 @@ class GameChangerActivity : ComponentActivity(), DataClient.OnDataChangedListene
     }
 }
 
-/** What the watch last read from GameChanger, kept on the watch so the scores show at once (and with no signal). */
+/**
+ * What the watch last read from GameChanger, kept on the watch so the scores show at once (and with no signal).
+ * One copy for the GC Scores screen and the watch face's "Live score" (GcScoreComplication), so the two always agree.
+ */
 object GcStore {
     data class Snap(val teamId: String, val team: Gc.Team?, val games: List<Gc.Game>, val readAt: Long, val error: String?, val loading: Boolean)
 
     val snap = MutableStateFlow(Snap("", null, emptyList(), 0, null, false))
     val lines = MutableStateFlow<Map<String, Gc.Line>>(emptyMap())
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
+    private val lock = Mutex()
     private var raw = Pair("", "")
 
     private fun prefs(ctx: Context) = ctx.getSharedPreferences("gc", Context.MODE_PRIVATE)
@@ -101,20 +108,26 @@ object GcStore {
         val id = p.getString("team", "") ?: ""
         val team = p.getString("teamJson", null)?.let { Gc.parseTeam(it) }
         val games = p.getString("gamesJson", null)?.let { Gc.parseGames(it) } ?: emptyList()
-        if (snap.value.teamId.isEmpty()) snap.value = Snap(id, team, games, p.getLong("readAt", 0), null, false)
+        if (snap.value.teamId.isEmpty()) {
+            snap.value = Snap(id, team, games, p.getLong("readAt", 0), null, false)
+            raw = (p.getString("teamJson", null) ?: "") to (p.getString("gamesJson", null) ?: "")
+        }
     }
 
     /** the team the coach picked in Dugout on the phone (Watch › GameChanger team) */
     fun pullTeam(ctx: Context) {
+        scope.launch { syncTeam(ctx) }
+    }
+
+    /** reads the team the phone synced (the watch keeps its own copy, so this works with the phone away too) */
+    suspend fun syncTeam(ctx: Context) {
         val app = ctx.applicationContext
-        scope.launch {
-            try {
-                val buf = Wearable.getDataClient(app).getDataItems(Uri.Builder().scheme(PutDataRequest.WEAR_URI_SCHEME).path(Gc.PATH_TEAM).build()).await()
-                val ids = buf.mapNotNull { it.data?.let { d -> String(d, Charsets.UTF_8) } }
-                buf.release()
-                ids.lastOrNull()?.let { setTeam(app, it) }
-            } catch (e: Exception) { /* no phone yet: keep the team the watch already has */ }
-        }
+        try {
+            val buf = Wearable.getDataClient(app).getDataItems(Uri.Builder().scheme(PutDataRequest.WEAR_URI_SCHEME).path(Gc.PATH_TEAM).build()).await()
+            val ids = buf.mapNotNull { it.data?.let { d -> String(d, Charsets.UTF_8) } }
+            buf.release()
+            ids.lastOrNull()?.let { setTeam(app, it) }
+        } catch (e: CancellationException) { throw e } catch (e: Exception) { /* no phone yet: keep the team the watch already has */ }
     }
 
     fun setTeam(ctx: Context, input: String) {
@@ -122,14 +135,16 @@ object GcStore {
         if (id == snap.value.teamId) return
         prefs(ctx).edit().putString("team", id).remove("teamJson").remove("gamesJson").putLong("readAt", 0).apply()
         lines.value = emptyMap()
+        raw = Pair("", "")
         snap.value = Snap(id, null, emptyList(), 0, null, false)
+        LiveScore.update(ctx) // a new team (or none): the watch face changes too
         if (id.isNotEmpty()) refresh(ctx)
     }
 
-    private suspend fun get(url: String): String = withContext(Dispatchers.IO) {
+    private suspend fun get(url: String, timeoutMs: Int): String = withContext(Dispatchers.IO) {
         val c = URL(url).openConnection() as HttpURLConnection
         try {
-            c.connectTimeout = 15_000; c.readTimeout = 15_000
+            c.connectTimeout = timeoutMs; c.readTimeout = timeoutMs
             c.setRequestProperty("Accept", "application/json")
             c.setRequestProperty("User-Agent", "DugoutWatch/1.0 (LYBS coach app)")
             if (c.responseCode !in 200..299) throw IllegalStateException("GameChanger answered ${c.responseCode}")
@@ -139,35 +154,57 @@ object GcStore {
         } finally { c.disconnect() }
     }
 
+    /** reads GameChanger again in the background (the GC Scores screen's Refresh and its timer) */
     fun refresh(ctx: Context) {
+        if (!Gc.safeTeamId(snap.value.teamId) || snap.value.loading) return
+        snap.value = snap.value.copy(loading = true, error = null) // at once, so a second tap doesn't queue a second read
+        scope.launch { pull(ctx) }
+    }
+
+    /**
+     * Reads the team's games from GameChanger, and the line score of a game going on, one read at a time. Skips the read
+     * when the watch's copy is younger than [maxAgeMs]. [tellFace] asks the watch face to show the new scores (the face's
+     * own reads pass false, since it is about to show them anyway). [withTeam] false skips the team's name and record when
+     * the watch already has them (the face doesn't show them). Returns false when GameChanger couldn't be reached.
+     */
+    suspend fun pull(ctx: Context, maxAgeMs: Long = 0, timeoutMs: Int = 15_000, tellFace: Boolean = true, withTeam: Boolean = true): Boolean = lock.withLock {
         val id = snap.value.teamId
-        if (!Gc.safeTeamId(id) || snap.value.loading) return
+        if (!Gc.safeTeamId(id)) return@withLock false
+        if (maxAgeMs > 0 && System.currentTimeMillis() - snap.value.readAt < maxAgeMs) return@withLock true
         val app = ctx.applicationContext
         snap.value = snap.value.copy(loading = true, error = null)
-        scope.launch {
-            try {
-                val gamesJson = get(Gc.gamesUrl(id))
-                val teamJson = try { get(Gc.teamUrl(id)) } catch (e: Exception) { raw.first }
-                if (snap.value.teamId != id) return@launch
-                raw = teamJson to gamesJson
-                val now = System.currentTimeMillis()
-                prefs(app).edit().putString("teamJson", teamJson).putString("gamesJson", gamesJson).putLong("readAt", now).apply()
-                snap.value = Snap(id, Gc.parseTeam(teamJson) ?: snap.value.team, Gc.parseGames(gamesJson), now, null, false)
-                Gc.board(snap.value.games, now).live?.let { line(it.id, force = true) }
-            } catch (e: Exception) {
-                snap.value = snap.value.copy(loading = false, error = "Can't reach GameChanger")
-            }
+        try {
+            val gamesJson = get(Gc.gamesUrl(id), timeoutMs)
+            val teamJson = if (!withTeam && raw.first.isNotEmpty()) raw.first
+                else try { get(Gc.teamUrl(id), timeoutMs) } catch (e: CancellationException) { throw e } catch (e: Exception) { raw.first }
+            if (snap.value.teamId != id) return@withLock false
+            raw = teamJson to gamesJson
+            val now = System.currentTimeMillis()
+            prefs(app).edit().putString("teamJson", teamJson).putString("gamesJson", gamesJson).putLong("readAt", now).apply()
+            snap.value = Snap(id, Gc.parseTeam(teamJson) ?: snap.value.team, Gc.parseGames(gamesJson), now, null, false)
+            Gc.board(snap.value.games, now).live?.let { readLine(it.id, timeoutMs) }
+            if (tellFace) LiveScore.update(app)
+            true
+        } catch (e: CancellationException) {
+            snap.value = snap.value.copy(loading = false)
+            throw e
+        } catch (e: Exception) {
+            snap.value = snap.value.copy(loading = false, error = "Can't reach GameChanger")
+            false
         }
     }
 
     /** one game's runs by inning, plus R/H/E; a final never changes, so it's read once */
     fun line(gameId: String, force: Boolean = false) {
         if (!Gc.safeGameId(gameId) || (!force && lines.value.containsKey(gameId))) return
-        scope.launch {
-            try { Gc.parseLine(get(Gc.lineUrl(gameId)))?.let { lines.value = lines.value + (gameId to it) } } catch (e: Exception) { /* the score still shows */ }
-        }
+        scope.launch { readLine(gameId, 15_000) }
     }
 
+    private suspend fun readLine(gameId: String, timeoutMs: Int) {
+        if (!Gc.safeGameId(gameId)) return
+        try { Gc.parseLine(get(Gc.lineUrl(gameId), timeoutMs))?.let { lines.value = lines.value + (gameId to it) } }
+        catch (e: CancellationException) { throw e } catch (e: Exception) { /* the score still shows */ }
+    }
 }
 
 private val DarkCard = Color(0xFF1E293B)

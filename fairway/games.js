@@ -104,7 +104,7 @@
 
   G.tab = function (el, ev) {
     const u = U(), me = u.me(), r = Math.min(ev.cur, ev.rounds);
-    el.innerHTML = betsHtml(ev, me, r) + bingoHtml(ev, me, r);
+    el.innerHTML = betsHtml(ev, me, r) + bingoHtml(ev, me, r) + (FW.recap ? FW.recap.seasonHtml() : "");
     const bs = $("#betset", el); if (bs) bs.onclick = () => setupSheet(ev);
     const bk = $("#betmark", el); if (bk) bk.onclick = () => markSheet(ev, r);
     $$("[data-sq]", el).forEach(b => b.onclick = () => {
