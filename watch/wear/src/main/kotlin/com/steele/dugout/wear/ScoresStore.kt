@@ -30,9 +30,11 @@ object ScoresStore {
     private var idToken: String? = null
     private var tokenUntil = 0L
     private lateinit var prefs: SharedPreferences
+    private var app: Context? = null
 
     fun load(ctx: Context) {
         if (::prefs.isInitialized) return
+        app = ctx.applicationContext
         prefs = ctx.applicationContext.getSharedPreferences("scores", Context.MODE_PRIVATE)
         val json = prefs.getString("json", null) ?: return
         val board = try { LeagueScores.parse(json) } catch (e: Exception) { return }
@@ -52,6 +54,7 @@ object ScoresStore {
             val t = System.currentTimeMillis()
             prefs.edit().putString("json", json).putLong("checkedAt", t).apply()
             _state.value = State(board, checkedAt = t)
+            Tiles.scores(app)
         } catch (e: Exception) {
             _state.value = _state.value.copy(loading = false, error = "Can't reach the scores right now")
         }
