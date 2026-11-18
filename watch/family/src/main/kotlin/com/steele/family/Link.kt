@@ -44,11 +44,13 @@ object Link {
     private val _state = MutableStateFlow(State())
     val state: StateFlow<State> = _state
     private lateinit var prefs: SharedPreferences
+    private var app: Context? = null
     private val lock = Mutex()
     @Volatile private var dirty = false
 
     fun load(ctx: Context) {
         if (::prefs.isInitialized) return
+        app = ctx.applicationContext
         prefs = ctx.applicationContext.getSharedPreferences("link", Context.MODE_PRIVATE)
         dirty = prefs.getBoolean("dirty", false)
         val f = FIELDS.mapNotNull { n -> prefs.getString("f_$n", null)?.let { n to it } }.toMap()
@@ -135,7 +137,10 @@ object Link {
         val ed = prefs.edit()
         FIELDS.forEach { n -> f.optJSONObject(n)?.optString("stringValue")?.takeIf { it.isNotBlank() }?.let { out[n] = it; ed.putString("f_$n", it) } }
         ed.putLong("checkedAt", now).apply()
+        val schedChanged = out["sc"] != _state.value.fields["sc"]
         _state.value = _state.value.copy(linked = true, fields = out, checkedAt = now, offline = false, noRules = false)
+        // a new schedule from the phone: the watch face's Next up asks for new words
+        if (schedChanged) app?.let { NextUp.update(it) }
     }
 
     // ---------- the Gameday Picks sign-in ----------
