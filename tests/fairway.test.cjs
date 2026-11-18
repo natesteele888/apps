@@ -632,6 +632,13 @@ const pl = (ev, id) => Object.assign({ id }, ev.p[id]);
     await page.locator('.scorer li').first().locator('.val').click();
     const code = await page.evaluate(() => window.FW.debug.S.code);
     await page.waitForFunction(c => Object.values(JSON.parse(localStorage.getItem('fw:ev:' + c)).p).some(x => x.s && x.s['1_1'] === 4), code);
+    // fixing a score 40 minutes later keeps the time the hole was first scored, for pace of play
+    const tmOf = c => { const p = Object.values(JSON.parse(localStorage.getItem('fw:ev:' + c)).p).find(x => x.s && x.s['1_1'] != null); return p && p.tm && p.tm['1_1']; };
+    const t1 = await page.evaluate(tmOf, code); assert.ok(t1 > 0, 'the score has a time');
+    await page.evaluate(() => { const real = Date.now; Date.now = () => real() + 40 * 60000; });
+    await page.locator('.scorer li').first().locator('.minus').click();
+    await page.waitForFunction(c => Object.values(JSON.parse(localStorage.getItem('fw:ev:' + c)).p).some(x => x.s && x.s['1_1'] === 3), code);
+    eq(await page.evaluate(tmOf, code), t1, 'a fixed score keeps its first time');
     await page.click('#back'); await page.waitForSelector('[data-open] .chip:text("Round")');
     deq(errors, []); await ctx.close();
   });
