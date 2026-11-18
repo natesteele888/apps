@@ -3,6 +3,7 @@ package com.steele.usage
 import android.annotation.SuppressLint
 import android.content.ActivityNotFoundException
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.graphics.Color
 import android.net.Uri
 import android.os.Bundle
@@ -24,12 +25,15 @@ import androidx.activity.result.contract.ActivityResultContracts
 import com.google.android.gms.auth.api.identity.AuthorizationRequest
 import com.google.android.gms.auth.api.identity.AuthorizationResult
 import com.google.android.gms.auth.api.identity.Identity
+import com.google.android.gms.common.ConnectionResult
+import com.google.android.gms.common.GoogleApiAvailability
 import com.google.android.gms.common.api.ApiException
 import com.google.android.gms.common.api.Scope
 import java.util.concurrent.Executors
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.ByteArrayInputStream
+import java.security.MessageDigest
 
 /**
  * Steele Usage on the phone: the Steele Usage web page full screen (GitHub Actions minutes), plus Claude.
@@ -75,11 +79,25 @@ if(!r.ok){window.__su={state:'error'};return}return r.json().then(function(j){wi
     private val io = Executors.newSingleThreadExecutor()
     private var fbBusy = false
     private var fbLast: String? = null
+    private var fbWantAsk = false
+    private var fbAsking = false
+    private var fbSeq = 0
     private val fbAsk = registerForActivityResult(ActivityResultContracts.StartIntentSenderForResult()) { r ->
+        fbAsking = false
         try {
-            val res = Identity.getAuthorizationClient(this).getAuthorizationResultFromIntent(r.data)
-            fbRead(res)
-        } catch (e: ApiException) { fbBusy = false; fbSend(if (r.resultCode == RESULT_CANCELED) "signedout" else fbState(e)) }
+            fbRead(Identity.getAuthorizationClient(this).getAuthorizationResultFromIntent(r.data))
+        } catch (e: ApiException) { fbDone(); sendFb(fbFail(e)) }
+          catch (e: Exception) { fbDone(); sendFb(fbJson(if (r.resultCode == RESULT_CANCELED) "cancelled" else "error")) }
+    }
+
+    /** This app's own signing SHA-1, shown on the setup card so it can be checked against the Firebase console. */
+    private val sha1: String by lazy {
+        try {
+            @Suppress("DEPRECATION")
+            val c = packageManager.getPackageInfo(packageName, PackageManager.GET_SIGNING_CERTIFICATES)
+                .signingInfo?.apkContentsSigners?.firstOrNull()?.toByteArray()
+            if (c == null) "" else MessageDigest.getInstance("SHA-1").digest(c).joinToString(":") { "%02X".format(it) }
+        } catch (e: Exception) { "" }
     }
 
     @SuppressLint("SetJavaScriptEnabled")
@@ -255,10 +273,17 @@ if(!r.ok){window.__su={state:'error'};return}return r.json().then(function(j){wi
         cm.removeAllCookies { cm.flush(); send("""{"state":"signedout"}""") }
     }
 
-    /** Reads Firebase usage. With ask false it never shows a screen: no grant yet just means "not connected". */
+    /**
+     * Reads Firebase usage. With ask false it never shows a screen: no grant yet just means "not connected".
+     * Every path ends in a card state, so a tap on Connect Google never just does nothing.
+     */
     private fun readFirebase(ask: Boolean) {
-        if (fbBusy) return
+        if (fbBusy) { if (ask) fbWantAsk = true; return }
+        val gs = GoogleApiAvailability.getInstance().isGooglePlayServicesAvailable(this)
+        if (gs != ConnectionResult.SUCCESS) { sendFb(fbJson("noplay", gs)); return }
         fbBusy = true
+        val id = ++fbSeq
+        ui.postDelayed({ if (fbBusy && !fbAsking && fbSeq == id) { fbSeq++; fbDone(); sendFb(fbJson("error", reason = "TIMEOUT")) } }, 45_000)
         val req = AuthorizationRequest.builder()
             .setRequestedScopes(listOf(Scope(FirebaseUsage.SCOPE_MONITORING), Scope(FirebaseUsage.SCOPE_FIREBASE)))
             .build()
@@ -266,29 +291,52 @@ if(!r.ok){window.__su={state:'error'};return}return r.json().then(function(j){wi
             .addOnSuccessListener { res ->
                 val pi = res.pendingIntent
                 when {
-                    res.hasResolution() && ask && pi != null -> fbAsk.launch(IntentSenderRequest.Builder(pi.intentSender).build())
-                    res.hasResolution() -> { fbBusy = false; fbSend("signedout") }
+                    res.hasResolution() && ask && pi != null -> {
+                        fbAsking = true
+                        try { fbAsk.launch(IntentSenderRequest.Builder(pi.intentSender).build()) }
+                        catch (e: Exception) { fbAsking = false; fbDone(); sendFb(fbJson("error", reason = "NO_SCREEN")) }
+                    }
+                    res.hasResolution() -> { fbDone(); sendFb(fbJson("signedout")) }
                     else -> fbRead(res)
                 }
             }
-            .addOnFailureListener { e -> fbBusy = false; fbSend(fbState(e)) }
+            .addOnFailureListener { e -> fbDone(); sendFb(fbFail(e)) }
     }
 
     private fun fbRead(res: AuthorizationResult) {
         val token = res.accessToken
-        if (token.isNullOrEmpty()) { fbBusy = false; fbSend("error"); return }
+        if (token.isNullOrEmpty()) { fbDone(); sendFb(fbJson("error", reason = "NO_TOKEN")); return }
         io.execute {
             val json = try { FirebaseUsage.read(token) }
-                       catch (e: FirebaseUsage.AuthError) { """{"state":"signedout"}""" }
-                       catch (e: Exception) { """{"state":"error"}""" }
-            ui.post { fbBusy = false; sendFb(json) }
+                       catch (e: FirebaseUsage.AuthError) { fbJson("signedout") }
+                       catch (e: FirebaseUsage.ApiErr) { fbJson("error", e.code, e.reason, e.service) }
+                       catch (e: java.io.IOException) { fbJson("offline") }
+                       catch (e: Exception) { fbJson("error") }
+            ui.post { fbDone(); sendFb(json) }
         }
     }
 
-    /** DEVELOPER_ERROR (10) means Google doesn't know this app yet: the one-time setup isn't done. */
-    private fun fbState(e: Exception): String = if (e is ApiException && e.statusCode == 10) "setup" else "error"
+    /** One read finished. A Connect tap that came in during a quiet read runs now. */
+    private fun fbDone() {
+        fbBusy = false
+        if (fbWantAsk) { fbWantAsk = false; ui.post { readFirebase(true) } }
+    }
 
-    private fun fbSend(state: String) = sendFb(JSONObject().put("state", state).toString())
+    /** Google's own sign-in codes, in words the card can explain. 10 means Google doesn't know this app yet. */
+    private fun fbFail(e: Exception): String {
+        if (e !is ApiException) return fbJson("error")
+        return when (e.statusCode) {
+            10 -> fbJson("setup", 10)
+            16, 12501 -> fbJson("cancelled", e.statusCode)
+            7 -> fbJson("offline", 7)
+            else -> fbJson("error", e.statusCode, "SIGN_IN")
+        }
+    }
+
+    /** A card state plus what the card needs to explain it; never a token or anything from Google's replies but a code. */
+    private fun fbJson(state: String, code: Int = 0, reason: String = "", service: String = ""): String =
+        JSONObject().put("state", state).put("code", code).put("reason", reason).put("service", service)
+            .put("pkg", packageName).put("sha1", sha1).toString()
 
     private fun sendFb(json: String) {
         fbLast = json
