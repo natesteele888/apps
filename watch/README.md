@@ -81,7 +81,7 @@ Nothing goes through the internet or a server. Player names and photos stay on t
 - It reads GameChanger's public team page data, so no sign-in. It needs the phone nearby (or the watch's own Wi-Fi). With no signal it shows the last scores it read and when.
 - Only teams scored in GameChanger show up, and the score is only as live as the scorekeeper.
 
-**Live score on the watch face.** To see GC Scores without opening it, long-press the watch face › **Customize** › tap a complication slot › **Dugout** › **Live score**. During a game it shows the score and inning ("INN 5" over "4-3"), between games the next game's day and time ("SAT" over "6:30"), and for 6 hours after a game the final ("W 7-3"). A wide slot shows the whole line, like "LIVE vs Hawks 4-3". Tap it to open GC Scores. It follows the team set on the phone, updates every minute during a game (and in the 30 minutes before one), and every 5 to 15 minutes otherwise, so it's easy on the battery.
+**Live score on the watch face.** To see GC Scores without opening it, long-press the watch face › **Customize** › tap a complication slot › **Dugout** › **Live score**. During a game it shows the score and inning ("INN 5" over "4-3"), between games the next game's day and time ("SAT" over "6:30"), and for 6 hours after a game the final ("W 7-3"). A wide slot shows the whole line, like "LIVE vs Hawks 4-3". Tap it to open GC Scores. It follows the team set on the phone, updates every minute during a game (and in the 30 minutes before one), and every 5 to 15 minutes otherwise, so it's easy on the battery. It needs Android 8 or newer on the watch (Wear OS 3, 4 and 5, and most Wear OS 2 watches); an Android Wear 2.0 watch on Android 7 doesn't list it.
 
 ## What the phone does
 

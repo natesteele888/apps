@@ -135,8 +135,9 @@ object GcStore {
         if (id == snap.value.teamId) return
         prefs(ctx).edit().putString("team", id).remove("teamJson").remove("gamesJson").putLong("readAt", 0).apply()
         lines.value = emptyMap()
+        raw = Pair("", "")
         snap.value = Snap(id, null, emptyList(), 0, null, false)
-        GcScoreComplication.update(ctx) // a new team (or none): the watch face changes too
+        LiveScore.update(ctx) // a new team (or none): the watch face changes too
         if (id.isNotEmpty()) refresh(ctx)
     }
 
@@ -182,7 +183,7 @@ object GcStore {
             prefs(app).edit().putString("teamJson", teamJson).putString("gamesJson", gamesJson).putLong("readAt", now).apply()
             snap.value = Snap(id, Gc.parseTeam(teamJson) ?: snap.value.team, Gc.parseGames(gamesJson), now, null, false)
             Gc.board(snap.value.games, now).live?.let { readLine(it.id, timeoutMs) }
-            if (tellFace) GcScoreComplication.update(app)
+            if (tellFace) LiveScore.update(app)
             true
         } catch (e: CancellationException) {
             snap.value = snap.value.copy(loading = false)

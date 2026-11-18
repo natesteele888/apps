@@ -7,8 +7,10 @@ import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.graphics.drawable.Icon
+import android.os.Build
 import android.os.SystemClock
 import android.text.format.DateFormat
+import androidx.annotation.RequiresApi
 import androidx.wear.watchface.complications.data.ComplicationData
 import androidx.wear.watchface.complications.data.ComplicationType
 import androidx.wear.watchface.complications.data.LongTextComplicationData
@@ -34,7 +36,12 @@ import java.time.ZoneId
  * screen shows. The watch asks for new words every 5 minutes (the least it allows, set in the manifest). While a game is
  * on, or starts within 30 minutes, this asks again every minute with an alarm, and never faster. Between games it reads
  * GameChanger at most every 15 minutes.
+ *
+ * Google's watch-face library needs Android 8 (Wear OS 2 on Android 8 or newer, and every Wear OS 3+ watch). On an
+ * Android Wear 2.0 watch (Android 7.1) Live score is switched off in the manifest (@bool/face_on) and the rest of
+ * Dugout works as before.
  */
+@RequiresApi(26)
 class GcScoreComplication : SuspendingComplicationDataSourceService() {
     override suspend fun onComplicationRequest(request: ComplicationRequest): ComplicationData? {
         val ctx = applicationContext
@@ -57,13 +64,6 @@ class GcScoreComplication : SuspendingComplicationDataSourceService() {
         data(this, type, GcFace.Texts("INN 5", "4-3", "LIVE vs Hawks 4-3"), null)
 
     companion object {
-        /** asks every watch face showing Live score to ask again (a new team, new scores on the GC Scores screen, the minute alarm) */
-        fun update(ctx: Context) {
-            val app = ctx.applicationContext
-            try { ComplicationDataSourceUpdateRequester.create(app, ComponentName(app, GcScoreComplication::class.java)).requestUpdateAll() }
-            catch (e: Exception) { /* no watch face to tell */ }
-        }
-
         /** one more update in about a minute; an inexact alarm, so the watch can line it up with its other wake-ups */
         private fun again(ctx: Context) {
             val am = ctx.getSystemService(Context.ALARM_SERVICE) as? AlarmManager ?: return
@@ -98,9 +98,20 @@ class GcScoreComplication : SuspendingComplicationDataSourceService() {
     }
 }
 
+/** tells the watch face's Live score to ask for new words */
+object LiveScore {
+    /** asks every watch face showing Live score to ask again (a new team, new scores on the GC Scores screen, the minute alarm) */
+    fun update(ctx: Context) {
+        if (Build.VERSION.SDK_INT < 26) return // no Live score before Android 8 (see GcScoreComplication)
+        val app = ctx.applicationContext
+        try { ComplicationDataSourceUpdateRequester.create(app, ComponentName(app, GcScoreComplication::class.java)).requestUpdateAll() }
+        catch (e: Exception) { /* no watch face to tell */ }
+    }
+}
+
 /** the minute alarm during a game: asks the watch face for new words, which reads GameChanger again */
 class GcScoreTick : BroadcastReceiver() {
-    override fun onReceive(ctx: Context, intent: Intent) = GcScoreComplication.update(ctx)
+    override fun onReceive(ctx: Context, intent: Intent) = LiveScore.update(ctx)
 }
 
 /** wakes the app when the coach sends a new team from the phone, so the watch face changes even with GC Scores closed */

@@ -1,5 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+    <!-- Google's watch-face library (Live score) needs Android 8; Live score is switched on only there (@bool/face_on) -->
+    <uses-sdk tools:overrideLibrary="androidx.wear.watchface.complications.data, androidx.wear.watchface.complications.datasource, androidx.wear.watchface.complications.datasource.ktx, androidx.wear.watchface.complications, androidx.wear.watchface.data, androidx.wear.watchface.utility" />
     <uses-feature android:name="android.hardware.type.watch" />
     <uses-permission android:name="android.permission.VIBRATE" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
@@ -70,9 +73,10 @@
             </intent-filter>
         </activity>
 
-        <!-- Live score on the watch face (long-press the face › Customize › tap a slot › Dugout › Live score): GC Scores' team -->
+        <!-- Live score on the watch face (long-press the face › Customize › tap a slot › Dugout › Live score): GC Scores' team. Android 8+ only. -->
         <service
             android:name=".GcScoreComplication"
+            android:enabled="@bool/face_on"
             android:exported="true"
             android:icon="@drawable/ic_face_gc"
             android:label="@string/face_score_name"
@@ -85,7 +89,7 @@
             <meta-data android:name="android.support.wearable.complications.UPDATE_PERIOD_SECONDS" android:value="300" />
         </service>
         <!-- the minute alarm during a game -->
-        <receiver android:name=".GcScoreTick" android:exported="false" />
+        <receiver android:name=".GcScoreTick" android:enabled="@bool/face_on" android:exported="false" />
         <!-- a new GameChanger team from the phone updates the watch face even with GC Scores closed -->
         <service android:name=".GcTeamListener" android:exported="true">
             <intent-filter>
