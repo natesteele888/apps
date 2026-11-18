@@ -430,6 +430,24 @@ const pl = (ev, id) => Object.assign({ id }, ev.p[id]);
     deq(errors, []); await ctx.close();
   });
 
+  if (browser) await test('page: start a round (no tournament): Monoosnock first, a partner, score on this phone', async () => {
+    const { page, errors, ctx } = await open();
+    await page.click('#round'); await page.waitForSelector('#rf');
+    eq(await page.locator('input[name=rcourse]').first().getAttribute('value'), 'monoosnock', 'Monoosnock is the first course');
+    await page.fill('#rme', 'Alpha Test'); await page.click('label:has(input[name=rtee][value=whiteblue]) span'); await page.fill('#rhc', '10');
+    await page.click('#addpal'); await page.fill('.palrow .pname', 'Bravo Test'); await page.selectOption('.palrow .ptee', 'ladies');
+    await page.locator('#rf [type=submit]').click();
+    await page.waitForFunction(() => window.FW.debug.S.view === 'event' && window.FW.debug.S.tab === 'score' && window.FW.debug.S.ev);
+    eq(await page.locator('#tabs [data-tab]').count(), 3, 'Score, Card and Games only');
+    eq(await page.locator('.scorer li').count(), 2);
+    await page.waitForSelector('#mapopen'); await page.waitForSelector('#jackopen'); await page.waitForSelector('#hsketch svg');
+    await page.locator('.scorer li').first().locator('.val').click();
+    const code = await page.evaluate(() => window.FW.debug.S.code);
+    await page.waitForFunction(c => Object.values(JSON.parse(localStorage.getItem('fw:ev:' + c)).p).some(x => x.s && x.s['1_1'] === 4), code);
+    await page.click('#back'); await page.waitForSelector('[data-open] .chip:text("Round")');
+    deq(errors, []); await ctx.close();
+  });
+
   if (browser) await test('page: start a tournament on this phone, mark a closest-to-the-pin hole and measure with GPS', async () => {
     const { page, errors, ctx } = await open({ ctx: { geolocation: { latitude: 40, longitude: -75, accuracy: 4 }, permissions: ['geolocation'] } });
     await page.click('#new'); await page.fill('#nn', 'Test Classic'); await page.fill('#nme', 'Alpha Test');
