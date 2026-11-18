@@ -340,6 +340,26 @@
     return r;
   }
 
+  /* ---------- the watch ---------- */
+  /* What a linked Wear OS watch gets (the "pk" field of the watch link, see ../watchlink.js): each block or station's
+     name and length plus the run's clock numbers, so the watch works out where practice is on its own (the same math as
+     positionAt and the "wait for me" hold) and buzzes at every change, even while this phone sleeps. No practice: {none}.
+     Small on purpose: at most 200 segments, names cut to 40 characters, no notes. */
+  function watchSegName(s) { return str(s.kind === "station" ? s.name + " · " + (s.label || "Station " + s.station) : s.name, L.nameMax) || "Block"; }
+  function watchSummary(run, nowMs) {
+    var at = Math.round(num(nowMs, 0));
+    if (!isObj(run) || !isObj(run.plan) || !Array.isArray(run.plan.blocks)) return { v: 1, at: at, none: true };
+    var segs = segments(run.plan, run.adj).slice(0, 200);
+    if (!segs.length) return { v: 1, at: at, none: true };
+    return {
+      v: 1, at: at, name: str(run.plan.name, L.nameMax) || "Practice", wait: run.plan.wait === true, ack: int(run.ack, 0, segs.length - 1, 0),
+      startMs: Math.round(num(run.startMs, at)), pausedMs: Math.round(Math.max(0, num(run.pausedMs, 0))),
+      pausedAt: typeof run.pausedAt === "number" && isFinite(run.pausedAt) ? Math.round(run.pausedAt) : null,
+      finished: run.finished === true, hold: run.holding === true,
+      segs: segs.map(function (s) { return { n: watchSegName(s), d: s.durMs }; })
+    };
+  }
+
   /* ---------- clock times for the editor ---------- */
   // start/end (minutes since midnight, may pass 1440) of every block when the plan starts at startMin
   function clockSchedule(plan, startMin) {
@@ -572,7 +592,7 @@
     clockSchedule: clockSchedule, overBy: overBy, trimToFit: trimToFit, applyTrim: applyTrim,
     encodeShare: encodeShare, decodeShare: decodeShare, utf8Encode: utf8Encode, utf8Decode: utf8Decode, b64urlEncode: b64urlEncode, b64urlDecode: b64urlDecode,
     planText: planText, TEMPLATES: TEMPLATES, templateById: templateById, planFromTemplate: planFromTemplate, duplicatePlan: duplicatePlan,
-    makeBackup: makeBackup, validateBackup: validateBackup
+    makeBackup: makeBackup, validateBackup: validateBackup, watchSummary: watchSummary
   };
   root.PracticeClockCore = api;
   if (typeof module !== "undefined" && module.exports) module.exports = api;

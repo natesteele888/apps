@@ -226,6 +226,25 @@ const strip = p => { const q = JSON.parse(JSON.stringify(p)); delete q.id; q.blo
     const bk = C.skipBack(C.settle(r, T + 12 * MIN), T + 12 * MIN); eq(bk.holding, false); eq(C.runPos(bk, T + 12 * MIN).segIndex, 0); eq(C.runPos(bk, T + 12 * MIN).remainingMs, 10 * MIN);
   });
 
+  await test('core: what a linked watch gets (names, lengths, the clock numbers), and "none" with no practice', async () => {
+    deq(C.watchSummary(null, T), { v: 1, at: T, none: true }); deq(C.watchSummary(undefined, T), { v: 1, at: T, none: true }); deq(C.watchSummary({ plan: 'x' }, T), { v: 1, at: T, none: true });
+    const p = P([{ name: 'Warm-up', min: 10 }, { name: 'Hitting', min: 5, type: 'stations', stations: 3, labels: ['Tee', '', 'Soft toss'] }, { name: 'x'.repeat(40), min: 5, note: 'not sent' }], { name: 'Tuesday', wait: true });
+    let r = C.newRun(p, T, TODAY);
+    let w = C.watchSummary(r, T + 1000);
+    eq(w.v, 1); eq(w.at, T + 1000); eq(w.name, 'Tuesday'); eq(w.wait, true); eq(w.ack, 0); eq(w.startMs, T); eq(w.pausedMs, 0); eq(w.pausedAt, null); eq(w.finished, false); eq(w.hold, false);
+    deq(w.segs, [{ n: 'Warm-up', d: 10 * MIN }, { n: 'Hitting · Tee', d: 5 * MIN }, { n: 'Hitting · Station 2', d: 5 * MIN }, { n: 'Hitting · Soft toss', d: 5 * MIN }, { n: 'x'.repeat(40), d: 5 * MIN }]);
+    assert.ok(!/not sent/.test(JSON.stringify(w)), 'notes stay on the phone');
+    // a minute added to the station that is on shows in its length; a hold and a pause come through as they are
+    r = C.skipNext(r, T + 2 * MIN); r = C.adjustCurrent(r, T + 2 * MIN, MIN).run;
+    w = C.watchSummary(r, T + 2 * MIN); eq(w.segs[1].d, 6 * MIN); eq(w.ack, 1); eq(w.startMs, T - 8 * MIN);
+    const h = C.settle(r, T + 12 * MIN); w = C.watchSummary(h, T + 12 * MIN); eq(w.hold, true); eq(w.pausedAt, T + 8 * MIN, 'held where the station ended');
+    w = C.watchSummary(C.pauseRun(C.newRun(p, T, TODAY), T + MIN), T + 2 * MIN); eq(w.pausedAt, T + MIN); eq(w.hold, false);
+    eq(C.watchSummary(C.endRun(r, T + 3 * MIN), T + 3 * MIN).finished, true);
+    // a big plan stays small enough for the watch link (40 KB)
+    const big = C.sanitizePlan({ name: 'Big', blocks: Array.from({ length: 60 }, (_, i) => ({ name: 'Block ' + 'y'.repeat(30) + i, min: 3, type: 'stations', stations: 8, labels: Array(8).fill('z'.repeat(24)) })) });
+    w = C.watchSummary(C.newRun(big, T, TODAY), T); eq(w.segs.length, 200); assert.ok(JSON.stringify(w).length < 40000, JSON.stringify(w).length + ' bytes');
+  });
+
   await test('core: saved run state is checked when it is loaded', async () => {
     const rp = P([10, 5, 5]); let r = C.newRun(rp, T, TODAY);
     r = C.resumeRun(C.pauseRun(C.adjustCurrent(r, T + MIN, MIN).run, T + 2 * MIN), T + 4 * MIN);

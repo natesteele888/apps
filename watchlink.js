@@ -1,4 +1,4 @@
-/* Watch link: how the family apps on a phone (Get Ready, Cube Clock, Read 20, Power Program, Gameday Picks) talk to the
+/* Watch link: how the family apps on a phone (Get Ready, Cube Clock, Read 20, Power Program, Gameday Picks, Practice Clock) talk to the
    Steele Family apps on a Wear OS watch (watch/family).
 
    One private link joins one phone to one watch. It is a single document in the nates-toolbox Firestore,
@@ -10,6 +10,8 @@
      gr   Get Ready's lists and check marks, written by the phone (the watch reads it).
      cc, r20, pp, gp   a short summary from Cube Clock, Read 20, Power Program (today's workout) and Gameday Picks
                        for the watch to show.
+     pk   the practice running in Practice Clock (each block's name and length and the clock numbers), so the watch can
+          show the station and buzz at every change by itself. {"none":true} when no practice is running.
      w    the watch's own log of what happened on the watch (a tick, a solve, a reading session, a finished exercise), written only by
           the watch. Each phone app takes the entries for it that it hasn't taken yet.
 
@@ -23,7 +25,7 @@
   const BASE = "https://firestore.googleapis.com/v1/projects/nates-toolbox/databases/(default)/documents/";
   const KEY = "steele.watchlink", SEEN = "steele.watchlink.seen.";
   const ABC = "abcdefghijklmnopqrstuvwxyz234567";
-  const FIELDS = ["gr", "cc", "r20", "pp", "gp", "w"];
+  const FIELDS = ["gr", "cc", "r20", "pp", "gp", "pk", "w"];
   const listeners = new Set();
 
   const lsGet = k => { try { return localStorage.getItem(k) || ""; } catch (e) { return ""; } };

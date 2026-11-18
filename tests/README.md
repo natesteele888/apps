@@ -15,7 +15,7 @@ NODE_PATH=/path/to/node_modules tests/run.sh locker    # one app
 - `eightcount`, `eightcount-more`: the screens, click timing (checked with an oscillator spy), lock-in across two pages with a shifted clock, recording with a fake camera, offline.
 - `playboard`: every sport, drag by mouse and touch, paths, animation, share links, picture and print, offline.
 - `locker`, `locker-back`: hand-checked stat math, streaks, pitch rest days, backup and restore, the card picture, the Back button.
-- `practiceclock`: block and station schedule math across pauses, sleep and skips, the runner on a fake clock, share links, print, backup.
+- `practiceclock`: block and station schedule math across pauses, sleep and skips, what a linked watch gets (the `pk` field: names, lengths and the clock numbers, never notes), the runner on a fake clock, share links, print, backup.
 - `read20`: the story library (levels, page lengths), day, streak and month math, damaged saves, tap-to-highlight, the nightly timer on a fake clock across two stories, idle pause, the log, offline.
 - `read20` also covers readers (several children, migration, removal), the older-readers library and theme, family links, and one-reader links for a child's own phone (the phone only ever touches that reader's record).
 - `read20` also covers the watch link (`watchlink.js`, Firestore REST stubbed): nothing is sent until a watch is linked, a reader is picked for the watch, the watch's reading sessions land once in that reader's log (odd ones and other apps' entries skipped, never doubled by later syncs or a reload), the goal and streak follow, the summary the watch shows (only the `r20` field, only when it changed), the party when the goal is reached on the watch, and unlinking.
