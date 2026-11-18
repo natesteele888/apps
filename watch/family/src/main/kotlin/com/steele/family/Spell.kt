@@ -23,6 +23,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -46,6 +47,7 @@ import androidx.wear.compose.material.CompactChip
 import androidx.wear.compose.material.MaterialTheme
 import androidx.wear.compose.material.Text
 import com.steele.family.core.SpellCore
+import com.steele.family.core.Syllables
 import com.steele.family.core.WordList
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -56,6 +58,8 @@ import java.util.Locale
 
 private val SalBlue = Color(0xFF6366F1)
 private val Tile = Color(0xFF312E81)
+/** every other part of the word (sor-cer-er) gets this tile, so the parts show */
+private val TileB = Color(0xFF1E40AF)
 
 /**
  * Sal, the spelling assistant: say "spell sorcerer" (or "hey Sal, how do you spell sorcerer") and the word comes up big,
@@ -90,12 +94,18 @@ class SpellActivity : ComponentActivity() {
     }
 }
 
-/** the word list, read once from the app (assets/spell/words.txt, built by tools/spell-words.py) */
+/**
+ * the word list and the patterns for splitting a word into parts, read once from the app (assets/spell/words.txt and
+ * parts.txt, built by tools/spell-words.py and tools/spell-parts.py)
+ */
 object Words {
     val list = MutableStateFlow<WordList?>(null)
+    val parts = MutableStateFlow<Syllables?>(null)
     @Synchronized fun load(ctx: Context) {
         if (list.value != null) return
-        list.value = ctx.assets.open("spell/words.txt").bufferedReader().useLines { WordList(it) }
+        val words = ctx.assets.open("spell/words.txt").bufferedReader().useLines { WordList(it) }
+        list.value = words
+        parts.value = ctx.assets.open("spell/parts.txt").bufferedReader().useLines { Syllables(it, words::sizeOf) }
     }
 }
 
@@ -116,12 +126,26 @@ class Voice(ctx: Context) : TextToSpeech.OnInitListener {
 
     /** the word, a pause, each letter, a pause, the word again */
     fun spell(word: String) {
+        val said = SpellCore.spoken(word)
+        speak(said) { i -> if (i == 0 || i == said.size - 2) 450L else 220L }
+    }
+
+    /** the word, then each part and its letters (sor, S O R, cer, C E R...), then the word again */
+    fun spellParts(word: String, parts: List<String>) {
+        val said = SpellCore.spokenParts(word, parts)
+        // a longer pause after the word and after each part's last letter, so the parts are easy to hear
+        val partEnds = HashSet<Int>()
+        var at = 0
+        for (p in parts) { at += 1 + SpellCore.spoken(p.trim()).size - 2; partEnds += at }
+        speak(said) { i -> if (i == 0 || i in partEnds) 550L else 220L }
+    }
+
+    private fun speak(said: List<String>, gap: (Int) -> Long) {
         if (!ready) return
-        val parts = SpellCore.spoken(word)
         tts.stop()
-        parts.forEachIndexed { i, p ->
+        said.forEachIndexed { i, p ->
             tts.speak(p, if (i == 0) TextToSpeech.QUEUE_FLUSH else TextToSpeech.QUEUE_ADD, null, "spell$i")
-            if (i < parts.size - 1) tts.playSilentUtterance(if (i == 0 || i == parts.size - 2) 450L else 220L, TextToSpeech.QUEUE_ADD, "gap$i")
+            if (i < said.size - 1) tts.playSilentUtterance(gap(i), TextToSpeech.QUEUE_ADD, "gap$i")
         }
     }
 
@@ -229,6 +253,10 @@ fun SpellApp(opened: Int, voice: Voice) {
 private fun AnswerScreen(a: SpellCore.Answer, voice: Voice, onPick: (String) -> Unit, onAgain: () -> Unit, canListen: Boolean, onBack: () -> Unit) {
     val letters = SpellCore.letters(a.word)
     var lit by remember(a.word) { mutableIntStateOf(-1) }
+    val splitter = Words.parts.collectAsState().value
+    val pieces = remember(a.word, splitter) { splitter?.split(a.word) ?: listOf(a.word) }
+    // which part each letter is in, to color every other part's tiles
+    val partOf = remember(pieces) { pieces.flatMapIndexed { n, p -> List(p.length) { n } } }
     // read it out once when it comes up
     LaunchedEffect(a.word, voice.ready) { if (voice.ready) voice.spell(a.word) }
     val size = when {
@@ -243,6 +271,9 @@ private fun AnswerScreen(a: SpellCore.Answer, voice: Voice, onPick: (String) -> 
             val count = letters.count { it.isNotBlank() && it[0].isLetter() }
             Text(if (a.hint != null) "$count letters · ${a.hint}" else "$count letters", fontSize = 12.sp, color = Muted, textAlign = TextAlign.Center)
         }
+        if (pieces.size > 1) item {
+            Text(pieces.joinToString(" · ") { it.trim() }, fontSize = 14.sp, color = SalBlue, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
+        }
         // one tile per letter, five to a row; tap a tile to hear that letter
         letters.chunked(5).forEachIndexed { row, chunk ->
             item {
@@ -251,7 +282,7 @@ private fun AnswerScreen(a: SpellCore.Answer, voice: Voice, onPick: (String) -> 
                         val at = row * 5 + i
                         if (ch == " ") Box(Modifier.width(14.dp))
                         else Box(
-                            Modifier.size(30.dp).clip(RoundedCornerShape(7.dp)).background(if (at == lit) SalBlue else Tile)
+                            Modifier.size(30.dp).clip(RoundedCornerShape(7.dp)).background(if (at == lit) SalBlue else if ((partOf.getOrElse(at) { 0 }) % 2 == 1) TileB else Tile)
                                 .clickable { lit = at; voice.say(SpellCore.spoken(ch).let { it[1] }) },
                             contentAlignment = Alignment.Center,
                         ) { Text(ch, fontSize = 19.sp, fontWeight = FontWeight.Bold, color = Color.White) }
@@ -269,6 +300,10 @@ private fun AnswerScreen(a: SpellCore.Answer, voice: Voice, onPick: (String) -> 
                 if (voice.ready) CompactChip(onClick = { voice.spell(a.word) }, label = { Text("🔊 Say it") }, colors = ChipDefaults.secondaryChipColors())
                 if (canListen) CompactChip(onClick = onAgain, label = { Text("🎤 Next") }, colors = ChipDefaults.primaryChipColors(backgroundColor = SalBlue))
             }
+        }
+        // a long word, one part at a time: "sor, S O R, cer, C E R, er, E R"
+        if (voice.ready && pieces.size > 1) item {
+            CompactChip(onClick = { voice.spellParts(a.word, pieces) }, label = { Text("🔊 In parts") }, colors = ChipDefaults.secondaryChipColors())
         }
         if (a.others.isNotEmpty()) {
             item { Text(if (a.known) "Or did you mean" else "Did you mean", fontSize = 12.sp, color = Muted, modifier = Modifier.padding(top = 6.dp)) }
