@@ -98,6 +98,10 @@ svg.chart{display:block;width:100%;height:auto}
 .repo .rb{height:6px;border-radius:3px;background:var(--empty);overflow:hidden}
 .repo .rb i{display:block;height:100%;border-radius:3px;background:var(--accent)}
 .more{background:none;border:0;color:var(--accent);font-weight:600;font-size:12.5px;padding:4px 0 0}
+.clogo{width:22px;height:22px;border-radius:6px;background:#D97757;display:grid;place-items:center;flex:none}
+.cmsg{color:var(--text-3);font-size:12.5px;padding:4px 0 2px}
+.cbtn{margin-top:8px;border:0;border-radius:10px;padding:9px 14px;background:#D97757;color:#fff;font-weight:700;font-size:14px}
+.clink{background:none;border:0;color:var(--text-3);font-size:11.5px;text-decoration:underline;padding:0}
 .slot{display:flex;align-items:center;gap:10px;border:1px dashed var(--line-2);background:transparent;width:100%;text-align:left;color:var(--text-2)}
 .slot .clogo{width:24px;height:24px;border-radius:6px;background:#D97757;display:grid;place-items:center;flex:none}
 .slot b{display:block;color:var(--text);font-size:15px}
@@ -189,10 +193,14 @@ svg.chart{display:block;width:100%;height:auto}
       <div class="mfoot" id="mfoot"></div>
     </section>
 
-    <button class="card slot" id="claudeSlot" type="button">
-      <span class="clogo" aria-hidden="true"><svg width="15" height="15" viewBox="0 0 24 24"><path fill="#fff" d="M12 2l1.6 6.3L19 4.9l-3.4 5.5L22 12l-6.4 1.6 3.4 5.5-5.4-3.4L12 22l-1.6-6.3L5 19.1l3.4-5.5L2 12l6.4-1.6L5 4.9l5.4 3.4z"/></svg></span>
-      <span><b>Claude</b><small>5-hour and weekly limits go here once there's a way to read them</small></span>
-    </button>
+    <section class="card meter" id="claude">
+      <div class="mhead">
+        <span class="clogo" aria-hidden="true"><svg width="15" height="15" viewBox="0 0 24 24"><path fill="#fff" d="M12 2l1.6 6.3L19 4.9l-3.4 5.5L22 12l-6.4 1.6 3.4 5.5-5.4-3.4L12 22l-1.6-6.3L5 19.1l3.4-5.5L2 12l6.4-1.6L5 4.9l5.4 3.4z"/></svg></span>
+        <span class="nm">Claude</span>
+        <span class="when"><span class="dot" id="cDot"></span><span id="cWhen"></span></span>
+      </div>
+      <div id="cBody"></div>
+    </section>
 
     <section class="card box">
       <div class="boxhead">
@@ -297,6 +305,7 @@ function explain(status, body) {
 }
 async function load(manual) {
   if (S.loading) return;
+  if (C.state !== 'web') app('refreshClaude');
   if (S.demo) { S.data = demoData(); S.fetchedAt = +now(); S.error = ''; scheduleNext(); render(); return; }
   if (!S.token) { render(); return; }
   S.loading = true; $('refreshBtn').classList.add('spin');
@@ -391,6 +400,7 @@ function render() {
   /* chart, schedule, repos */
   drawChart(d, p, plan);
   drawRepos(d);
+  drawClaude();
   tickStatus();
 }
 function bolt() { return '<svg width="16" height="18" viewBox="0 0 16 18" aria-hidden="true"><path d="M9 0L1 10h6l-1 8 8-10H8z" fill="currentColor"/></svg>'; }
@@ -492,6 +502,46 @@ async function toggleWake() {
 }
 function wakeUi() { $('wakePill').classList.toggle('on', !!S.wantWake); $('wakePill').setAttribute('aria-pressed', S.wantWake ? 'true' : 'false'); }
 
+/* ---------- Claude ----------
+   Only inside the Steele Usage Android app. The app signs in to Claude on the phone and reads the usage numbers
+   (5-hour and weekly percent, and when each resets); this page only ever gets those numbers, never the sign-in. */
+const APK = 'https://github.com/natesteele888/apps/releases/latest/download/steele-usage.apk';
+const C = { state: window.SteeleApp ? 'loading' : 'web', d: null, at: 0 };
+const app = (fn) => { try { window.SteeleApp && window.SteeleApp[fn](); } catch (e) {} };
+window.steeleClaude = function (x) {
+  C.state = (x && x.state) || 'error';
+  if (C.state === 'ok') { C.d = x; C.at = +now(); }
+  drawClaude();
+};
+function cRow(name, w, len) {
+  const pct = Math.max(0, +w.pct || 0) / 100, lv = level(pct), r = Date.parse(w.reset), t = +now();
+  const has = isFinite(r) && r > t, left = has ? r - t : 0;
+  const when = !has ? '' : len > 864e5 ? DOW[new Date(r).getDay()] + ' ' + clock(r) : clock(r);
+  return '<div class="mrow"><div class="pct ' + lv + '">' + Math.round(pct * 100) + '%</div>' +
+    '<div class="name">' + name + '<small>' + (len > 864e5 ? 'this week' : 'this window') + '</small></div>' +
+    '<div class="bar">' + segs(pct, has ? 1 - left / len : null, lv) + '</div>' +
+    '<div class="rt"><b>' + (has ? span(left, true).replace(/d/, 'd ').replace(/h(?=\d)/, 'h ') : '–') + '</b><small>' + (has ? esc(when) : 'not started') + '</small></div></div>';
+}
+function drawClaude() {
+  const body = $('cBody'), card = $('claude'); if (!body) return;
+  const ok = C.state === 'ok' && C.d;
+  $('cDot').className = 'dot' + (C.state === 'error' ? ' err' : '');
+  $('cWhen').textContent = ok ? (+now() - C.at < 6e4 ? 'just now' : span(+now() - C.at, true) + ' ago') : '';
+  $('cDot').style.display = ok || C.state === 'error' ? '' : 'none';
+  if (ok) {
+    const five = C.d.five || {}, week = C.d.week || {}, worst = Math.max(+five.pct || 0, +week.pct || 0) / 100;
+    card.className = 'card meter ' + (level(worst) === 'ok' ? '' : level(worst));
+    body.innerHTML = cRow('5-hour', five, 5 * 36e5) + cRow('Week', week, 7 * 864e5) +
+      '<div class="mfoot"><span>Read from your Claude account on this phone</span><button class="clink" id="cOut" type="button">Sign out</button></div>';
+    $('cOut').onclick = () => { if (confirm('Sign out of Claude in this app?')) app('signOut'); };
+    return;
+  }
+  card.className = 'card meter';
+  if (C.state === 'web') body.innerHTML = '<div class="cmsg">Your 5-hour and weekly Claude usage shows here in the Steele Usage phone app, where you sign in to Claude once.</div><a class="cbtn" style="display:inline-block;text-decoration:none" href="' + APK + '">Get the Android app</a>';
+  else if (C.state === 'signedout') { body.innerHTML = '<div class="cmsg">Sign in to Claude once and your 5-hour and weekly usage fills in here.</div><button class="cbtn" id="cIn" type="button">Sign in to Claude</button>'; $('cIn').onclick = () => app('signIn'); }
+  else if (C.state === 'error') { body.innerHTML = '<div class="cmsg">Couldn’t read your Claude usage just now.</div><button class="cbtn" id="cTry" type="button">Try again</button>'; $('cTry').onclick = () => { C.state = 'loading'; drawClaude(); app('refreshClaude'); }; }
+  else body.innerHTML = '<div class="cmsg">Reading your Claude usage…</div>';
+}
 /* ---------- wire up ---------- */
 $('refreshBtn').onclick = () => load(true);
 $('settingsBtn').onclick = openSettings;
@@ -502,7 +552,6 @@ $('setupSave').onclick = () => {
   S.token = tk; put(K.token, tk); S.demo = false; put(K.demo, null); $('setupToken').value = ''; load(true);
 };
 $('setupDemo').onclick = () => { S.demo = true; put(K.demo, '1'); load(); };
-$('claudeSlot').onclick = () => toast('Claude has no public usage feed yet, so this card is saved for when there is one.');
 $('wakePill').onclick = toggleWake;
 document.querySelectorAll('.tabs button').forEach(b => b.onclick = () => { S.view = b.dataset.view; put(K.view, S.view); if (S.data) drawChart(S.data, period(), S.plan); });
 document.addEventListener('visibilitychange', async () => {
