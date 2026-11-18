@@ -483,6 +483,17 @@ test('fairway games: bingo marks fit in the tournament, capped', async () => {
   await assertFails(updateDoc(ref, { bg: Object.fromEntries(Array.from({ length: 121 }, (_, i) => ['pl' + String(i).padStart(7, '0'), [3]])), updated: 3 }));
 });
 
+test('fairway games: side game settings and hole marks fit, capped (a tally only, no money fields)', async () => {
+  const ref = doc(anon(), 'golf_events/' + FW_CODE);
+  await assertSucceeds(setDoc(ref, fwEvent()));
+  await assertSucceeds(updateDoc(doc(stranger(), 'golf_events/' + FW_CODE), { bets: { on: ['skins', 'wolf'], amt: { skins: 1, wolf: 2 }, out: [] }, updated: 2 }));
+  await assertSucceeds(updateDoc(ref, { 'bm.1_4.tp': ['pl0000001'], 'bm.1_4.wp.1': 'lone', updated: 3 }));
+  await assertFails(updateDoc(ref, { bets: { on: ['skins'], card: '4242' }, updated: 4 }), 'no other fields');
+  await assertFails(updateDoc(ref, { bets: { on: Array.from({ length: 11 }, () => 'skins') }, updated: 4 }));
+  await assertFails(updateDoc(ref, { bm: 'all', updated: 4 }));
+  await assertFails(updateDoc(ref, { bm: Object.fromEntries(Array.from({ length: 73 }, (_, i) => ['k' + i, {}])), updated: 4 }));
+});
+
 test('fairway phase 1: the chat lives under the tournament; votes and birdie shouts are the only edits', async () => {
   const chat = id => doc(anon(), 'golf_events/' + FW_CODE + '/chat/' + id);
   const msg = { k: 'm', by: 'pl0000001', n: 'Test Golfer', t: 'On my way', at: 1 };

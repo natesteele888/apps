@@ -20,6 +20,7 @@ async function test(name, fn) {
 }
 const eq = (a, b, m) => assert.strictEqual(a, b, (m ? m + ': ' : '') + 'expected ' + JSON.stringify(b) + ' got ' + JSON.stringify(a));
 const deq = (a, b, m) => assert.deepStrictEqual(a, b, m);
+const ok = (v, m) => assert.ok(v, m);
 const NOW = 1794000000000;
 function twoPlayers() {
   const ev = C.newEvent({ name: 'Test Cup', now: NOW });
@@ -171,6 +172,33 @@ const pl = (ev, id) => Object.assign({ id }, ev.p[id]);
     deq(C.cleanBingo({ aaaaaa1: [0, 3, 3, 99, 'x'], zzzzzz9: [4] }, ev), { aaaaaa1: [3] }, 'auto squares, repeats and unknown golfers dropped');
   });
 
+  await test('core side games: skins carry, Nassau, wolf, snake and greenies tally who owes who, and it all nets to zero', () => {
+    const ev = twoPlayers();
+    ev.p.cccccc1 = C.newPlayer(ev, { name: 'Charlie Test', tee: 'blue', g: 1, st: 1 });
+    ev.p.dddddd1 = C.newPlayer(ev, { name: 'Delta Test', tee: 'blue', g: 1, st: 1 });
+    ['aaaaaa1', 'bbbbbb1', 'cccccc1', 'dddddd1'].forEach((id, i) => { ev.p[id].at = i; ev.course.holes.forEach((h, j) => { ev.p[id].s['1_' + (j + 1)] = h.par; }); });
+    ev.p.aaaaaa1.s['1_1'] -= 1; // a birdie on 1 takes the first skin
+    ev.p.bbbbbb1.s['1_3'] -= 1; // 2 halved, so 3 is worth two skins
+    const par3 = ev.course.holes.findIndex(h => h.par === 3) + 1;
+    const raw = JSON.parse(JSON.stringify(ev));
+    raw.bets = { on: ['skins', 'nassau', 'snake', 'wolf', 'green', 'venmo'], amt: { skins: 1, nassau: 5, snake: 2, wolf: 1, green: 0 }, out: ['zzzzzz9'] };
+    raw.bm = { '1_1': { wp: { 1: 'cccccc1' } }, '1_5': { tp: ['cccccc1'] }, '1_9': { tp: ['dddddd1', 'nobody1'] }, ['1_' + par3]: { gr: 'dddddd1' }, '9_1': { ld: 'aaaaaa1' } };
+    const e = C.cleanEvent(raw);
+    deq(e.bets.on, ['skins', 'nassau', 'snake', 'wolf', 'green'], 'unknown games dropped'); deq(e.bets.out, [], 'unknown golfers dropped');
+    eq(e.bm['9_1'], undefined, 'marks for a round that does not exist are dropped'); deq(e.bm['1_9'].tp, ['dddddd1']);
+    const t = C.betTally(e, 1), g = id => t.games.find(x => x.g === id);
+    eq(g('skins').lines[0], 'Hole 1: Alpha Test wins the skin.'); eq(g('skins').lines[1], 'Hole 3: Bravo Test wins 2 skins.');
+    ok(/Delta Test holds the snake/.test(g('snake').lines[0]), 'the last three-putt holds the snake');
+    eq(g('wolf').lines[0], 'hole 1: Alpha Test and Charlie Test win.', 'the wolf (first to join) and partner win with the birdie');
+    eq(g('green').lines[0], 'Hole ' + par3 + ': Delta Test.'); eq(g('green').amt, 0, 'a game for fun shows winners but owes nothing');
+    eq(Math.round(Object.values(t.bal).reduce((a, b) => a + b, 0) * 100), 0, 'every dollar won is a dollar lost');
+    eq(t.bal.dddddd1 < 0, true, 'the snake holder is down');
+    const paid = {}; t.owes.forEach(o => { paid[o.from] = (paid[o.from] || 0) - o.amt; paid[o.to] = (paid[o.to] || 0) + o.amt; });
+    Object.keys(t.bal).forEach(p => eq(Math.round((paid[p] || 0) * 100), Math.round(t.bal[p] * 100), 'the payments settle ' + p));
+    ok(t.owes.length <= 3, 'four golfers settle in three payments or fewer');
+    eq(C.money(3.5), '$3.50'); eq(C.money(4), '$4');
+  });
+
   /* ===================== PART 2: the page ===================== */
   let server, browser;
   try { server = await startServer('fairway'); browser = await launch(); }
@@ -308,6 +336,26 @@ const pl = (ev, id) => Object.assign({ id }, ev.p[id]);
     // nothing changed: the next look sends nothing new
     patches.length = 0; await page.evaluate(() => window.FW.watch.tick()); eq(patches.length, 0);
     eq(await page.evaluate(() => window.FairwayCore.strokes(window.FW.debug.S.ev.p[window.FW.ui.me().id], 1, 1)), 5);
+    const wide = await page.evaluate(() => document.documentElement.scrollWidth); assert.ok(wide <= 390, 'no sideways scroll at 390 px, got ' + wide);
+    deq(errors, []); await ctx.close();
+  });
+
+  if (browser) await test('page: side games, pick skins and the snake, mark a three-putt, see who owes who', async () => {
+    const { page, errors, ctx } = await open();
+    await page.click('#new'); await page.fill('#nn', 'Skins Day'); await page.fill('#nme', 'Alpha Test');
+    await page.locator('#nf [type=submit]').click(); await page.waitForFunction(() => window.FW.debug.S.ev);
+    await page.evaluate(() => { const S = window.FW.debug.S, C = window.FairwayCore, me = window.FW.ui.me();
+      const id = C.newPid(); window.FW.ui.write({ ['p.' + id]: C.newPlayer(S.ev, { name: 'Bravo Test', tee: S.ev.course.tees[0].id, g: 1, st: 1 }),
+        ['p.' + me.id + '.s.1_1']: 3, ['p.' + id + '.s.1_1']: 4 }); });
+    await page.click('[data-tab=games]'); await page.click('#betset');
+    await page.check('[data-g=skins]'); await page.check('[data-g=snake]'); await page.selectOption('[data-amt=snake]', '5');
+    await page.click('#betsave'); await page.waitForSelector('.betg');
+    ok(/Alpha Test wins the skin/.test(await page.locator('.betg').first().textContent()), 'the birdie wins hole 1');
+    await page.click('#betmark'); await page.selectOption('#bh', '1');
+    await page.locator('.sheet [data-tp]').last().check(); await page.click('#bmsave');
+    await page.waitForFunction(() => /holds the snake/.test(document.body.textContent));
+    ok(/Bravo Test\s*owes\s*Alpha Test/.test(await page.locator('.owes').textContent()), 'who owes who shows up');
+    ok(/never moves money/.test(await page.textContent('body')));
     const wide = await page.evaluate(() => document.documentElement.scrollWidth); assert.ok(wide <= 390, 'no sideways scroll at 390 px, got ' + wide);
     deq(errors, []); await ctx.close();
   });

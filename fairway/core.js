@@ -535,6 +535,163 @@
     return out;
   }
 
+  /* ---------- side games: a running tally of who owes who. Fairway never moves money. ---------- */
+  const BETS = [["skins", "Skins"], ["tskins", "Team skins"], ["nassau", "Nassau"], ["wolf", "Wolf"], ["bball", "Best ball"],
+    ["ctp", "Closest to the pin"], ["long", "Long drive"], ["green", "Greenies"], ["sandy", "Sandies"], ["snake", "Snake"]];
+  const BET_IDS = BETS.map(b => b[0]), BET_AMTS = [0, 1, 2, 5, 10, 20];
+  // Settings: which games are on, the stake for each (0 plays for bragging rights) and who sits out.
+  function cleanBets(x, ev) {
+    if (!x || typeof x !== "object") return null;
+    const on = []; (Array.isArray(x.on) ? x.on : []).forEach(g => { if (BET_IDS.indexOf(g) >= 0 && on.indexOf(g) < 0) on.push(g); });
+    const amt = {}; on.forEach(g => { const v = x.amt && typeof x.amt === "object" ? Number(x.amt[g]) : NaN; amt[g] = BET_AMTS.indexOf(v) >= 0 ? v : 1; });
+    const out = []; (Array.isArray(x.out) ? x.out : []).forEach(p => { if (isPid(p) && ev.p[p] && out.indexOf(p) < 0) out.push(p); });
+    return { on, amt, out };
+  }
+  // Marks by round and hole: ld long drive, gr greenie, sa sandies, tp three-putts (the snake), wp each group's wolf pick.
+  function cleanBetMarks(x, ev) {
+    const out = {}, n = ev.course.holes.length; if (!x || typeof x !== "object") return out;
+    const one = p => (isPid(p) && ev.p[p] ? p : null);
+    const many = v => { const o = []; (Array.isArray(v) ? v : []).forEach(p => { if (one(p) && o.indexOf(p) < 0) o.push(p); }); return o; };
+    Object.keys(x).forEach(k => {
+      const m = /^([1-4])_([0-9]{1,2})$/.exec(k), b = x[k];
+      if (!m || +m[1] > ev.rounds || +m[2] < 1 || +m[2] > n || !b || typeof b !== "object") return;
+      const o = {};
+      if (one(b.ld)) o.ld = b.ld;
+      if (one(b.gr)) o.gr = b.gr;
+      const sa = many(b.sa); if (sa.length) o.sa = sa;
+      const tp = many(b.tp); if (tp.length) o.tp = tp;
+      if (b.wp && typeof b.wp === "object") {
+        const wp = {}; Object.keys(b.wp).forEach(g => { const v = b.wp[g]; if (/^[0-9]{1,2}$/.test(g) && +g >= 1 && +g <= 60 && (v === "lone" || one(v))) wp[g] = v; });
+        if (Object.keys(wp).length) o.wp = wp;
+      }
+      if (Object.keys(o).length) out[k] = o;
+    });
+    return out;
+  }
+  const betOn = (ev, g) => !!(ev.bets && ev.bets.on.indexOf(g) >= 0);
+  const betAmt = (ev, g) => (ev.bets && ev.bets.amt && ev.bets.amt[g] != null ? ev.bets.amt[g] : 1);
+  function betPlayers(ev) { const out = (ev.bets && ev.bets.out) || []; return players(ev).filter(p => out.indexOf(p.id) < 0).map(p => p.id); }
+  // A group's wolf order: who joined first tees off first, then it goes round by hole number.
+  function wolfOrder(ev, g, who) { return who.filter(p => ev.p[p].g === g).sort((a, b) => (ev.p[a].at || 0) - (ev.p[b].at || 0) || (a < b ? -1 : 1)); }
+  function wolfOf(ev, g, h, who) { const o = wolfOrder(ev, g, who || betPlayers(ev)); return o.length >= 3 ? o[(h - 1) % o.length] : null; }
+  const andList = l => (l.length < 3 ? l.join(" and ") : l.slice(0, -1).join(", ") + " and " + l[l.length - 1]);
+  const money = v => { const c = Math.round(Math.abs(v) * 100); return "$" + (c % 100 ? (c / 100).toFixed(2) : String(c / 100)); };
+
+  // The whole tally for one round: each game's results, everyone's balance and the fewest payments that settle it.
+  function betTally(ev, r) {
+    const who = betPlayers(ev), nm = p => (ev.p[p] ? ev.p[p].n : "Player"), n = holeCount(ev), holes = ev.course.holes;
+    const bm = ev.bm || {}, bal = {}; who.forEach(p => { bal[p] = 0; });
+    const sc = (p, h) => strokes(ev.p[p], r, h), all = (list, h) => list.every(p => sc(p, h) != null);
+    const games = [];
+    // every loser pays the stake, split between the winners
+    function pay(win, lose, unit, real) { if (!real || !win.length || !lose.length) return; lose.forEach(l => win.forEach(w => { bal[l] -= unit / win.length; bal[w] += unit / win.length; })); }
+    const teams = teamIds(ev).map(t => ({ t, n: ev.teams[t].n, m: who.filter(p => teamOf(ev, p) === t) })).filter(x => x.m.length);
+    (ev.bets ? ev.bets.on : []).forEach(g => {
+      const amt = betAmt(ev, g), unit = amt || 1, real = amt > 0, lines = [], game = { g, name: BETS.find(b => b[0] === g)[1], amt, lines };
+      const others = p => who.filter(x => x !== p);
+      if (who.length < 2) lines.push("Needs two golfers or more.");
+      else if (g === "skins" || g === "tskins") {
+        const sides = g === "skins" ? who.map(p => ({ n: nm(p), m: [p] })) : teams;
+        if (sides.length < 2) lines.push("Needs two teams. Set them up on the Teams tab.");
+        else {
+          let carry = 1, won = 0;
+          for (let h = 1; h <= n; h++) {
+            if (!sides.every(s => all(s.m, h))) { lines.push(`Hole ${h} waits on everyone's score${carry > 1 ? `, ${carry} skins riding` : ""}.`); carry = 0; break; }
+            const best = sides.map(s => Math.min.apply(null, s.m.map(p => sc(p, h)))), low = Math.min.apply(null, best), at = best.filter(v => v === low).length;
+            if (at > 1) { carry++; continue; }
+            const w = sides[best.indexOf(low)];
+            lines.push(`Hole ${h}: ${w.n}${carry > 1 ? ` wins ${carry} skins` : " wins the skin"}.`);
+            pay(w.m, who.filter(p => w.m.indexOf(p) < 0), unit * carry, real); won += carry; carry = 1;
+          }
+          if (carry > 1) lines.push(`${carry - 1} skin${carry > 2 ? "s" : ""} carried past the last hole.`);
+          if (!won && !lines.length) lines.push("No skins won yet.");
+        }
+      } else if (g === "nassau") {
+        const legs = n === 18 ? [["Front nine", 1, 9], ["Back nine", 10, 18], ["Total", 1, 18]] : [["Total", 1, n]];
+        legs.forEach(([lbl, a, b]) => {
+          const hs = []; for (let h = a; h <= b; h++) hs.push(h);
+          if (!hs.every(h => all(who, h))) { lines.push(`${lbl}: still being played.`); return; }
+          const tot = who.map(p => hs.reduce((s, h) => s + sc(p, h), 0)), low = Math.min.apply(null, tot), win = who.filter((p, i) => tot[i] === low);
+          if (win.length === who.length) { lines.push(`${lbl}: all square at ${low}.`); return; }
+          lines.push(`${lbl}: ${andList(win.map(nm))}${win.length > 1 ? " tie" : " wins"} with ${low}.`);
+          pay(win, who.filter(p => win.indexOf(p) < 0), unit, real);
+        });
+      } else if (g === "bball") {
+        if (teams.length < 2) lines.push("Needs two teams. Set them up on the Teams tab.");
+        else {
+          const done = [], tot = teams.map(() => 0);
+          for (let h = 1; h <= n; h++) if (teams.every(s => all(s.m, h))) { done.push(h); teams.forEach((s, i) => { tot[i] += Math.min.apply(null, s.m.map(p => sc(p, h))); }); }
+          if (!done.length) lines.push("No holes in from every team yet.");
+          else {
+            const low = Math.min.apply(null, tot), win = teams.filter((s, i) => tot[i] === low);
+            teams.forEach((s, i) => lines.push(`${s.n}: ${tot[i]} through ${done.length}.`));
+            if (done.length === n) { const wm = [].concat.apply([], win.map(s => s.m)); lines.push(win.length === teams.length ? "All square." : `${andList(win.map(s => s.n))}${win.length > 1 ? " tie" : " win"}.`); pay(wm, who.filter(p => wm.indexOf(p) < 0), unit, real); }
+          }
+        }
+      } else if (g === "ctp") {
+        ctpBoard(ev, r).forEach(x => {
+          const b = x.list.find(e => who.indexOf(e.pid) >= 0);
+          if (!b) { lines.push(`Hole ${x.h}: nobody on yet.`); return; }
+          lines.push(`Hole ${x.h}: ${nm(b.pid)}, ${fmtFeet(b.d)}.`); pay([b.pid], others(b.pid), unit, real);
+        });
+        if (!(ev.ctph || []).length) lines.push("Pick the closest to the pin holes on the Score tab.");
+      } else if (g === "long" || g === "green" || g === "sandy") {
+        for (let h = 1; h <= n; h++) {
+          const m = bm[key(r, h)] || {}, par = holes[h - 1].par;
+          if (g === "long" && m.ld && who.indexOf(m.ld) >= 0) { lines.push(`Hole ${h}: ${nm(m.ld)}.`); pay([m.ld], others(m.ld), unit, real); }
+          if (g === "green" && m.gr && who.indexOf(m.gr) >= 0) {
+            const v = sc(m.gr, h);
+            if (v == null) lines.push(`Hole ${h}: ${nm(m.gr)}, once they make par.`);
+            else if (v <= par) { lines.push(`Hole ${h}: ${nm(m.gr)}.`); pay([m.gr], others(m.gr), unit, real); }
+            else lines.push(`Hole ${h}: ${nm(m.gr)} hit it close but missed par.`);
+          }
+          if (g === "sandy") (m.sa || []).filter(p => who.indexOf(p) >= 0).forEach(p => {
+            const v = sc(p, h);
+            if (v != null && v <= par) { lines.push(`Hole ${h}: ${nm(p)}.`); pay([p], others(p), unit, real); }
+          });
+        }
+        if (!lines.length) lines.push(g === "long" ? "Mark the long drive from Mark a hole." : g === "green" ? "Greenies: on the green in one on a par 3 and make par. Mark them from Mark a hole." : "Sandies: out of the sand and par or better. Mark them from Mark a hole.");
+      } else if (g === "snake") {
+        let holder = null, last = 0;
+        for (let h = 1; h <= n; h++) { const tp = ((bm[key(r, h)] || {}).tp || []).filter(p => who.indexOf(p) >= 0); if (tp.length) { holder = tp[tp.length - 1]; last = h; } }
+        if (!holder) lines.push("Nobody has three-putted yet.");
+        else { lines.push(`${nm(holder)} holds the snake (three-putt on ${last}) and pays everyone if it ends now.`); pay(others(holder), [holder], unit * others(holder).length, real); }
+      } else if (g === "wolf") {
+        const gs = []; who.forEach(p => { const gg = ev.p[p].g; if (gs.indexOf(gg) < 0) gs.push(gg); });
+        gs.sort((a, b) => a - b).forEach(gg => {
+          const order = wolfOrder(ev, gg, who);
+          if (order.length < 3) return;
+          const pre = gs.length > 1 ? `Group ${gg}, ` : "", tally = {}; order.forEach(p => { tally[p] = 0; });
+          for (let h = 1; h <= n; h++) {
+            const w = order[(h - 1) % order.length], pick = ((bm[key(r, h)] || {}).wp || {})[gg];
+            if (!pick || !all(order, h) || (pick !== "lone" && order.indexOf(pick) < 0)) continue;
+            const a = pick === "lone" ? [w] : [w, pick], b = order.filter(p => a.indexOf(p) < 0);
+            const ba = Math.min.apply(null, a.map(p => sc(p, h))), bb = Math.min.apply(null, b.map(p => sc(p, h)));
+            if (ba === bb) { lines.push(`${pre}hole ${h}: halved.`); continue; }
+            const stake = pick === "lone" ? 2 * unit : unit, win = ba < bb ? a : b, lose = ba < bb ? b : a;
+            lines.push(`${pre}hole ${h}: ${pick === "lone" ? (ba < bb ? `${nm(w)} wins alone` : `${nm(w)} loses alone`) : `${win.map(nm).join(" and ")} win`}.`);
+            lose.forEach(l => win.forEach(x => { tally[l] -= stake; tally[x] += stake; }));
+          }
+          if (real) order.forEach(p => { bal[p] += tally[p]; });
+        });
+        if (!lines.length) lines.push("Each hole, the wolf picks a partner or goes alone. Pick from Mark a hole.");
+      }
+      games.push(game);
+    });
+    // fewest payments: the biggest debt goes to the biggest winner first
+    const owes = [], debt = who.filter(p => bal[p] < -0.004).map(p => ({ p, v: -bal[p] })), cred = who.filter(p => bal[p] > 0.004).map(p => ({ p, v: bal[p] }));
+    debt.sort((a, b) => b.v - a.v); cred.sort((a, b) => b.v - a.v);
+    while (debt.length && cred.length) {
+      const d = debt[0], c = cred[0], v = Math.min(d.v, c.v);
+      owes.push({ from: d.p, to: c.p, amt: Math.round(v * 100) / 100 });
+      d.v -= v; c.v -= v;
+      if (d.v < 0.004) debt.shift(); if (c.v < 0.004) cred.shift();
+      debt.sort((a, b) => b.v - a.v); cred.sort((a, b) => b.v - a.v);
+    }
+    Object.keys(bal).forEach(p => { bal[p] = Math.round(bal[p] * 100) / 100; });
+    return { who, games, bal, owes };
+  }
+
   /* ---------- changes: the same dotted paths the shared database takes ---------- */
   // patch keys look like "p.abc123.s.1_7" or "name"; a value of DELETE removes the field.
   const DELETE = { __delete: true };
@@ -604,6 +761,8 @@
     }
     const tt = cleanTt(d.tt, n); if (tt) ev.tt = tt;
     const bg = cleanBingo(d.bg, ev); if (Object.keys(bg).length) ev.bg = bg;
+    const bets = cleanBets(d.bets, ev); if (bets && bets.on.length) ev.bets = bets;
+    const bmk = cleanBetMarks(d.bm, ev); if (Object.keys(bmk).length) ev.bm = bmk;
     return ev;
   }
   // What one finished round looks like in this phone's history (for "previous rounds" on a player card).
@@ -632,5 +791,6 @@
     cleanCtpHoles, cleanCtpEntry, ctpBoard, metres, averageFix, ctpMeasure, fmtFeet,
     cleanHc, isDate, isTime, isTid, cleanRally, cleanFmt, rallyList, officialPatch, openGroup, teamIds, pickSlots, teamOf, draftState, pickPatch,
     draftStartPatch, pickCaptains, teamBoard, matchStatus, matchIds, autoMatches, picksLocked, pickCounts, cleanTt, teeTime, fmtTime, fmtDate,
-    reminders, icsFor, directions, cleanMsg, shout, BINGO, BINGO_AUTO, bingoCard, bingoState, cleanBingo };
+    reminders, icsFor, directions, cleanMsg, shout, BINGO, BINGO_AUTO, bingoCard, bingoState, cleanBingo,
+    BETS, BET_AMTS, cleanBets, cleanBetMarks, betOn, betAmt, betPlayers, wolfOrder, wolfOf, betTally, money };
 });
