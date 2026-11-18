@@ -1,6 +1,6 @@
 // Fairway: network first, so updates show up right away; the last saved copy when there's no signal on the course.
 // Caches the app and the Firebase code it needs to start. Scores stay in Firestore's own copy on the phone, never here.
-const CACHE = "fairway-v20";
+const CACHE = "fairway-v35";
 const SHELL = ["./", "manifest.json", "fairway.css", "core.js", "qr.js", "store.js", "sound.js", "teams.js", "games.js", "review.js", "jack.js", "recap.js", "bag.js", "map.js", "where.js", "holemap.js", "caddie.js", "app.js", "watch.js", "../watchlink.js", "/apps/icons/fairway-192.png", "/apps/icons/fairway-512.png", "../install.js", "../health.js"];
 // Same version as store.js loads: change them together.
 const FIREBASE = ["app", "firestore"].map(n => `https://www.gstatic.com/firebasejs/11.6.0/firebase-${n}-compat.js`);
@@ -22,8 +22,18 @@ self.addEventListener("fetch", e => {
   const u = new URL(r.url);
   // Firestore's own traffic goes straight through; only the page, its files, Firebase's code and fonts are kept.
   if (!(u.origin === location.origin || u.host === "www.gstatic.com" || u.host.startsWith("fonts."))) return;
-  e.respondWith(fetch(r).then(res => {
-    if (res.ok || res.type === "opaque") { const c = res.clone(); caches.open(CACHE).then(x => x.put(r, c)); }
+  const saved = () => caches.open(CACHE).then(x => x.match(r, {ignoreSearch: true}).then(m => m || (r.mode === "navigate" ? x.match("./") : undefined)));
+  const net = fetch(r).then(res => {
+    if (res.ok || res.type === "opaque") { const c = res.clone(); e.waitUntil(caches.open(CACHE).then(x => x.put(r, c))); }
     return res;
-  }).catch(() => caches.open(CACHE).then(x => x.match(r, {ignoreSearch: true}).then(m => m || (r.mode === "navigate" ? x.match("./") : Response.error())))));
+  });
+  // One bar of signal on the course: a fetch can hang for a long time without failing. After 3 seconds the saved copy
+  // shows instead, and the network's answer still refreshes the cache for next time.
+  e.respondWith(new Promise(resolve => {
+    let done = false;
+    const give = res => { if (!done && res) { done = true; resolve(res); } };
+    const t = setTimeout(() => saved().then(give), 3000);
+    net.then(res => { clearTimeout(t); give(res); })
+      .catch(() => { clearTimeout(t); saved().then(m => { give(m); if (!done) { done = true; resolve(Response.error()); } }); });
+  }));
 });

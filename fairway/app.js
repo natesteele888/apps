@@ -17,7 +17,7 @@
   const reduced = () => matchMedia("(prefers-reduced-motion: reduce)").matches;
 
   const S = {
-    view: "home", net: !!(FW.LS && FW.LS.get("fw:net", false)), code: null, ev: null, place: null, live: "", unsub: null, tab: "board", boardMode: "leaders", boardRound: null,
+    view: "home", net: !!(FW.LS && FW.LS.get("fw:net", false)), sf: !!(FW.LS && FW.LS.get("fw:sf", false)), code: null, ev: null, place: null, live: "", unsub: null, tab: "board", boardMode: "leaders", boardRound: null,
     fieldMode: "place", group: null, hole: null, scoreRound: null, draft: null, draftFrom: "home", card: null, needRender: false
   };
   const ICON = {
@@ -36,9 +36,12 @@
   };
 
   /* ---------- toasts and sheets ---------- */
-  function toast(msg, kind) {
+  // act: { label, fn } adds a button (like Undo) and keeps the toast up a little longer
+  function toast(msg, kind, act) {
     const t = document.createElement("div"); t.className = "toast " + (kind || ""); t.textContent = msg;
-    $("#toasts").appendChild(t); setTimeout(() => t.classList.add("out"), 3200); setTimeout(() => t.remove(), 3700);
+    if (act) { const b = document.createElement("button"); b.type = "button"; b.className = "tact"; b.textContent = act.label; b.onclick = () => { t.remove(); act.fn(); }; t.appendChild(b); }
+    const ms = act ? 6000 : 3200;
+    $("#toasts").appendChild(t); setTimeout(() => t.classList.add("out"), ms); setTimeout(() => t.remove(), ms + 500);
   }
   function sheet(title, html, onOpen) {
     const box = $("#sheets");
@@ -145,7 +148,8 @@
      ====================================================================== */
   // Your finished rounds on this phone (by the name you play under): best and average for each course, and the last few.
   function myRoundsHtml() {
-    const name = FW.LS.get("fw:name", ""); if (!name) return "";
+    // a quick round with the name left empty is played as "Me"
+    const name = FW.LS.get("fw:name", "") || "Me";
     const m = C.myRounds(FW.history(), name); if (!m.list.length) return "";
     const fmtD = d => new Date(d).toLocaleDateString(undefined, { month: "short", day: "numeric" });
     return `<section class="pad"><h2 class="sec">Your rounds <small>${m.list.length} finished</small></h2>
@@ -166,7 +170,7 @@
       </section>
       ${mine.length ? `<section class="pad"><h2 class="sec">Your tournaments</h2><ul class="list">${mine.map(m => {
         const ev = FW.cacheGet(m.code);
-        const sub = ev ? `${esc(ev.course.name)} · ${C.players(ev).length} players` : "Tap to open";
+        const sub = ev ? `${esc(ev.course.name)} · ${C.players(ev).length} player${C.players(ev).length === 1 ? "" : "s"}` : "Tap to open";
         return `<li><button type="button" class="row" data-open="${esc(m.code)}"><span><b>${esc((ev && ev.name) || m.name || "Tournament")}</b><small>${sub}</small></span><span class="chips">${m.demo ? '<i class="chip">Demo</i>' : ""}${m.round ? '<i class="chip">Round</i>' : m.org ? '<i class="chip">Yours</i>' : ""}${m.local && !m.demo ? '<i class="chip">This phone</i>' : ""}</span></button></li>`;
       }).join("")}</ul></section>` : ""}
       ${myRoundsHtml()}
@@ -271,7 +275,7 @@
         <label class="fld"><span>How many do you want?</span><input id="ngoal" type="number" min="2" max="120" inputmode="numeric" value="12"></label>
         <label class="fld"><span>A note for everyone (optional)</span><input id="nnote" maxlength="140" placeholder="Morning tee time, captains and a draft if we get 12"></label>` : ""}
       <p class="stepno">How do you want to play?</p>
-      <div class="pick" id="nkind">${[["teams", "Teams with a draft", "Captains pick their teams"], ["solo", "Everyone for themselves", "Lowest score wins"], ["match", "Match play", "Head to head, hole by hole"]].map(([k, t, d]) => `<button type="button" class="pk${kind === k ? " on" : ""}" data-nk="${k}"><span class="grow"><b>${t}</b><small>${d}</small></span><span class="ck" aria-hidden="true"></span></button>`).join("")}</div>
+      <div class="pick" id="nkind">${[["teams", "Teams with a draft", "Captains pick their teams"], ["scramble", "Scramble", "Teams play one ball; the captain keeps the card"], ["solo", "Everyone for themselves", "Lowest score wins"], ["match", "Match play", "Head to head, hole by hole"]].map(([k, t, d]) => `<button type="button" class="pk${kind === k ? " on" : ""}" data-nk="${k}"><span class="grow"><b>${t}</b><small>${d}</small></span><span class="ck" aria-hidden="true"></span></button>`).join("")}</div>
       <fieldset class="fld"><legend>Course</legend><div class="opts">${courses.map(c => `<label class="opt"><input type="radio" name="course" value="${esc(c.id)}" ${c.id === pick ? "checked" : ""}><span><b>${esc(c.name)}</b><small>${c.holes.length} holes · ${C.parText(c)} · ${c.tees.map(t => esc(t.name)).join(", ")}</small></span></label>`).join("")}</div>
         <button type="button" class="btn ghost small" id="nb">Build a new course</button></fieldset>
       <fieldset class="fld"><legend>Rounds</legend><div class="seg" role="radiogroup">${[1, 2, 3, 4].map(n => `<label><input type="radio" name="rounds" value="${n}" ${n === 1 ? "checked" : ""}><span>${n}</span></label>`).join("")}</div></fieldset>
@@ -454,7 +458,9 @@
   /* ---------- Board: the leaders, and the classic hole-by-hole board ---------- */
   function tabBoard(el, ev) {
     const hasHc = C.players(ev).some(p => Number.isFinite(p.hc)), net = hasHc && S.net && S.boardMode === "leaders";
-    const rows = C.standings(ev, { net }), r = S.boardRound || Math.min(ev.cur, ev.rounds), n = C.holeCount(ev);
+    const scr = C.isScramble(ev) && C.teamIds(ev).length, sf = !!S.sf && S.boardMode === "leaders";
+    const rows = C.standings(ev, { net, pts: sf }).filter(row => !scr || C.keepsCard(ev, row.id)).map(row => { const t = scr ? C.teamOf(ev, row.id) : null; return t ? Object.assign({}, row, { name: ev.teams[t].n }) : row; });
+    const r = S.boardRound || Math.min(ev.cur, ev.rounds), n = C.holeCount(ev);
     const seg = `<div class="pills" role="group" aria-label="Board">${[["leaders", "Leaders"], ["holes", "Hole by hole"], ["field", "Field"], ["course", "Course"]].map(([k, l]) => `<button type="button" class="pill" data-bm="${k}" aria-pressed="${S.boardMode === k}">${l}</button>`).join("")}</div>`;
     if (S.boardMode === "field" || S.boardMode === "course") {
       el.innerHTML = seg + `<div id="bsub"></div>`; (S.boardMode === "field" ? tabField : tabCourse)($("#bsub", el), ev); wireBoard(el); return;
@@ -471,11 +477,13 @@
             return `<tr><th class="nm"><button type="button" data-player="${esc(row.id)}"><span class="pos">${esc(row.pos)}</span>${esc(bn[row.id])}</button></th>${pars.map((_, i) => { const h = i + 1, v = x.run[h]; return `<td class="${v == null ? "" : C.tone(v)}${x.last === h && !x.done ? " now" : ""}">${v == null ? "" : esc(v === 0 ? "E" : Math.abs(v))}</td>`; }).join("")}</tr>`; }).join("")}
         </tbody></table></div><p class="legend"><span class="tp under">Red</span> under par, <span class="tp over">green</span> over par, black even. Each number is the player's score to par after that hole${n === 18 ? "" : ""}.</p></div>`;
     } else {
-      const R = ev.rounds, bn = C.boardNames(rows), tp = row => (net ? row.net : row.toPar);
-      html = `${hasHc ? `<div class="pills small" role="group" aria-label="Gross or net">${[[false, "Gross"], [true, "Net"]].map(([k, l]) => `<button type="button" class="pill" data-net="${k ? 1 : 0}" aria-pressed="${!!net === k}">${l}</button>`).join("")}</div>` : ""}
-        <div class="board"><div class="bhead">Leaders${net ? " · net" : ""}</div><table class="lb"><thead><tr><th>Pos</th><th class="pn">Player</th><th>${net ? "Net" : "To par"}</th><th>Thru</th>${R > 1 ? Array.from({ length: R }, (_, i) => `<th class="rd">R${i + 1}</th>`).join("") : ""}<th>Tot</th></tr></thead><tbody>
-        ${rows.map(row => `<tr data-player="${esc(row.id)}" tabindex="0" role="button" aria-label="${esc(row.name)}, ${esc(row.pos)}, ${esc(C.fmtPar(tp(row)))}${net ? " net" : ""}"><td class="pos">${esc(row.pos)}</td><td class="pn">${teeDot(C.teeOf(ev, row.pl))}${esc(bn[row.id])}${net && row.ch != null ? ` <small class="chc">${esc(chText(row.ch))}</small>` : ""}</td><td class="big">${row.holes ? parText(tp(row)) : ""}</td><td class="thru">${esc(row.today.done ? "F" : row.today.thru || "–")}</td>${R > 1 ? row.rounds.map(x => `<td class="rd">${x.done ? x.strokes : x.started ? `<span class="tp ${C.tone(x.toPar)} sm">${esc(C.fmtPar(x.toPar))}</span>` : ""}</td>`).join("") : ""}<td class="tot">${row.total || ""}</td></tr>`).join("")}
-      </tbody></table></div><p class="legend">Tap a name for their card. <span class="tp under">Red</span> is under par, <span class="tp over">green</span> over.${net ? " Net takes off each golfer's handicap strokes (the small number is their course handicap from their tees). Golfers with no index play gross." : ""}</p>${ctpPanel(ev, r)}`;
+      const R = ev.rounds, bn = C.boardNames(rows), tp = row => (net ? row.net : row.toPar), pt = x => (net ? x.ptsNet : x.pts);
+      // Stableford (points per hole, most wins) is a way to read the same scores, picked on each phone
+      const sfPills = `<div class="pills small" role="group" aria-label="Strokes or points">${[[false, "Strokes"], [true, "Points"]].map(([k, l]) => `<button type="button" class="pill" data-sf="${k ? 1 : 0}" aria-pressed="${sf === k}">${l}</button>`).join("")}</div>`;
+      html = `<div class="pillrow">${sfPills}${hasHc ? `<div class="pills small" role="group" aria-label="Gross or net">${[[false, "Gross"], [true, "Net"]].map(([k, l]) => `<button type="button" class="pill" data-net="${k ? 1 : 0}" aria-pressed="${!!net === k}">${l}</button>`).join("")}</div>` : ""}</div>
+        <div class="board"><div class="bhead">Leaders${sf ? " · Stableford" : ""}${net ? " · net" : ""}</div><table class="lb"><thead><tr><th>Pos</th><th class="pn">Player</th><th>${sf ? "Points" : net ? "Net" : "To par"}</th><th>Thru</th>${R > 1 ? Array.from({ length: R }, (_, i) => `<th class="rd">R${i + 1}</th>`).join("") : ""}<th>Tot</th></tr></thead><tbody>
+        ${rows.map(row => `<tr data-player="${esc(row.id)}" tabindex="0" role="button" aria-label="${esc(row.name)}, ${esc(row.pos)}, ${sf ? pt(row) + " points" : esc(C.fmtPar(tp(row)))}${net ? " net" : ""}"><td class="pos">${esc(row.pos)}</td><td class="pn">${teeDot(C.teeOf(ev, row.pl))}${esc(bn[row.id])}${net && row.ch != null ? ` <small class="chc">${esc(chText(row.ch))}</small>` : ""}</td><td class="big">${row.holes ? (sf ? `<b class="pts">${pt(row)}</b>` : parText(tp(row))) : ""}</td><td class="thru">${esc(row.today.done ? "F" : row.today.thru || "–")}</td>${R > 1 ? row.rounds.map(x => `<td class="rd">${sf ? (x.started ? pt(x) : "") : x.done ? x.strokes : x.started ? `<span class="tp ${C.tone(x.toPar)} sm">${esc(C.fmtPar(x.toPar))}</span>` : ""}</td>`).join("") : ""}<td class="tot">${row.total || ""}</td></tr>`).join("")}
+      </tbody></table></div><p class="legend">Tap a name for their card. ${sf ? "Stableford: 2 points for a par, 3 for a birdie, 4 for an eagle, 1 for a bogey, 0 for anything worse. Most points wins." : `<span class="tp under">Red</span> is under par, <span class="tp over">green</span> over.`}${net && sf ? " Net points count each golfer's handicap strokes on the hardest holes." : net ? " Net takes off each golfer's handicap strokes (the small number is their course handicap from their tees). Golfers with no index play gross." : ""}</p>${ctpPanel(ev, r)}`;
     }
     el.innerHTML = seg + (S.boardMode === "holes" ? "" : FW.recap.html(ev, r)) + html;
     wireBoard(el); FW.recap.wire(el, ev, r);
@@ -484,6 +492,7 @@
   function wireBoard(el) {
     $$("[data-bm]", el).forEach(b => b.onclick = () => { S.boardMode = b.dataset.bm; render(); });
     $$("[data-net]", el).forEach(b => b.onclick = () => { S.net = b.dataset.net === "1"; FW.LS.set("fw:net", S.net); render(); });
+    $$("[data-sf]", el).forEach(b => b.onclick = () => { S.sf = b.dataset.sf === "1"; FW.LS.set("fw:sf", S.sf); render(); });
     $$("[data-br]", el).forEach(b => b.onclick = () => { S.boardRound = +b.dataset.br; render(); });
     $$("[data-ctp]", el).forEach(b => b.onclick = () => ctpList(+b.dataset.ctp, +b.dataset.ctpr));
     const go2 = $("#gojoin", el); if (go2) go2.onclick = () => { S.tab = "more"; render(); };
@@ -494,6 +503,15 @@
   function track(ev, x) {
     return `<span class="track" aria-hidden="true">${x.order.map(h => { const v = x.scores[h - 1]; const d = v == null ? null : v - x.pars[h - 1]; return `<i class="${d == null ? "" : C.tone(d)}${x.next === h ? " at" : ""}"></i>`; }).join("")}</span>`;
   }
+  // A group's pace in a few words: minutes a hole, and how far behind a 15-minute hole when it's slipping.
+  function paceText(p) {
+    if (!p) return "";
+    if (p.total) return " · about " + Math.floor(p.total / 60) + ":" + String(p.total % 60).padStart(2, "0") + " on the course";
+    let s = " · " + p.per + " min a hole";
+    if (p.behind >= 10) s += ", " + p.behind + " min behind";
+    if (p.since >= 25) s += " · no score for " + p.since + " min";
+    return s;
+  }
   function tabField(el, ev) {
     const rows = C.standings(ev);
     if (!rows.length) { el.innerHTML = emptyField(); wireBoard(el); return; }
@@ -503,7 +521,8 @@
     let list;
     if (S.fieldMode === "group") {
       const byId = {}; rows.forEach(r => byId[r.id] = r);
-      list = C.groups(ev).map(g => `<li class="ghead"><b>Group ${g.g}</b><small>${g.done ? "Finished" : g.thru ? "On hole " + g.on : "Starts on " + g.start}</small></li>${g.players.map(p => rowHtml(byId[p.id])).join("")}`).join("");
+      const rr = Math.min(ev.cur, ev.rounds);
+      list = C.groups(ev).map(g => `<li class="ghead"><b>Group ${g.g}</b><small>${g.done ? "Finished" : g.thru ? "On hole " + C.holeNo(ev.course, g.on) : "Starts on " + C.holeNo(ev.course, g.start)}${paceText(C.groupPace(ev, g, rr))}</small></li>${g.players.map(p => rowHtml(byId[p.id])).join("")}`).join("");
     } else list = rows.map(rowHtml).join("");
     el.innerHTML = `<button type="button" class="leader" data-player="${esc(lead.id)}"><small>${co > 1 ? "Tied for the lead" : "Leader"}</small><b>${esc(lead.name)}</b><span class="lscore">${lead.holes ? parText(lead.toPar) : ""}</span><span class="lwhere">${esc(lead.holes ? where(lx) + (lx.thru && !lx.done ? " · thru " + lx.thru : "") : "Hasn't teed off")}</span>${track(ev, lx)}</button>
       <div class="pills" role="group" aria-label="Order"><button type="button" class="pill" data-fm="place" aria-pressed="${S.fieldMode === "place"}">By place</button><button type="button" class="pill" data-fm="group" aria-pressed="${S.fieldMode === "group"}">By group</button></div>
@@ -516,27 +535,44 @@
     const gs = C.groups(ev), mine = me();
     if (!gs.length) { el.innerHTML = emptyField(); wireBoard(el); return; }
     if (S.group == null || !gs.some(g => g.g === S.group)) S.group = mine ? mine.g : gs[0].g;
-    const g = gs.find(x => x.g === S.group), r = S.scoreRound || Math.min(ev.cur, ev.rounds), n = C.holeCount(ev);
+    const g0 = gs.find(x => x.g === S.group), r = S.scoreRound || Math.min(ev.cur, ev.rounds), n = C.holeCount(ev);
+    const scr = C.isScramble(ev), g = scr ? Object.assign({}, g0, { players: g0.players.filter(p => C.keepsCard(ev, p.id)) }) : g0;
+    if (!g.players.length) { el.innerHTML = `${gs.length > 1 ? `<div class="pills small" role="group" aria-label="Group">${gs.map(x => `<button type="button" class="pill" data-g="${x.g}" aria-pressed="${x.g === g0.g}">Group ${x.g}</button>`).join("")}</div>` : ""}<div class="empty"><p>Your captain keeps the card</p><p class="msg">It's a scramble: each team plays one ball and the captain keeps its score. Follow along on the Board.</p></div>`; $$("[data-g]", el).forEach(b => b.onclick = () => { S.group = +b.dataset.g; S.hole = null; render(); }); return; }
+    const tname = p => { const t = scr ? C.teamOf(ev, p.id) : null; return t ? ev.teams[t].n : null; };
     const order = C.playOrder(n, g.start), rs = g.players.map(p => C.round(ev, p, r));
     if (S.hole == null || S.holeGroup !== g.g) { S.hole = order.find(h => rs.some(x => x.scores[h - 1] == null)) || order[order.length - 1]; S.holeGroup = g.g; }
     const h = S.hole, hole = ev.course.holes[h - 1], idx = order.indexOf(h), allIn = rs.every(x => x.scores[h - 1] != null);
-    el.innerHTML = `${gs.length > 1 ? `<div class="pills small" role="group" aria-label="Group">${gs.map(x => `<button type="button" class="pill" data-g="${x.g}" aria-pressed="${x.g === g.g}">Group ${x.g}</button>`).join("")}</div>` : ""}
+    // the whole group has a score on every hole: say so, with the totals, instead of leaving them on the last hole
+    const quick = !!(FW.mineGet(S.code) || {}).round, fin = !ev.demo && rs.length && rs.every(x => x.done);
+    const finHtml = fin ? `<div class="rdone" role="status"><b>${quick ? "Round done" : "Your group is done"}</b>
+        <small>${g.players.map((p, i) => esc(tname(p) || p.n) + " " + rs[i].strokes + " (" + esc(C.fmtPar(rs[i].toPar)) + ")").join(" · ")}</small>
+        <small>${quick ? "Saved to Your rounds on the home screen. You can still fix a score below." : "Check the card below. Final standings are on the Board."}</small>
+        ${mine && g.players.some(p => p.id === mine.id) ? numbersHtml(ev, mine, r) : ""}
+        <div class="row2"><button type="button" class="btn small" id="rdgo">${quick ? "Back to home" : "See the board"}</button><button type="button" class="btn small" id="rdtxt">Send the card</button></div></div>` : "";
+    el.innerHTML = `${finHtml}${gs.length > 1 ? `<div class="pills small" role="group" aria-label="Group">${gs.map(x => `<button type="button" class="pill" data-g="${x.g}" aria-pressed="${x.g === g.g}">Group ${x.g}</button>`).join("")}</div>` : ""}
       ${ev.rounds > 1 ? `<div class="pills small" role="group" aria-label="Round">${Array.from({ length: ev.rounds }, (_, i) => `<button type="button" class="pill" data-sr="${i + 1}" aria-pressed="${r === i + 1}">Round ${i + 1}${i + 1 === ev.cur ? " (now)" : ""}</button>`).join("")}</div>` : ""}
-      <div class="strip" data-keep="strip" role="group" aria-label="Hole">${order.map(k => { const done = rs.every(x => x.scores[k - 1] != null), some = rs.some(x => x.scores[k - 1] != null); return `<button type="button" data-h="${k}" aria-pressed="${k === h}" class="${done ? "done" : some ? "part" : ""}">${k}</button>`; }).join("")}</div>
+      <div class="strip" data-keep="strip" role="group" aria-label="Hole">${order.map(k => { const done = rs.every(x => x.scores[k - 1] != null), some = rs.some(x => x.scores[k - 1] != null); return `<button type="button" data-h="${k}" aria-pressed="${k === h}" class="${done ? "done" : some ? "part" : ""}">${C.holeNo(ev.course, k)}</button>`; }).join("")}</div>
       <div class="holecard"><div class="hn"><small>Hole</small><b>${C.holeNo(ev.course, h)}</b></div><div class="hinfo"><b>Par ${hole.par}</b><small>${hole.tp ? ev.course.tees.filter(t => hole.tp[t.id] && g.players.some(p => p.tee === t.id)).map(t => esc(t.name) + " par " + hole.tp[t.id] + " · ").join("") : ""}Handicap ${hole.hcp}</small></div>
         <div class="hy">${ev.course.tees.filter(t => g.players.some(p => p.tee === t.id)).map(t => `<span>${teeDot(t)}${C.yards(ev.course, h, t.id) || "–"} yds</span>`).join("")}</div></div>
       ${caddieRow(ev, g, r, h, mine)}
       ${(ev.ctph || []).indexOf(h) >= 0 ? (() => { const x = C.ctpBoard(ev, r).find(y => y.h === h); return `<button type="button" class="ctpbar" id="ctpopen"><span><b>Closest to the pin</b><small>${x.best ? esc(x.best.name) + ", " + esc(C.fmtFeet(x.best.d)) : "Nobody measured yet"}</small></span><span class="chev">Measure</span></button>`; })() : ""}
       ${mine && mine.g === g.g ? FW.map.holeHtml(ev, h) + FW.jack.holeHtml(ev, h) : ""}
       <ul class="scorer">${g.players.map((p, i) => { const v = rs[i].scores[h - 1], d = v == null ? null : v - rs[i].pars[h - 1], t = C.teeOf(ev, p);
-        return `<li data-pid="${esc(p.id)}"><button type="button" class="sname" data-player="${esc(p.id)}">${teeDot(t)}<span><b>${esc(p.n)}</b><small>${rs[i].thru ? parText(rs[i].toPar) + " thru " + rs[i].thru : "No scores yet"}${rs[i].gets[h - 1] > 0 ? " · gets " + (rs[i].gets[h - 1] > 1 ? rs[i].gets[h - 1] + " strokes" : "a stroke") : rs[i].gets[h - 1] < 0 ? " · gives a stroke" : ""}${mine && mine.id === p.id ? " · you" : ""}</small></span></button>
+        return `<li data-pid="${esc(p.id)}"><button type="button" class="sname" data-player="${esc(p.id)}">${teeDot(t)}<span><b>${esc(tname(p) || p.n)}</b><small>${rs[i].thru ? parText(rs[i].toPar) + " thru " + rs[i].thru : "No scores yet"}${rs[i].gets[h - 1] > 0 ? " · gets " + (rs[i].gets[h - 1] > 1 ? rs[i].gets[h - 1] + " strokes" : "a stroke") : rs[i].gets[h - 1] < 0 ? " · gives a stroke" : ""}${mine && mine.id === p.id ? " · you" : ""}</small></span></button>
           <div class="stepper"><button type="button" class="minus" aria-label="One less for ${esc(p.n)}">−</button><button type="button" class="val ${v == null ? "empty" : C.mark(d)}" aria-label="${v == null ? "Set par for " + esc(p.n) : esc(p.n) + ": " + v}">${v == null ? "Par?" : v}</button><button type="button" class="plus" aria-label="One more for ${esc(p.n)}">+</button></div>
-          <small class="sword ${d == null ? "" : C.tone(d)}">${v == null ? "" : esc(C.scoreName(d, v))}${v != null ? ` <button type="button" class="link clr" aria-label="Clear ${esc(p.n)}'s score">clear</button>` : ""}</small></li>`; }).join("")}</ul>
+          <small class="sword ${d == null ? "" : C.tone(d)}">${v == null ? `<button type="button" class="link pku" aria-label="Pick up for ${esc(p.n)}: double par">Pick up</button>` : esc(C.scoreName(d, v))}${v != null ? ` <button type="button" class="link clr" aria-label="Clear ${esc(p.n)}'s score">clear</button>` : ""}</small></li>`; }).join("")}</ul>
       ${mine && mine.g === g.g ? FW.review.html(ev, mine, r, h) : ""}
       <div class="navrow"><button type="button" class="btn" id="prev" ${idx <= 0 ? "disabled" : ""}>‹ Hole ${order[idx - 1] ? C.holeNo(ev.course, order[idx - 1]) : ""}</button><button type="button" class="btn ${allIn ? "primary" : ""}" id="next" ${idx >= order.length - 1 ? "disabled" : ""}>Hole ${order[idx + 1] ? C.holeNo(ev.course, order[idx + 1]) : ""} ›</button></div>
       <h2 class="sec">Group ${g.g} card</h2>${groupCard(ev, g.players, r, order, h)}
       ${!mine && !isOrg() ? `<p class="msg">You're watching. To keep score for this group, tap Join on the Share tab.</p>` : ""}`;
     const co = $("#ctpopen", el); if (co) co.onclick = () => ctpList(h, r);
+    // the group's card as plain text, for Messages or anywhere: the share menu, or copy where there isn't one
+    const rt = $("#rdtxt", el); if (rt) rt.onclick = async () => {
+      const text = C.cardText(ev, g.players, r, new Date(ev.created || Date.now()).toLocaleDateString(undefined, { month: "short", day: "numeric" }));
+      if (navigator.share) { navigator.share({ title: ev.name, text }).catch(() => {}); return; }
+      try { await navigator.clipboard.writeText(text); toast("Card copied"); } catch (e) { sheet("Copy the card", `<textarea class="copybox" readonly rows="10">${esc(text)}</textarea>`); }
+    };
+    const rd = $("#rdgo", el); if (rd) rd.onclick = () => { if (quick) go("home", {}, false); else { S.tab = "board"; render(); window.scrollTo(0, 0); } };
     wireCaddie(el, ev, g, r, h, mine);
     $$("[data-g]", el).forEach(b => b.onclick = () => { S.group = +b.dataset.g; S.hole = null; render(); });
     $$("[data-sr]", el).forEach(b => b.onclick = () => { S.scoreRound = +b.dataset.sr; S.hole = null; render(); });
@@ -549,21 +585,38 @@
       const pid = li.dataset.pid, cur = C.strokes(ev.p[pid], r, h);
       const set = val => {
         if (val != null) jackReact(ev, pid, r, h, cur, val);
-        write({ ["p." + pid + ".s." + C.key(r, h)]: val == null ? C.DELETE : val });
+        // the time goes with the score, in the same write, for pace of play
+        write({ ["p." + pid + ".s." + C.key(r, h)]: val == null ? C.DELETE : val, ["p." + pid + ".tm." + C.key(r, h)]: val == null ? C.DELETE : Math.round(Date.now() / 60000) });
         const sh = val != null && !S.ev.demo && C.shout(S.ev, pid, r, h, val); if (sh) FW.phase1.autoPost(sh, "a" + pid + "r" + r + "h" + h);
       };
       const par = C.parOf(ev.course, h, (ev.p[pid] || {}).tee);
       $(".val", li).onclick = () => { if (cur == null) set(par); };
       $(".minus", li).onclick = () => set(cur == null ? par - 1 : Math.max(1, cur - 1));
       $(".plus", li).onclick = () => set(cur == null ? par + 1 : Math.min(20, cur + 1));
-      const clr = $(".clr", li); if (clr) clr.onclick = () => set(null);
+      // Pick up: a beginner who's had enough on a hole takes double par, the usual limit, instead of counting every swing
+      const pku = $(".pku", li); if (pku) pku.onclick = () => { set(par * 2); toast("Picked up: " + par * 2 + ", double par", "", { label: "Undo", fn: () => { if (S.ev && S.ev.p[pid] && C.strokes(S.ev.p[pid], r, h) === par * 2) write({ ["p." + pid + ".s." + C.key(r, h)]: C.DELETE }); } }); };
+      // a clear is one tap from the stepper on a small screen, so it can be taken back
+      const clr = $(".clr", li); if (clr) clr.onclick = () => { const was = cur, nm = (ev.p[pid] || {}).n || ""; set(null); toast("Cleared " + nm.split(" ")[0] + "'s " + was, "", { label: "Undo", fn: () => { if (S.ev && S.ev.p[pid] && C.strokes(S.ev.p[pid], r, h) == null) write({ ["p." + pid + ".s." + C.key(r, h)]: was }); } }); };
     });
+  }
+  // Your round by the numbers, under the Round done card: from your scores and the hole reviews on this phone.
+  function numbersHtml(ev, pl, r) {
+    const x = C.roundNumbers(ev, pl, r, FW.review ? FW.review.notes(S.code) : {}), out = [];
+    const word = (d, v) => esc(C.scoreName(d, v));
+    if (x.fw) out.push(["Fairways", x.fw[0] + " of " + x.fw[1]]);
+    if (x.putts != null) out.push(["Putts", x.putts + (x.pHoles < x.holes ? " on " + x.pHoles + " holes" : "") + (x.three ? " · " + x.three + " three-putt" + (x.three > 1 ? "s" : "") : "")]);
+    if (x.pen) out.push(["Penalties", String(x.pen)]);
+    if (x.sand) out.push(["Sand", x.sand + (x.sand > 1 ? " holes" : " hole")]);
+    if (x.best) out.push(["Best", "Hole " + x.best.n + ", " + word(x.best.d, x.best.v)]);
+    if (x.worst) out.push(["Toughest", "Hole " + x.worst.n + ", " + word(x.worst.d, x.worst.v)]);
+    if (!out.length) return "";
+    return `<dl class="rnum">${out.map(([k, v]) => `<div><dt>${esc(k)}</dt><dd>${v}</dd></div>`).join("")}</dl>${x.marked ? "" : `<small>Tap tee shot, putts and penalties under each score next time, and they add up here.</small>`}`;
   }
   function groupCard(ev, list, r, order, hl) {
     const n = C.holeCount(ev), halves = n === 18 ? [[1, 9, "Out"], [10, 18, "In"]] : [[1, 9, "Tot"]];
     return halves.map(([a, b, lbl]) => {
       const holes = []; for (let k = a; k <= b; k++) holes.push(k);
-      return `<div class="cardwrap" data-keep="gc${a}"><table class="sc"><thead><tr><th class="nm">Hole</th>${holes.map(k => `<th class="${k === hl ? "hl" : ""}">${k}</th>`).join("")}<th>${lbl}</th></tr>
+      return `<div class="cardwrap" data-keep="gc${a}"><table class="sc"><thead><tr><th class="nm">Hole</th>${holes.map(k => `<th class="${k === hl ? "hl" : ""}">${C.holeNo(ev.course, k)}</th>`).join("")}<th>${lbl}</th></tr>
         <tr class="parrow"><th class="nm">Par</th>${holes.map(k => `<td>${ev.course.holes[k - 1].par}</td>`).join("")}<td>${holes.reduce((s, k) => s + ev.course.holes[k - 1].par, 0)}</td></tr></thead><tbody>
         ${list.map(p => { let t = 0, any = false; return `<tr><th class="nm">${esc(p.n.split(" ")[0])}</th>${holes.map(k => { const v = C.strokes(p, r, k); if (v != null) { t += v; any = true; } return `<td>${v == null ? "" : `<span class="mk ${C.mark(v - ev.course.holes[k - 1].par)}">${v}</span>`}</td>`; }).join("")}<td class="sum">${any ? t : ""}</td></tr>`; }).join("")}
       </tbody></table></div>`;
@@ -577,7 +630,7 @@
     el.innerHTML = `<div class="pad0">${FW.where.html(ev)}<h2 class="sec">${esc(c.name)} <small>par ${C.coursePar(c)}</small></h2>
       <ul class="teesum">${c.tees.map(t => `<li class="${mine && mine.tee === t.id ? "mine" : ""}">${teeLabel(c, t)}${mine && mine.tee === t.id ? " <i class='chip'>Your tees</i>" : ""}</li>`).join("")}</ul>
       ${halves.map(([a, b, lbl]) => { const hs = []; for (let k = a; k <= b; k++) hs.push(k);
-        return `<div class="cardwrap" data-keep="cc${a}"><table class="sc course"><thead><tr><th class="nm">Hole</th>${hs.map(k => `<th>${k}</th>`).join("")}<th>${lbl}</th></tr></thead><tbody>
+        return `<div class="cardwrap" data-keep="cc${a}"><table class="sc course"><thead><tr><th class="nm">Hole</th>${hs.map(k => `<th>${C.holeNo(c, k)}</th>`).join("")}<th>${lbl}</th></tr></thead><tbody>
           ${c.tees.map(t => `<tr class="${mine && mine.tee === t.id ? "mine" : ""}"><th class="nm">${teeDot(t)}${esc(t.name)}</th>${hs.map(k => `<td>${C.yards(c, k, t.id) || ""}</td>`).join("")}<td class="sum">${hs.reduce((s, k) => s + C.yards(c, k, t.id), 0) || ""}</td></tr>`).join("")}
           <tr class="parrow"><th class="nm">Par</th>${hs.map(k => `<td>${c.holes[k - 1].par}</td>`).join("")}<td class="sum">${hs.reduce((s, k) => s + c.holes[k - 1].par, 0)}</td></tr>
           <tr class="hcprow"><th class="nm">Hcp</th>${hs.map(k => `<td>${c.holes[k - 1].hcp}</td>`).join("")}<td></td></tr>
@@ -686,11 +739,16 @@
   function holeSketch(ev, h, teeId, big) {
     const hole = ev.course.holes[h - 1], par = C.parOf(ev.course, h, teeId);
     const p = M.plan({ seed: ev.course.name + " " + h, par, yards: C.yards(ev.course, h, teeId), hcp: hole.hcp });
-    return M.svg(p, { id: (big ? "hb" : "hs") + h, big, title: "Sketch of hole " + h + ", par " + par });
+    const sk = M.svg(p, { id: (big ? "hb" : "hs") + h, big, title: "Sketch of hole " + C.holeNo(ev.course, h) + ", par " + par });
+    // the course's own drawing of the hole when the app has one; the sketch stays underneath in case it can't load
+    const art = C.holeArt(ev.course, h);
+    return art ? `<img class="holeart" src="${esc(art)}" alt="Hole ${C.holeNo(ev.course, h)}, par ${par}" decoding="async"><span class="skfb">${sk}</span>` : sk;
   }
+  // A hole picture that won't load (no signal yet, or a missing file) gives way to the sketch.
+  function artFallback(el) { $$("img.holeart", el).forEach(i => { const drop = () => i.remove(); i.onerror = drop; if (i.complete && !i.naturalWidth && i.getAttribute("src")) drop(); }); }
   function teeLine(ev, g, r, h, mine) {
     const sub = subjectOf(g, mine), hole = ev.course.holes[h - 1];
-    return J.lineFor({ kind: "tee", par: C.parOf(ev.course, h, sub.tee), y: C.yards(ev.course, h, sub.tee), hcp: hole.hcp, n: sub.n, h }, jackLevel());
+    return J.lineFor({ kind: "tee", par: C.parOf(ev.course, h, sub.tee), y: C.yards(ev.course, h, sub.tee), hcp: hole.hcp, n: sub.n, h: C.holeNo(ev.course, h) }, jackLevel());
   }
   function caddieRow(ev, g, r, h, mine) {
     if (!M || !J || !FW.jack) return "";
@@ -698,7 +756,7 @@
     if (!S.jack || S.jack.key !== key) S.jack = Object.assign({ key }, teeLine(ev, g, r, h, mine));
     const lock = js.kid ? "Kid's profile: clean" : ev.fam ? "Family event: clean" : C.JACK_LANGS[jackLevel()][1];
     return `<div class="hplus">
-      <button type="button" class="sketch" id="hsketch" aria-label="Hole ${h} sketch. Tap to make it bigger">${holeSketch(ev, h, sub.tee, false)}</button>
+      <button type="button" class="sketch" id="hsketch" aria-label="Hole ${C.holeNo(ev.course, h)} sketch. Tap to make it bigger">${holeSketch(ev, h, sub.tee, false)}</button>
       <div class="jack" aria-live="polite"><div class="jhead"><span class="jface" aria-hidden="true">J</span><span><b>Jack</b><small>${esc(lock)}</small></span><button type="button" class="link" id="jkset">Settings</button></div>
         <p class="jline" id="jline">${esc(S.jack.text)}</p>
         <div class="jbtns"><button type="button" class="btn small" id="jask">Ask Jack</button>${"speechSynthesis" in window ? `<button type="button" class="btn small ghost" id="jsay">Say it</button>` : ""}</div></div>
@@ -706,6 +764,7 @@
   }
   function wireCaddie(el, ev, g, r, h, mine) {
     const mp = $("#hsketch", el); if (mp) mp.onclick = () => sketchSheet(ev, g, h, mine);
+    artFallback(el);
     const st = $("#jkset", el); if (st) st.onclick = () => FW.jack.settingsSheet(() => { closeSheet(); S.jack = null; render(); });
     const ask = $("#jask", el); if (ask) ask.onclick = () => { const k = S.jack && S.jack.key; S.jack = Object.assign({ key: k }, teeLine(ev, g, r, h, mine)); const ln = $("#jline", el); if (ln) ln.textContent = S.jack.text; };
     const ag = $("#jsay", el); if (ag) ag.onclick = () => S.jack && FW.jack.say(S.jack.text);
@@ -716,15 +775,16 @@
     const p = ev.p[pid], par = C.parOf(ev.course, h, p.tee), x = C.round(ev, Object.assign({ id: pid }, p), r);
     const tp = x.toPar - (cur == null ? 0 : cur - par) + (val - par), thru = x.thru + (cur == null ? 1 : 0);
     const rows = C.standings(ev), lead = rows.length > 1 && rows[0].id === pid;
-    const line = J.lineFor({ kind: "score", par, diff: val - par, tp, thru, n: p.n, h, lead }, jackLevel());
+    const line = J.lineFor({ kind: "score", par, diff: val - par, tp, thru, n: p.n, h: C.holeNo(ev.course, h), lead }, jackLevel());
     S.jack = Object.assign({ key: [S.code, r, S.group, h, jackLevel()].join(":") }, line);
   }
   function sketchSheet(ev, g, h, mine) {
     const sub = subjectOf(g, mine), hole = ev.course.holes[h - 1], y = C.yards(ev.course, h, sub.tee), own = mine && mine.g === g.g;
-    sheet("Hole " + h, `<div class="mapbig">${holeSketch(ev, h, sub.tee, true)}</div>
+    sheet("Hole " + C.holeNo(ev.course, h), `<div class="mapbig">${holeSketch(ev, h, sub.tee, true)}</div>
       <p class="maplegend"><b>Par ${C.parOf(ev.course, h, sub.tee)}</b>${y ? ` · ${y} yds from the ${esc(C.teeOf(ev, sub).name)} tees` : ""} · Handicap ${hole.hcp}</p>
-      <p class="msg small">A pencil sketch drawn from the hole's par and yardage, not the real layout. Numbers on the fairway are yards to the middle of the green.${own ? " For the real hole, add your own picture on the hole map." : ""}</p>
+      <p class="msg small">${C.holeArt(ev.course, h) ? "The course's own drawing of the hole." : "A pencil sketch drawn from the hole's par and yardage, not the real layout. Numbers on the fairway are yards to the middle of the green."}${own ? " For GPS yards, add your own picture on the hole map." : ""}</p>
       ${own ? `<button type="button" class="btn block" id="skmap">Open the hole map</button>` : ""}`, box => {
+      artFallback(box);
       const b = $("#skmap", box); if (b) b.onclick = () => { closeSheet(); FW.map.sheet(ev, mine, h); };
     });
   }
@@ -770,7 +830,7 @@
   }
   function ctpList(h, r) {
     const ev = S.ev, x = C.ctpBoard(ev, r).find(y => y.h === h); if (!x) return;
-    sheet("Hole " + h + ": closest to the pin", `${x.list.length ? `<ol class="ctplist">${x.list.map(e => `<li><span><b>${esc(e.name)}</b><small>${e.m === "tape" ? "Measured with a tape" : "GPS, give or take " + esc(e.acc) + " ft"}</small></span><span>${esc(C.fmtFeet(e.d))}${e.ph ? ` <button type="button" class="link" data-ph="${esc(e.ph)}">Photo</button>` : ""}</span></li>`).join("")}</ol>` : `<p class="msg">Nobody has measured a ball here yet.</p>`}
+    sheet("Hole " + C.holeNo(S.ev.course, h) + ": closest to the pin", `${x.list.length ? `<ol class="ctplist">${x.list.map(e => `<li><span><b>${esc(e.name)}</b><small>${e.m === "tape" ? "Measured with a tape" : "GPS, give or take " + esc(e.acc) + " ft"}</small></span><span>${esc(C.fmtFeet(e.d))}${e.ph ? ` <button type="button" class="link" data-ph="${esc(e.ph)}">Photo</button>` : ""}</span></li>`).join("")}</ol>` : `<p class="msg">Nobody has measured a ball here yet.</p>`}
       <div id="phbox"></div><button type="button" class="btn primary block" id="meas">Measure a ball</button>
       <p class="msg small">Phone GPS is close, not exact: usually within 10 to 30 feet. For a tight finish, measure with a tape and enter it.</p>`, box => {
       $("#meas", box).onclick = () => ctpSheet(h, r);
@@ -786,7 +846,7 @@
     const pick = (mine && g && g.players.some(p => p.id === mine.id)) ? mine.id : g ? g.players[0].id : null;
     if (!pick) return;
     const st = { pin: null, ball: null, photo: null };
-    sheet("Hole " + h + ": measure a ball", `<label class="fld"><span>Whose ball</span><select id="cw">${C.players(ev).sort((a, b) => a.g - b.g || a.n.localeCompare(b.n)).map(p => `<option value="${esc(p.id)}" ${p.id === pick ? "selected" : ""}>${esc(p.n)} (group ${p.g})</option>`).join("")}</select></label>
+    sheet("Hole " + C.holeNo(S.ev.course, h) + ": measure a ball", `<label class="fld"><span>Whose ball</span><select id="cw">${C.players(ev).sort((a, b) => a.g - b.g || a.n.localeCompare(b.n)).map(p => `<option value="${esc(p.id)}" ${p.id === pick ? "selected" : ""}>${esc(p.n)} (group ${p.g})</option>`).join("")}</select></label>
       <ol class="steps"><li id="s1"><b>Stand right at the hole</b> and tap Mark pin. Hold still for a few seconds.<button type="button" class="btn block" id="mpin">Mark pin</button><small class="gps" id="g1"></small></li>
         <li id="s2"><b>Walk to the ball</b>, stand over it and tap Mark ball.<button type="button" class="btn block" id="mball" disabled>Mark ball</button><small class="gps" id="g2"></small></li></ol>
       <div id="cres"></div>
@@ -895,7 +955,7 @@
     const n = C.holeCount(ev), halves = n === 18 ? [[1, 9, "Out"], [10, 18, "In"]] : [[1, n, "Tot"]], c = ev.course;
     return halves.map(([a, b, lbl]) => { const hs = []; for (let k = a; k <= b; k++) hs.push(k);
       const sum = hs.reduce((s, k) => s + (x.scores[k - 1] || 0), 0), any = hs.some(k => x.scores[k - 1] != null);
-      return `<table class="sc pcard"><thead><tr><th class="nm">Hole</th>${hs.map(k => `<th>${k}</th>`).join("")}<th>${lbl}</th></tr></thead><tbody>
+      return `<table class="sc pcard"><thead><tr><th class="nm">Hole</th>${hs.map(k => `<th>${C.holeNo(c, k)}</th>`).join("")}<th>${lbl}</th></tr></thead><tbody>
         <tr class="ydrow"><th class="nm">Yds</th>${hs.map(k => `<td>${C.yards(c, k, p.tee) || ""}</td>`).join("")}<td>${hs.reduce((s, k) => s + C.yards(c, k, p.tee), 0) || ""}</td></tr>
         <tr class="parrow"><th class="nm">Par</th>${hs.map(k => `<td>${x.pars[k - 1]}</td>`).join("")}<td>${hs.reduce((s, k) => s + x.pars[k - 1], 0)}</td></tr>
         <tr><th class="nm">Score</th>${hs.map(k => { const v = x.scores[k - 1]; return `<td>${v == null ? "" : `<span class="mk ${C.mark(v - x.pars[k - 1])}">${v}</span>`}</td>`; }).join("")}<td class="sum">${any ? sum : ""}</td></tr>

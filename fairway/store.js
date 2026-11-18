@@ -45,7 +45,7 @@
   FW.history = () => (LS.get(HIST, []) || []).filter(h => h && typeof h.name === "string");
   FW.historyKeep = (code, ev) => {
     if (!ev || ev.demo) return;
-    const rows = C.historyRows(ev, code);
+    const m = FW.mineGet(code), rows = C.historyRows(ev, code, { quick: !!(m && m.round) });
     const rest = FW.history().filter(h => h.code !== code);
     LS.set(HIST, rows.concat(rest).slice(0, 400));
   };

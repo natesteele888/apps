@@ -1,0 +1,17 @@
+{
+  "name": "My Stats: LYBS stats on a watch",
+  "short_name": "My Stats",
+  "description": "Sends one player's LYBS stats, season by season, to the My Stats app on a Wear OS watch.",
+  "id": "./",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0f172a",
+  "theme_color": "#0f172a",
+  "icons": [
+    { "src": "/apps/icons/stats-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/apps/icons/stats-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/apps/icons/stats-maskable.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

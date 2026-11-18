@@ -24,14 +24,14 @@
     if (v == null) return "";
     const hole = Object.assign({}, ev.course.holes[h - 1], { par: C.parOf(ev.course, h, pl.tee) }), n = R.notes(u.S.code)[C.key(r, h)] || {}, d = v - hole.par;
     const line = C.holeLine(hole.par, v, n), nx = C.nextHole(ev, pl, r, h), tip = C.jackNoticed(ev, pl, r, R.notes(u.S.code));
-    return `<section class="hreview" aria-label="Your hole ${h}">
-      <div class="hr-h"><b>Your ${h}</b><span>${v} · ${esc(C.scoreName(d, v))}</span></div>
+    return `<section class="hreview" aria-label="Your hole ${C.holeNo(ev.course, h)}">
+      <div class="hr-h"><b>Your ${C.holeNo(ev.course, h)}</b><span>${v} · ${esc(C.scoreName(d, v))}</span></div>
       <p class="msg small">${line ? esc(line) + "." : "How did it go? A tap each, kept on this phone."}</p>
       ${hole.par > 3 ? `<div class="hrrow"><span>Tee shot</span>${seg("t", n.t, [["fairway", "Fairway"], ["left", "Left"], ["right", "Right"], ["short", "Short"]])}</div>` : ""}
       <div class="hrrow"><span>Putts</span>${seg("p", n.p, [[0, "0"], [1, "1"], [2, "2"], [3, "3"], [4, "4+"]])}</div>
       <div class="hrrow"><span>Penalties</span>${seg("x", n.x || 0, [[0, "None"], [1, "1"], [2, "2+"]])}</div>
       <div class="hrrow"><span>Sand</span>${seg("b", n.b ? 1 : 0, [[0, "No"], [1, "Yes"]])}</div>
-      ${nx ? `<div class="hrnext"><span><small>Up next</small><b>Hole ${nx.h} · par ${nx.par}</b><small>${nx.yds ? nx.yds + " yds from the " + esc(nx.tee) + " tees · " : ""}handicap ${nx.hcp}</small>${nx.par === 3 && nx.yds && FW.bag ? `<small class="hrnote">From your bag: ${esc(C.clubWords(FW.bag.club(nx.yds)))}</small>` : ""}${FW.jack && FW.jack.notesFor(ev.course, nx.h).length ? `<small class="hrnote">Your note: ${esc(FW.jack.notesFor(ev.course, nx.h)[0])}</small>` : ""}</span></div>` : ""}
+      ${nx ? `<div class="hrnext"><span><small>Up next</small><b>Hole ${nx.n} · par ${nx.par}</b><small>${nx.yds ? nx.yds + " yds from the " + esc(nx.tee) + " tees · " : ""}handicap ${nx.hcp}</small>${nx.par === 3 && nx.yds && FW.bag ? `<small class="hrnote">From your bag: ${esc(C.clubWords(FW.bag.club(nx.yds)))}</small>` : ""}${FW.jack && FW.jack.notesFor(ev.course, nx.h).length ? `<small class="hrnote">Your note: ${esc(FW.jack.notesFor(ev.course, nx.h)[0])}</small>` : ""}</span></div>` : ""}
       ${tip ? `<div class="hrjack"><small>Jack noticed</small><p>${esc(tip)}</p></div>` : ""}
     </section>`;
   };

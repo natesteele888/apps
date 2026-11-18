@@ -23,9 +23,9 @@
     const r = Math.min(ev.cur || 1, ev.rounds || 1), c = ev.course, ck = ckOf(c), tee = C.teeOf(ev, mine);
     const notes = (FW.LS.get(NK, {}) || {})[ck] || {};
     const h = c.holes.map((x, i) => {
-      const n = i + 1, m = FW.LS.get(mapKey(ck, n), null) || {}, o = { p: C.parOf(c, n, tee.id), y: C.yards(c, n, tee.id) || 0 };
+      const n = i + 1, hn = C.holeNo ? C.holeNo(c, n) : n, m = FW.LS.get(mapKey(ck, hn), null) || {}, o = { p: C.parOf(c, n, tee.id), y: C.yards(c, n, tee.id) || 0 };
       [["f", "gf"], ["c", "gc"], ["b", "gb"]].forEach(([k, g]) => { const s = pt(m[g]); if (s) o[k] = s; });
-      const nl = (Array.isArray(notes[n]) ? notes[n] : []).filter(t => typeof t === "string" && t).slice(0, 5);
+      const nl = (Array.isArray(notes[hn]) ? notes[hn] : []).filter(t => typeof t === "string" && t).slice(0, 5);
       if (nl.length) o.n = nl;
       return o;
     });
@@ -41,6 +41,8 @@
   X.take = function (doc) {
     const fresh = WL.fresh(doc, "fg"); if (!fresh.length) return 0;
     const u = FW.ui, S = u && u.S, took = [];
+    // a hole map or note from the watch names the round's hole; keep it by the number on the sign
+    const hnOf = x => (S && S.ev && S.ev.course && C.holeNo && ckOf(S.ev.course) === x.c ? C.holeNo(S.ev.course, x.h) : x.h);
     fresh.forEach(x => {
       if (x.k === "s") {
         if (!S || !S.ev || x.e !== S.code) return;
@@ -49,13 +51,14 @@
         if ((S.place === FW.local || x.fb === true) && S.ev.p[x.p] && Number.isInteger(x.r) && Number.isInteger(x.h) && x.h >= 1 && x.h <= 18)
           u.write({ ["p." + x.p + ".s." + x.r + "_" + x.h]: x.s >= 1 && x.s <= 20 ? x.s : C.DELETE });
       } else if (x.k === "g" && typeof x.c === "string" && x.h >= 1 && x.h <= 18 && ["f", "c", "b"].indexOf(x.m) >= 0 && isFinite(x.lat) && isFinite(x.lon)) {
-        let m = Object.assign({}, FW.LS.get(mapKey(x.c, x.h), null) || {}, { ["g" + x.m]: { lat: x.lat, lon: x.lon, acc: Number(x.acc) || 0 } });
+        const hn = hnOf(x);
+        let m = Object.assign({}, FW.LS.get(mapKey(x.c, hn), null) || {}, { ["g" + x.m]: { lat: x.lat, lon: x.lon, acc: Number(x.acc) || 0 } });
         if (C.cleanHoleMap) m = C.cleanHoleMap(m) || m;
-        FW.LS.set(mapKey(x.c, x.h), m);
+        FW.LS.set(mapKey(x.c, hn), m);
       } else if (x.k === "n" && typeof x.c === "string" && x.h >= 1 && x.h <= 18 && typeof x.t === "string" && clip(x.t, 140)) {
-        const all = FW.LS.get(NK, {}) || {}, holes = all[x.c] || {}, list = Array.isArray(holes[x.h]) ? holes[x.h] : [], t = clip(x.t, 140);
+        const hn = hnOf(x), all = FW.LS.get(NK, {}) || {}, holes = all[x.c] || {}, list = Array.isArray(holes[hn]) ? holes[hn] : [], t = clip(x.t, 140);
         if (list.indexOf(t) < 0) list.push(t);
-        holes[x.h] = list.slice(-5); all[x.c] = holes; FW.LS.set(NK, all);
+        holes[hn] = list.slice(-5); all[x.c] = holes; FW.LS.set(NK, all);
       }
       took.push(x);
     });
