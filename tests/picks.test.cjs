@@ -105,8 +105,8 @@ const event = (id, date, away, home, state, done) => ({ id, date, competitions: 
     const fail = code => Promise.reject(Object.assign(new Error(code), { code }));
     const auth = {
       onAuthStateChanged: cb => { authCb = cb; setTimeout(() => cb(user), 0); }, signOut: () => become(null), signInWithPopup: () => Promise.resolve(),
-      createUserWithEmailAndPassword(em, pw) { window.__auth.push(['create', em]); if (em === 'taken@example.com') return fail('auth/email-already-in-use'); if (pw.length < 6) return fail('auth/weak-password'); return become({ uid: 'new1', displayName: null, email: em }); },
-      signInWithEmailAndPassword(em, pw) { window.__auth.push(['signin', em]); return em === 'taken@example.com' && pw === 'secret1' ? become({ uid: 'old1', displayName: null, email: em }) : fail('auth/invalid-credential'); },
+      createUserWithEmailAndPassword(em, pw) { window.__auth.push(['create', em]); if (em === 'taken@example.com' || em === 'timmy@players.natesteele888.github.io') return fail('auth/email-already-in-use'); if (pw.length < 6) return fail('auth/weak-password'); return become({ uid: 'new1', displayName: null, email: em }); },
+      signInWithEmailAndPassword(em, pw) { window.__auth.push(['signin', em]); return (em === 'taken@example.com' && pw === 'secret1') || (em === 'timmy@players.natesteele888.github.io' && pw === 'gp-pin-1234') ? become({ uid: 'old1', displayName: null, email: em }) : fail('auth/invalid-credential'); },
       sendPasswordResetEmail(em) { window.__auth.push(['reset', em]); return Promise.resolve(); }
     };
     window.firebase = { initializeApp() {}, firestore: () => db, auth: Object.assign(() => auth, { GoogleAuthProvider: function () { this.setCustomParameters = () => {}; } }) };
@@ -233,12 +233,36 @@ const event = (id, date, away, home, state, done) => ({ id, date, competitions: 
     eq(errors.length, 0, errors.join(' | ')); await ctx.close();
   });
 
+  await test('page: a kid with no Google account or email picks a name and a 4-digit PIN, and the name + PIN signs them back in', async () => {
+    const { ctx, page, errors } = await open({ signedOut: true, ctx: { viewport: { width: 390, height: 844 } } });
+    await page.goto(server.url + '?code=good'); await page.waitForSelector('#pf');
+    await page.screenshot({ path: path.join(SHOTS, 'picks-pin-signin.png'), fullPage: true });
+    eq(await page.textContent('#pGo'), 'Start playing', 'an invite link opens on a new player');
+    await page.fill('#pn', 'Timmy'); await page.fill('#pp', '12'); await page.click('#pGo');
+    assert.ok(/4 numbers/.test(await page.textContent('#pErr')), 'a short PIN is caught before sending');
+    await page.fill('#pp', '1234'); await page.click('#pGo');
+    await page.waitForFunction(() => /Timmy2/.test(document.querySelector('#pErr').textContent));
+    await page.click('#pMode'); eq(await page.textContent('#pGo'), 'Sign in');
+    await page.fill('#pp', '9999'); await page.click('#pGo'); await page.waitForFunction(() => /don't match/.test(document.querySelector('#pErr').textContent));
+    await page.fill('#pp', '1234'); await page.click('#pGo'); await page.waitForFunction(() => window.__auth.some(a => a[0] === 'signin' && a[1] === 'timmy@players.natesteele888.github.io'));
+    await page.evaluate(() => firebase.auth().signOut()); await page.waitForSelector('#pf');
+    await page.fill('#pn', 'Timmy 2'); await page.fill('#pp', '4321'); await page.click('#pGo');
+    await page.waitForSelector('#join'); eq(await page.inputValue('#jname'), 'Timmy 2', 'the player name carries over');
+    eq(await page.inputValue('#jcode'), 'GOOD');
+    await page.click('#join button.gold'); await page.waitForSelector('.game');
+    const w = await page.evaluate(() => window.__writes.find(x => x[0] === 'gp_players'));
+    eq(Object.keys(w[2]).sort().join(','), 'code,joinedAt,name', 'nothing but the name and code is saved');
+    eq(await page.evaluate(() => window.__auth.filter(a => a[0] === 'create').pop()[1]), 'timmy2@players.natesteele888.github.io');
+    eq(await page.evaluate(() => document.documentElement.scrollWidth), 390);
+    eq(errors.length, 0, errors.join(' | ')); await ctx.close();
+  });
+
   await test('page: any player can share the code they joined with', async () => {
     const { ctx, page, errors } = await open();
     await page.addInitScript(() => { navigator.share = d => { window.__shared = d; return Promise.resolve(); }; });
     await page.goto(server.url); await page.waitForSelector('#inv');
     await page.click('#inv'); const sh = await page.evaluate(() => window.__shared);
-    assert.ok(/code=GOOD$/.test(sh.url) && /Code: GOOD/.test(sh.text) && /any email/.test(sh.text), JSON.stringify(sh));
+    assert.ok(/code=GOOD$/.test(sh.url) && /Code: GOOD/.test(sh.text) && /player name and a PIN/.test(sh.text), JSON.stringify(sh));
     eq(errors.length, 0, errors.join(' | ')); await ctx.close();
   });
 
