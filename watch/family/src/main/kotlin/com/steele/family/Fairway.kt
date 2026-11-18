@@ -55,9 +55,14 @@ import androidx.wear.compose.material.ChipDefaults
 import androidx.wear.compose.material.CompactChip
 import androidx.wear.compose.material.Text
 import com.steele.family.core.FairwayCore
+import com.steele.family.core.FairwayCore.Pending
 import com.steele.family.core.FairwayCore.Spot
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONObject
@@ -99,11 +104,24 @@ object FwStore {
     fun setScore(r: FairwayCore.Round, h: Int, s: Int?) {
         val k = "s:${r.code}:${r.pid}:${r.r}"
         put(k, obj(k).put(h.toString(), s ?: 0))
-        if (r.shared) put("q", queue().put(JSONObject().put("e", r.code).put("p", r.pid).put("r", r.r).put("h", h).put("s", s ?: 0)))
+        // only the last tap on each hole waits to go
+        if (r.shared) save(FairwayCore.collapse(pending() + Pending(r.code, r.pid, r.r, h, s ?: 0)))
     }
     /** shared-tournament scores not yet sent, oldest first */
-    fun queue(): JSONArray = try { JSONArray(p.getString("q", "[]")) } catch (e: Exception) { JSONArray() }
-    fun sent(n: Int) { val q = queue(); val left = JSONArray(); for (i in n until q.length()) left.put(q.get(i)); put("q", left) }
+    fun pending(): List<Pending> = try {
+        val a = JSONArray(p.getString("q", "[]"))
+        (0 until a.length()).map { i -> a.getJSONObject(i).let { Pending(it.optString("e"), it.optString("p"), it.optInt("r"), it.optInt("h"), it.optInt("s")) } }
+    } catch (e: Exception) { emptyList() }
+    private fun save(q: List<Pending>) {
+        val a = JSONArray(); q.forEach { a.put(JSONObject().put("e", it.code).put("p", it.pid).put("r", it.r).put("h", it.h).put("s", it.s)) }
+        put("q", a)
+    }
+    /** takes the sent ones off; a new tap on the same hole while they went stays to go next time */
+    private fun sent(done: List<Pending>) {
+        if (done.isEmpty()) return
+        val left = done.toMutableList()
+        save(pending().filter { x -> val i = left.indexOf(x); if (i >= 0) { left.removeAt(i); false } else true })
+    }
 
     /** green marks made on the watch, by hole: "f", "c", "b" to [lat, lon] */
     fun marks(ck: String): JSONObject = obj("g:$ck")
@@ -130,23 +148,22 @@ object FwStore {
         })
     }
 
-    /** sends the shared-tournament scores waiting on the watch, straight to the tournament (no phone needed) */
-    suspend fun flush() = withContext(Dispatchers.IO) {
-        val q = queue(); var done = 0
-        try {
-            for (i in 0 until q.length()) {
-                val e = q.getJSONObject(i)
-                val s = e.optInt("s").takeIf { it in 1..20 }
-                val w = FairwayCore.scoreWrite(e.optString("e"), e.optString("p"), e.optInt("r"), e.optInt("h"), s, System.currentTimeMillis())
-                if (w != null) {
-                    val (code, _) = Link.firestore("PATCH", w.first, w.second)
-                    // a 4xx (the tournament is gone, or the rules aren't published) won't get better by trying again
-                    if (code !in 200..299 && code < 400) break
-                }
-                done = i + 1
-            }
-        } catch (e: Exception) { }
-        if (done > 0) withContext(Dispatchers.Main) { sent(done) }
+    /**
+     * Sends the shared-tournament scores waiting on the watch, straight to the tournament (no phone needed). One at a time:
+     * two sends at once could each take the other's score off the list. A score the tournament refuses goes to the phone
+     * through the watch log instead, so it isn't lost.
+     */
+    private val sending = Mutex()
+    suspend fun flush() = sending.withLock {
+        val q = withContext(Dispatchers.Main) { pending() }
+        if (q.isEmpty()) return@withLock
+        val f = withContext(Dispatchers.IO) {
+            FairwayCore.flush(q, System.currentTimeMillis()) { path, body -> try { Link.firestore("PATCH", path, body).first } catch (e: Exception) { null } }
+        }
+        withContext(Dispatchers.Main) {
+            sent(f.sent)
+            f.toPhone.forEach { x -> Link.add("fg", mapOf("k" to "s", "e" to x.code, "p" to x.pid, "r" to x.r, "h" to x.h, "s" to x.s, "fb" to true)) }
+        }
     }
 }
 
@@ -157,10 +174,16 @@ private fun rememberGps(on: Boolean, allowed: Boolean): Pair<Spot?, Float?> {
     val ctx = LocalContext.current
     val owner = LocalLifecycleOwner.current
     var here by remember { mutableStateOf<Location?>(null) }
+    var spot by remember { mutableStateOf<Spot?>(null) }
+    val steady = remember { FairwayCore.Steady() }
     DisposableEffect(on, allowed, owner) {
         val lm = ctx.getSystemService(Context.LOCATION_SERVICE) as? LocationManager
         val l = object : LocationListener {
-            override fun onLocationChanged(loc: Location) { if (here == null || loc.accuracy <= (here?.accuracy ?: 999f) + 10 || loc.time - (here?.time ?: 0) > 4000) here = loc }
+            // every provider's fixes go into one steadied spot, so the yards don't jump while you stand at the ball
+            override fun onLocationChanged(loc: Location) {
+                spot = steady.add(FairwayCore.Fix(loc.latitude, loc.longitude, loc.accuracy.toDouble(), System.currentTimeMillis()))
+                if (here == null || loc.accuracy <= (here?.accuracy ?: 999f) + 10 || loc.time - (here?.time ?: 0) > 4000) here = loc
+            }
             @Deprecated("old Android calls it") override fun onStatusChanged(provider: String?, status: Int, extras: Bundle?) {}
             override fun onProviderEnabled(provider: String) {}
             override fun onProviderDisabled(provider: String) {}
@@ -171,20 +194,20 @@ private fun rememberGps(on: Boolean, allowed: Boolean): Pair<Spot?, Float?> {
             val ps = try { lm.getProviders(true).filter { it != LocationManager.PASSIVE_PROVIDER } } catch (e: Exception) { emptyList() }
             ps.forEach { p ->
                 try {
-                    lm.getLastKnownLocation(p)?.takeIf { System.currentTimeMillis() - it.time < 60_000 }?.let { if (here == null) here = it }
+                    lm.getLastKnownLocation(p)?.takeIf { System.currentTimeMillis() - it.time < 60_000 }?.let { if (here == null) { here = it; spot = Spot(it.latitude, it.longitude) } }
                     lm.requestLocationUpdates(p, 2000L, 0f, l, Looper.getMainLooper())
                 } catch (e: Exception) { }
             }
             running = ps.isNotEmpty()
         }
-        fun stop() { if (running) { try { lm?.removeUpdates(l) } catch (e: Exception) { }; running = false } }
+        fun stop() { if (running) { try { lm?.removeUpdates(l) } catch (e: Exception) { }; running = false }; steady.reset() }
         val obs = LifecycleEventObserver { _, ev -> if (ev == Lifecycle.Event.ON_START) start() else if (ev == Lifecycle.Event.ON_STOP) stop() }
         owner.lifecycle.addObserver(obs)
         if (owner.lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)) start()
         onDispose { owner.lifecycle.removeObserver(obs); stop() }
     }
     val h = here
-    return (if (h == null || !on) null else Spot(h.latitude, h.longitude)) to h?.accuracy
+    return (if (h == null || !on) null else spot ?: Spot(h.latitude, h.longitude)) to h?.accuracy
 }
 
 /** Jack's voice on the watch (its speaker, or earbuds paired to the watch) */
@@ -236,6 +259,7 @@ fun FairwayApp(onChange: () -> Unit) {
     val listen = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { res ->
         val heard = res.data?.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS)?.firstOrNull()
         if (!heard.isNullOrBlank()) ask(heard)
+        else if (res.resultCode != android.app.Activity.RESULT_CANCELED) said = "Didn't catch that. Tap a question below, or try again."
     }
     val canListen = remember { Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).resolveActivity(ctx.packageManager) != null }
     fun talk() {
@@ -246,14 +270,18 @@ fun FairwayApp(onChange: () -> Unit) {
                 .putExtra(RecognizerIntent.EXTRA_PROMPT, "Ask Jack"))
         } catch (e: Exception) { said = "This watch can't listen. Tap a question below." }
     }
+    // every tap is kept on the watch at once; the watch waits 4 seconds after the last one, then sends:
+    // one write for the hole, not one for every + and -
+    var waiting by remember { mutableStateOf<Job?>(null) }
     fun setScore(s: Int?) {
         FwStore.setScore(r, h.n, s)
         if (!r.shared) Link.add("fg", mapOf("k" to "s", "e" to r.code, "p" to r.pid, "r" to r.r, "h" to h.n, "s" to (s ?: 0)))
-        Buzz.tick(ctx); onChange()
-        scope.launch { FwStore.flush() }
+        Buzz.tick(ctx)
+        waiting?.cancel()
+        waiting = scope.launch { delay(4_000); if (r.shared) FwStore.flush() else onChange() }
     }
     // anything the watch couldn't send last time goes with the next look at the link
-    androidx.compose.runtime.LaunchedEffect(st.checkedAt) { if (FwStore.queue().length() > 0) FwStore.flush() }
+    androidx.compose.runtime.LaunchedEffect(st.checkedAt) { if (FwStore.pending().isNotEmpty()) FwStore.flush() }
 
     Box(Modifier.fillMaxSize()) {
         HorizontalPager(state = pager, modifier = Modifier.fillMaxSize(), beyondViewportPageCount = 0) { page ->
