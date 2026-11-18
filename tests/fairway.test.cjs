@@ -139,6 +139,19 @@ const pl = (ev, id) => Object.assign({ id }, ev.p[id]);
     const rows = C.historyRows(ev, 'zz'); eq(rows.length, 1); eq(rows[0].n, 18); eq(rows[0].strokes, 72);
   });
 
+  await test('core: a quick nine of an 18-hole course keeps the handicap order and halves the rating', () => {
+    const c = C.monoosnockCourse(), f = C.nineOf(c, 'front'), b = C.nineOf(c, 'back');
+    eq(f.holes.length, 9); eq(b.holes.length, 9); eq(f.name, 'Monoosnock Country Club (front 9)'); eq(b.id, 'monoosnock-b9');
+    deq(f.holes.map(h => h.hcp), [5, 3, 2, 8, 9, 1, 4, 7, 6]); deq(b.holes.map(h => h.hcp), [5, 3, 2, 8, 9, 1, 4, 7, 6]);
+    eq(f.tees[0].cr, 34.8); eq(f.tees[0].sl, 126); eq(c.tees[0].cr, 69.6, 'the full course is untouched');
+    deq(b.holes[4].tp, { ladies: 4 }); eq(C.coursePar(f), 35); eq(C.coursePar(f, 'ladies'), 36);
+    // a 10 index from White/Blue over nine: 5 x 126 / 113 + (34.8 - 35) = 5.4, so 5 strokes
+    eq(C.courseHc(f, { tee: 'whiteblue', hc: 10 }), 5);
+    const ev = C.newEvent({ name: 'Nine', course: f, now: NOW }); eq(ev.course.holes.length, 9); eq(C.nineOf(f, 'front'), f, 'a nine stays a nine');
+    eq(C.holeNo(ev.course, 1), 1); const bev = C.newEvent({ name: 'Back', course: b, now: NOW }); eq(bev.course.h0, 9); eq(C.holeNo(bev.course, 1), 10);
+    eq(C.cleanCourse(Object.assign({}, c, { h0: 9 })).h0, undefined, 'an 18-hole course never gets an offset');
+  });
+
   await test('core: to-par words and colors match the Masters board (red under, green over)', () => {
     eq(C.fmtPar(0), 'E'); eq(C.fmtPar(-3), '-3'); eq(C.fmtPar(2), '+2');
     eq(C.tone(-1), 'under'); eq(C.tone(1), 'over'); eq(C.tone(0), 'even');

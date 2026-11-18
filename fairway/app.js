@@ -332,6 +332,7 @@
     v.innerHTML = `${topbar("Start a round", soundBtn())}<form class="pad" id="rf" autocomplete="off">
       <fieldset class="fld"><legend>Course</legend><div class="opts">${courses.map(c => `<label class="opt"><input type="radio" name="rcourse" value="${esc(c.id)}" ${c.id === pick ? "checked" : ""}><span><b>${esc(c.name)}</b><small>${c.holes.length} holes · ${C.parText(c)}</small></span></label>`).join("")}</div>
         <button type="button" class="btn ghost small" id="rb">Build a new course</button></fieldset>
+      ${course.holes.length === 18 ? `<fieldset class="fld"><legend>Holes</legend><div class="seg" role="radiogroup">${[["all", "18"], ["front", "Front 9"], ["back", "Back 9"]].map(([k, l]) => `<label><input type="radio" name="rnine" value="${k}" ${(S.roundNine || "all") === k ? "checked" : ""}><span>${l}</span></label>`).join("")}</div></fieldset>` : ""}
       <fieldset class="fld"><legend>You</legend>
         <label class="fld"><span>Your name</span><input id="rme" maxlength="${C.NAME_MAX}" value="${esc(you.n != null ? you.n : FW.LS.get("fw:name", ""))}" placeholder="Your name"></label>
         <div class="tees">${course.tees.map(t => `<label class="tee"><input type="radio" name="rtee" value="${esc(t.id)}" ${t.id === myTee ? "checked" : ""}><span>${teeLabel(course, t)}</span></label>`).join("")}</div>
@@ -342,6 +343,7 @@
         <p class="msg small">You keep everyone's score on this phone. For a group on several phones with a QR code, start a tournament instead.</p></fieldset>
       <button type="submit" class="btn primary block">Tee off</button><p class="err" id="rerr" role="alert"></p></form>`;
     wireTop(v);
+    $$("input[name=rnine]", v).forEach(r => r.onchange = () => { S.roundNine = r.value; });
     const read = () => { S.roundMe = { n: $("#rme", v).value, tee: ($("input[name=rtee]:checked", v) || {}).value, hc: $("#rhc", v).value }; $$(".palrow", v).forEach(r => { const x = pals[+r.dataset.i]; x.n = $(".pname", r).value; x.tee = $(".ptee", r).value; }); };
     $$("input[name=rcourse]", v).forEach(r => r.onchange = () => { read(); S.roundCourse = r.value; render(); });
     $("#rb", v).onclick = () => { read(); editCourse(null, "round"); };
@@ -350,7 +352,8 @@
     $("#rf", v).onsubmit = async e => {
       e.preventDefault(); read();
       const btn = $("button[type=submit]", v); btn.disabled = true;
-      const c = courses.find(x => x.id === ($("input[name=rcourse]:checked", v) || {}).value) || courses[0];
+      const c0 = courses.find(x => x.id === ($("input[name=rcourse]:checked", v) || {}).value) || courses[0];
+      const nine = ($("input[name=rnine]:checked", v) || {}).value, c = nine === "front" || nine === "back" ? C.nineOf(c0, nine) : c0;
       const name = C.cleanName($("#rme", v).value) || "Me", tee = ($("input[name=rtee]:checked", v) || {}).value, hc = C.cleanHc($("#rhc", v).value);
       const day = new Date().toLocaleDateString(undefined, { month: "short", day: "numeric" });
       const ev = C.newEvent({ name: (c.name + " · " + day).slice(0, C.EVENT_MAX), course: c, rounds: 1 });
@@ -363,7 +366,7 @@
       if ($("#rme", v).value.trim()) FW.LS.set("fw:name", name);
       FW.LS.set("fw:tee", ev.p[pid].tee); FW.LS.set("fw:hc", hc);
       FW.mineSet(code, { name: ev.name, local: true, org: true, round: true, me: pid });
-      FW.cacheSet(code, ev); S.roundPals = null; S.roundMe = null;
+      FW.cacheSet(code, ev); S.roundPals = null; S.roundMe = null; S.roundNine = null;
       openEvent(code); go("event", { tab: "score" }, true);
     };
   }
@@ -462,7 +465,7 @@
       const pars = ev.course.holes.map(h => h.par), bn = C.boardNames(rows);
       html = `${ev.rounds > 1 ? `<div class="pills small" role="group" aria-label="Round">${Array.from({ length: ev.rounds }, (_, i) => `<button type="button" class="pill" data-br="${i + 1}" aria-pressed="${r === i + 1}">Round ${i + 1}</button>`).join("")}</div>` : ""}
         <div class="board holes"><div class="bhead">Leaders</div><div class="cardwrap" data-keep="hbh"><table class="hbh"><thead>
-          <tr><th class="nm">Hole</th>${pars.map((_, i) => `<th>${i + 1}</th>`).join("")}</tr>
+          <tr><th class="nm">Hole</th>${pars.map((_, i) => `<th>${C.holeNo(ev.course, i + 1)}</th>`).join("")}</tr>
           <tr class="parrow"><th class="nm">Par</th>${pars.map(p => `<td>${p}</td>`).join("")}</tr></thead><tbody>
           ${rows.map(row => { const x = row.rounds[r - 1];
             return `<tr><th class="nm"><button type="button" data-player="${esc(row.id)}"><span class="pos">${esc(row.pos)}</span>${esc(bn[row.id])}</button></th>${pars.map((_, i) => { const h = i + 1, v = x.run[h]; return `<td class="${v == null ? "" : C.tone(v)}${x.last === h && !x.done ? " now" : ""}">${v == null ? "" : esc(v === 0 ? "E" : Math.abs(v))}</td>`; }).join("")}</tr>`; }).join("")}
@@ -520,7 +523,7 @@
     el.innerHTML = `${gs.length > 1 ? `<div class="pills small" role="group" aria-label="Group">${gs.map(x => `<button type="button" class="pill" data-g="${x.g}" aria-pressed="${x.g === g.g}">Group ${x.g}</button>`).join("")}</div>` : ""}
       ${ev.rounds > 1 ? `<div class="pills small" role="group" aria-label="Round">${Array.from({ length: ev.rounds }, (_, i) => `<button type="button" class="pill" data-sr="${i + 1}" aria-pressed="${r === i + 1}">Round ${i + 1}${i + 1 === ev.cur ? " (now)" : ""}</button>`).join("")}</div>` : ""}
       <div class="strip" data-keep="strip" role="group" aria-label="Hole">${order.map(k => { const done = rs.every(x => x.scores[k - 1] != null), some = rs.some(x => x.scores[k - 1] != null); return `<button type="button" data-h="${k}" aria-pressed="${k === h}" class="${done ? "done" : some ? "part" : ""}">${k}</button>`; }).join("")}</div>
-      <div class="holecard"><div class="hn"><small>Hole</small><b>${h}</b></div><div class="hinfo"><b>Par ${hole.par}</b><small>${hole.tp ? ev.course.tees.filter(t => hole.tp[t.id] && g.players.some(p => p.tee === t.id)).map(t => esc(t.name) + " par " + hole.tp[t.id] + " · ").join("") : ""}Handicap ${hole.hcp}</small></div>
+      <div class="holecard"><div class="hn"><small>Hole</small><b>${C.holeNo(ev.course, h)}</b></div><div class="hinfo"><b>Par ${hole.par}</b><small>${hole.tp ? ev.course.tees.filter(t => hole.tp[t.id] && g.players.some(p => p.tee === t.id)).map(t => esc(t.name) + " par " + hole.tp[t.id] + " · ").join("") : ""}Handicap ${hole.hcp}</small></div>
         <div class="hy">${ev.course.tees.filter(t => g.players.some(p => p.tee === t.id)).map(t => `<span>${teeDot(t)}${C.yards(ev.course, h, t.id) || "–"} yds</span>`).join("")}</div></div>
       ${caddieRow(ev, g, r, h, mine)}
       ${(ev.ctph || []).indexOf(h) >= 0 ? (() => { const x = C.ctpBoard(ev, r).find(y => y.h === h); return `<button type="button" class="ctpbar" id="ctpopen"><span><b>Closest to the pin</b><small>${x.best ? esc(x.best.name) + ", " + esc(C.fmtFeet(x.best.d)) : "Nobody measured yet"}</small></span><span class="chev">Measure</span></button>`; })() : ""}
@@ -530,7 +533,7 @@
           <div class="stepper"><button type="button" class="minus" aria-label="One less for ${esc(p.n)}">−</button><button type="button" class="val ${v == null ? "empty" : C.mark(d)}" aria-label="${v == null ? "Set par for " + esc(p.n) : esc(p.n) + ": " + v}">${v == null ? "Par?" : v}</button><button type="button" class="plus" aria-label="One more for ${esc(p.n)}">+</button></div>
           <small class="sword ${d == null ? "" : C.tone(d)}">${v == null ? "" : esc(C.scoreName(d, v))}${v != null ? ` <button type="button" class="link clr" aria-label="Clear ${esc(p.n)}'s score">clear</button>` : ""}</small></li>`; }).join("")}</ul>
       ${mine && mine.g === g.g ? FW.review.html(ev, mine, r, h) : ""}
-      <div class="navrow"><button type="button" class="btn" id="prev" ${idx <= 0 ? "disabled" : ""}>‹ Hole ${order[idx - 1] || ""}</button><button type="button" class="btn ${allIn ? "primary" : ""}" id="next" ${idx >= order.length - 1 ? "disabled" : ""}>Hole ${order[idx + 1] || ""} ›</button></div>
+      <div class="navrow"><button type="button" class="btn" id="prev" ${idx <= 0 ? "disabled" : ""}>‹ Hole ${order[idx - 1] ? C.holeNo(ev.course, order[idx - 1]) : ""}</button><button type="button" class="btn ${allIn ? "primary" : ""}" id="next" ${idx >= order.length - 1 ? "disabled" : ""}>Hole ${order[idx + 1] ? C.holeNo(ev.course, order[idx + 1]) : ""} ›</button></div>
       <h2 class="sec">Group ${g.g} card</h2>${groupCard(ev, g.players, r, order, h)}
       ${!mine && !isOrg() ? `<p class="msg">You're watching. To keep score for this group, tap Join on the Share tab.</p>` : ""}`;
     const co = $("#ctpopen", el); if (co) co.onclick = () => ctpList(h, r);
