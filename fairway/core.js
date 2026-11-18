@@ -942,6 +942,22 @@
     return { holes, marked, fw: fwOf ? [fwHit, fwOf] : null, putts: pHoles ? putts : null, pHoles, three, pen: marked ? pen : null, sand: marked ? sand : null,
       best: best && worst && best.d < worst.d ? best : null, worst: best && worst && best.d < worst.d ? worst : null };
   }
+  /* ---------- pace of play: from when each score went in ---------- */
+  const PACE_MIN = 15;   // minutes a hole: 4 hours 30 for 18, a usual pace
+  const nowMin = t => Math.round((t || Date.now()) / 60000);
+  // A group's pace this round: minutes a hole between its first and last scored hole, how far behind a 15-minute
+  // hole it is, and how long since its last score. Null until two holes have a time.
+  function groupPace(ev, g, r, now) {
+    const times = {};
+    g.players.forEach(pl => Object.keys(pl.tm || {}).forEach(k => { const m = /^(\d)_(\d+)$/.exec(k); if (m && +m[1] === r) times[m[2]] = Math.max(times[m[2]] || 0, pl.tm[k]); }));
+    const t = Object.keys(times).map(k => times[k]).sort((a, b) => a - b);
+    if (t.length < 2) return null;
+    const first = t[0], last = t[t.length - 1], span = last - first, holes = t.length;
+    const n = holeCount(ev), done = g.players.every(pl => round(ev, pl, r).done);
+    const per = Math.round(span / (holes - 1)), behind = span - (holes - 1) * PACE_MIN;
+    const since = done ? 0 : Math.max(0, nowMin(now) - last);
+    return { per, behind, since, holes, done, total: done && holes === n ? span + PACE_MIN : null };
+  }
   // A plain-text scorecard for Messages: the course and par, then each golfer's total and their holes nine by nine.
   function cardText(ev, list, r, date) {
     const n = holeCount(ev), c = ev.course, d = date ? " · " + date : "";
@@ -1261,6 +1277,9 @@
         const m = /^([1-4])_([0-9]{1,2})$/.exec(k), v = x.s[k];
         if (m && +m[1] <= ev.rounds && +m[2] >= 1 && +m[2] <= n && Number.isInteger(v) && v >= 1 && v <= 20) pl.s[k] = v;
       });
+      // when each score went in (whole minutes since 1970), for pace of play; only for holes with a score
+      const tm = {}; Object.keys(x.tm && typeof x.tm === "object" ? x.tm : {}).forEach(k => { const v = x.tm[k]; if (pl.s[k] != null && Number.isInteger(v) && v > 0 && v < 1e8) tm[k] = v; });
+      if (Object.keys(tm).length) pl.tm = tm;
       ev.p[id] = pl;
     });
     // a pick can only name someone who is in the tournament
@@ -1349,7 +1368,7 @@
   }
 
   return { VERSION, MAX_PLAYERS, MAX_ROUNDS, MAX_TEES, NAME_MAX, EVENT_MAX, TEE_COLORS, DEMO_NAMES, DELETE,
-    courseHc, strokesBy, stableford, roundNumbers, cardText, nineOf, holeNo, HOLE_ART, holeArt, sampleCourse, monoosnockCourse, readyCourses, parOf, parsFor, parText, newCode, isCode, newPid, isPid, cleanCourse, cleanName, newEvent, newPlayer, cleanEvent,
+    courseHc, strokesBy, stableford, roundNumbers, cardText, PACE_MIN, groupPace, nineOf, holeNo, HOLE_ART, holeArt, sampleCourse, monoosnockCourse, readyCourses, parOf, parsFor, parText, newCode, isCode, newPid, isPid, cleanCourse, cleanName, newEvent, newPlayer, cleanEvent,
     key, holeCount, coursePar, players, teeOf, yards, teeYards, playOrder, strokes, round, standings, groups,
     fmtPar, tone, scoreName, mark, stats, demoEvent, applyPatch, historyRows, myRounds, sameName, boardNames,
     cleanCtpHoles, cleanCtpEntry, ctpBoard, metres, averageFix, ctpMeasure, fmtFeet,

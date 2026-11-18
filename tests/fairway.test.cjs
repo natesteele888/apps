@@ -257,6 +257,25 @@ const pl = (ev, id) => Object.assign({ id }, ev.p[id]);
     ok(C.cardText(b9, C.players(b9), 1).indexOf('Holes 10-18: 4 ') >= 0);
   });
 
+  await test('core: pace of play from when each score went in', () => {
+    const ev = C.newEvent({ name: 'P', course: C.sampleCourse(), now: NOW });
+    ev.p.aaaaaa1 = C.newPlayer(ev, { name: 'Al Ace', tee: ev.course.tees[0].id, group: 1, now: NOW });
+    ev.p.bbbbbb1 = C.newPlayer(ev, { name: 'Bo Bogey', tee: ev.course.tees[0].id, group: 1, now: NOW + 1 });
+    const t0 = 29000000;
+    ev.p.aaaaaa1.s['1_1'] = 4; ev.p.aaaaaa1.tm = { '1_1': t0, '1_2': t0 + 20, '9_1': 5, '1_5': t0 + 3 };
+    let x = C.cleanEvent(JSON.parse(JSON.stringify(ev)));
+    deq(x.p.aaaaaa1.tm, { '1_1': t0 }, 'a time only stays with a score');
+    let g = C.groups(x)[0]; eq(C.groupPace(x, g, 1), null, 'one hole is not a pace');
+    for (let h = 2; h <= 5; h++) { x.p.aaaaaa1.s['1_' + h] = 4; x.p.aaaaaa1.tm['1_' + h] = t0 + (h - 1) * 20; }
+    x.p.bbbbbb1.s['1_5'] = 5; x.p.bbbbbb1.tm = { '1_5': t0 + 82 };
+    g = C.groups(x)[0];
+    const pc = C.groupPace(x, g, 1, (t0 + 82 + 30) * 60000);
+    eq(pc.holes, 5); eq(pc.per, Math.round(82 / 4)); eq(pc.behind, 82 - 4 * C.PACE_MIN); eq(pc.since, 30); eq(pc.done, false); eq(pc.total, null);
+    // the score write and its time clear together
+    const y = C.applyPatch(x, { 'p.aaaaaa1.s.1_2': C.DELETE, 'p.aaaaaa1.tm.1_2': C.DELETE });
+    eq(y.p.aaaaaa1.tm['1_2'], undefined);
+  });
+
   await test('core: hole art that comes with the app, by course, and the same pictures for a front or back nine', () => {
     const c = C.monoosnockCourse();
     eq(C.holeArt(c, 1), null, 'no pictures listed yet');
