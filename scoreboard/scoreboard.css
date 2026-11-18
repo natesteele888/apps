@@ -211,10 +211,14 @@ table.ls td.cur { background: rgba(41,211,224,.2); border-radius: 6px; }
 .t-score { font-family: var(--num); font-weight: 700; line-height: .9; font-variant-numeric: tabular-nums; flex: 1 1 auto; display: flex; align-items: center; justify-content: center; max-width: 100%; font-size: min(clamp(70px, min(42vw, 28vh), 300px), var(--fit, 999px)); }
 .t-score[data-d="3"], .t-score[data-d="4"] { font-size: min(clamp(56px, min(30vw, 22vh), 240px), var(--fit, 999px)); }
 /* size by the half's own width so 2, 3 and 4 digit scores shrink to fit and never run into the other team's */
+/* Phones without container units (iOS 15 and older, Chrome before 105) skip this and keep the vw/vh sizes above;
+   without the @supports they'd throw the whole font-size away and show the score at body-text size. */
+@supports (width: 1cqw) {
 .t-score { --fit: calc((100cqw - 8px) / .75); }
 .t-score[data-d="2"] { --fit: calc((100cqw - 8px) / 1.35); }
 .t-score[data-d="3"] { --fit: calc((100cqw - 8px) / 2); }
 .t-score[data-d="4"] { --fit: calc((100cqw - 8px) / 2.6); }
+}
 .t-score.pop { animation: pop .35s ease-out; }
 @keyframes pop { 0% { transform: scale(1); } 40% { transform: scale(1.12); } 100% { transform: scale(1); } }
 .t-stats { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 4px 12px; padding: 4px 0 6px; color: var(--text); min-height: 36px; }
@@ -387,9 +391,9 @@ table.ls td.cur { background: rgba(41,211,224,.2); border-radius: 6px; }
   .t-name { font-size: clamp(24px, 9vmin, 64px); }
   .t-name[data-l="m"] { font-size: clamp(22px, 7.4vmin, 52px); }
   .t-name[data-l="l"] { font-size: clamp(20px, 5.6vmin, 40px); }
-  .t-score { line-height: .78; font-size: min(clamp(80px, min(58vmin, calc((100vw - 232px) / 1.95), calc((100dvh - 190px) / .78)), 420px), var(--fit, 999px)); }
+  .t-score { line-height: .78; font-size: min(clamp(80px, min(58vmin, calc((100vw - 232px) / 1.95), calc((100vh - 190px) / .78)), 420px), var(--fit, 999px)); font-size: min(clamp(80px, min(58vmin, calc((100vw - 232px) / 1.95), calc((100dvh - 190px) / .78)), 420px), var(--fit, 999px)); }
   .t-score[data-d="3"], .t-score[data-d="4"] { font-size: min(clamp(60px, min(44vmin, calc((100vw - 232px) / 2.9)), 330px), var(--fit, 999px)); }
-  .board.locked .t-score { font-size: min(clamp(100px, min(74vmin, calc((100vw - 232px) / 1.95), calc((100dvh - 80px) / .78)), 520px), var(--fit, 999px)); }
+  .board.locked .t-score { font-size: min(clamp(100px, min(74vmin, calc((100vw - 232px) / 1.95), calc((100vh - 80px) / .78)), 520px), var(--fit, 999px)); font-size: min(clamp(100px, min(74vmin, calc((100vw - 232px) / 1.95), calc((100dvh - 80px) / .78)), 520px), var(--fit, 999px)); }
   .board.locked .t-score[data-d="3"], .board.locked .t-score[data-d="4"] { font-size: min(clamp(80px, min(52vmin, calc((100vw - 232px) / 2.9)), 400px), var(--fit, 999px)); }
   .t-stats { padding: 0 0 2px; min-height: 30px; }
   .mid { justify-content: flex-start; padding-top: 50px; }

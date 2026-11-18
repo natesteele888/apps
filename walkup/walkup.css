@@ -402,7 +402,7 @@ input[type="range"].rng.rel { width: calc(80% + 30px); margin: 0 calc(10% - 15px
 }
 
 /* ---------- pitching (top of the Game screen) ---------- */
-.card.pitch { border-width: 2px; --z: var(--ok); border-color: var(--z); background: linear-gradient(180deg, color-mix(in srgb, var(--z) 14%, var(--panel)), var(--panel)); }
+.card.pitch { border-width: 2px; --z: var(--ok); border-color: var(--z); background: var(--panel); background: linear-gradient(180deg, color-mix(in srgb, var(--z) 14%, var(--panel)), var(--panel)); }
 .card.pitch.z-none { --z: var(--line2); }
 .card.pitch.z-yellow { --z: #fbbf24; }
 .card.pitch.z-red, .card.pitch.z-limit { --z: #ff4d5e; }
