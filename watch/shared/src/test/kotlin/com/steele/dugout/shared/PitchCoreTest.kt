@@ -66,6 +66,12 @@ class PitchCoreTest {
     @Test fun restDaysAndSetupFromTheNewerSide() {
         assertEquals(RestStep(21, 1), PitchCore.nextRestStep(18, "Majors"))
         assertNull(PitchCore.nextRestStep(70, "Majors"))
+        assertEquals(RestStep(21, 1), PitchCore.restSoon(20, "Majors"))
+        assertEquals(RestStep(36, 2), PitchCore.restSoon(35, "Majors"))
+        assertNull(PitchCore.restSoon(19, "Majors"))
+        assertNull(PitchCore.restSoon(21, "Majors"))
+        assertNull(PitchCore.restSoon(0, "Majors"))
+        assertNull(PitchCore.restSoon(70, "Majors"))
         assertEquals(2, PitchCore.restDaysFor(50, "Majors"))
         val rows = PitchCore.bullpen(base(), day, mapOf("pBBBB2" to PitchCore.addDays(day, 2), "pAAAA1" to day))
         assertEquals(true, rows[0].eligible); assertEquals(false, rows[1].eligible); assertNotNull(rows[1].eligibleOn)

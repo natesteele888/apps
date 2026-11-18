@@ -145,12 +145,11 @@ class PitchTileService : DugoutTile() {
         val seq = PitchStore.tileSeq()
         when (requestParams.currentState.lastClickableId) {
             "add.$seq" -> {
-                val (r, before) = PitchStore.add()
-                if (r != null) Buzz.pitch(this, r.left, before, r.limit) else Buzz.tick(this)
+                PitchStore.addAndBuzz(this)
                 PitchStore.nextTileSeq()
             }
             "undo.$seq" -> {
-                if (PitchStore.undo()) Buzz.pattern(this, 40, 60, 40)
+                if (PitchStore.undo()) Buzz.undone(this)
                 PitchStore.nextTileSeq()
             }
         }
@@ -184,6 +183,7 @@ class PitchTileService : DugoutTile() {
             .addContent(Tiles.text(cur?.second ?: "Pitch Count", 13f, Tiles.WHITE, bold = true))
             .addContent(Tiles.text("${row?.count ?: 0}", 44f, Tiles.WHITE, bold = true))
             .addContent(Tiles.text(status, 13f, Tiles.WHITE, bold = true))
+            .apply { if (row != null) PitchStore.restLine(row, log)?.let { addContent(Tiles.text(it, 11f, Tiles.WHITE)) } }
             .build()
 
         val buttons = LayoutElementBuilders.Row.Builder()

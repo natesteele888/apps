@@ -24,6 +24,9 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableLongStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -53,7 +56,11 @@ import com.steele.dugout.shared.Zone
 import java.time.LocalDate
 import java.time.format.TextStyle
 import java.util.Locale
+import kotlinx.coroutines.delay
 import kotlin.math.abs
+
+/** taps closer together than this are one tap: no real pitch comes that fast */
+private const val DOUBLE_TAP_MS = 400L
 
 private fun zoneColor(z: Zone?): Color = when (z) {
     Zone.YELLOW -> Color(0xFFA16207)
@@ -64,7 +71,8 @@ private fun zoneColor(z: Zone?): Color = when (z) {
 
 /**
  * Pitching: tap anywhere in the middle to add a pitch. Green while well under, yellow at 10 left, red at 5 left, and a
- * buzz on every pitch from then on. Undo takes back the last one. Swipe up or down, or turn the bezel, for the bullpen.
+ * buzz on every pitch from then on. One pitch before another rest day, a quick double tap and a yellow line say so.
+ * Undo takes back the last one and says it did. Swipe up or down, or turn the bezel, for the bullpen.
  */
 @Composable
 fun PitchingScreen(onBullpen: () -> Unit) {
@@ -77,6 +85,10 @@ fun PitchingScreen(onBullpen: () -> Unit) {
     val rotary = remember { mutableFloatStateOf(0f) }
     val drag = remember { mutableFloatStateOf(0f) }
     val pulse by rememberInfiniteTransition(label = "limit").animateFloat(0.6f, 1f, infiniteRepeatable(tween(500), RepeatMode.Reverse), label = "pulse")
+    // a short word after Undo, in place of "N left", so the coach knows it worked
+    var note by remember { mutableStateOf<String?>(null) }
+    LaunchedEffect(note) { if (note != null) { delay(1800); note = null } }
+    val lastTap = remember { mutableLongStateOf(0L) }
     LaunchedEffect(Unit) { focus.requestFocus() }
     val bg = zoneColor(row?.zone).let { if (row?.zone == Zone.LIMIT) it.copy(alpha = pulse) else it }
 
@@ -99,11 +111,16 @@ fun PitchingScreen(onBullpen: () -> Unit) {
                 indicatorColor = Color.White, trackColor = Color(0x33FFFFFF), strokeWidth = 6.dp,
             )
         }
-        // the big tap target: the whole middle of the screen
+        // the big tap target: the whole middle of the screen. Two taps closer together than a real pitch could come
+        // (a bump, a double tap) count once.
         Box(
             Modifier.size(150.dp).clip(RoundedCornerShape(75.dp)).clickable {
-                val (r, before) = PitchStore.add()
-                if (r != null) Buzz.pitch(ctx, r.left, before, r.limit) else Buzz.tick(ctx)
+                val t = System.currentTimeMillis()
+                if (t - lastTap.longValue >= DOUBLE_TAP_MS) {
+                    lastTap.longValue = t
+                    PitchStore.addAndBuzz(ctx)
+                    note = null
+                }
             },
             contentAlignment = Alignment.Center,
         ) {
@@ -111,6 +128,7 @@ fun PitchingScreen(onBullpen: () -> Unit) {
                 Text("${row?.count ?: 0}", fontSize = 58.sp, fontWeight = FontWeight.Black, color = Color.White)
                 Text(
                     when {
+                        note != null -> note ?: ""
                         row == null -> "Tap to count"
                         row.limit == 0 -> "No limit set"
                         row.left <= 0 -> "LIMIT REACHED"
@@ -119,7 +137,14 @@ fun PitchingScreen(onBullpen: () -> Unit) {
                     fontSize = 15.sp, fontWeight = FontWeight.Bold, color = Color.White,
                 )
                 val step = row?.let { PitchCore.nextRestStep(it.count, log.division) }
-                if (step != null && row != null && row.left > 0) Text("Pitch ${step.at} = ${step.rest} rest day" + (if (step.rest == 1) "" else "s"), fontSize = 10.sp, color = Color(0xCCFFFFFF))
+                val soon = row?.let { PitchStore.restLine(it, log) }
+                if (soon != null) {
+                    // one pitch before another rest day: say it plainly, on a dark chip so it reads on any color
+                    Text(
+                        soon, fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Yellow,
+                        modifier = Modifier.padding(top = 2.dp).clip(RoundedCornerShape(8.dp)).background(Color(0x88000000)).padding(horizontal = 6.dp, vertical = 1.dp),
+                    )
+                } else if (step != null && row != null && row.left > 0) Text("Pitch ${step.at} = ${step.rest} rest day" + (if (step.rest == 1) "" else "s"), fontSize = 10.sp, color = Color(0xCCFFFFFF))
             }
         }
         Text(
@@ -129,7 +154,9 @@ fun PitchingScreen(onBullpen: () -> Unit) {
         )
         Box(
             Modifier.align(Alignment.BottomCenter).padding(bottom = 12.dp).size(width = 64.dp, height = 30.dp).clip(RoundedCornerShape(15.dp))
-                .background(Color(0x55000000)).clickable { if (PitchStore.undo()) Buzz.pattern(ctx, 40, 60, 40) },
+                .background(Color(0x55000000)).clickable {
+                    if (PitchStore.undo()) { Buzz.undone(ctx); note = "Took one back" } else { Buzz.tick(ctx); note = "Nothing to undo" }
+                },
             contentAlignment = Alignment.Center,
         ) { Text("Undo", fontSize = 13.sp, color = Color.White) }
     }

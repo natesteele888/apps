@@ -59,7 +59,8 @@ Nothing goes through the internet or a server. Player names and photos stay on t
 - The top line shows the speaker: green when the phone is on a Bluetooth speaker, yellow for "No speaker", and red for "Open Dugout on your phone" when the watch can't reach the phone.
 
 **Pitch Count** (the green baseball icon)
-- Tap the middle of the screen to add a pitch. **Undo** takes back the last one.
+- Tap the middle of the screen to add a pitch. Two taps closer together than 0.4 seconds count once, so a bump or a double tap can't add an extra. **Undo** takes back the last one and says **Took one back** (or **Nothing to undo**).
+- One pitch before another rest day (20, 35, 50 and 65 pitches; Seniors 30, 45, 60 and 80), a yellow **Next pitch = 1 rest day** shows under the count and the tick becomes a quick double tap, so you can feel it's time to think about a change. The tile shows the same line.
 - The screen is green while the pitcher is well under the limit. It turns yellow at 10 pitches left and red at 5 left. At the limit it flashes.
 - The watch buzzes once on reaching 10 left, buzzes twice on every pitch from 5 left, and buzzes three times at the limit.
 - Swipe up or down, or turn the bezel, for the **Bullpen**. It shows every pitcher's pitches today, how many they have left, and who is resting and until when. Tap a pitcher to put them on the mound.

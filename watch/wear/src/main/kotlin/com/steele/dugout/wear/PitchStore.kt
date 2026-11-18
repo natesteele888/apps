@@ -73,6 +73,23 @@ object PitchStore {
         return rows(l).firstOrNull { it.id == c.first } to before
     }
 
+    /** the next pitch for this pitcher adds a rest day (and isn't the one that reaches the limit) */
+    fun restSoon(r: Row, l: PitchLog = log.value): Boolean =
+        PitchCore.restSoon(r.count, l.division) != null && (r.limit == 0 || r.left > 1)
+
+    /** "Next pitch = 1 rest day" when it does, or null */
+    fun restLine(r: Row, l: PitchLog = log.value): String? {
+        if (!restSoon(r, l)) return null
+        val step = PitchCore.restSoon(r.count, l.division) ?: return null
+        return "Next pitch = ${step.rest} rest day" + (if (step.rest == 1) "" else "s")
+    }
+
+    /** one pitch, and the buzz that goes with it */
+    fun addAndBuzz(ctx: Context) {
+        val (r, before) = add()
+        if (r != null) Buzz.pitch(ctx, r.left, before, r.limit, restSoon(r)) else Buzz.tick(ctx)
+    }
+
     fun undo(): Boolean {
         val c = cur() ?: return false
         val l = PitchCore.undo(log.value, c.first, today(), System.currentTimeMillis()) ?: return false
