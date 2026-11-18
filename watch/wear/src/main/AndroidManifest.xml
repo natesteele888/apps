@@ -69,5 +69,29 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <!-- Live score on the watch face (long-press the face › Customize › tap a slot › Dugout › Live score): GC Scores' team -->
+        <service
+            android:name=".GcScoreComplication"
+            android:exported="true"
+            android:icon="@drawable/ic_face_gc"
+            android:label="@string/face_score_name"
+            android:permission="com.google.android.wearable.permission.BIND_COMPLICATION_PROVIDER">
+            <intent-filter>
+                <action android:name="android.support.wearable.complications.ACTION_COMPLICATION_UPDATE_REQUEST" />
+            </intent-filter>
+            <meta-data android:name="android.support.wearable.complications.SUPPORTED_TYPES" android:value="SHORT_TEXT,LONG_TEXT" />
+            <!-- every 5 minutes, the least the watch allows; during a game GcScoreComplication asks every minute itself -->
+            <meta-data android:name="android.support.wearable.complications.UPDATE_PERIOD_SECONDS" android:value="300" />
+        </service>
+        <!-- the minute alarm during a game -->
+        <receiver android:name=".GcScoreTick" android:exported="false" />
+        <!-- a new GameChanger team from the phone updates the watch face even with GC Scores closed -->
+        <service android:name=".GcTeamListener" android:exported="true">
+            <intent-filter>
+                <action android:name="com.google.android.gms.wearable.DATA_CHANGED" />
+                <data android:scheme="wear" android:host="*" android:path="/gc/team" />
+            </intent-filter>
+        </service>
     </application>
 </manifest>
