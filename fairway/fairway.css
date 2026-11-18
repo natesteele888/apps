@@ -178,7 +178,7 @@ input:focus, select:focus, textarea:focus { outline: 0; border-color: var(--gree
 .holecard { display: grid; grid-template-columns: auto 1fr; gap: 4px 14px; align-items: center; background: var(--green); color: #fff; border-radius: 16px; padding: 12px 16px; margin: 6px 0 10px; }
 .holecard small { color: #cfe0d2; }
 .hn { grid-row: span 2; text-align: center; padding-right: 14px; border-right: 1px solid rgba(255, 255, 255, .25); }
-.hn small { display: block; text-transform: uppercase; letter-spacing: .14em; font-size: 11px; font-weight: 700; }
+.hn small { display: block; text-transform: uppercase; letter-spacing: .14em; font-size: 12px; font-weight: 700; }
 .hn b { font: 700 48px/1 var(--serif); }
 .hinfo b { font-size: 20px; margin-right: 8px; }
 .hy { display: flex; flex-wrap: wrap; gap: 4px 12px; font-weight: 600; }
@@ -199,7 +199,7 @@ input:focus, select:focus, textarea:focus { outline: 0; border-color: var(--gree
 .sword { font-weight: 700; color: var(--muted); }
 .sword.under { color: var(--under); }
 .sword.over { color: var(--over); }
-.sword .clr { font-size: 13px; margin-left: 6px; color: var(--muted); }
+.sword .clr { font-size: 14px; margin: -12px -8px -12px 4px; padding: 12px 8px; color: var(--muted); }
 .navrow { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 12px 0; }
 
 /* scorecards */
@@ -260,7 +260,8 @@ input:focus, select:focus, textarea:focus { outline: 0; border-color: var(--gree
 .sheet-h h2 { font: 700 20px var(--serif); color: var(--green); }
 .sheet-h .x { width: 44px; height: 44px; border: 0; background: none; font-size: 28px; cursor: pointer; }
 #toasts { position: fixed; left: 0; right: 0; bottom: calc(var(--tabs) + 14px + env(safe-area-inset-bottom)); z-index: 40; display: grid; justify-items: center; gap: 6px; pointer-events: none; padding: 0 16px; }
-.toast { background: var(--ink); color: #fff; padding: 10px 16px; border-radius: 12px; font-weight: 600; max-width: 520px; transition: opacity .4s, transform .4s; }
+.toast .tact { pointer-events: auto; margin-left: 12px; min-height: 40px; padding: 0 14px; border-radius: 10px; border: 1.5px solid #fff; background: none; color: #fff; font: inherit; font-weight: 800; cursor: pointer; }
+.toast { background: var(--ink); color: #fff; padding: 10px 16px; border-radius: 12px; font-weight: 600; max-width: 520px; display: flex; align-items: center; transition: opacity .4s, transform .4s; }
 .toast.error { background: var(--danger); }
 .toast.out { opacity: 0; transform: translateY(8px); }
 
@@ -348,7 +349,7 @@ input:focus, select:focus, textarea:focus { outline: 0; border-color: var(--gree
 .ctph { display: grid; grid-template-columns: repeat(auto-fill, minmax(52px, 1fr)); gap: 6px; }
 .ctph input { position: absolute; opacity: 0; width: 1px; height: 1px; min-height: 0; }
 .ctph span { display: grid; place-items: center; min-height: 50px; border: 1.5px solid var(--line); border-radius: 10px; background: #fff; font-weight: 700; cursor: pointer; line-height: 1.1; }
-.ctph span small { font-size: 11px; font-weight: 600; }
+.ctph span small { font-size: 12px; font-weight: 600; }
 .ctph .p3 span { border-color: var(--gold); }
 .ctph input:checked + span { background: var(--green); border-color: var(--green); color: #fff; }
 .ctph input:checked + span small { color: #cfe0d2; }
@@ -441,7 +442,7 @@ a.btn { text-decoration: none; }
 /* round bingo: a 3 by 3 card, big enough to read at a glance */
 .bgo { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 4px 0 10px; }
 .bgo button { min-height: 86px; border-radius: 12px; border: 2px solid var(--line); background: #fff; color: var(--ink); font: 700 16px/1.15 var(--cond); text-transform: uppercase; padding: 8px 6px; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
-.bgo button small { display: block; font: 600 10px/1.2 var(--sans); text-transform: none; margin-top: 4px; opacity: .8; }
+.bgo button small { display: block; font: 600 12px/1.2 var(--sans); text-transform: none; margin-top: 4px; opacity: .8; }
 .bgo button.hit { background: var(--green); border-color: var(--green); color: #fff; }
 .bgo button.free { background: #c9a227; border-color: #c9a227; color: #3a2c06; }
 .bgo button.win { background: var(--under); border-color: var(--under); color: #fff; }
