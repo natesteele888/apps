@@ -79,8 +79,9 @@ const ROWS = [
   async function open(opts) {
     const { ctx, page, errors } = await newPage(browser);
     const writes = [];
-    await page.route(/gstatic\.com\/firebasejs\/.*firebase-app-compat\.js/, r => r.fulfill({ contentType: 'text/javascript', body: FAKE_FB }));
-    await page.route(/gstatic\.com\/firebasejs\//, r => r.fulfill({ contentType: 'text/javascript', body: '' }));
+    // one handler (Playwright tries the newest route first, so two would let the catch-all win): the fake SDK for
+    // app-compat, nothing for auth and firestore
+    await page.route(/gstatic\.com\/firebasejs\//, r => r.fulfill({ contentType: 'text/javascript', body: /firebase-app-compat\.js/.test(r.request().url()) ? FAKE_FB : '' }));
     await page.route(/firestore\.googleapis\.com/, async r => {
       const q = r.request();
       if (q.method() === 'PATCH') { writes.push({ url: q.url(), body: JSON.parse(q.postData()) }); return r.fulfill({ status: opts.status || 200, contentType: 'application/json', body: '{}' }); }
