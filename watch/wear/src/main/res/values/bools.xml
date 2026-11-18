@@ -1,5 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <!-- Tiles need Android 8 (Wear OS 2) or newer; values-v26 turns them on there -->
+    <bool name="tiles_on">false</bool>
     <!-- Live score on the watch face: off before Android 8 (Android Wear 2.0), where Google's watch-face library doesn't run -->
     <bool name="face_on">false</bool>
 </resources>

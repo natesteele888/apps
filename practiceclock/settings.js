@@ -34,6 +34,7 @@
         '<p class="mute" style="margin:8px 0 12px;font-size:15px">' + esc(lastBackupText()) + '</p><div class="stack"><button type="button" class="btn block" data-act="dl-backup">Download backup file</button>' +
         (canShareFiles() ? '<button type="button" class="btn ghost block" data-act="share-backup">Share backup file...</button>' : "") +
         '<label class="btn ghost block file-btn">Restore from a backup file<input type="file" accept="application/json,.json" data-restore aria-label="Choose a Practice Clock backup file"></label></div></section>';
+      if (window.WatchLink) h += '<section class="card"><button type="button" class="list-btn" data-act="watch" style="margin-bottom:0"><span class="t">⌚ Watch<small>' + (window.WatchLink.linked() ? "Linked. The watch buzzes at every block and station." : "Follow practice on a Wear OS watch") + '</small></span><span class="go">' + I.go + "</span></button></section>";
       h += '<section class="card"><button type="button" class="list-btn" data-act="about"><span class="t">Help and about<small>' + esc(Core.VERSION) + '</small></span><span class="go">' + I.go + '</span></button>' +
         '<button type="button" class="list-btn" style="margin-top:8px" onclick="window.nateHealth&&nateHealth.report()"><span class="t">Something wrong?<small>Send a problem report</small></span><span class="go">' + I.go + '</span></button>' +
         '<button type="button" class="list-btn warn" data-act="clear-all" style="margin-top:8px;margin-bottom:0"><span class="t">Clear everything<small>Deletes all plans, recent practices and settings</small></span><span class="go">' + I.go + "</span></button></section>";
@@ -58,6 +59,21 @@
     setTimeout(() => { PC.audio.chime("block"); }, 60);
     toast("You should hear two tones. If you don't, check the phone's volume and silent switch.", "ok", 4500);
   };
+
+  /* ================= the watch (the sending is in app.js) ================= */
+  PC.ACT["watch"] = () => openSheet({
+    title: "Watch",
+    html: '<div id="pc-wl"></div><p class="mute" id="pc-wlm" role="status" style="margin-top:8px;font-size:15px">' + esc(PC.watch.msg) + "</p>",
+    footer: '<button type="button" class="btn block" data-close>Done</button>',
+    onOpen(api) {
+      window.WatchLink.panel($("#pc-wl", api.el), {
+        intro: "Open Practice Clock on the watch. It shows a code. Type it here.",
+        linkedText: "The watch shows the station and buzzes at every change.",
+        btn: "btn ghost", btnPri: "btn", onLinked: () => PC.watchSync()
+      });
+    },
+    onClose() { if (S.view === "settings") PC.render(); }
+  });
 
   /* ================= backup and restore ================= */
   function markBackup() { S.meta.lastBackup = PC.today(); PC.saveData(); }
@@ -138,7 +154,7 @@
       "<h3>Build a plan</h3><p>Tap <b>New plan</b> or start from a template. Add blocks with a name and minutes. A <b>stations</b> block rotates every few minutes: the clock says “Rotate now” and flashes.</p>" +
       "<h3>Run it</h3><p>Tap <b>Start</b>. Pause, skip ahead, go back, or add or take off a minute. If the phone sleeps the clock stays right, because it works from the time, not from counting. Turn on “wait for me” to stop at the end of every block.</p>" +
       "<h3>Share</h3><p>Share a plan as a link. The link holds the plan itself, nothing else. You can also copy it as text or print a one-page schedule.</p>" +
-      "<h3>Your privacy</h3><ul><li>Everything is saved on this phone only. No account, no server, no tracking.</li><li>Only what you choose to share (a link, text, a backup file) leaves the app.</li></ul>" +
+      "<h3>Your privacy</h3><ul><li>Everything is saved on this phone only. No account, no server, no tracking.</li><li>Only what you choose to share (a link, text, a backup file) leaves the app.</li><li>If you link a watch (Settings, Watch), the practice that is running goes to it through a private link, so it can show the station and buzz.</li></ul>" +
       "<h3>Keep a backup</h3><p>A phone can clear a web app's saved data, for example after a reset. Download a backup file now and then.</p>" +
       '<p class="ver">' + esc(Core.VERSION) + "</p>"
   });

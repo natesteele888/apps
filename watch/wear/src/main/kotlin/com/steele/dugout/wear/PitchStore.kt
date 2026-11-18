@@ -17,11 +17,13 @@ object PitchStore {
     /** pitcher id to the day they can pitch again, from the phone */
     val resting = MutableStateFlow<Map<String, String>>(emptyMap())
     private var prefs: SharedPreferences? = null
+    private var app: Context? = null
 
     fun today(): String = PitchCore.ymd(System.currentTimeMillis())
 
     fun load(ctx: Context) {
         if (prefs != null) return
+        app = ctx.applicationContext
         val p = ctx.applicationContext.getSharedPreferences("pitch", Context.MODE_PRIVATE)
         prefs = p
         log.value = PitchCore.trimOld(PitchCore.parse(p.getString("log", null)), today())
@@ -35,8 +37,17 @@ object PitchStore {
 
     private fun save(push: Boolean) {
         prefs?.edit()?.putString("log", PitchCore.toJson(log.value).toString())?.putString("resting", JSONObject(resting.value).toString())?.apply()
-        if (push) PhoneLink.putPitch(PitchCore.toJson(log.value).toString())
+        if (push) app?.let { PhoneLink.putPitch(it, PitchCore.toJson(log.value).toString()) }
+        Tiles.pitch(app)
+        PitchComplicationService.update(app)
     }
+
+    /**
+     * The Pitch Count tile's button ids carry this number, and it goes up after each press, so a press counts once even
+     * when the watch asks for the tile again with the same last-pressed id.
+     */
+    fun tileSeq(): Int = prefs?.getInt("tileSeq", 0) ?: 0
+    fun nextTileSeq() { prefs?.edit()?.putInt("tileSeq", tileSeq() + 1)?.apply() }
 
     /** who is pitching: the one picked today, or the first on the list */
     fun cur(l: PitchLog = log.value): Pair<String, String>? =

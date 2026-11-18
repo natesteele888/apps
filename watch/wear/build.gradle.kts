@@ -57,7 +57,14 @@ dependencies {
     implementation("androidx.core:core-ktx:1.15.0")
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.8.7")
     implementation("com.google.android.gms:play-services-wearable:19.0.0")
-    implementation("androidx.wear.watchface:watchface-complications-data-source-ktx:1.2.1") // Live score on the watch face
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.9.0")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.9.0")
+    // Tiles (Pitch Count and Scores on a swipe from the watch face); see Tiles.kt
+    implementation("androidx.wear.tiles:tiles:1.4.1")
+    implementation("androidx.wear.protolayout:protolayout:1.2.1")
+    implementation("androidx.wear.protolayout:protolayout-expression:1.2.1")
+    implementation("androidx.concurrent:concurrent-futures:1.2.0")
+    implementation("com.google.guava:listenablefuture:1.0")
+    // the pitch count on the watch face (a complication); see Complication.kt
+    implementation("androidx.wear.watchface:watchface-complications-data-source-ktx:1.2.1")
 }

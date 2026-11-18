@@ -81,6 +81,14 @@ Nothing goes through the internet or a server. Player names and photos stay on t
 - It reads GameChanger's public team page data, so no sign-in. It needs the phone nearby (or the watch's own Wi-Fi). With no signal it shows the last scores it read and when.
 - Only teams scored in GameChanger show up, and the score is only as live as the scorekeeper.
 
+**Tiles** (swipe left from the watch face)
+- **Pitch Count tile:** who's pitching, the count and how many are left, in the same green, yellow and red as the app, with the ring filling toward the limit. **+1** and **Undo** work right on the tile, with the same buzzes, so you can count without opening anything. Tap the count to open Pitch Count.
+- **Scores tile:** today's MAC League games, Lunenburg's first, two at a time, and how many more there are. Tap it to open Scores. It reads new scores when you swipe to it and the last ones are over 5 minutes old.
+- Add them once: press and hold a tile, swipe to the end, tap **+**, and pick **Pitch Count** or **Scores** under Dugout. On a Galaxy Watch you can also do it in the Galaxy Wearable app on the phone (**Tiles**).
+- **On the watch face:** Pitch Count can also fill a slot on any watch face that has them (complications). Press and hold the face, tap **Customize** (or the pencil), pick a slot and choose **Pitch Count**. A small slot shows the count and how many are left, a ring slot fills toward the limit, and a wide slot also names the pitcher. Tap it to open Pitch Count.
+- The watch takes the phone's pitch count even with Pitch Count closed, so the tile matches the phone when someone counts on the phone.
+- Tiles need Wear OS 2 (Android 8) or newer. On a watch still on Android Wear 2.0 the tiles don't show, and the apps work the same.
+
 **Live score on the watch face.** To see GC Scores without opening it, long-press the watch face › **Customize** › tap a complication slot › **Dugout** › **Live score**. During a game it shows the score and inning ("INN 5" over "4-3"), between games the next game's day and time ("SAT" over "6:30"), and for 6 hours after a game the final ("W 7-3"). A wide slot shows the whole line, like "LIVE vs Hawks 4-3". Tap it to open GC Scores. It follows the team set on the phone, updates every minute during a game (and in the 30 minutes before one), and every 5 to 15 minutes otherwise, so it's easy on the battery. It needs Android 8 or newer on the watch (Wear OS 3, 4 and 5, and most Wear OS 2 watches); an Android Wear 2.0 watch on Android 7 doesn't list it.
 
 ## What the phone does
@@ -140,17 +148,19 @@ Both apps must be signed with the same key, because the watch only talks to a ph
 
 ## The Steele Family watch app (for a kid's watch)
 
-`steele-family-watch.apk` (from the same release) is a second, separate watch app with five apps in the watch's list. Each one follows its web app on the phone:
+`steele-family-watch.apk` (from the same release) is a second, separate watch app with several apps in the watch's list. Each one follows its web app on the phone:
 
 - **Get Ready**: today's checklist. Tap an item to tick it; an item with a timer starts it first, buzzes at the end and ticks itself. Finishing the list throws a small party on the watch and the full one on the phone.
 - **Cube Clock**: tap, 3-2-1, solve, tap to stop. +2 or DNF right after. Every solve lands in Cube Clock's history on the phone, and the watch shows the PB and average of 5.
 - **Power Program**: the next day's workout, one exercise per screen, with timers for timed moves (both sides for "/side" ones). Finished exercises and the finished day are checked off in Power Program on the phone.
 - **Gameday Picks**: this week's NFL games. Tap the left half for the away team, the right half for home. Tap the same side again to take the pick back. Locked games show the score, and the standings are at the bottom.
 - **Read 20**: a reading timer that fills a ring to the goal and buzzes when it's reached. Finish saves the minutes to that reader's log on the phone.
+- **Practice Clock**: the block or station that's on in the practice running on the coach's phone, with its countdown, a ring and what's next. It buzzes at every block and station change (a longer buzz at the end of practice), even with the watch screen off, and says when the phone is paused or waiting for the coach. The controls stay on the phone.
+- **Schedule**: games and practices for the next two weeks, next one up top, with the live score during a game when the team has a GameChanger link. LYBS Ballclub › Calendar › On a watch sends them, for the teams ticked there, each time the app opens.
 
 **Install:** the same steps as above, with `adb install steele-family-watch.apk`. It runs on Wear OS 2 through Wear OS 5, round or square, and needs no phone app: it talks to the web apps over the internet (through the phone's connection when the watch has no Wi-Fi).
 
-**Link it once:** open any of the five on the watch. It shows an 8-letter code. On the phone open Get Ready › More › Watch (or Cube Clock › Statistics › Your watch, Read 20 › Settings › Watch, Power Program › Program › Watch, or Gameday Picks › watch under your name) and type the code. One link covers all five, because the web apps share it.
+**Link it once:** open any of the apps in the watch's list. It shows an 8-letter code. On the phone open Get Ready › More › Watch (or Cube Clock › Statistics › Your watch, Read 20 › Settings › Watch, Power Program › Program › Watch, Practice Clock › Settings › Watch, LYBS Ballclub › Calendar › On a watch, or Gameday Picks › watch under your name) and type the code. One link covers them all, because the web apps share it.
 
 **Where the data goes:** one private document in the nates-toolbox Firestore, named by a 26-character random key that only that phone and that watch know (see `../watchlink.js`). Nothing is in GitHub. Gameday Picks is the one exception: picks are saved in Gameday Picks itself, so the watch signs in on its own and the player's phone okays that watch (the `gp_watch` rules in `toolbox/firestore.rules`).
 
@@ -175,7 +185,7 @@ Both apps must be signed with the same key, because the watch only talks to a ph
 
 - `shared/` holds the message format (`Protocol.kt`) and the pitch math (`PitchCore.kt`). The pitch math is a Kotlin copy of `walkup/pitch-core.js`, and its unit tests match `tests/walkup-pitch.test.cjs`.
 - `phone/` is the Dugout phone app. It's a WebView of the live Walk-Up site (`https://natesteele888.github.io/apps/walkup/`) with a JavaScript bridge (`walkup/bridge.js` on the page side, `Bridge.kt` here). The bridge adds Android text-to-speech, file picking, the microphone and saving to Downloads.
-- `wear/` is the watch install, built with Compose for Wear OS. It has four launcher activities, `WalkUpActivity`, `PitchCountActivity`, `ScoresActivity` and `GameChangerActivity` (GC Scores), so the watch shows four apps. `GcScoreComplication` is the watch face's Live score: it shares `GcStore` with GC Scores, and its words come from `shared/.../GcFace.kt`, with tests. Walk-Up and Pitch Count share `PhoneLink` and `PitchStore`, and one application id with the phone app, which the Wear OS link needs. Its minSdk is 25 (Android Wear 2.0), with java.time desugared, and CI runs lint's NewApi check so it stays that way. An old watch pairs with the phone through Google's Wear OS app, not Galaxy Wearable.
+- `wear/` is the watch install, built with Compose for Wear OS. It has four launcher activities, `WalkUpActivity`, `PitchCountActivity`, `ScoresActivity` and `GameChangerActivity` (GC Scores), so the watch shows four apps. `Tiles.kt` has the two tiles (`PitchTileService`, `ScoresTileService`), drawn with ProtoLayout; their services are switched on only from Android 8 (`res/values-v26/bools.xml`). `PitchSyncService` takes the phone's pitch log while the apps are closed. `Complication.kt` puts the pitch count on the watch face. `GcScoreComplication` is the watch face's Live score: it shares `GcStore` with GC Scores, and its words come from `shared/.../GcFace.kt`, with tests. Walk-Up and Pitch Count share `PhoneLink` and `PitchStore`, and one application id with the phone app, which the Wear OS link needs. Its minSdk is 25 (Android Wear 2.0), with java.time desugared, and CI runs lint's NewApi check so it stays that way. An old watch pairs with the phone through Google's Wear OS app, not Galaxy Wearable.
 - **Scores' data** is plain HTTPS and JSON, so any watch can read it the same way, an Apple Watch app later included: an anonymous Firebase sign-in, then `shared/macLeagueStandings.json` from LYBS Ballclub's Realtime Database. `shared/.../LeagueScores.kt` has the addresses, the data's shape and the parser, with tests. The data is written by `scripts/scrape-standings.mjs` in the lybs-ballclub repo, every 30 minutes from 8am to 9pm ET.
 - Build: `./gradlew :shared:test :phone:assembleDebug :wear:assembleDebug` (JDK 17, Android SDK 35). GitHub Actions runs this on every push that touches `watch/` or Walk-Up.
 - The phone app loads the live site. Web changes reach Dugout once they're merged to `main` and published.

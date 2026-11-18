@@ -475,6 +475,25 @@ test('fairway phase 1: rally, format, teams, draft, matchups, picks and tee time
   await assertFails(updateDoc(ref, { 'dr.ord': 'all', updated: 7 }));
 });
 
+test('fairway games: bingo marks fit in the tournament, capped', async () => {
+  const ref = doc(anon(), 'golf_events/' + FW_CODE);
+  await assertSucceeds(setDoc(ref, fwEvent()));
+  await assertSucceeds(updateDoc(doc(stranger(), 'golf_events/' + FW_CODE), { 'bg.pl0000001': [3, 7], updated: 2 }));
+  await assertFails(updateDoc(ref, { bg: 'all', updated: 3 }));
+  await assertFails(updateDoc(ref, { bg: Object.fromEntries(Array.from({ length: 121 }, (_, i) => ['pl' + String(i).padStart(7, '0'), [3]])), updated: 3 }));
+});
+
+test('fairway games: side game settings and hole marks fit, capped (a tally only, no money fields)', async () => {
+  const ref = doc(anon(), 'golf_events/' + FW_CODE);
+  await assertSucceeds(setDoc(ref, fwEvent()));
+  await assertSucceeds(updateDoc(doc(stranger(), 'golf_events/' + FW_CODE), { bets: { on: ['skins', 'wolf'], amt: { skins: 1, wolf: 2 }, out: [] }, updated: 2 }));
+  await assertSucceeds(updateDoc(ref, { 'bm.1_4.tp': ['pl0000001'], 'bm.1_4.wp.1': 'lone', updated: 3 }));
+  await assertFails(updateDoc(ref, { bets: { on: ['skins'], card: '4242' }, updated: 4 }), 'no other fields');
+  await assertFails(updateDoc(ref, { bets: { on: Array.from({ length: 11 }, () => 'skins') }, updated: 4 }));
+  await assertFails(updateDoc(ref, { bm: 'all', updated: 4 }));
+  await assertFails(updateDoc(ref, { bm: Object.fromEntries(Array.from({ length: 73 }, (_, i) => ['k' + i, {}])), updated: 4 }));
+});
+
 test('fairway phase 1: the chat lives under the tournament; votes and birdie shouts are the only edits', async () => {
   const chat = id => doc(anon(), 'golf_events/' + FW_CODE + '/chat/' + id);
   const msg = { k: 'm', by: 'pl0000001', n: 'Test Golfer', t: 'On my way', at: 1 };
@@ -513,7 +532,7 @@ test('watch link: anyone with the link code can create, read and update it, sign
   await assertSucceeds(setDoc(doc(anon(), 'fw_links/' + WL_KEY), { gr: '{"v":2}', updated: wlNow() }));
   await assertSucceeds(getDoc(doc(anon(), 'fw_links/' + WL_KEY)));
   await assertSucceeds(updateDoc(doc(anon(), 'fw_links/' + WL_KEY), { w: '{"v":1,"e":[]}' }));
-  await assertSucceeds(updateDoc(doc(stranger(), 'fw_links/' + WL_KEY), { cc: '{}', r20: '{}', pp: '{}', gp: '{}', updated: wlNow() }));
+  await assertSucceeds(updateDoc(doc(stranger(), 'fw_links/' + WL_KEY), { cc: '{}', r20: '{}', pp: '{}', gp: '{}', sc: '{"v":1,"ev":[]}', pk: '{}', updated: wlNow() }));
 });
 
 test('watch link: no listing, no deleting, the code must be 26 letters and digits 2-7, and only the known text fields', async () => {
@@ -530,6 +549,8 @@ test('watch link: no listing, no deleting, the code must be 26 letters and digit
   await assertFails(setDoc(doc(anon(), 'fw_links/' + WL_KEY), { lk: '{}' }), 'Locker is not on the watch');
   await assertSucceeds(setDoc(doc(anon(), 'fw_links/' + WL_KEY), { pp: 'x'.repeat(30000) }));
   await assertFails(setDoc(doc(anon(), 'fw_links/' + WL_KEY), { pp: 'x'.repeat(40001) }));
+  await assertSucceeds(setDoc(doc(anon(), 'fw_links/' + WL_KEY), { pk: 'x'.repeat(40000) }), 'Practice Clock');
+  await assertFails(setDoc(doc(anon(), 'fw_links/' + WL_KEY), { pk: 'x'.repeat(40001) }));
   await assertFails(setDoc(doc(anon(), 'fw_links/' + WL_KEY), { gr: '{}', updated: 'yesterday' }));
 });
 

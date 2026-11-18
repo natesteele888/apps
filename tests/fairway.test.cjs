@@ -19,6 +19,7 @@ async function test(name, fn) {
 }
 const eq = (a, b, m) => assert.strictEqual(a, b, (m ? m + ': ' : '') + 'expected ' + JSON.stringify(b) + ' got ' + JSON.stringify(a));
 const deq = (a, b, m) => assert.deepStrictEqual(a, b, m);
+const ok = (v, m) => assert.ok(v, m);
 const NOW = 1794000000000;
 function twoPlayers() {
   const ev = C.newEvent({ name: 'Test Cup', now: NOW });
@@ -59,6 +60,10 @@ const pl = (ev, id) => Object.assign({ id }, ev.p[id]);
     deq(C.playOrder(9, 1), [1, 2, 3, 4, 5, 6, 7, 8, 9]);
   });
 
+  await test('core: board names are last names, with an initial only when two share one', () => {
+    const n = C.boardNames([{ id: 'a', name: 'Cal Ortega' }, { id: 'b', name: 'Jo Tamsin' }, { id: 'c', name: 'Bea Tamsin' }, { id: 'd', name: 'Hank' }]);
+    eq(n.a, 'ORTEGA'); eq(n.b, 'J. TAMSIN'); eq(n.c, 'B. TAMSIN'); eq(n.d, 'HANK');
+  });
   await test('core: the demo is twelve made-up golfers in three groups', () => {
     const ev = C.demoEvent(NOW); eq(C.players(ev).length, 12); eq(C.groups(ev).length, 3);
     eq(C.groups(ev)[2].start, 10); eq(ev.cur, 2);
@@ -152,6 +157,69 @@ const pl = (ev, id) => Object.assign({ id }, ev.p[id]);
     eq(C.cleanHc('+2.1'), -2.1); eq(C.cleanHc('abc'), null);
   });
 
+  await test('core games: a 3 by 3 bingo card per golfer, scores mark birdies, three in a row wins', () => {
+    const ev = twoPlayers(), c1 = C.bingoCard(ev, 'aaaaaa1');
+    eq(c1.length, 9); eq(c1[4], -1); deq(C.bingoCard(ev, 'aaaaaa1'), c1, 'the same card on every phone');
+    eq(new Set(c1).size, 9, 'no square twice');
+    let st = C.bingoState(ev, 'aaaaaa1', 1); eq(st.line, null); eq(st.cells[4].hit, true);
+    const at = c1.indexOf(0); // the Birdie square, if this card has it
+    ev.p.aaaaaa1.s['1_1'] = 3; // birdie on a par 4
+    st = C.bingoState(ev, 'aaaaaa1', 1); if (at >= 0) eq(st.cells[at].hit, true, 'a birdie marks itself');
+    const line = [[3, 4, 5], [1, 4, 7], [0, 4, 8], [2, 4, 6]].find(l => l.every(i => c1[i] < 0 || c1[i] >= C.BINGO_AUTO));
+    ev.bg = { aaaaaa1: line.filter(i => i !== 4).map(i => c1[i]) };
+    st = C.bingoState(ev, 'aaaaaa1', 1); deq(st.line && st.line.slice().sort(), line.slice().sort());
+    deq(C.cleanBingo({ aaaaaa1: [0, 3, 3, 99, 'x'], zzzzzz9: [4] }, ev), { aaaaaa1: [3] }, 'auto squares, repeats and unknown golfers dropped');
+  });
+
+  await test('core side games: skins carry, Nassau, wolf, snake and greenies tally who owes who, and it all nets to zero', () => {
+    const ev = twoPlayers();
+    ev.p.cccccc1 = C.newPlayer(ev, { name: 'Charlie Test', tee: 'blue', g: 1, st: 1 });
+    ev.p.dddddd1 = C.newPlayer(ev, { name: 'Delta Test', tee: 'blue', g: 1, st: 1 });
+    ['aaaaaa1', 'bbbbbb1', 'cccccc1', 'dddddd1'].forEach((id, i) => { ev.p[id].at = i; ev.course.holes.forEach((h, j) => { ev.p[id].s['1_' + (j + 1)] = h.par; }); });
+    ev.p.aaaaaa1.s['1_1'] -= 1; // a birdie on 1 takes the first skin
+    ev.p.bbbbbb1.s['1_3'] -= 1; // 2 halved, so 3 is worth two skins
+    const par3 = ev.course.holes.findIndex(h => h.par === 3) + 1;
+    const raw = JSON.parse(JSON.stringify(ev));
+    raw.bets = { on: ['skins', 'nassau', 'snake', 'wolf', 'green', 'venmo'], amt: { skins: 1, nassau: 5, snake: 2, wolf: 1, green: 0 }, out: ['zzzzzz9'] };
+    raw.bm = { '1_1': { wp: { 1: 'cccccc1' } }, '1_5': { tp: ['cccccc1'] }, '1_9': { tp: ['dddddd1', 'nobody1'] }, ['1_' + par3]: { gr: 'dddddd1' }, '9_1': { ld: 'aaaaaa1' } };
+    const e = C.cleanEvent(raw);
+    deq(e.bets.on, ['skins', 'nassau', 'snake', 'wolf', 'green'], 'unknown games dropped'); deq(e.bets.out, [], 'unknown golfers dropped');
+    eq(e.bm['9_1'], undefined, 'marks for a round that does not exist are dropped'); deq(e.bm['1_9'].tp, ['dddddd1']);
+    const t = C.betTally(e, 1), g = id => t.games.find(x => x.g === id);
+    eq(g('skins').lines[0], 'Hole 1: Alpha Test wins the skin.'); eq(g('skins').lines[1], 'Hole 3: Bravo Test wins 2 skins.');
+    ok(/Delta Test holds the snake/.test(g('snake').lines[0]), 'the last three-putt holds the snake');
+    eq(g('wolf').lines[0], 'hole 1: Alpha Test and Charlie Test win.', 'the wolf (first to join) and partner win with the birdie');
+    eq(g('green').lines[0], 'Hole ' + par3 + ': Delta Test.'); eq(g('green').amt, 0, 'a game for fun shows winners but owes nothing');
+    eq(Math.round(Object.values(t.bal).reduce((a, b) => a + b, 0) * 100), 0, 'every dollar won is a dollar lost');
+    eq(t.bal.dddddd1 < 0, true, 'the snake holder is down');
+    const paid = {}; t.owes.forEach(o => { paid[o.from] = (paid[o.from] || 0) - o.amt; paid[o.to] = (paid[o.to] || 0) + o.amt; });
+    Object.keys(t.bal).forEach(p => eq(Math.round((paid[p] || 0) * 100), Math.round(t.bal[p] * 100), 'the payments settle ' + p));
+    ok(t.owes.length <= 3, 'four golfers settle in three payments or fewer');
+    eq(C.money(3.5), '$3.50'); eq(C.money(4), '$4');
+  });
+
+  await test('core hole review: one plain line, the next hole from your tees, and Jack only speaks up on a pattern', () => {
+    const ev = twoPlayers(), a = ev.p.aaaaaa1, pars = ev.course.holes.map(h => h.par);
+    eq(C.holeLine(4, 5, { t: 'left', p: 2, x: 1, b: true }), 'Missed left, 2 putts, 1 penalty, in the sand');
+    eq(C.holeLine(4, 4, { t: 'fairway', p: 2 }), 'Fairway, 2 putts, green in regulation');
+    eq(C.holeLine(3, 3, { t: 'fairway', p: 2 }), '2 putts, green in regulation', 'no tee shot on a par 3');
+    eq(C.holeLine(4, 4, null), '');
+    const nx = C.nextHole(ev, a, 1, 1); eq(nx.h, 2); eq(nx.par, pars[1]); ok(nx.yds > 0); eq(C.nextHole(ev, a, 1, 18), null, 'nothing after the last hole');
+    a.st = 10; eq(C.nextHole(ev, a, 1, 18).h, 1, 'a start on 10 goes 18 then 1'); a.st = 1;
+    deq(C.cleanHoleNotes({ '1_3': { t: 'shank', p: 9, b: 1 }, '1_4': { p: 2, email: 'x' }, '5_1': { p: 1 } }), { '1_4': { p: 2 } }, 'odd values, odd fields and odd holes are dropped');
+    const notes = {};
+    [1, 2].forEach(h => { a.s['1_' + h] = pars[h - 1]; notes['1_' + h] = { t: 'fairway', p: 2 }; });
+    eq(C.jackNoticed(ev, a, 1, notes), null, 'too few holes to call it a pattern');
+    a.s['1_3'] = pars[2]; notes['1_3'] = { t: 'fairway', p: 2 }; eq(C.jackNoticed(ev, a, 1, notes), null, 'a steady run says nothing');
+    const long = [1, 2, 3, 4, 5, 6].filter(h => pars[h - 1] > 3).slice(0, 3);
+    long.forEach(h => { a.s['1_' + h] = pars[h - 1] + 1; notes['1_' + h] = { t: 'right', p: 2 }; });
+    const all = Object.keys(a.s).map(k => +k.split('_')[1]).sort((x, y) => x - y), last4 = all.slice(-4).filter(h => pars[h - 1] > 3);
+    if (last4.length >= 3 && last4.every(h => notes['1_' + h].t !== 'fairway')) ok(/fairways/.test(C.jackNoticed(ev, a, 1, notes)), 'missed fairways get noticed');
+    const b = ev.p.bbbbbb1, bn = {}; [1, 2, 3].forEach(h => { b.s['1_' + h] = pars[h - 1] + 1; bn['1_' + h] = { p: 3 }; });
+    ok(/three-putts/.test(C.jackNoticed(ev, b, 1, bn)), 'three-putts get noticed');
+    for (const w of ['damn', 'hell']) ok(!/\b(damn|hell)\b/i.test(C.jackNoticed(ev, b, 1, bn) + (C.jackNoticed(ev, a, 1, notes) || '')), 'clean words only: ' + w);
+  });
+
   /* ===================== PART 2: the page ===================== */
   let server, browser;
   try { server = await startServer('fairway'); browser = await launch(); }
@@ -231,6 +299,59 @@ const pl = (ev, id) => Object.assign({ id }, ev.p[id]);
     await page.waitForSelector('.teecard'); assert.match(await page.locator('.teecard').textContent(), /8:10 AM/);
     const [dl] = await Promise.all([page.waitForEvent('download'), page.click('#addcal')]);
     assert.match(dl.suggestedFilename(), /\.ics$/);
+    const wide = await page.evaluate(() => document.documentElement.scrollWidth); assert.ok(wide <= 390, 'no sideways scroll at 390 px, got ' + wide);
+    deq(errors, []); await ctx.close();
+  });
+
+  if (browser) await test('page: the Games tab bingo card, tap three in a row', async () => {
+    const { page, errors, ctx } = await open();
+    await page.click('#new'); await page.fill('#nn', 'Bingo Day'); await page.fill('#nme', 'Alpha Test');
+    await page.locator('#nf [type=submit]').click(); await page.waitForFunction(() => window.FW.debug.S.ev);
+    await page.click('[data-tab=games]'); await page.waitForSelector('.bgo button');
+    eq(await page.locator('.bgo button').count(), 9);
+    const sqs = await page.evaluate(() => { const S = window.FW.debug.S, C = window.FairwayCore, me = window.FW.ui.me(), c = C.bingoCard(S.ev, me.id);
+      const l = [[3, 4, 5], [1, 4, 7], [0, 4, 8], [2, 4, 6]].find(x => x.every(i => c[i] < 0 || c[i] >= C.BINGO_AUTO)); return l.filter(i => i !== 4).map(i => c[i]); });
+    for (const q of sqs) await page.click(`.bgo [data-sq="${q}"]`);
+    await page.waitForSelector('.bgo.won');
+    const wide = await page.evaluate(() => document.documentElement.scrollWidth); assert.ok(wide <= 390, 'no sideways scroll at 390 px, got ' + wide);
+    deq(errors, []); await ctx.close();
+  });
+
+  if (browser) await test('page: side games, pick skins and the snake, mark a three-putt, see who owes who', async () => {
+    const { page, errors, ctx } = await open();
+    await page.click('#new'); await page.fill('#nn', 'Skins Day'); await page.fill('#nme', 'Alpha Test');
+    await page.locator('#nf [type=submit]').click(); await page.waitForFunction(() => window.FW.debug.S.ev);
+    await page.evaluate(() => { const S = window.FW.debug.S, C = window.FairwayCore, me = window.FW.ui.me();
+      const id = C.newPid(); window.FW.ui.write({ ['p.' + id]: C.newPlayer(S.ev, { name: 'Bravo Test', tee: S.ev.course.tees[0].id, g: 1, st: 1 }),
+        ['p.' + me.id + '.s.1_1']: 3, ['p.' + id + '.s.1_1']: 4 }); });
+    await page.click('[data-tab=games]'); await page.click('#betset');
+    await page.check('[data-g=skins]'); await page.check('[data-g=snake]'); await page.selectOption('[data-amt=snake]', '5');
+    await page.click('#betsave'); await page.waitForSelector('.betg');
+    ok(/Alpha Test wins the skin/.test(await page.locator('.betg').first().textContent()), 'the birdie wins hole 1');
+    await page.click('#betmark'); await page.selectOption('#bh', '1');
+    await page.locator('.sheet [data-tp]').last().check(); await page.click('#bmsave');
+    await page.waitForFunction(() => /holds the snake/.test(document.body.textContent));
+    ok(/Bravo Test\s*owes\s*Alpha Test/.test(await page.locator('.owes').textContent()), 'who owes who shows up');
+    ok(/never moves money/.test(await page.textContent('body')));
+    const wide = await page.evaluate(() => document.documentElement.scrollWidth); assert.ok(wide <= 390, 'no sideways scroll at 390 px, got ' + wide);
+    deq(errors, []); await ctx.close();
+  });
+
+  if (browser) await test('page: once your score is in, the hole review saves taps on this phone and shows the next hole', async () => {
+    const { page, errors, ctx } = await open();
+    await page.click('#new'); await page.fill('#nn', 'Review Day'); await page.fill('#nme', 'Alpha Test');
+    await page.locator('#nf [type=submit]').click(); await page.waitForFunction(() => window.FW.debug.S.ev);
+    await page.click('[data-tab=score]'); await page.waitForSelector('.scorer');
+    eq(await page.locator('.hreview').count(), 0, 'no review before a score');
+    await page.locator('.scorer li').first().locator('.val').click();
+    await page.waitForSelector('.hreview');
+    ok(/Up next/.test(await page.textContent('.hreview')), 'the next hole is shown');
+    const par = await page.evaluate(() => window.FW.debug.S.ev.course.holes[window.FW.debug.S.hole - 1].par);
+    if (par > 3) await page.click('[data-hn=t][data-v=left]');
+    await page.click('[data-hn=p][data-v="2"]');
+    await page.waitForFunction(() => /2 putts/.test(document.querySelector('.hreview').textContent));
+    const saved = await page.evaluate(() => JSON.stringify(localStorage)); ok(/fw:hn:/.test(saved), 'kept on this phone');
+    const shared = await page.evaluate(() => JSON.stringify(window.FW.debug.S.ev)); ok(!/"putts"|"hn"/.test(shared), 'never in the shared tournament');
     const wide = await page.evaluate(() => document.documentElement.scrollWidth); assert.ok(wide <= 390, 'no sideways scroll at 390 px, got ' + wide);
     deq(errors, []); await ctx.close();
   });

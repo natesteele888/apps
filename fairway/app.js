@@ -29,6 +29,7 @@
     score: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 19l1-4L16 5l3 3L9 18l-4 1z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>',
     course: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20c3-6 6-2 8-8s5-8 8-8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><circle cx="18" cy="17" r="2.2" fill="currentColor"/></svg>',
     teams: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="8" cy="8" r="3" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="16.5" cy="9" r="2.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M2.5 19c.6-3.4 2.8-5 5.5-5s4.9 1.6 5.5 5M13.5 14.6c.9-.4 1.9-.6 3-.6 2.4 0 4.2 1.4 4.8 4.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>',
+    games: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M9.3 4v16M14.7 4v16M4 9.3h16M4 14.7h16" stroke="currentColor" stroke-width="1.6"/></svg>',
     chat: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v11H9l-5 4z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>',
     going: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12l4 4 10-10" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>',
     more: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="6" height="6" fill="none" stroke="currentColor" stroke-width="2"/><rect x="14" y="4" width="6" height="6" fill="none" stroke="currentColor" stroke-width="2"/><rect x="4" y="14" width="6" height="6" fill="none" stroke="currentColor" stroke-width="2"/><path d="M14 14h2v2h-2zM18 18h2v2h-2zM14 18h2M18 14h2" stroke="currentColor" stroke-width="2"/></svg>'
@@ -361,10 +362,10 @@
     $("#back", v).onclick = () => go("home", {}, false);
     const body = $("#tab", v);
     const going = !!(ev.rally && ev.rally.on);
-    const list = going ? [["going", "Going"], ["chat", "Chat"], ["more", "Share"]] : [["board", "Board"], ["score", "Score"], ["teams", "Teams"], ["chat", "Chat"], ["more", "Share"]];
+    const list = going ? [["going", "Going"], ["chat", "Chat"], ["more", "Share"]] : [["board", "Board"], ["score", "Score"], ["teams", "Teams"], ["games", "Games"], ["chat", "Chat"], ["more", "Share"]];
     if (S.tab === "field" || S.tab === "course") { S.boardMode = S.tab; S.tab = "board"; }
     if (!list.some(x => x[0] === S.tab)) S.tab = list[0][0];
-    ({ board: tabBoard, score: tabScore, teams: FW.phase1.tabTeams, chat: FW.phase1.tabChat, going: FW.phase1.tabGoing, more: tabMore }[S.tab] || tabBoard)(body, ev);
+    ({ board: tabBoard, score: tabScore, teams: FW.phase1.tabTeams, games: FW.games.tab, chat: FW.phase1.tabChat, going: FW.phase1.tabGoing, more: tabMore }[S.tab] || tabBoard)(body, ev);
     const tabs = $("#tabs"), unread = S.tab === "chat" ? 0 : FW.phase1.unread(S.code);
     tabs.hidden = false;
     tabs.innerHTML = list.map(([k, l]) => `<button type="button" data-tab="${k}" aria-current="${S.tab === k}">${ICON[k]}<span>${l}</span>${k === "chat" && unread ? `<i class="dot" aria-label="${unread} new">${unread > 9 ? "9+" : unread}</i>` : ""}</button>`).join("");
@@ -382,19 +383,19 @@
     if (!rows.length) { el.innerHTML = seg + emptyField(); wireBoard(el); return; }
     let html;
     if (S.boardMode === "holes") {
-      const pars = ev.course.holes.map(h => h.par);
+      const pars = ev.course.holes.map(h => h.par), bn = C.boardNames(rows);
       html = `${ev.rounds > 1 ? `<div class="pills small" role="group" aria-label="Round">${Array.from({ length: ev.rounds }, (_, i) => `<button type="button" class="pill" data-br="${i + 1}" aria-pressed="${r === i + 1}">Round ${i + 1}</button>`).join("")}</div>` : ""}
         <div class="board holes"><div class="bhead">Leaders</div><div class="cardwrap" data-keep="hbh"><table class="hbh"><thead>
           <tr><th class="nm">Hole</th>${pars.map((_, i) => `<th>${i + 1}</th>`).join("")}</tr>
           <tr class="parrow"><th class="nm">Par</th>${pars.map(p => `<td>${p}</td>`).join("")}</tr></thead><tbody>
           ${rows.map(row => { const x = row.rounds[r - 1];
-            return `<tr><th class="nm"><button type="button" data-player="${esc(row.id)}"><span class="pos">${esc(row.pos)}</span>${esc(row.name)}</button></th>${pars.map((_, i) => { const h = i + 1, v = x.run[h]; return `<td class="${v == null ? "" : C.tone(v)}${x.last === h && !x.done ? " now" : ""}">${v == null ? "" : esc(v === 0 ? "E" : Math.abs(v))}</td>`; }).join("")}</tr>`; }).join("")}
+            return `<tr><th class="nm"><button type="button" data-player="${esc(row.id)}"><span class="pos">${esc(row.pos)}</span>${esc(bn[row.id])}</button></th>${pars.map((_, i) => { const h = i + 1, v = x.run[h]; return `<td class="${v == null ? "" : C.tone(v)}${x.last === h && !x.done ? " now" : ""}">${v == null ? "" : esc(v === 0 ? "E" : Math.abs(v))}</td>`; }).join("")}</tr>`; }).join("")}
         </tbody></table></div><p class="legend"><span class="tp under">Red</span> under par, <span class="tp over">green</span> over par, black even. Each number is the player's score to par after that hole${n === 18 ? "" : ""}.</p></div>`;
     } else {
-      const R = ev.rounds;
+      const R = ev.rounds, bn = C.boardNames(rows);
       html = `<div class="board"><div class="bhead">Leaders</div><table class="lb"><thead><tr><th>Pos</th><th class="pn">Player</th><th>To par</th><th>Thru</th>${R > 1 ? Array.from({ length: R }, (_, i) => `<th class="rd">R${i + 1}</th>`).join("") : ""}<th>Tot</th></tr></thead><tbody>
-        ${rows.map(row => `<tr data-player="${esc(row.id)}" tabindex="0" role="button" aria-label="${esc(row.name)}, ${esc(row.pos)}, ${esc(C.fmtPar(row.toPar))}"><td class="pos">${esc(row.pos)}</td><td class="pn">${teeDot(C.teeOf(ev, row.pl))}${esc(row.name)}</td><td class="big">${row.holes ? parText(row.toPar) : ""}</td><td class="thru">${esc(row.today.done ? "F" : row.today.thru || "–")}</td>${R > 1 ? row.rounds.map(x => `<td class="rd">${x.done ? x.strokes : x.started ? `<span class="tp ${C.tone(x.toPar)} sm">${esc(C.fmtPar(x.toPar))}</span>` : ""}</td>`).join("") : ""}<td class="tot">${row.total || ""}</td></tr>`).join("")}
-      </tbody></table></div><p class="legend">Tap a player for their card. <span class="tp under">Red</span> is under par, <span class="tp over">green</span> over.</p>${ctpPanel(ev, r)}`;
+        ${rows.map(row => `<tr data-player="${esc(row.id)}" tabindex="0" role="button" aria-label="${esc(row.name)}, ${esc(row.pos)}, ${esc(C.fmtPar(row.toPar))}"><td class="pos">${esc(row.pos)}</td><td class="pn">${teeDot(C.teeOf(ev, row.pl))}${esc(bn[row.id])}</td><td class="big">${row.holes ? parText(row.toPar) : ""}</td><td class="thru">${esc(row.today.done ? "F" : row.today.thru || "–")}</td>${R > 1 ? row.rounds.map(x => `<td class="rd">${x.done ? x.strokes : x.started ? `<span class="tp ${C.tone(x.toPar)} sm">${esc(C.fmtPar(x.toPar))}</span>` : ""}</td>`).join("") : ""}<td class="tot">${row.total || ""}</td></tr>`).join("")}
+      </tbody></table></div><p class="legend">Tap a name for their card. <span class="tp under">Red</span> is under par, <span class="tp over">green</span> over.</p>${ctpPanel(ev, r)}`;
     }
     el.innerHTML = seg + html;
     wireBoard(el);
@@ -448,6 +449,7 @@
         return `<li data-pid="${esc(p.id)}"><button type="button" class="sname" data-player="${esc(p.id)}">${teeDot(t)}<span><b>${esc(p.n)}</b><small>${rs[i].thru ? parText(rs[i].toPar) + " thru " + rs[i].thru : "No scores yet"}${mine && mine.id === p.id ? " · you" : ""}</small></span></button>
           <div class="stepper"><button type="button" class="minus" aria-label="One less for ${esc(p.n)}">−</button><button type="button" class="val ${v == null ? "empty" : C.mark(d)}" aria-label="${v == null ? "Set par for " + esc(p.n) : esc(p.n) + ": " + v}">${v == null ? "Par?" : v}</button><button type="button" class="plus" aria-label="One more for ${esc(p.n)}">+</button></div>
           <small class="sword ${d == null ? "" : C.tone(d)}">${v == null ? "" : esc(C.scoreName(d, v))}${v != null ? ` <button type="button" class="link clr" aria-label="Clear ${esc(p.n)}'s score">clear</button>` : ""}</small></li>`; }).join("")}</ul>
+      ${mine && mine.g === g.g ? FW.review.html(ev, mine, r, h) : ""}
       <div class="navrow"><button type="button" class="btn" id="prev" ${idx <= 0 ? "disabled" : ""}>‹ Hole ${order[idx - 1] || ""}</button><button type="button" class="btn ${allIn ? "primary" : ""}" id="next" ${idx >= order.length - 1 ? "disabled" : ""}>Hole ${order[idx + 1] || ""} ›</button></div>
       <h2 class="sec">Group ${g.g} card</h2>${groupCard(ev, g.players, r, order, h)}
       ${!mine && !isOrg() ? `<p class="msg">You're watching. To keep score for this group, tap Join on the Share tab.</p>` : ""}`;
@@ -458,6 +460,7 @@
     const strip = $(".strip", el), on = strip && $("[aria-pressed=true]", strip); if (on && strip.scrollTo) strip.scrollLeft = Math.max(0, on.offsetLeft - strip.clientWidth / 2 + on.clientWidth / 2);
     $("#prev", el).onclick = () => { S.hole = order[idx - 1]; render(); };
     $("#next", el).onclick = () => { S.hole = order[idx + 1]; render(); };
+    if (mine && mine.g === g.g) FW.review.wire(el, ev, mine, r, h);
     $$(".scorer li", el).forEach(li => {
       const pid = li.dataset.pid, cur = C.strokes(ev.p[pid], r, h);
       const set = val => {

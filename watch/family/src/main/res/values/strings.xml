@@ -6,4 +6,6 @@
     <string name="power_name">Power Program</string>
     <string name="picks_name">Gameday Picks</string>
     <string name="read_name">Read 20</string>
+    <string name="practice_name">Practice Clock</string>
+    <string name="schedule_name">Schedule</string>
 </resources>
