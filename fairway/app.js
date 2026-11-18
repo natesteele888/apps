@@ -546,7 +546,7 @@
       <ul class="scorer">${g.players.map((p, i) => { const v = rs[i].scores[h - 1], d = v == null ? null : v - rs[i].pars[h - 1], t = C.teeOf(ev, p);
         return `<li data-pid="${esc(p.id)}"><button type="button" class="sname" data-player="${esc(p.id)}">${teeDot(t)}<span><b>${esc(tname(p) || p.n)}</b><small>${rs[i].thru ? parText(rs[i].toPar) + " thru " + rs[i].thru : "No scores yet"}${rs[i].gets[h - 1] > 0 ? " · gets " + (rs[i].gets[h - 1] > 1 ? rs[i].gets[h - 1] + " strokes" : "a stroke") : rs[i].gets[h - 1] < 0 ? " · gives a stroke" : ""}${mine && mine.id === p.id ? " · you" : ""}</small></span></button>
           <div class="stepper"><button type="button" class="minus" aria-label="One less for ${esc(p.n)}">−</button><button type="button" class="val ${v == null ? "empty" : C.mark(d)}" aria-label="${v == null ? "Set par for " + esc(p.n) : esc(p.n) + ": " + v}">${v == null ? "Par?" : v}</button><button type="button" class="plus" aria-label="One more for ${esc(p.n)}">+</button></div>
-          <small class="sword ${d == null ? "" : C.tone(d)}">${v == null ? "" : esc(C.scoreName(d, v))}${v != null ? ` <button type="button" class="link clr" aria-label="Clear ${esc(p.n)}'s score">clear</button>` : ""}</small></li>`; }).join("")}</ul>
+          <small class="sword ${d == null ? "" : C.tone(d)}">${v == null ? `<button type="button" class="link pku" aria-label="Pick up for ${esc(p.n)}: double par">Pick up</button>` : esc(C.scoreName(d, v))}${v != null ? ` <button type="button" class="link clr" aria-label="Clear ${esc(p.n)}'s score">clear</button>` : ""}</small></li>`; }).join("")}</ul>
       ${mine && mine.g === g.g ? FW.review.html(ev, mine, r, h) : ""}
       <div class="navrow"><button type="button" class="btn" id="prev" ${idx <= 0 ? "disabled" : ""}>‹ Hole ${order[idx - 1] ? C.holeNo(ev.course, order[idx - 1]) : ""}</button><button type="button" class="btn ${allIn ? "primary" : ""}" id="next" ${idx >= order.length - 1 ? "disabled" : ""}>Hole ${order[idx + 1] ? C.holeNo(ev.course, order[idx + 1]) : ""} ›</button></div>
       <h2 class="sec">Group ${g.g} card</h2>${groupCard(ev, g.players, r, order, h)}
@@ -572,6 +572,8 @@
       $(".val", li).onclick = () => { if (cur == null) set(par); };
       $(".minus", li).onclick = () => set(cur == null ? par - 1 : Math.max(1, cur - 1));
       $(".plus", li).onclick = () => set(cur == null ? par + 1 : Math.min(20, cur + 1));
+      // Pick up: a beginner who's had enough on a hole takes double par, the usual limit, instead of counting every swing
+      const pku = $(".pku", li); if (pku) pku.onclick = () => { set(par * 2); toast("Picked up: " + par * 2 + ", double par", "", { label: "Undo", fn: () => { if (S.ev && S.ev.p[pid] && C.strokes(S.ev.p[pid], r, h) === par * 2) write({ ["p." + pid + ".s." + C.key(r, h)]: C.DELETE }); } }); };
       // a clear is one tap from the stepper on a small screen, so it can be taken back
       const clr = $(".clr", li); if (clr) clr.onclick = () => { const was = cur, nm = (ev.p[pid] || {}).n || ""; set(null); toast("Cleared " + nm.split(" ")[0] + "'s " + was, "", { label: "Undo", fn: () => { if (S.ev && S.ev.p[pid] && C.strokes(S.ev.p[pid], r, h) == null) write({ ["p." + pid + ".s." + C.key(r, h)]: was }); } }); };
     });
