@@ -99,7 +99,9 @@ svg.chart{display:block;width:100%;height:auto}
 .repo .rb i{display:block;height:100%;border-radius:3px;background:var(--accent)}
 .more{background:none;border:0;color:var(--accent);font-weight:600;font-size:12.5px;padding:4px 0 0}
 .clogo{width:22px;height:22px;border-radius:6px;background:#D97757;display:grid;place-items:center;flex:none}
+.flogo{width:22px;height:22px;border-radius:6px;background:#F57C00;display:grid;place-items:center;flex:none}
 .cmsg{color:var(--text-3);font-size:12.5px;padding:4px 0 2px}
+.cbtn.fbtn{background:#F57C00}
 .cbtn{margin-top:8px;border:0;border-radius:10px;padding:9px 14px;background:#D97757;color:#fff;font-weight:700;font-size:14px}
 .clink{background:none;border:0;color:var(--text-3);font-size:11.5px;text-decoration:underline;padding:0}
 .slot{display:flex;align-items:center;gap:10px;border:1px dashed var(--line-2);background:transparent;width:100%;text-align:left;color:var(--text-2)}
@@ -202,6 +204,14 @@ svg.chart{display:block;width:100%;height:auto}
       <div id="cBody"></div>
     </section>
 
+    <section class="card meter hidden" id="firebase">
+      <div class="mhead">
+        <span class="flogo" aria-hidden="true"><svg width="14" height="14" viewBox="0 0 24 24"><path fill="#fff" d="M4 19.5L6.6 3.3c.1-.5.7-.6 1-.2l2.8 5.2L4 19.5zm16 .2l-2.4-14.9c-.1-.5-.7-.6-1-.3L4 19.7l7.2 4c.5.3 1.1.3 1.6 0L20 19.7zM14 8.8l-2-3.8c-.2-.4-.8-.4-1 0L5.4 15.4 14 8.8z"/></svg></span>
+        <span class="nm">Firebase</span><span class="badge">free plan, per day</span>
+        <span class="when"><span class="dot" id="fDot"></span><span id="fWhen"></span></span>
+      </div>
+      <div id="fBody"></div>
+    </section>
     <section class="card box">
       <div class="boxhead">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#6EA8FF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l5-6 4 4 8-9"/><path d="M15 6h5v5"/></svg>
@@ -306,6 +316,7 @@ function explain(status, body) {
 async function load(manual) {
   if (S.loading) return;
   if (C.state !== 'web') app('refreshClaude');
+  if (F.state !== 'web') fapp('refreshFirebase');
   if (S.demo) { S.data = demoData(); S.fetchedAt = +now(); S.error = ''; scheduleNext(); render(); return; }
   if (!S.token) { render(); return; }
   S.loading = true; $('refreshBtn').classList.add('spin');
@@ -401,6 +412,7 @@ function render() {
   drawChart(d, p, plan);
   drawRepos(d);
   drawClaude();
+  drawFirebase();
   tickStatus();
 }
 function bolt() { return '<svg width="16" height="18" viewBox="0 0 16 18" aria-hidden="true"><path d="M9 0L1 10h6l-1 8 8-10H8z" fill="currentColor"/></svg>'; }
@@ -542,6 +554,51 @@ function drawClaude() {
   else if (C.state === 'error') { body.innerHTML = '<div class="cmsg">Couldn’t read your Claude usage just now.</div><button class="cbtn" id="cTry" type="button">Try again</button>'; $('cTry').onclick = () => { C.state = 'loading'; drawClaude(); app('refreshClaude'); }; }
   else body.innerHTML = '<div class="cmsg">Reading your Claude usage…</div>';
 }
+/* ---------- Firebase ----------
+   Also only inside the phone app: it connects your Google account read-only and hands this page each
+   Firebase project's Firestore reads, writes and deletes since midnight Pacific, when the free plan's caps reset. */
+const FCAP = { reads: 50000, writes: 20000, deletes: 20000 };
+const F = { state: window.SteeleApp ? 'loading' : 'web', d: null, at: 0 };
+window.steeleFirebase = function (x) {
+  F.state = (x && x.state) || 'error';
+  if (F.state === 'ok') { F.d = x; F.at = +now(); }
+  drawFirebase();
+};
+const kfmt = n => n >= 1e4 ? (n / 1e3).toFixed(n >= 1e5 ? 0 : 1).replace(/\.0$/, '') + 'k' : fmt(n);
+function drawFirebase() {
+  const card = $('firebase'), body = $('fBody'); if (!card) return;
+  card.classList.toggle('hidden', F.state === 'web');
+  if (F.state === 'web') return;
+  const ok = F.state === 'ok' && F.d;
+  $('fDot').style.display = ok || F.state === 'error' ? '' : 'none';
+  $('fDot').className = 'dot' + (F.state === 'error' ? ' err' : '');
+  $('fWhen').textContent = ok ? (+now() - F.at < 6e4 ? 'just now' : span(+now() - F.at, true) + ' ago') : '';
+  if (ok) {
+    const r = Date.parse(F.d.reset), left = Math.max(0, r - +now()), elapsed = 1 - left / 864e5;
+    const ps = (F.d.projects || []).map(p => {
+      const f = { reads: (+p.reads || 0) / FCAP.reads, writes: (+p.writes || 0) / FCAP.writes, deletes: (+p.deletes || 0) / FCAP.deletes };
+      return Object.assign({}, p, { worst: Math.max(f.reads, f.writes, f.deletes) });
+    }).sort((a, b) => b.worst - a.worst);
+    let worst = 0;
+    const rows = ps.map(p => {
+      const lv = level(p.worst); worst = Math.max(worst, p.worst);
+      return '<div class="mrow"><div class="pct ' + lv + '">' + Math.round(p.worst * 100) + '%</div>' +
+        '<div class="name" title="' + esc(p.id) + '">' + esc(p.name || p.id) + '<small>' + kfmt(+p.reads || 0) + ' reads · ' + kfmt(+p.writes || 0) + ' writes · ' + kfmt(+p.deletes || 0) + ' del</small></div>' +
+        '<div class="bar">' + segs(p.worst, elapsed, lv) + '</div>' +
+        '<div class="rt"><b>' + span(left, true).replace(/h(?=\d)/, 'h ') + '</b><small>' + clock(r) + '</small></div></div>';
+    }).join('');
+    card.className = 'card meter ' + (level(worst) === 'ok' ? '' : level(worst));
+    body.innerHTML = (rows || '<div class="cmsg">No Firebase projects on this Google account.</div>') +
+      '<div class="mfoot"><span>Free caps a day: <b>50k</b> reads, <b>20k</b> writes, <b>20k</b> deletes</span><span>Resets midnight Pacific</span></div>';
+    return;
+  }
+  card.className = 'card meter';
+  if (F.state === 'signedout') { body.innerHTML = '<div class="cmsg">Connect your Google account once (read-only) to see today\u2019s Firestore reads, writes and deletes for each project.</div><button class="cbtn fbtn" id="fIn" type="button">Connect Google</button>'; $('fIn').onclick = () => { F.state = 'loading'; drawFirebase(); fapp('connectFirebase'); }; }
+  else if (F.state === 'setup') body.innerHTML = '<div class="cmsg">Google doesn\u2019t know this app yet. It needs a one-time setup in your Firebase console first.</div>';
+  else if (F.state === 'error') { body.innerHTML = '<div class="cmsg">Couldn\u2019t read your Firebase usage just now.</div><button class="cbtn fbtn" id="fTry" type="button">Try again</button>'; $('fTry').onclick = () => { F.state = 'loading'; drawFirebase(); fapp('refreshFirebase'); }; }
+  else body.innerHTML = '<div class="cmsg">Reading your Firebase usage\u2026</div>';
+}
+const fapp = (fn) => { try { window.SteeleApp && window.SteeleApp[fn] && window.SteeleApp[fn](); } catch (e) {} };
 /* ---------- wire up ---------- */
 $('refreshBtn').onclick = () => load(true);
 $('settingsBtn').onclick = openSettings;
