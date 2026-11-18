@@ -991,10 +991,18 @@
 
   /* ---------- season race: points from every finished tournament this phone has followed this year ---------- */
   const SEASON_PTS = [500, 300, 190, 135, 110, 100, 90, 85, 80, 75, 70, 65, 60, 55, 50];
+  // Quick rounds (q) count toward each golfer's rounds, scoring average and best 18, never toward points or events.
   function seasonRace(hist, year) {
-    const rows = (Array.isArray(hist) ? hist : []).filter(h => h && typeof h.name === "string" && typeof h.code === "string" && Number.isFinite(h.toPar) && new Date(h.date || 0).getUTCFullYear() === year);
+    const all = (Array.isArray(hist) ? hist : []).filter(h => h && typeof h.name === "string" && typeof h.code === "string" && Number.isFinite(h.toPar) && new Date(h.date || 0).getUTCFullYear() === year);
+    const rows = all.filter(h => !h.q);
     const events = {}; rows.forEach(h => { (events[h.code] = events[h.code] || []).push(h); });
     const table = {};
+    const row = (k, name) => (table[k] = table[k] || { name, pts: 0, events: 0, wins: 0, rounds: 0, holes: 0, toPar: 0, best: null });
+    all.forEach(h => {
+      const n = h.n === 9 ? 9 : 18, t = row(cleanName(h.name).toLowerCase(), cleanName(h.name));
+      t.rounds++; t.holes += n; t.toPar += h.toPar;
+      if (n === 18 && Number.isFinite(h.strokes) && (t.best == null || h.strokes < t.best.strokes)) t.best = { strokes: h.strokes, toPar: h.toPar, course: h.course };
+    });
     Object.keys(events).forEach(code => {
       const by = {}; events[code].forEach(h => { const k = cleanName(h.name).toLowerCase(); const o = by[k] = by[k] || { name: cleanName(h.name), toPar: 0, rounds: 0, tw: false, bonus: 0 }; o.toPar += h.toPar; o.rounds++; if (h.tw) o.tw = true; o.bonus += (h.sg ? 50 : 0) + (h.bg ? 25 : 0); });
       const list = Object.keys(by).map(k => Object.assign({ k }, by[k])), most = Math.max.apply(null, list.map(x => x.rounds));
@@ -1002,11 +1010,13 @@
       list.forEach(x => {
         const place = x.rounds === most ? full.filter(y => y.toPar < x.toPar).length + 1 : null;
         const pts = (place ? SEASON_PTS[place - 1] || 40 : 25) + (x.tw ? 100 : 0) + x.bonus;
-        const t = table[x.k] = table[x.k] || { name: x.name, pts: 0, events: 0, wins: 0 };
+        const t = row(x.k, x.name);
         t.pts += pts; t.events++; if (place === 1) t.wins++;
       });
     });
-    const out = Object.keys(table).map(k => table[k]).sort((a, b) => b.pts - a.pts || b.wins - a.wins || a.name.localeCompare(b.name));
+    const out = Object.keys(table).map(k => table[k]).sort((a, b) => b.pts - a.pts || b.wins - a.wins || b.rounds - a.rounds || a.name.localeCompare(b.name));
+    // scoring average to par, per 18 holes (a nine counts as half a round)
+    out.forEach(x => { x.avg = x.holes ? Math.round((x.toPar * 18 / x.holes) * 10) / 10 : null; });
     out.forEach((x, i) => { x.place = out.findIndex(y => y.pts === x.pts) + 1; });
     return { year, events: Object.keys(events).length, list: out };
   }
@@ -1207,7 +1217,8 @@
   }
   // What one finished round looks like in this phone's history (for "previous rounds" on a player card).
   // tw: on the winning team once it's over; sg: the round's biggest side-game winner; bg: got a bingo. The season race counts them.
-  function historyRows(ev, code) {
+  function historyRows(ev, code, o) {
+    const quick = !!(o && o.quick);
     const tb = ev.done ? teamBoard(ev).filter(t => t.holes) : [], winTeam = tb.length >= 2 && tb[0].toPar < tb[1].toPar ? tb[0] : null, topSg = {};
     for (let r = 1; r <= ev.rounds; r++) if (ev.bets) { const t = betTally(ev, r), top = Object.keys(t.bal).sort((a, b) => t.bal[b] - t.bal[a])[0]; if (top && t.bal[top] > 0) topSg[r] = top; }
     return players(ev).map(pl => {
@@ -1215,6 +1226,7 @@
       for (let r = 1; r <= ev.rounds; r++) {
         const x = round(ev, pl, r); if (!x.done) continue;
         const row = { code, event: ev.name, course: ev.course.name, date: ev.created, r, strokes: x.strokes, toPar: x.toPar, name: pl.n, n: holeCount(ev) };
+        if (quick) row.q = true;
         if (winTeam && winTeam.members.some(m => m.id === pl.id)) row.tw = true;
         if (topSg[r] === pl.id) row.sg = true;
         if (bingoState(ev, pl.id, r).line) row.bg = true;

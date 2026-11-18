@@ -421,6 +421,13 @@ const pl = (ev, id) => Object.assign({ id }, ev.p[id]);
     const sr = C.seasonRace(two, y);
     eq(sr.events, 2); eq(sr.list[0].pts, 800, 'a win (500) and a second (300)'); eq(sr.list[0].wins, 1);
     eq(C.seasonRace(two, y - 1).list.length, 0, 'only this year counts');
+    eq(sr.list[0].rounds, 2); eq(sr.list[0].best.strokes, Math.min.apply(null, two.filter(h => h.name === sr.list[0].name).map(h => h.strokes)));
+    // a quick round adds to rounds and the average but not to points or events; a nine counts as half a round
+    const q = two.concat([{ code: 'cccccccccccccccccccc', event: 'R', course: 'X', date: NOW, r: 1, strokes: 40, toPar: 4, name: 'Alpha Test', n: 9, q: true }]);
+    const sq = C.seasonRace(q, y), al = sq.list.find(x => x.name === 'Alpha Test'), al0 = sr.list.find(x => x.name === 'Alpha Test');
+    eq(sq.events, 2); eq(al.pts, al0.pts); eq(al.events, al0.events); eq(al.rounds, al0.rounds + 1);
+    eq(al.avg, Math.round(((al0.toPar + 4) * 18 / (al0.holes + 9)) * 10) / 10);
+    eq(C.historyRows(ev, 'zzzzzzzzzzzzzzzzzzzz', { quick: true })[0].q, true); eq(hist[0].q, undefined);
   });
 
   await test('core My bag: typical yards until you set yours, the shortest club that gets there, and Jack names it on a par 3', () => {
