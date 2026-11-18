@@ -46,6 +46,22 @@ async function addMotion(page, text, { nay = [], abstain = [], unanimous = false
   const srv = await startServer('secretary');
   const browser = await launch();
   try {
+    await test('the header has a way back to the Dashboard, and the app installs on its own', async () => {
+      const { ctx, page, errors } = await newPage(browser);
+      await page.goto(srv.url);
+      await page.waitForFunction(() => typeof view !== 'undefined' && view === 'home');
+      const dash = await page.evaluate(() => { const a = document.querySelector('.topbar #btnDash'); const r = a && a.getBoundingClientRect();
+        return a && { href: a.href, target: a.target, text: a.textContent.trim(), shown: r.width > 0 && r.height > 0 }; });
+      eq(dash && dash.href, 'https://lybs-dashboard.web.app/', 'goes to the Dashboard');
+      eq(dash.target, '_top', 'leaves the Dashboard frame when shown inside one');
+      eq(dash.text, '‹ Dashboard'); eq(dash.shown, true, 'visible at phone size');
+      const man = await (await fetch(srv.url + 'manifest.json')).json();
+      eq(man.scope, './', 'its own scope, so it installs as its own app'); eq(man.start_url, './'); eq(man.display, 'standalone');
+      eq(man.short_name, 'Secretary');
+      eq(errors.join('\n'), '', 'no console errors');
+      await ctx.close();
+    });
+
     await test('Unanimous button and vote chips count only members present', async () => {
       const { ctx, page, errors } = await newPage(browser);
       await page.goto(srv.url);
