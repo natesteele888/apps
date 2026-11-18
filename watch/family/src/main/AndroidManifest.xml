@@ -1,5 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android" xmlns:tools="http://schemas.android.com/tools">
+    <!-- Google's watch-face library says Android 8; only Next up uses it, and that's switched off before Android 8 (@bool/face_on) -->
+    <uses-sdk tools:overrideLibrary="androidx.wear.watchface.complications.datasource, androidx.wear.watchface.complications.datasource.ktx, androidx.wear.watchface.complications.data, androidx.wear.watchface.complications, androidx.wear.watchface.data, androidx.wear.watchface.utility, androidx.wear.watchface.style, androidx.wear.watchface.client, androidx.wear.watchface" />
     <uses-feature android:name="android.hardware.type.watch" />
     <uses-permission android:name="android.permission.VIBRATE" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
@@ -70,6 +72,23 @@
             android:label="@string/stats_name" android:launchMode="singleTask" android:taskAffinity="com.steele.family.stats">
             <intent-filter><action android:name="android.intent.action.MAIN" /><category android:name="android.intent.category.LAUNCHER" /></intent-filter>
         </activity>
+        <!-- Next up on the watch face (long-press the face › Customize › tap a slot › Steele Family › Next up): the next game or
+             practice from Schedule. Android 8+ only: @bool/face_on switches it off before that, which tools:targetApi tells lint. -->
+        <service
+            android:name=".NextUpComplication"
+            android:enabled="@bool/face_on"
+            tools:targetApi="26"
+            android:exported="true"
+            android:icon="@drawable/ic_face_next"
+            android:label="@string/face_next_name"
+            android:permission="com.google.android.wearable.permission.BIND_COMPLICATION_PROVIDER">
+            <intent-filter>
+                <action android:name="android.support.wearable.complications.ACTION_COMPLICATION_UPDATE_REQUEST" />
+            </intent-filter>
+            <meta-data android:name="android.support.wearable.complications.SUPPORTED_TYPES" android:value="SHORT_TEXT,LONG_TEXT" />
+            <!-- every 30 minutes; a new schedule from the phone asks straight away (Link) -->
+            <meta-data android:name="android.support.wearable.complications.UPDATE_PERIOD_SECONDS" android:value="1800" />
+        </service>
         <activity android:name=".FairwayActivity" android:exported="true" android:icon="@mipmap/ic_fairway" android:roundIcon="@mipmap/ic_fairway"
             android:label="@string/fairway_name" android:launchMode="singleTask" android:taskAffinity="com.steele.family.fairway">
             <intent-filter><action android:name="android.intent.action.MAIN" /><category android:name="android.intent.category.LAUNCHER" /></intent-filter>

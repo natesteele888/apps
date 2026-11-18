@@ -56,4 +56,5 @@ dependencies {
     implementation("androidx.core:core-ktx:1.15.0")
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.8.7")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.9.0")
+    implementation("androidx.wear.watchface:watchface-complications-data-source-ktx:1.2.1") // Next up on the watch face
 }
