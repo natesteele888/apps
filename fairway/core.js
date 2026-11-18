@@ -47,9 +47,9 @@
   const MONO_HCP = [9, 5, 3, 15, 17, 1, 7, 13, 11, 10, 6, 4, 16, 18, 2, 8, 14, 12];
   function monoosnockCourse() {
     const tees = [
-      { id: "whiteblue", name: "White/Blue", color: TEE_COLORS.blue },
-      { id: "green", name: "Green", color: TEE_COLORS.green },
-      { id: "ladies", name: "Ladies", color: TEE_COLORS.red }
+      { id: "whiteblue", name: "White/Blue", color: TEE_COLORS.blue, cr: 69.6, sl: 126 },
+      { id: "green", name: "Green", color: TEE_COLORS.green, cr: 66.4, sl: 122 },
+      { id: "ladies", name: "Ladies", color: TEE_COLORS.red, cr: 72.5, sl: 128 }
     ];
     const holes = MONO_HCP.map((hcp, i) => {
       const k = i % 9, h = { par: MONO_PAR[k], hcp, y: { whiteblue: MONO_WB[k], green: MONO_GR[k], ladies: MONO_LD[k] } };
@@ -86,7 +86,12 @@
       while (seen[id]) id += "x";
       seen[id] = 1;
       const color = /^#[0-9a-f]{6}$/i.test(t && t.color) ? t.color.toLowerCase() : TEE_COLORS.white;
-      return { id, name: clip(t && t.name, 16) || "Tee " + (i + 1), color };
+      const out = { id, name: clip(t && t.name, 16) || "Tee " + (i + 1), color };
+      // the tee's course rating and slope from the scorecard, when the course has them (they turn a handicap index into strokes)
+      const cr = Number(t && t.cr), sl = Number(t && t.sl);
+      if (Number.isFinite(cr) && cr >= 25 && cr <= 85) out.cr = Math.round(cr * 10) / 10;
+      if (Number.isFinite(sl) && sl >= 55 && sl <= 155) out.sl = Math.round(sl);
+      return out;
     });
     if (!tees.length) tees = [{ id: "white", name: "White", color: TEE_COLORS.white }];
     const n = Array.isArray(c.holes) && c.holes.length >= 18 ? 18 : 9;
@@ -142,6 +147,25 @@
     const odd = course.tees.filter(t => coursePar(course, t.id) !== base).map(t => t.name + " " + coursePar(course, t.id));
     return "par " + base + (odd.length ? " (" + odd.join(", ") + ")" : "");
   }
+  /* ---------- handicaps: course handicap and the strokes it gives on each hole ---------- */
+  // Course handicap, the way the World Handicap System works it out: index x slope / 113 + (course rating - par),
+  // rounded. Without a rating and slope from the card it's the index, rounded. A 9-hole course takes half the index
+  // (its card's rating is for nine). Plus handicaps come out negative. null when the golfer gave no index.
+  function courseHc(course, pl) {
+    const hc = pl && Number.isFinite(pl.hc) ? pl.hc : null; if (hc == null) return null;
+    const t = course.tees.find(x => x.id === pl.tee) || course.tees[0], nine = course.holes.length === 9, ix = nine ? hc / 2 : hc;
+    const v = t && t.cr && t.sl ? ix * t.sl / 113 + (t.cr - coursePar(course, t.id)) : ix;
+    return Math.round(v) || 0;
+  }
+  // Strokes a course handicap gets on each hole: one on each hole in handicap order (1 is the hardest), going round
+  // again past the number of holes. A plus handicap gives strokes back, starting on the easiest hole.
+  function strokesBy(course, ch) {
+    const n = course.holes.length, out = course.holes.map(() => 0); if (!ch) return out;
+    const rank = course.holes.map((h, i) => i).sort((a, b) => course.holes[a].hcp - course.holes[b].hcp || a - b);
+    const abs = Math.abs(ch), sign = ch < 0 ? -1 : 1, base = Math.floor(abs / n), extra = abs % n;
+    rank.forEach((hi, k) => { const pos = sign > 0 ? k : n - 1 - k; out[hi] = sign * (base + (pos < extra ? 1 : 0)); });
+    return out;
+  }
   const players = ev => Object.keys(ev.p || {}).filter(isPid).map(id => Object.assign({ id }, ev.p[id]));
   function teeOf(ev, pl) { return ev.course.tees.find(t => t.id === pl.tee) || ev.course.tees[0]; }
   function yards(course, hole, teeId) { const h = course.holes[hole - 1]; return h && h.y ? h.y[teeId] || 0 : 0; }
@@ -153,31 +177,35 @@
   // One player's round: scores by hole, strokes, to par, how far through and the hole they're on.
   function round(ev, pl, r) {
     const n = holeCount(ev), order = playOrder(n, pl.st), sc = [], pars = parsFor(ev.course, pl.tee);
-    let tot = 0, par = 0, thru = 0;
-    for (let h = 1; h <= n; h++) { const v = strokes(pl, r, h); sc.push(v); if (v != null) { tot += v; par += pars[h - 1]; thru++; } }
+    const ch = courseHc(ev.course, pl), gets = strokesBy(ev.course, ch || 0);
+    let tot = 0, par = 0, thru = 0, given = 0;
+    for (let h = 1; h <= n; h++) { const v = strokes(pl, r, h); sc.push(v); if (v != null) { tot += v; par += pars[h - 1]; thru++; given += gets[h - 1]; } }
     const next = order.find(h => sc[h - 1] == null) || null;
     // the last hole they finished, in their own order (where the board's marker sits)
     let last = null; for (const h of order) if (sc[h - 1] != null) last = h;
     // to par after each hole, in play order (the classic board shows this number for every hole)
     const run = {}; let acc = 0;
     order.forEach(h => { const v = sc[h - 1]; if (v != null) { acc += v - pars[h - 1]; run[h] = acc; } });
-    return { r, pars, scores: sc, strokes: tot, par, toPar: tot - par, thru, done: thru === n, started: thru > 0, next, last, order, run, out: half(ev, sc, 0), inn: n === 18 ? half(ev, sc, 9) : null };
+    // net: strokes take off the strokes this golfer gets on the holes they've played (gross for a golfer with no index)
+    return { r, pars, ch, gets, scores: sc, strokes: tot, par, toPar: tot - par, net: tot - given - par, thru, done: thru === n, started: thru > 0, next, last, order, run, out: half(ev, sc, 0), inn: n === 18 ? half(ev, sc, 9) : null };
   }
   function half(ev, sc, from) { let t = 0, any = false; for (let i = from; i < from + 9 && i < sc.length; i++) if (sc[i] != null) { t += sc[i]; any = true; } return any ? t : null; }
 
   // Everyone, in place order. The overall to par adds up every hole played in every round.
-  function standings(ev) {
+  // With { net: true } the board ranks by net to par (each golfer's handicap strokes taken off), else by gross.
+  function standings(ev, opt) {
+    const net = !!(opt && opt.net), by = row => (net ? row.net : row.toPar);
     const rows = players(ev).map(pl => {
-      const rs = []; let toPar = 0, total = 0, holes = 0;
-      for (let r = 1; r <= ev.rounds; r++) { const x = round(ev, pl, r); rs.push(x); toPar += x.toPar; total += x.strokes; holes += x.thru; }
+      const rs = []; let toPar = 0, total = 0, holes = 0, nt = 0;
+      for (let r = 1; r <= ev.rounds; r++) { const x = round(ev, pl, r); rs.push(x); toPar += x.toPar; total += x.strokes; holes += x.thru; nt += x.net; }
       const today = rs[Math.min(ev.cur, ev.rounds) - 1];
-      return { id: pl.id, pl, name: pl.n, rounds: rs, toPar, total, holes, today };
+      return { id: pl.id, pl, name: pl.n, rounds: rs, toPar, net: nt, ch: rs[0] ? rs[0].ch : null, total, holes, today };
     });
-    rows.sort((a, b) => (a.holes ? 0 : 1) - (b.holes ? 0 : 1) || a.toPar - b.toPar || b.holes - a.holes || a.name.localeCompare(b.name));
+    rows.sort((a, b) => (a.holes ? 0 : 1) - (b.holes ? 0 : 1) || by(a) - by(b) || b.holes - a.holes || a.name.localeCompare(b.name));
     rows.forEach((row, i) => {
       if (!row.holes) { row.pos = "–"; row.rank = null; return; }
-      const first = rows.findIndex(x => x.holes && x.toPar === row.toPar);
-      const tied = rows.filter(x => x.holes && x.toPar === row.toPar).length > 1;
+      const first = rows.findIndex(x => x.holes && by(x) === by(row));
+      const tied = rows.filter(x => x.holes && by(x) === by(row)).length > 1;
       row.rank = first + 1; row.pos = (tied ? "T" : "") + (first + 1);
     });
     return rows;
@@ -1129,7 +1157,7 @@
   }
 
   return { VERSION, MAX_PLAYERS, MAX_ROUNDS, MAX_TEES, NAME_MAX, EVENT_MAX, TEE_COLORS, DEMO_NAMES, DELETE,
-    sampleCourse, monoosnockCourse, readyCourses, parOf, parsFor, parText, newCode, isCode, newPid, isPid, cleanCourse, cleanName, newEvent, newPlayer, cleanEvent,
+    courseHc, strokesBy, sampleCourse, monoosnockCourse, readyCourses, parOf, parsFor, parText, newCode, isCode, newPid, isPid, cleanCourse, cleanName, newEvent, newPlayer, cleanEvent,
     key, holeCount, coursePar, players, teeOf, yards, teeYards, playOrder, strokes, round, standings, groups,
     fmtPar, tone, scoreName, mark, stats, demoEvent, applyPatch, historyRows, sameName, boardNames,
     cleanCtpHoles, cleanCtpEntry, ctpBoard, metres, averageFix, ctpMeasure, fmtFeet,

@@ -17,7 +17,7 @@
   const reduced = () => matchMedia("(prefers-reduced-motion: reduce)").matches;
 
   const S = {
-    view: "home", code: null, ev: null, place: null, live: "", unsub: null, tab: "board", boardMode: "leaders", boardRound: null,
+    view: "home", net: !!(FW.LS && FW.LS.get("fw:net", false)), code: null, ev: null, place: null, live: "", unsub: null, tab: "board", boardMode: "leaders", boardRound: null,
     fieldMode: "place", group: null, hole: null, scoreRound: null, draft: null, draftFrom: "home", card: null, needRender: false
   };
   const ICON = {
@@ -324,7 +324,8 @@
       ${S.draftNote ? `<p class="msg">${esc(S.draftNote)}</p>` : ""}
       <label class="fld"><span>Course name</span><input id="cn" maxlength="60" required value="${esc(c.name)}" placeholder="Pine Hollow"></label>
       <fieldset class="fld"><legend>Holes</legend><div class="seg">${[9, 18].map(k => `<label><input type="radio" name="nh" value="${k}" ${k === n ? "checked" : ""}><span>${k}</span></label>`).join("")}</div></fieldset>
-      <fieldset class="fld"><legend>Tee boxes</legend><div class="teeedit">${c.tees.map((t, i) => `<div class="teerow" data-i="${i}">${teeDot(t)}<input aria-label="Tee name" class="tname" maxlength="16" value="${esc(t.name)}"><select aria-label="Tee color" class="tcol">${colorOpts(t.color)}</select>${c.tees.length > 1 ? `<button type="button" class="x" data-rmtee="${i}" aria-label="Remove ${esc(t.name)} tees">×</button>` : ""}</div>`).join("")}</div>
+      <fieldset class="fld"><legend>Tee boxes</legend><div class="teeedit">${c.tees.map((t, i) => `<div class="teerow" data-i="${i}">${teeDot(t)}<input aria-label="Tee name" class="tname" maxlength="16" value="${esc(t.name)}"><select aria-label="Tee color" class="tcol">${colorOpts(t.color)}</select>${c.tees.length > 1 ? `<button type="button" class="x" data-rmtee="${i}" aria-label="Remove ${esc(t.name)} tees">×</button>` : ""}<span class="crsl"><input aria-label="${esc(t.name)} course rating" class="tcr" inputmode="decimal" maxlength="4" placeholder="Rating" value="${t.cr || ""}"><input aria-label="${esc(t.name)} slope" class="tsl" inputmode="numeric" maxlength="3" placeholder="Slope" value="${t.sl || ""}"></span></div>`).join("")}</div>
+        <p class="msg small">Rating and slope are on the scorecard for each tee (like 69.6/126). With them, handicaps turn into the right strokes for a net board. Leave them empty and a golfer's index is used as it is.</p>
         ${c.tees.length < C.MAX_TEES ? `<button type="button" class="btn ghost small" id="addtee">Add a tee box</button>` : ""}</fieldset>
       <h2 class="sec">Scorecard <small>par ${c.holes.reduce((a, h) => a + h.par, 0)}${tot.some(Boolean) ? " · " + c.tees.map((t, i) => esc(t.name) + " " + tot[i].toLocaleString()).join(" · ") : ""}</small></h2>
       <p class="msg">Par and yards for each tee, from the course's own scorecard. Handicap (Hcp) is the hole's difficulty rank, 1 the hardest.</p>
@@ -337,7 +338,7 @@
     wireTop(v);
     const read = () => {
       c.name = $("#cn", v).value;
-      $$(".teerow", v).forEach(r => { const t = c.tees[+r.dataset.i]; t.name = $(".tname", r).value; t.color = $(".tcol", r).value; });
+      $$(".teerow", v).forEach(r => { const t = c.tees[+r.dataset.i]; t.name = $(".tname", r).value; t.color = $(".tcol", r).value; const cr = parseFloat($(".tcr", r).value), sl = parseInt($(".tsl", r).value, 10); t.cr = cr > 0 ? cr : undefined; t.sl = sl > 0 ? sl : undefined; });
       $$("tr[data-h]", v).forEach(r => { const h = c.holes[+r.dataset.h]; h.par = +$(".par", r).value; h.hcp = +$(".hcp", r).value || h.hcp; h.y = h.y || {}; $$(".yd", r).forEach(inp => { const y = parseInt(inp.value, 10); if (y > 0) h.y[inp.dataset.t] = Math.min(800, y); else delete h.y[inp.dataset.t]; }); });
     };
     $$("input[name=nh]", v).forEach(r => r.onchange = () => { read(); const k = +r.value; while (c.holes.length < k) c.holes.push({ par: 4, hcp: c.holes.length + 1, y: {} }); c.holes.length = k; render(); });
@@ -382,7 +383,8 @@
 
   /* ---------- Board: the leaders, and the classic hole-by-hole board ---------- */
   function tabBoard(el, ev) {
-    const rows = C.standings(ev), r = S.boardRound || Math.min(ev.cur, ev.rounds), n = C.holeCount(ev);
+    const hasHc = C.players(ev).some(p => Number.isFinite(p.hc)), net = hasHc && S.net && S.boardMode === "leaders";
+    const rows = C.standings(ev, { net }), r = S.boardRound || Math.min(ev.cur, ev.rounds), n = C.holeCount(ev);
     const seg = `<div class="pills" role="group" aria-label="Board">${[["leaders", "Leaders"], ["holes", "Hole by hole"], ["field", "Field"], ["course", "Course"]].map(([k, l]) => `<button type="button" class="pill" data-bm="${k}" aria-pressed="${S.boardMode === k}">${l}</button>`).join("")}</div>`;
     if (S.boardMode === "field" || S.boardMode === "course") {
       el.innerHTML = seg + `<div id="bsub"></div>`; (S.boardMode === "field" ? tabField : tabCourse)($("#bsub", el), ev); wireBoard(el); return;
@@ -399,10 +401,11 @@
             return `<tr><th class="nm"><button type="button" data-player="${esc(row.id)}"><span class="pos">${esc(row.pos)}</span>${esc(bn[row.id])}</button></th>${pars.map((_, i) => { const h = i + 1, v = x.run[h]; return `<td class="${v == null ? "" : C.tone(v)}${x.last === h && !x.done ? " now" : ""}">${v == null ? "" : esc(v === 0 ? "E" : Math.abs(v))}</td>`; }).join("")}</tr>`; }).join("")}
         </tbody></table></div><p class="legend"><span class="tp under">Red</span> under par, <span class="tp over">green</span> over par, black even. Each number is the player's score to par after that hole${n === 18 ? "" : ""}.</p></div>`;
     } else {
-      const R = ev.rounds, bn = C.boardNames(rows);
-      html = `<div class="board"><div class="bhead">Leaders</div><table class="lb"><thead><tr><th>Pos</th><th class="pn">Player</th><th>To par</th><th>Thru</th>${R > 1 ? Array.from({ length: R }, (_, i) => `<th class="rd">R${i + 1}</th>`).join("") : ""}<th>Tot</th></tr></thead><tbody>
-        ${rows.map(row => `<tr data-player="${esc(row.id)}" tabindex="0" role="button" aria-label="${esc(row.name)}, ${esc(row.pos)}, ${esc(C.fmtPar(row.toPar))}"><td class="pos">${esc(row.pos)}</td><td class="pn">${teeDot(C.teeOf(ev, row.pl))}${esc(bn[row.id])}</td><td class="big">${row.holes ? parText(row.toPar) : ""}</td><td class="thru">${esc(row.today.done ? "F" : row.today.thru || "–")}</td>${R > 1 ? row.rounds.map(x => `<td class="rd">${x.done ? x.strokes : x.started ? `<span class="tp ${C.tone(x.toPar)} sm">${esc(C.fmtPar(x.toPar))}</span>` : ""}</td>`).join("") : ""}<td class="tot">${row.total || ""}</td></tr>`).join("")}
-      </tbody></table></div><p class="legend">Tap a name for their card. <span class="tp under">Red</span> is under par, <span class="tp over">green</span> over.</p>${ctpPanel(ev, r)}`;
+      const R = ev.rounds, bn = C.boardNames(rows), tp = row => (net ? row.net : row.toPar);
+      html = `${hasHc ? `<div class="pills small" role="group" aria-label="Gross or net">${[[false, "Gross"], [true, "Net"]].map(([k, l]) => `<button type="button" class="pill" data-net="${k ? 1 : 0}" aria-pressed="${!!net === k}">${l}</button>`).join("")}</div>` : ""}
+        <div class="board"><div class="bhead">Leaders${net ? " · net" : ""}</div><table class="lb"><thead><tr><th>Pos</th><th class="pn">Player</th><th>${net ? "Net" : "To par"}</th><th>Thru</th>${R > 1 ? Array.from({ length: R }, (_, i) => `<th class="rd">R${i + 1}</th>`).join("") : ""}<th>Tot</th></tr></thead><tbody>
+        ${rows.map(row => `<tr data-player="${esc(row.id)}" tabindex="0" role="button" aria-label="${esc(row.name)}, ${esc(row.pos)}, ${esc(C.fmtPar(tp(row)))}${net ? " net" : ""}"><td class="pos">${esc(row.pos)}</td><td class="pn">${teeDot(C.teeOf(ev, row.pl))}${esc(bn[row.id])}${net && row.ch != null ? ` <small class="chc">${esc(chText(row.ch))}</small>` : ""}</td><td class="big">${row.holes ? parText(tp(row)) : ""}</td><td class="thru">${esc(row.today.done ? "F" : row.today.thru || "–")}</td>${R > 1 ? row.rounds.map(x => `<td class="rd">${x.done ? x.strokes : x.started ? `<span class="tp ${C.tone(x.toPar)} sm">${esc(C.fmtPar(x.toPar))}</span>` : ""}</td>`).join("") : ""}<td class="tot">${row.total || ""}</td></tr>`).join("")}
+      </tbody></table></div><p class="legend">Tap a name for their card. <span class="tp under">Red</span> is under par, <span class="tp over">green</span> over.${net ? " Net takes off each golfer's handicap strokes (the small number is their course handicap from their tees). Golfers with no index play gross." : ""}</p>${ctpPanel(ev, r)}`;
     }
     el.innerHTML = seg + (S.boardMode === "holes" ? "" : FW.recap.html(ev, r)) + html;
     wireBoard(el); FW.recap.wire(el, ev, r);
@@ -410,6 +413,7 @@
   }
   function wireBoard(el) {
     $$("[data-bm]", el).forEach(b => b.onclick = () => { S.boardMode = b.dataset.bm; render(); });
+    $$("[data-net]", el).forEach(b => b.onclick = () => { S.net = b.dataset.net === "1"; FW.LS.set("fw:net", S.net); render(); });
     $$("[data-br]", el).forEach(b => b.onclick = () => { S.boardRound = +b.dataset.br; render(); });
     $$("[data-ctp]", el).forEach(b => b.onclick = () => ctpList(+b.dataset.ctp, +b.dataset.ctpr));
     const go2 = $("#gojoin", el); if (go2) go2.onclick = () => { S.tab = "more"; render(); };
@@ -455,7 +459,7 @@
       ${(ev.ctph || []).indexOf(h) >= 0 ? (() => { const x = C.ctpBoard(ev, r).find(y => y.h === h); return `<button type="button" class="ctpbar" id="ctpopen"><span><b>Closest to the pin</b><small>${x.best ? esc(x.best.name) + ", " + esc(C.fmtFeet(x.best.d)) : "Nobody measured yet"}</small></span><span class="chev">Measure</span></button>`; })() : ""}
       ${mine && mine.g === g.g ? FW.map.holeHtml(ev, h) + FW.jack.holeHtml(ev, h) : ""}
       <ul class="scorer">${g.players.map((p, i) => { const v = rs[i].scores[h - 1], d = v == null ? null : v - rs[i].pars[h - 1], t = C.teeOf(ev, p);
-        return `<li data-pid="${esc(p.id)}"><button type="button" class="sname" data-player="${esc(p.id)}">${teeDot(t)}<span><b>${esc(p.n)}</b><small>${rs[i].thru ? parText(rs[i].toPar) + " thru " + rs[i].thru : "No scores yet"}${mine && mine.id === p.id ? " · you" : ""}</small></span></button>
+        return `<li data-pid="${esc(p.id)}"><button type="button" class="sname" data-player="${esc(p.id)}">${teeDot(t)}<span><b>${esc(p.n)}</b><small>${rs[i].thru ? parText(rs[i].toPar) + " thru " + rs[i].thru : "No scores yet"}${rs[i].gets[h - 1] > 0 ? " · gets " + (rs[i].gets[h - 1] > 1 ? rs[i].gets[h - 1] + " strokes" : "a stroke") : rs[i].gets[h - 1] < 0 ? " · gives a stroke" : ""}${mine && mine.id === p.id ? " · you" : ""}</small></span></button>
           <div class="stepper"><button type="button" class="minus" aria-label="One less for ${esc(p.n)}">−</button><button type="button" class="val ${v == null ? "empty" : C.mark(d)}" aria-label="${v == null ? "Set par for " + esc(p.n) : esc(p.n) + ": " + v}">${v == null ? "Par?" : v}</button><button type="button" class="plus" aria-label="One more for ${esc(p.n)}">+</button></div>
           <small class="sword ${d == null ? "" : C.tone(d)}">${v == null ? "" : esc(C.scoreName(d, v))}${v != null ? ` <button type="button" class="link clr" aria-label="Clear ${esc(p.n)}'s score">clear</button>` : ""}</small></li>`; }).join("")}</ul>
       ${mine && mine.g === g.g ? FW.review.html(ev, mine, r, h) : ""}
@@ -773,6 +777,8 @@
     const L = $("#cardlayer"); L.classList.add("out"); setTimeout(() => { L.innerHTML = ""; L.classList.remove("out"); }, reduced() ? 0 : 220);
     if (!fromPop && history.state && history.state.card) history.back();
   }
+  // A course handicap as golfers write it: 12, or +2 for a plus handicap.
+  const chText = ch => (ch < 0 ? "+" + Math.abs(ch) : String(ch));
   function drawCard(fresh) {
     const L = $("#cardlayer"), ev = S.ev, cs = S.card; if (!cs || !ev) return;
     const pl = ev.p[cs.pid]; if (!pl) { closeCard(); return; }
@@ -799,6 +805,7 @@
           <h2>${esc(p.n)}</h2>
           <div class="cbig">${row.holes ? parText(row.toPar) : '<span class="tp">–</span>'}</div>
           <div class="cfacts"><div><b>${esc(row.pos)}</b><small>Position</small></div><div><b>${esc(statusText(row.today))}</b><small>${ev.done ? "Final" : "Today"}</small></div><div><b>${row.total || "–"}</b><small>Strokes</small></div></div>
+          ${row.ch != null ? `<p class="hint">Course handicap ${esc(chText(row.ch))} from the ${esc(t.name)} tees${row.holes ? " · net " + esc(C.fmtPar(row.net)) : ""}</p>` : ""}
           <p class="hint">Tap to flip</p></div>
         <div class="face back">
           <div class="cband"><b>${esc(p.n)}</b><span>${row.holes ? parText(row.toPar) : ""} · ${esc(row.pos)}</span></div>
