@@ -66,6 +66,10 @@
             android:label="@string/schedule_name" android:launchMode="singleTask" android:taskAffinity="com.steele.family.schedule">
             <intent-filter><action android:name="android.intent.action.MAIN" /><category android:name="android.intent.category.LAUNCHER" /></intent-filter>
         </activity>
+        <activity android:name=".StatsActivity" android:exported="true" android:icon="@mipmap/ic_stats" android:roundIcon="@mipmap/ic_stats"
+            android:label="@string/stats_name" android:launchMode="singleTask" android:taskAffinity="com.steele.family.stats">
+            <intent-filter><action android:name="android.intent.action.MAIN" /><category android:name="android.intent.category.LAUNCHER" /></intent-filter>
+        </activity>
         <activity android:name=".FairwayActivity" android:exported="true" android:icon="@mipmap/ic_fairway" android:roundIcon="@mipmap/ic_fairway"
             android:label="@string/fairway_name" android:launchMode="singleTask" android:taskAffinity="com.steele.family.fairway">
             <intent-filter><action android:name="android.intent.action.MAIN" /><category android:name="android.intent.category.LAUNCHER" /></intent-filter>
