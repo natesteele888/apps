@@ -49,6 +49,7 @@ Nothing goes through the internet or a server. Player names and photos stay on t
 - One screen per batter shows the jersey number big, the name, and the batter's photo behind them if you set one.
 - Swipe left or right, or turn the bezel, to move between batters. Swiping never starts or stops music. The order goes round: after the last batter comes the leadoff batter again.
 - Swipe up for the batting order. Tap a name to jump there. Press and hold a name to swap in a bench player: pick who comes in, and they take that batting spot while the other player goes to the bench. Swaps wait while a song plays.
+- **Lineup card:** at the top of the batting order. It shows who plays where: the nine positions with the player at each, then who sits. Turn the bezel, or tap **−** and **+**, to change the inning. It opens on the last inning you looked at while Walk-Up is open (inning 1 the first time). A position with two players shows red, one with nobody shows yellow, and a line at the top sums it up. The innings come from Walk-Up's **Team › Positions by inning** on the phone; with none set, the card shows each batter's one position and says where to set them.
 - To play, press and hold anywhere on the face. A green ring fills around the edge in about one second. Letting go early, or starting a swipe, does nothing.
 - When the ring closes, a short countdown shows (**STARTING IN 2**, set in the phone's **Watch › Song countdown**, 0 to 5 seconds) with a light buzz. A tap anywhere cancels it before any sound plays.
 - While a song plays, the whole screen pulses blue with **PLAYING**, a ring showing the song's progress, and a big red **STOP**. One tap stops it right away. You can't swipe to another batter while a song plays.
@@ -98,6 +99,7 @@ Nothing goes through the internet or a server. Player names and photos stay on t
 - **Watch** in the top bar opens a screen where you set a photo for each batter and open LYBS Ballclub inside Dugout.
 - **Pocket** turns the screen black and ignores touches, so the phone can't play or stop anything in your pocket. Music and the watch keep working. Hold the screen for 1.5 seconds to unlock it.
 - The Bullpen has an **Official counts** button. In Dugout it opens the MAC League website on its own screen, and remembers the last league page you were on, so next time it opens straight to your team. Dugout only shows the league's page; it doesn't read or copy it. In Chrome the button opens the site in a new tab.
+- **Team › Positions by inning** is the lineup card: one row per player (the batting order, then the bench) and one box per inning. Tap a box to pick P, C, 1B, 2B, 3B, SS, LF, CF, RF or Sit. **Innings in the game** sets 1 to 9 (6 to start), **Copy inning 1 to all** fills the rest of the game from the first inning, and a chip for each inning warns when a position has two players or nobody. It's saved with the team (and in backups) and shows on the watch's Lineup card.
 - Pitching settings has a **Copy for Ballclub** button. It copies today's totals so you can paste them into the game in Ballclub.
 - **Field mode** (Watch › Field tablet) turns a tablet into the field's walk-up player for every Lunenburg team: Walk-Up's Field mode page full screen, screen kept on, the app pinned. **Add Field mode to the home screen** puts an icon on the tablet that opens straight to it. A board member lets the tablet in once from LYBS Select (Data Admin › Field tablets). Leave pinning with Back and Overview held together.
 
@@ -146,18 +148,19 @@ Both apps must be signed with the same key, because the watch only talks to a ph
 
 ## The Steele Family watch app (for a kid's watch)
 
-`steele-family-watch.apk` (from the same release) is a second, separate watch app with six apps in the watch's list. Each one follows its web app on the phone:
+`steele-family-watch.apk` (from the same release) is a second, separate watch app with several apps in the watch's list. Each one follows its web app on the phone:
 
 - **Get Ready**: today's checklist. Tap an item to tick it; an item with a timer starts it first, buzzes at the end and ticks itself. Finishing the list throws a small party on the watch and the full one on the phone.
 - **Cube Clock**: tap, 3-2-1, solve, tap to stop. +2 or DNF right after. Every solve lands in Cube Clock's history on the phone, and the watch shows the PB and average of 5.
 - **Power Program**: the next day's workout, one exercise per screen, with timers for timed moves (both sides for "/side" ones). Finished exercises and the finished day are checked off in Power Program on the phone.
 - **Gameday Picks**: this week's NFL games. Tap the left half for the away team, the right half for home. Tap the same side again to take the pick back. Locked games show the score, and the standings are at the bottom.
 - **Read 20**: a reading timer that fills a ring to the goal and buzzes when it's reached. Finish saves the minutes to that reader's log on the phone.
-- **Schedule**: games and practices for the next two weeks, next one up top, with the live score during a game when the team has a GameChanger link. The team app on the phone (LYBS Ballclub) sends them; that side isn't built yet.
+- **Practice Clock**: the block or station that's on in the practice running on the coach's phone, with its countdown, a ring and what's next. It buzzes at every block and station change (a longer buzz at the end of practice), even with the watch screen off, and says when the phone is paused or waiting for the coach. The controls stay on the phone.
+- **Schedule**: games and practices for the next two weeks, next one up top, with the live score during a game when the team has a GameChanger link. LYBS Ballclub › Calendar › On a watch sends them, for the teams ticked there, each time the app opens.
 
 **Install:** the same steps as above, with `adb install steele-family-watch.apk`. It runs on Wear OS 2 through Wear OS 5, round or square, and needs no phone app: it talks to the web apps over the internet (through the phone's connection when the watch has no Wi-Fi).
 
-**Link it once:** open any of them on the watch. It shows an 8-letter code. On the phone open Get Ready › More › Watch (or Cube Clock › Statistics › Your watch, Read 20 › Settings › Watch, Power Program › Program › Watch, or Gameday Picks › watch under your name) and type the code. One link covers them all, because the web apps share it.
+**Link it once:** open any of the apps in the watch's list. It shows an 8-letter code. On the phone open Get Ready › More › Watch (or Cube Clock › Statistics › Your watch, Read 20 › Settings › Watch, Power Program › Program › Watch, Practice Clock › Settings › Watch, LYBS Ballclub › Calendar › On a watch, or Gameday Picks › watch under your name) and type the code. One link covers them all, because the web apps share it.
 
 **Where the data goes:** one private document in the nates-toolbox Firestore, named by a 26-character random key that only that phone and that watch know (see `../watchlink.js`). Nothing is in GitHub. Gameday Picks is the one exception: picks are saved in Gameday Picks itself, so the watch signs in on its own and the player's phone okays that watch (the `gp_watch` rules in `toolbox/firestore.rules`).
 
@@ -180,6 +183,7 @@ Both apps must be signed with the same key, because the watch only talks to a ph
 
 ## For developers
 
+- **Lineup card data:** once a grid is set, `walkup/bridge.js` adds `inn` to each lineup and bench row (one entry per inning: `"P"`, `"SS"`, `"Bench"` or `""`) and `innings` to the state; an optional `inning` (the inning being played) is read too, for a later phone that knows it. `shared/.../Lineup.kt` reads them (who plays where in inning k, duplicates, missing positions) with tests in `LineupTest.kt`; older phones send neither and older watches ignore both.
 - `shared/` holds the message format (`Protocol.kt`) and the pitch math (`PitchCore.kt`). The pitch math is a Kotlin copy of `walkup/pitch-core.js`, and its unit tests match `tests/walkup-pitch.test.cjs`.
 - `phone/` is the Dugout phone app. It's a WebView of the live Walk-Up site (`https://natesteele888.github.io/apps/walkup/`) with a JavaScript bridge (`walkup/bridge.js` on the page side, `Bridge.kt` here). The bridge adds Android text-to-speech, file picking, the microphone and saving to Downloads.
 - `wear/` is the watch install, built with Compose for Wear OS. It has four launcher activities, `WalkUpActivity`, `PitchCountActivity`, `ScoresActivity` and `GameChangerActivity` (GC Scores), so the watch shows four apps. `Tiles.kt` has the two tiles (`PitchTileService`, `ScoresTileService`), drawn with ProtoLayout; their services are switched on only from Android 8 (`res/values-v26/bools.xml`). `PitchSyncService` takes the phone's pitch log while the apps are closed. `Complication.kt` puts the pitch count on the watch face. Walk-Up and Pitch Count share `PhoneLink` and `PitchStore`, and one application id with the phone app, which the Wear OS link needs. Its minSdk is 25 (Android Wear 2.0), with java.time desugared, and CI runs lint's NewApi check so it stays that way. An old watch pairs with the phone through Google's Wear OS app, not Galaxy Wearable.

@@ -532,7 +532,7 @@ test('watch link: anyone with the link code can create, read and update it, sign
   await assertSucceeds(setDoc(doc(anon(), 'fw_links/' + WL_KEY), { gr: '{"v":2}', updated: wlNow() }));
   await assertSucceeds(getDoc(doc(anon(), 'fw_links/' + WL_KEY)));
   await assertSucceeds(updateDoc(doc(anon(), 'fw_links/' + WL_KEY), { w: '{"v":1,"e":[]}' }));
-  await assertSucceeds(updateDoc(doc(stranger(), 'fw_links/' + WL_KEY), { cc: '{}', r20: '{}', pp: '{}', gp: '{}', sc: '{"v":1,"ev":[]}', updated: wlNow() }));
+  await assertSucceeds(updateDoc(doc(stranger(), 'fw_links/' + WL_KEY), { cc: '{}', r20: '{}', pp: '{}', gp: '{}', sc: '{"v":1,"ev":[]}', pk: '{}', updated: wlNow() }));
 });
 
 test('watch link: no listing, no deleting, the code must be 26 letters and digits 2-7, and only the known text fields', async () => {
@@ -549,6 +549,8 @@ test('watch link: no listing, no deleting, the code must be 26 letters and digit
   await assertFails(setDoc(doc(anon(), 'fw_links/' + WL_KEY), { lk: '{}' }), 'Locker is not on the watch');
   await assertSucceeds(setDoc(doc(anon(), 'fw_links/' + WL_KEY), { pp: 'x'.repeat(30000) }));
   await assertFails(setDoc(doc(anon(), 'fw_links/' + WL_KEY), { pp: 'x'.repeat(40001) }));
+  await assertSucceeds(setDoc(doc(anon(), 'fw_links/' + WL_KEY), { pk: 'x'.repeat(40000) }), 'Practice Clock');
+  await assertFails(setDoc(doc(anon(), 'fw_links/' + WL_KEY), { pk: 'x'.repeat(40001) }));
   await assertSucceeds(updateDoc(doc(anon(), 'fw_links/' + WL_KEY), { fg: 'x'.repeat(50000) }), "Fairway's round on the watch");
   await assertFails(updateDoc(doc(anon(), 'fw_links/' + WL_KEY), { fg: 'x'.repeat(60001) }));
   await assertFails(setDoc(doc(anon(), 'fw_links/' + WL_KEY), { gr: '{}', updated: 'yesterday' }));

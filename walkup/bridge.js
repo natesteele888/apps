@@ -1,6 +1,7 @@
 /* Walk-Up's link to the Dugout phone app (watch/ in this repo). Does nothing in a normal browser.
    Inside the Dugout app, window.WalkupNative exists, and this file:
-   - sends the batting order, who is up and what is playing to the app (and from there to the watch) whenever they change,
+   - sends the batting order (with each player's positions by inning, for the Lineup card), who is up and what is playing to the app
+     (and from there to the watch) whenever they change,
    - sends the pitch log the same way, and merges the watch's pitch log back in (every pitch is counted once),
    - runs the watch's commands (pick a batter, play, stop, keep playing, swap in a bench player, game sounds and Up next),
    - fills in two things Android's web view lacks: the computer voice (Android's own text-to-speech) and saving backup files.
@@ -38,12 +39,17 @@
   /* ---------- what the watch needs to know ---------- */
   function snapshot() {
     var S = WU.S, st = S.st, E = WU.eng, pl = E.playing();
+    /* positions by inning (def.js), for the watch's Lineup card: each row's "inn" has one entry per inning ("P", "SS", "Bench" or ""),
+       and "innings" is how many the game has. Both are left out (innings 0) until a position is set; older watches ignore them. */
+    var benchIds = C.benchIds(st.roster, st.lineup), def = st.def, grid = !!def && C.defUsed(def, st.lineup.concat(benchIds));
     function row(id) {
       var p = WU.player(id); if (!p) return null;
       var code = WU.status(p).code;
-      return { id: p.id, name: p.name || "", num: p.num || "", pos: p.pos || "", ready: !(code === "empty" || code === "needs-song" || code === "needs-voice"), code: code };
+      var r = { id: p.id, name: p.name || "", num: p.num || "", pos: p.pos || "", ready: !(code === "empty" || code === "needs-song" || code === "needs-voice"), code: code };
+      if (grid) r.inn = C.defRow(def, p.id);
+      return r;
     }
-    var lineup = st.lineup.map(row).filter(Boolean), bench = C.benchIds(st.roster, st.lineup).map(row).filter(Boolean);
+    var lineup = st.lineup.map(row).filter(Boolean), bench = benchIds.map(row).filter(Boolean);
     var playing = null, B = WU.board;
     if (pl) {
       var gid = pl.key && pl.key.indexOf("g:") === 0 ? pl.key.slice(2) : null, gp = gid ? WU.player(gid) : null;
@@ -53,7 +59,7 @@
     /* game sounds, and what waits in Up next */
     var board = B ? B.tiles().map(function (t) { return { id: t.id, label: t.label, ready: B.ready(t) }; }) : [];
     var queue = B ? B.queue().map(function (id) { var t = B.tile(id); return { id: id, label: t.label }; }) : [];
-    return { v: 1, ready: true, batter: st.batter, lineup: lineup, bench: bench, playing: playing, loading: S.play && S.play.state === "loading" ? S.play.id : null, error: lastErr, team: st.settings.team || "", board: board, queue: queue };
+    return { v: 1, ready: true, batter: st.batter, lineup: lineup, bench: bench, playing: playing, loading: S.play && S.play.state === "loading" ? S.play.id : null, error: lastErr, team: st.settings.team || "", board: board, queue: queue, innings: grid ? def.n : 0 };
   }
   var tState = 0, tPitch = 0;
   function sendState() { clearTimeout(tState); tState = setTimeout(function () { try { N.postState(JSON.stringify(snapshot())); } catch (e) { console.error(e); } }, 60); }

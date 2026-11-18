@@ -692,6 +692,61 @@
     return { who, games, bal, owes };
   }
 
+  /* ---------- after a hole: how it went, the hole coming up and what Jack noticed ---------- */
+  // "How it went" stays on the golfer's own phone, never in the shared tournament: t tee shot, p putts, x penalties, b in the sand.
+  const TEE_SHOTS = ["fairway", "left", "right", "short"];
+  function cleanHoleNote(x) {
+    if (!x || typeof x !== "object") return null;
+    const o = {};
+    if (TEE_SHOTS.indexOf(x.t) >= 0) o.t = x.t;
+    if (Number.isInteger(x.p) && x.p >= 0 && x.p <= 6) o.p = x.p;
+    if (Number.isInteger(x.x) && x.x >= 0 && x.x <= 6) o.x = x.x;
+    if (x.b === true) o.b = true;
+    return Object.keys(o).length ? o : null;
+  }
+  function cleanHoleNotes(x) {
+    const out = {}; if (!x || typeof x !== "object") return out;
+    Object.keys(x).forEach(k => { if (/^[1-4]_([1-9]|1[0-8])$/.test(k)) { const v = cleanHoleNote(x[k]); if (v) out[k] = v; } });
+    return out;
+  }
+  // One plain line: "Missed left, 2 putts, 1 penalty, in the sand". Greens in regulation come from the score and putts.
+  function holeLine(par, v, n) {
+    if (!n) return "";
+    const out = [];
+    if (n.t && par > 3) out.push(n.t === "fairway" ? "Fairway" : n.t === "short" ? "Short of the fairway" : "Missed " + n.t);
+    if (n.p != null) {
+      out.push(n.p === 0 ? "holed it from off the green" : n.p === 1 ? "1 putt" : n.p + " putts");
+      if (v != null && v - n.p <= par - 2) out.push("green in regulation");
+    }
+    if (n.x) out.push(n.x === 1 ? "1 penalty" : n.x + " penalties");
+    if (n.b) out.push("in the sand");
+    const s = out.join(", ");
+    return s.charAt(0).toUpperCase() + s.slice(1);
+  }
+  // The next hole in this golfer's own order, with the yards from their tees.
+  function nextHole(ev, pl, r, h) {
+    const order = playOrder(holeCount(ev), pl.st), i = order.indexOf(h);
+    if (i < 0 || i >= order.length - 1) return null;
+    const nh = order[i + 1], hole = ev.course.holes[nh - 1], tee = teeOf(ev, pl);
+    return { h: nh, par: hole.par, hcp: hole.hcp, yds: yards(ev.course, nh, tee.id) || null, tee: tee.name };
+  }
+  // Plain, clean words about a pattern in the last few holes. No AI here, just counting.
+  function jackNoticed(ev, pl, r, notes) {
+    const order = playOrder(holeCount(ev), pl.st).filter(h => strokes(pl, r, h) != null);
+    const last = order.slice(-4), recent = last.map(h => ({ h, v: strokes(pl, r, h), par: ev.course.holes[h - 1].par, n: notes[key(r, h)] || {} }));
+    if (recent.length < 3) return null;
+    const tees = recent.filter(x => x.par > 3 && x.n.t), missed = tees.filter(x => x.n.t !== "fairway").length;
+    if (tees.length >= 3 && missed >= 3) return `You've missed ${missed} of your last ${tees.length} fairways. Club down off the tee for a few holes and play from the short grass.`;
+    const pen = recent.slice(-3).filter(x => x.n.x);
+    if (pen.length >= 2) return "Two penalties in three holes. Pick the safe side of the hole and take the trouble out of play.";
+    const three = recent.filter(x => x.n.p >= 3).length;
+    if (three >= 2) return `${three} three-putts in your last ${recent.length} holes. Lag the long ones close and take your two.`;
+    const run = recent.slice(-3).reduce((a, x) => a + x.v - x.par, 0);
+    if (run <= -2) return `${-run} under over your last three holes. Keep doing exactly what you're doing.`;
+    if (run >= 5) return "A rough patch. Fairways and the middle of the green for the next couple of holes; bogey is fine.";
+    return null;
+  }
+
   /* ---------- changes: the same dotted paths the shared database takes ---------- */
   // patch keys look like "p.abc123.s.1_7" or "name"; a value of DELETE removes the field.
   const DELETE = { __delete: true };
@@ -792,5 +847,6 @@
     cleanHc, isDate, isTime, isTid, cleanRally, cleanFmt, rallyList, officialPatch, openGroup, teamIds, pickSlots, teamOf, draftState, pickPatch,
     draftStartPatch, pickCaptains, teamBoard, matchStatus, matchIds, autoMatches, picksLocked, pickCounts, cleanTt, teeTime, fmtTime, fmtDate,
     reminders, icsFor, directions, cleanMsg, shout, BINGO, BINGO_AUTO, bingoCard, bingoState, cleanBingo,
-    BETS, BET_AMTS, cleanBets, cleanBetMarks, betOn, betAmt, betPlayers, wolfOrder, wolfOf, betTally, money };
+    BETS, BET_AMTS, cleanBets, cleanBetMarks, betOn, betAmt, betPlayers, wolfOrder, wolfOf, betTally, money,
+    TEE_SHOTS, cleanHoleNote, cleanHoleNotes, holeLine, nextHole, jackNoticed };
 });

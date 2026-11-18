@@ -199,6 +199,28 @@ const pl = (ev, id) => Object.assign({ id }, ev.p[id]);
     eq(C.money(3.5), '$3.50'); eq(C.money(4), '$4');
   });
 
+  await test('core hole review: one plain line, the next hole from your tees, and Jack only speaks up on a pattern', () => {
+    const ev = twoPlayers(), a = ev.p.aaaaaa1, pars = ev.course.holes.map(h => h.par);
+    eq(C.holeLine(4, 5, { t: 'left', p: 2, x: 1, b: true }), 'Missed left, 2 putts, 1 penalty, in the sand');
+    eq(C.holeLine(4, 4, { t: 'fairway', p: 2 }), 'Fairway, 2 putts, green in regulation');
+    eq(C.holeLine(3, 3, { t: 'fairway', p: 2 }), '2 putts, green in regulation', 'no tee shot on a par 3');
+    eq(C.holeLine(4, 4, null), '');
+    const nx = C.nextHole(ev, a, 1, 1); eq(nx.h, 2); eq(nx.par, pars[1]); ok(nx.yds > 0); eq(C.nextHole(ev, a, 1, 18), null, 'nothing after the last hole');
+    a.st = 10; eq(C.nextHole(ev, a, 1, 18).h, 1, 'a start on 10 goes 18 then 1'); a.st = 1;
+    deq(C.cleanHoleNotes({ '1_3': { t: 'shank', p: 9, b: 1 }, '1_4': { p: 2, email: 'x' }, '5_1': { p: 1 } }), { '1_4': { p: 2 } }, 'odd values, odd fields and odd holes are dropped');
+    const notes = {};
+    [1, 2].forEach(h => { a.s['1_' + h] = pars[h - 1]; notes['1_' + h] = { t: 'fairway', p: 2 }; });
+    eq(C.jackNoticed(ev, a, 1, notes), null, 'too few holes to call it a pattern');
+    a.s['1_3'] = pars[2]; notes['1_3'] = { t: 'fairway', p: 2 }; eq(C.jackNoticed(ev, a, 1, notes), null, 'a steady run says nothing');
+    const long = [1, 2, 3, 4, 5, 6].filter(h => pars[h - 1] > 3).slice(0, 3);
+    long.forEach(h => { a.s['1_' + h] = pars[h - 1] + 1; notes['1_' + h] = { t: 'right', p: 2 }; });
+    const all = Object.keys(a.s).map(k => +k.split('_')[1]).sort((x, y) => x - y), last4 = all.slice(-4).filter(h => pars[h - 1] > 3);
+    if (last4.length >= 3 && last4.every(h => notes['1_' + h].t !== 'fairway')) ok(/fairways/.test(C.jackNoticed(ev, a, 1, notes)), 'missed fairways get noticed');
+    const b = ev.p.bbbbbb1, bn = {}; [1, 2, 3].forEach(h => { b.s['1_' + h] = pars[h - 1] + 1; bn['1_' + h] = { p: 3 }; });
+    ok(/three-putts/.test(C.jackNoticed(ev, b, 1, bn)), 'three-putts get noticed');
+    for (const w of ['damn', 'hell']) ok(!/\b(damn|hell)\b/i.test(C.jackNoticed(ev, b, 1, bn) + (C.jackNoticed(ev, a, 1, notes) || '')), 'clean words only: ' + w);
+  });
+
   /* ===================== PART 2: the page ===================== */
   let server, browser;
   try { server = await startServer('fairway'); browser = await launch(); }
@@ -356,6 +378,25 @@ const pl = (ev, id) => Object.assign({ id }, ev.p[id]);
     await page.waitForFunction(() => /holds the snake/.test(document.body.textContent));
     ok(/Bravo Test\s*owes\s*Alpha Test/.test(await page.locator('.owes').textContent()), 'who owes who shows up');
     ok(/never moves money/.test(await page.textContent('body')));
+    const wide = await page.evaluate(() => document.documentElement.scrollWidth); assert.ok(wide <= 390, 'no sideways scroll at 390 px, got ' + wide);
+    deq(errors, []); await ctx.close();
+  });
+
+  if (browser) await test('page: once your score is in, the hole review saves taps on this phone and shows the next hole', async () => {
+    const { page, errors, ctx } = await open();
+    await page.click('#new'); await page.fill('#nn', 'Review Day'); await page.fill('#nme', 'Alpha Test');
+    await page.locator('#nf [type=submit]').click(); await page.waitForFunction(() => window.FW.debug.S.ev);
+    await page.click('[data-tab=score]'); await page.waitForSelector('.scorer');
+    eq(await page.locator('.hreview').count(), 0, 'no review before a score');
+    await page.locator('.scorer li').first().locator('.val').click();
+    await page.waitForSelector('.hreview');
+    ok(/Up next/.test(await page.textContent('.hreview')), 'the next hole is shown');
+    const par = await page.evaluate(() => window.FW.debug.S.ev.course.holes[window.FW.debug.S.hole - 1].par);
+    if (par > 3) await page.click('[data-hn=t][data-v=left]');
+    await page.click('[data-hn=p][data-v="2"]');
+    await page.waitForFunction(() => /2 putts/.test(document.querySelector('.hreview').textContent));
+    const saved = await page.evaluate(() => JSON.stringify(localStorage)); ok(/fw:hn:/.test(saved), 'kept on this phone');
+    const shared = await page.evaluate(() => JSON.stringify(window.FW.debug.S.ev)); ok(!/"putts"|"hn"/.test(shared), 'never in the shared tournament');
     const wide = await page.evaluate(() => document.documentElement.scrollWidth); assert.ok(wide <= 390, 'no sideways scroll at 390 px, got ' + wide);
     deq(errors, []); await ctx.close();
   });

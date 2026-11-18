@@ -1,6 +1,7 @@
 /* Practice Clock shell: storage, sheets, toasts, Back-button sync, the plans list and the recent list.
    The editor is in editor.js, the clock in runner.js, settings / backup / sharing in settings.js.
-   All data lives in this phone's localStorage (keys start with "practiceclock."). Nothing is sent anywhere. */
+   All data lives in this phone's localStorage (keys start with "practiceclock."). Nothing is sent anywhere, except the
+   running practice to a watch, and only once one is linked (see "the watch" below). */
 (function () {
   "use strict";
   const Core = window.PracticeClockCore;
@@ -56,9 +57,40 @@
     return ok || failSave();
   };
   PC.saveRun = function () {
+    watchSoon();
     if (!S.run) { store.del("run"); return true; }
     return store.set("run", JSON.stringify(S.run)) || failSave();
   };
+
+  /* ================= the watch =================
+     A linked Wear OS watch (Settings › Watch) shows the block or station that's on and buzzes at every change. The phone
+     sends it the running practice (Core.watchSummary: names, lengths and the clock numbers, the "pk" field of the shared
+     watch link, ../watchlink.js) about a second after every change, and "no practice" when it ends. The watch does the
+     counting itself, so nothing is sent while the clock just runs. Nothing at all is sent while no watch is linked. */
+  const WL = window.WatchLink;
+  const watch = PC.watch = { last: "", soon: 0, busy: false, again: false, retry: 0, msg: "" };
+  const wlOn = () => !!(WL && WL.linked());
+  const watchKey = w => { const o = Object.assign({}, w); delete o.at; return JSON.stringify(o); };   // what changed, leaving out when it was sent
+  function watchSoon() {
+    if (!wlOn() || watch.soon) return;
+    watch.soon = setTimeout(() => { watch.soon = 0; watchSync(); }, 1000);
+  }
+  async function watchSync() {
+    if (!wlOn()) return; if (watch.busy) { watch.again = true; return; } watch.busy = true;
+    clearTimeout(watch.retry); watch.retry = 0;
+    try {
+      const w = Core.watchSummary(S.run, Date.now()), k = watchKey(w);
+      if (k !== watch.last) { await WL.write("pk", w); watch.last = k; }
+      watch.msg = "";
+    } catch (e) {
+      watch.msg = navigator.onLine === false ? "No signal right now. The watch catches up when there is signal." : "Could not reach the watch link just now. It tries again by itself.";
+      watch.retry = setTimeout(watchSync, 15000);
+    } finally {
+      watch.busy = false; const m = $("#pc-wlm"); if (m) m.textContent = watch.msg;
+      if (watch.again) { watch.again = false; watchSync(); }
+    }
+  }
+  PC.watchSync = () => { watch.last = ""; watchSync(); };
   function readJSON(k) { const raw = store.get(k); if (raw == null) return null; try { return JSON.parse(raw); } catch (e) { return undefined; } }
   PC.loadAll = function () {
     S.plans = []; S.hist = []; S.settings = Core.sanitizeSettings({}); S.meta = { lastBackup: null }; S.run = null; S.dropped = 0;
@@ -412,5 +444,11 @@
     if (PC.runnerBoot) PC.runnerBoot();
     if (PC.checkShareHash) PC.checkShareHash();
     if ("serviceWorker" in navigator) window.addEventListener("load", () => { navigator.serviceWorker.register("sw.js").catch(() => {}); });
+    // the watch: catch it up on open and whenever the app comes back on screen (a send may have missed while offline)
+    if (WL) {
+      watchSync();
+      document.addEventListener("visibilitychange", () => { if (!document.hidden) watchSync(); });
+      WL.onChange(on => { watch.last = ""; if (on) watchSync(); });
+    }
   };
 })();
