@@ -40,6 +40,7 @@ object PitchStore {
         if (push) app?.let { PhoneLink.putPitch(it, PitchCore.toJson(log.value).toString()) }
         Tiles.pitch(app)
         PitchComplicationService.update(app)
+        Ongoing.pitch(app)
     }
 
     /**

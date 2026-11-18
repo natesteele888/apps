@@ -67,7 +67,7 @@
           ${gy.c != null && club(gy.c) ? `<p class="msg small">From your bag: <b>${esc(club(gy.c))}</b>${here && here.acc > 15 ? ` · GPS is rough right now (±${Math.round(here.acc * 1.09)} yds)` : ""}</p>` : ""}`
         : `<p class="msg small">${gpsErr ? "This phone won't share its location with Fairway right now." : watch == null ? "" : here ? "Mark the green below to get yards to it." : "Finding you…"}</p>`;
       const hint = mode === "tee" ? "Tap the tee on the picture." : mode === "green" ? "Now tap the middle of the green." : meas ? `${meas.fromYou ? "From you" : "From the tee"}: <b>${meas.from}</b> yds · to the green: <b>${meas.to}</b> yds${club(meas.to) ? ` · ${esc(club(meas.to))} in` : ""}` : m.img && scale ? "Tap anywhere on the picture to measure it." : m.img ? "Set the tee and green on the picture to measure." : "";
-      $(".sheet-b", box).innerHTML = `<p class="msg small">Hole ${h} · par ${par}${card ? ` · ${card} yds from the ${esc(tee.name)} tees` : ""}</p>
+      $(".sheet-b", box).innerHTML = `<p class="msg small">Hole ${C.holeNo(ev.course, h)} · par ${par}${card ? ` · ${card} yds from the ${esc(tee.name)} tees` : ""}</p>
         ${pic}<p class="msg small" id="maphint">${hint}</p>
         ${watch == null ? `<button type="button" class="btn primary block" id="gpson">Use GPS for yards</button>` : yards}
         <div class="row2">${m.img ? `<button type="button" class="btn small" id="setpts">${m.tee && m.green ? "Move the tee and green" : "Set the tee and green"}</button>` : ""}

@@ -3,7 +3,7 @@
    Through the watch link (../watchlink.js, the "fg" field) this phone sends the watch your round: the course, your tees'
    yards, the greens you've marked, your notes, your bag and your scores. It takes back what the watch did: green marks
    and notes, and scores in a tournament kept on this phone only. In a shared tournament the watch writes your score
-   straight to the tournament itself, so the phone can stay in your pocket.
+   straight to the tournament itself, so the phone can stay in your pocket; one the tournament refused comes here instead.
    Nothing goes anywhere unless a watch is linked, and only while Fairway is open. Loaded after app.js. */
 (function () {
   "use strict";
@@ -44,8 +44,9 @@
     fresh.forEach(x => {
       if (x.k === "s") {
         if (!S || !S.ev || x.e !== S.code) return;
-        // a shared tournament already has it: the watch wrote it there itself
-        if (S.place === FW.local && S.ev.p[x.p] && Number.isInteger(x.r) && Number.isInteger(x.h) && x.h >= 1 && x.h <= 18)
+        // a shared tournament already has it (the watch wrote it there itself), unless the tournament refused the watch
+        // and it came here instead (fb)
+        if ((S.place === FW.local || x.fb === true) && S.ev.p[x.p] && Number.isInteger(x.r) && Number.isInteger(x.h) && x.h >= 1 && x.h <= 18)
           u.write({ ["p." + x.p + ".s." + x.r + "_" + x.h]: x.s >= 1 && x.s <= 20 ? x.s : C.DELETE });
       } else if (x.k === "g" && typeof x.c === "string" && x.h >= 1 && x.h <= 18 && ["f", "c", "b"].indexOf(x.m) >= 0 && isFinite(x.lat) && isFinite(x.lon)) {
         let m = Object.assign({}, FW.LS.get(mapKey(x.c, x.h), null) || {}, { ["g" + x.m]: { lat: x.lat, lon: x.lon, acc: Number(x.acc) || 0 } });

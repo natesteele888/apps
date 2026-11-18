@@ -363,7 +363,8 @@
           "Switch leagues with one tap: NFL, MLB, NBA and NHL",
           "Invite your crew with a code, and turn it off any time"
         ]
-      }
+      },
+      "store": true
     },
     {
       "id": "bengals",
@@ -986,7 +987,7 @@
           "See the gap between left and right leg at a glance"
         ]
       },
-      "store": true
+      "store": false
     },
     {
       "id": "cube",
@@ -1338,7 +1339,8 @@
           "The guest list: headcount, pizza choices and comments",
           "Design the invitation on screen with a live preview"
         ]
-      }
+      },
+      "store": true
     },
     {
       "id": "eightcount",
@@ -2242,7 +2244,7 @@
           "Start a game in one tap, and look back at recent finals"
         ]
       },
-      "store": true
+      "store": false
     },
     {
       "id": "fairway",
@@ -2809,7 +2811,7 @@
         ],
         "autoShots": []
       },
-      "store": true
+      "store": false
     },
     {
       "id": "secretary",

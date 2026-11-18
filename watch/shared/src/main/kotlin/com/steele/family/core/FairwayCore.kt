@@ -153,6 +153,84 @@ object FairwayCore {
 
     // ---------- Jack ----------
     /** what Jack says back, and a note to save for this hole when he was asked to remember something */
+    /* ---------- GPS that holds still: the watch's fixes wander a few yards every couple of seconds, even standing still ---------- */
+    data class Fix(val lat: Double, val lon: Double, val acc: Double, val at: Long)
+
+    /**
+     * Steadies the watch's GPS for yards. Standing still, it averages the last few seconds of fixes (the better ones count
+     * more), so the number stops jumping. One wild fix (a tree, a cart barn) is ignored; two in a row mean you really moved,
+     * and it starts over from where you are now.
+     */
+    class Steady(private val keepMs: Long = 10_000, private val moved: Double = 10.0) {
+        private val fixes = ArrayDeque<Fix>()
+        private var far: Fix? = null
+        fun reset() { fixes.clear(); far = null }
+        fun add(f: Fix): Spot {
+            while (fixes.isNotEmpty() && f.at - fixes.first().at > keepMs) fixes.removeFirst()
+            far?.let { if (f.at - it.at > keepMs) far = null }
+            // a much better fix than any so far (the GPS just locked on) wins outright
+            if (fixes.isNotEmpty() && f.acc < 0.6 * fixes.minOf { it.acc }) { fixes.clear(); far = null }
+            val now = mean()
+            // with nothing but rough fixes so far, rough ones average together rather than the first one sticking
+            val roughOnly = fixes.isNotEmpty() && fixes.minOf { it.acc } >= 25.0
+            if (now != null && metres(now, Spot(f.lat, f.lon)) > maxOf(moved, minOf(f.acc, 25.0), if (roughOnly) 1.5 * f.acc else 0.0)) {
+                // a rough fix (the phone network's, say) far from a good GPS lock is the rough one, never a move
+                if (f.acc > 2 * fixes.minOf { it.acc }) return now
+                val before = far
+                // two wild fixes in a row aren't a move either if getting there would take faster than a cart (8 m/s)
+                val tooFast = fixes.isNotEmpty() && metres(now, Spot(f.lat, f.lon)) / maxOf(1.0, (f.at - fixes.last().at) / 1000.0) > 8.0
+                if (before == null || tooFast || metres(Spot(before.lat, before.lon), Spot(f.lat, f.lon)) > 2 * moved) { far = f; return now }
+                fixes.clear(); fixes.addLast(before)
+            }
+            far = null
+            fixes.addLast(f)
+            return mean()!!
+        }
+        private fun mean(): Spot? {
+            if (fixes.isEmpty()) return null
+            var w = 0.0; var la = 0.0; var lo = 0.0
+            fixes.forEach { x -> val k = 1.0 / maxOf(3.0, x.acc).let { it * it }; w += k; la += x.lat * k; lo += x.lon * k }
+            return Spot(la / w, lo / w)
+        }
+    }
+    fun metres(a: Spot, b: Spot): Double {
+        val r = 6371008.8; val p1 = Math.toRadians(a.lat); val p2 = Math.toRadians(b.lat)
+        val dp = p2 - p1; val dl = Math.toRadians(b.lon - a.lon)
+        val x = Math.sin(dp / 2).let { it * it } + Math.cos(p1) * Math.cos(p2) * Math.sin(dl / 2).let { it * it }
+        return 2 * r * Math.asin(Math.min(1.0, Math.sqrt(x)))
+    }
+
+    /* ---------- scores the watch still has to send (shared tournaments), when there's no signal for a few holes ---------- */
+    data class Pending(val code: String, val pid: String, val r: Int, val h: Int, val s: Int)
+    /** only the last tap on each hole needs to go: three taps on + while out of signal are one write, not three */
+    fun collapse(q: List<Pending>): List<Pending> {
+        val last = LinkedHashMap<String, Pending>()
+        q.forEach { p -> val k = "${p.code}|${p.pid}|${p.r}|${p.h}"; last.remove(k); last[k] = p }
+        return last.values.toList()
+    }
+
+    data class Flush(val sent: List<Pending>, val toPhone: List<Pending>)
+    /**
+     * Sends the waiting scores, oldest first. [send] returns the server's answer, or null with no signal. No signal or a
+     * server hiccup (5xx) stops it, to try again at the next look. A refusal (4xx: the tournament is gone, or its rules
+     * aren't switched on) won't get better by trying again, so that score goes to the phone through the watch log instead
+     * of being lost.
+     */
+    fun flush(q: List<Pending>, now: Long, send: (String, String) -> Int?): Flush {
+        val sent = ArrayList<Pending>(); val phone = ArrayList<Pending>()
+        for (p in collapse(q)) {
+            val w = scoreWrite(p.code, p.pid, p.r, p.h, p.s.takeIf { it in 1..20 }, now)
+            if (w == null) { sent += p; continue }
+            val code = send(w.first, w.second) ?: break
+            when (code) {
+                in 200..299 -> sent += p
+                in 400..499 -> { sent += p; phone += p }
+                else -> break
+            }
+        }
+        return Flush(sent, phone)
+    }
+
     data class Answer(val text: String, val note: String? = null)
 
     private fun has(t: String, vararg w: String) = w.any { t.contains(it) }
@@ -162,7 +240,7 @@ object FairwayCore {
      * round and the hole's notes). [said] is what the speech recognizer heard.
      */
     fun jack(said: String, r: Round, h: Hole, here: GreenYards?, scores: Map<Int, Int>): Answer {
-        val body = said.trim().replace(Regex("^(hey|hi|ok|okay)?\\s*jack[,.!]?\\s*", RegexOption.IGNORE_CASE), "").trim()
+        val body = said.trim().replace(Regex("^(hey|hi|ok|okay|a)?\\s*jacks?[,.!]?\\s*", RegexOption.IGNORE_CASE), "").trim()
         val t = body.lowercase()
         val mid = here?.mid
         val toGo = mid ?: if (scores[h.n] == null && h.yards > 0) h.yards else null
@@ -176,7 +254,7 @@ object FairwayCore {
             has(t, "notes", "what do i know", "what do you know", "tell me about", "anything i should know", "what's the trouble", "trouble") ->
                 if (h.notes.isEmpty()) Answer("No notes on hole ${h.n} yet. Say \"remember\" and what you want me to keep.")
                 else Answer("Hole ${h.n}: " + h.notes.joinToString(". ") { it.trimEnd('.') } + ".")
-            has(t, "club", "what do i hit", "what should i hit", "what am i hitting", "what to hit") -> {
+            has(t, "club", "what do i hit", "what should i hit", "what am i hitting", "what to hit", "the play", "play here", "what's the shot") -> {
                 val c = club(r.bag, toGo)
                 when {
                     r.bag.isEmpty() -> Answer("Set up My bag in Fairway on your phone and I'll pick the club.")
@@ -184,20 +262,20 @@ object FairwayCore {
                     else -> Answer("$toGo to go${if (mid == null) " from the tee" else " to the middle"}. $c.")
                 }
             }
-            has(t, "how far", "yard", "distance", "how long", "front", "back", "middle", "green") -> when {
+            has(t, "how far", "yard", "distance", "how long", "front", "back", "middle", "green", "number", "pin", "flag") -> when {
                 here != null && (here.mid != null || here.front != null || here.back != null) -> Answer(listOfNotNull(
                     here.mid?.let { "$it to the middle" }, here.front?.let { "$it to the front" }, here.back?.let { "$it to the back" },
                 ).joinToString(", ").replaceFirstChar { it.uppercase() } + ".")
-                h.yards > 0 -> Answer("Hole ${h.n} is ${h.yards} from your tees. Mark the green once and I'll give you live yards.")
+                h.yards > 0 -> Answer("${h.yards} from your tees. No green marked here yet.")
                 else -> Answer("I don't have yards for hole ${h.n}. Mark the green when you're on it and I'll know next time.")
             }
-            has(t, "score", "how am i doing", "how'm i doing", "where am i", "how am i") -> {
+            has(t, "score", "how am i doing", "how'm i doing", "where am i", "how am i", "where do i stand", "what am i at", "what did i shoot") -> {
                 val s = summary(r, scores)
                 if (s.thru == 0) Answer("No scores yet. Hole ${h.n}, par ${h.par}. Go get it.")
                 else Answer("You're ${spokenPar(s.toPar)} through ${s.thru}, ${s.strokes} strokes.")
             }
             has(t, "par", "what hole", "which hole", "this hole") -> Answer("Hole ${h.n}, par ${h.par}" + (if (h.yards > 0) ", ${h.yards} yards." else "."))
-            else -> Answer("I can give you yards, a club, your score and your notes for this hole. Ask me one of those.")
+            else -> Answer("I do yards, a club, your score and notes. Ask me one of those.")
         }
     }
     fun spokenPar(n: Int) = when { n == 0 -> "even"; n > 0 -> "$n over"; else -> "${-n} under" }

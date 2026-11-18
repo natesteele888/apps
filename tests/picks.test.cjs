@@ -105,8 +105,8 @@ const event = (id, date, away, home, state, done) => ({ id, date, competitions: 
     const fail = code => Promise.reject(Object.assign(new Error(code), { code }));
     const auth = {
       onAuthStateChanged: cb => { authCb = cb; setTimeout(() => cb(user), 0); }, signOut: () => become(null), signInWithPopup: () => Promise.resolve(),
-      createUserWithEmailAndPassword(em, pw) { window.__auth.push(['create', em]); if (em === 'taken@example.com') return fail('auth/email-already-in-use'); if (pw.length < 6) return fail('auth/weak-password'); return become({ uid: 'new1', displayName: null, email: em }); },
-      signInWithEmailAndPassword(em, pw) { window.__auth.push(['signin', em]); return em === 'taken@example.com' && pw === 'secret1' ? become({ uid: 'old1', displayName: null, email: em }) : fail('auth/invalid-credential'); },
+      createUserWithEmailAndPassword(em, pw) { window.__auth.push(['create', em]); if (em === 'taken@example.com' || em === 'timmy@players.natesteele888.github.io') return fail('auth/email-already-in-use'); if (pw.length < 6) return fail('auth/weak-password'); return become({ uid: 'new1', displayName: null, email: em }); },
+      signInWithEmailAndPassword(em, pw) { window.__auth.push(['signin', em]); return (em === 'taken@example.com' && pw === 'secret1') || (em === 'timmy@players.natesteele888.github.io' && pw === 'gp-pin-1234') ? become({ uid: 'old1', displayName: null, email: em }) : fail('auth/invalid-credential'); },
       sendPasswordResetEmail(em) { window.__auth.push(['reset', em]); return Promise.resolve(); }
     };
     window.firebase = { initializeApp() {}, firestore: () => db, auth: Object.assign(() => auth, { GoogleAuthProvider: function () { this.setCustomParameters = () => {}; } }) };
@@ -176,6 +176,57 @@ const event = (id, date, away, home, state, done) => ({ id, date, competitions: 
     await page.click('[data-view="stats"]'); await page.waitForSelector('.empty'); assert.ok(/Make some NHL picks/.test(await page.textContent('#view')));
     eq(errors.length, 0, errors.join(' | ')); await ctx.close();
   });
+  await test('page: other players\' picks stay hidden until you lock in yours, then show; locked picks can\'t change', async () => {
+    const { ctx, page, errors } = await open();
+    await page.goto(server.url); await page.waitForSelector('[data-sport]');
+    await page.click('[data-sport="mlb"]'); await page.waitForSelector('.game');
+    await page.evaluate(d => { window.__data.gp_picks['p2_mlb-' + d] = { uid: 'p2', week: 'mlb-' + d, picks: { ['MLB-' + d + '-3']: 'EEE' } }; window.__notify(); }, TODAY);
+    await page.waitForTimeout(200);
+    const open3 = page.locator('.game').nth(2);
+    assert.ok(!/Player Two/.test(await open3.textContent()), 'no names on an open game before locking');
+    assert.ok(!/\d pick/.test(await open3.textContent()), 'not even a count');
+    assert.ok(await page.locator('#lockin').isDisabled(), 'nothing picked yet, nothing to lock');
+    await page.click('.side[data-t="FFF"]'); await page.waitForSelector('.side.mine');
+    await page.click('#lockin'); eq(await page.textContent('#lockin'), 'Tap again to lock', 'the first tap asks to confirm');
+    await page.click('#lockin'); await page.waitForSelector('.lockbar.done');
+    const w = await page.evaluate(() => window.__writes.filter(x => x[0] === 'gp_picks').pop());
+    assert.ok(w[2].locked && w[2].picks['MLB-' + TODAY + '-3'] === 'FFF', JSON.stringify(w));
+    assert.ok(/Player Two/.test(await open3.textContent()), 'their pick shows once locked in');
+    eq(await open3.locator('.side:not([disabled])').count(), 0, 'a locked slate can\'t change');
+    eq(errors.length, 0, errors.join(' | ')); await ctx.close();
+  });
+  await test('page: a challenge shows up for the player challenged, picks stay hidden both ways until locked, and players can challenge back', async () => {
+    const { ctx, page, errors } = await open({ ctx: { viewport: { width: 390, height: 844 } } });
+    await page.goto(server.url); await page.waitForSelector('[data-sport]');
+    await page.click('[data-sport="mlb"]'); await page.waitForSelector('.game');
+    await page.evaluate(d => { window.__data.gp_picks['p2_mlb-' + d] = { uid: 'p2', week: 'mlb-' + d, picks: { ['MLB-' + d + '-3']: 'EEE' }, ch: { to: ['me1'], at: '2026-11-09T12:00:00Z' } }; window.__notify(); }, TODAY);
+    await page.waitForSelector('.chin'); assert.ok(/Player Two\s*challenged you/.test(await page.textContent('.chin')));
+    assert.ok(/Head to head/.test(await page.textContent('.chbar')) && /Player Two/.test(await page.textContent('.chbar')));
+    assert.ok(!/Player Two/.test(await page.locator('.game').nth(2).textContent()), 'the challenger\'s pick is hidden');
+    await page.click('.side[data-t="FFF"]'); await page.waitForSelector('.side.mine');
+    await page.click('#chOpen'); await page.waitForSelector('.chlist input[value="p2"]');
+    await page.screenshot({ path: path.join(SHOTS, 'picks-challenge.png'), fullPage: true });
+    await page.check('.chlist input[value="p2"]'); await page.click('#chSend');
+    await page.waitForFunction(() => window.__writes.some(x => x[0] === 'gp_picks' && x[2].ch));
+    let w = await page.evaluate(() => window.__writes.filter(x => x[0] === 'gp_picks').pop());
+    eq(JSON.stringify(w[2].ch.to), '["p2"]'); eq(w[2].picks['MLB-' + TODAY + '-3'], 'FFF', 'the challenge keeps the picks');
+    await page.click('#lockin'); await page.click('#lockin'); await page.waitForSelector('.lockbar.done');
+    w = await page.evaluate(() => window.__writes.filter(x => x[0] === 'gp_picks').pop());
+    assert.ok(w[2].locked && w[2].ch && w[2].ch.to[0] === 'p2', 'locking keeps the challenge: ' + JSON.stringify(w[2]));
+    eq(await page.locator('.chin').count(), 0, 'a locked challenge leaves the to-do list');
+    assert.ok(/Player Two/.test(await page.locator('.game').nth(2).textContent()), 'picks show once locked');
+    eq(await page.evaluate(() => document.documentElement.scrollWidth), 390);
+    eq(errors.length, 0, errors.join(' | ')); await ctx.close();
+  });
+  await test('page: a challenge link opens the slate and joins the challenge', async () => {
+    const { ctx, page, errors } = await open();
+    await page.goto(server.url + '?slate=nba-' + TODAY + '&vs=p2'); await page.waitForSelector('[data-sport="nba"][aria-pressed="true"]', { timeout: 6000 });
+    await page.waitForFunction(() => window.__writes.some(x => x[0] === 'gp_picks' && x[2].ch));
+    const w = await page.evaluate(() => window.__writes.filter(x => x[0] === 'gp_picks').pop());
+    eq(w[1], 'me1_nba-' + TODAY); eq(JSON.stringify(w[2].ch.to), '["p2"]');
+    eq(await page.evaluate(() => location.search), '', 'the link is cleared from the address bar');
+    eq(errors.length, 0, errors.join(' | ')); await ctx.close();
+  });
   await test('page: each team\'s record shows under its name, and open games show a win-chance gauge', async () => {
     const { ctx, page, errors } = await open();
     await page.goto(server.url); await page.waitForSelector('.game');
@@ -233,12 +284,36 @@ const event = (id, date, away, home, state, done) => ({ id, date, competitions: 
     eq(errors.length, 0, errors.join(' | ')); await ctx.close();
   });
 
+  await test('page: a kid with no Google account or email picks a name and a 4-digit PIN, and the name + PIN signs them back in', async () => {
+    const { ctx, page, errors } = await open({ signedOut: true, ctx: { viewport: { width: 390, height: 844 } } });
+    await page.goto(server.url + '?code=good'); await page.waitForSelector('#pf');
+    await page.screenshot({ path: path.join(SHOTS, 'picks-pin-signin.png'), fullPage: true });
+    eq(await page.textContent('#pGo'), 'Start playing', 'an invite link opens on a new player');
+    await page.fill('#pn', 'Timmy'); await page.fill('#pp', '12'); await page.click('#pGo');
+    assert.ok(/4 numbers/.test(await page.textContent('#pErr')), 'a short PIN is caught before sending');
+    await page.fill('#pp', '1234'); await page.click('#pGo');
+    await page.waitForFunction(() => /Timmy2/.test(document.querySelector('#pErr').textContent));
+    await page.click('#pMode'); eq(await page.textContent('#pGo'), 'Sign in');
+    await page.fill('#pp', '9999'); await page.click('#pGo'); await page.waitForFunction(() => /don't match/.test(document.querySelector('#pErr').textContent));
+    await page.fill('#pp', '1234'); await page.click('#pGo'); await page.waitForFunction(() => window.__auth.some(a => a[0] === 'signin' && a[1] === 'timmy@players.natesteele888.github.io'));
+    await page.evaluate(() => firebase.auth().signOut()); await page.waitForSelector('#pf');
+    await page.fill('#pn', 'Timmy 2'); await page.fill('#pp', '4321'); await page.click('#pGo');
+    await page.waitForSelector('#join'); eq(await page.inputValue('#jname'), 'Timmy 2', 'the player name carries over');
+    eq(await page.inputValue('#jcode'), 'GOOD');
+    await page.click('#join button.gold'); await page.waitForSelector('.game');
+    const w = await page.evaluate(() => window.__writes.find(x => x[0] === 'gp_players'));
+    eq(Object.keys(w[2]).sort().join(','), 'code,joinedAt,name', 'nothing but the name and code is saved');
+    eq(await page.evaluate(() => window.__auth.filter(a => a[0] === 'create').pop()[1]), 'timmy2@players.natesteele888.github.io');
+    eq(await page.evaluate(() => document.documentElement.scrollWidth), 390);
+    eq(errors.length, 0, errors.join(' | ')); await ctx.close();
+  });
+
   await test('page: any player can share the code they joined with', async () => {
     const { ctx, page, errors } = await open();
     await page.addInitScript(() => { navigator.share = d => { window.__shared = d; return Promise.resolve(); }; });
     await page.goto(server.url); await page.waitForSelector('#inv');
     await page.click('#inv'); const sh = await page.evaluate(() => window.__shared);
-    assert.ok(/code=GOOD$/.test(sh.url) && /Code: GOOD/.test(sh.text) && /any email/.test(sh.text), JSON.stringify(sh));
+    assert.ok(/code=GOOD$/.test(sh.url) && /Code: GOOD/.test(sh.text) && /player name and a PIN/.test(sh.text), JSON.stringify(sh));
     eq(errors.length, 0, errors.join(' | ')); await ctx.close();
   });
 
