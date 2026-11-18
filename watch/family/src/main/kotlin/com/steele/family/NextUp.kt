@@ -75,10 +75,11 @@ class NextUpComplication : SuspendingComplicationDataSourceService() {
     }
 }
 
-/** tells the watch face's Next up to ask for new words (a new schedule from the phone) */
+/** tells the watch face's Next up and the Schedule tile to ask again (a new schedule from the phone) */
 object NextUp {
     fun update(ctx: Context) {
         if (Build.VERSION.SDK_INT < 26) return
+        ScheduleTileService.update(ctx)
         val app = ctx.applicationContext
         try { ComplicationDataSourceUpdateRequester.create(app, ComponentName(app, NextUpComplication::class.java)).requestUpdateAll() }
         catch (e: Exception) { /* no watch face to tell */ }

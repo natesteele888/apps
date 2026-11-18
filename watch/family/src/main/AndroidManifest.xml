@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android" xmlns:tools="http://schemas.android.com/tools">
-    <!-- Google's watch-face library says Android 8; only Next up uses it, and that's switched off before Android 8 (@bool/face_on) -->
-    <uses-sdk tools:overrideLibrary="androidx.wear.watchface.complications.datasource, androidx.wear.watchface.complications.datasource.ktx, androidx.wear.watchface.complications.data, androidx.wear.watchface.complications, androidx.wear.watchface.data, androidx.wear.watchface.utility, androidx.wear.watchface.style, androidx.wear.watchface.client, androidx.wear.watchface" />
+    <!-- Google's watch-face and tile libraries say Android 8; only Next up and the Schedule tile use them, and both are switched off before Android 8 (@bool/face_on) -->
+    <uses-sdk tools:overrideLibrary="androidx.wear.tiles, androidx.wear.protolayout, androidx.wear.protolayout.expression, androidx.wear.protolayout.expression.pipeline, androidx.wear.protolayout.proto, androidx.wear.protolayout.renderer, androidx.wear.watchface.complications.datasource, androidx.wear.watchface.complications.datasource.ktx, androidx.wear.watchface.complications.data, androidx.wear.watchface.complications, androidx.wear.watchface.data, androidx.wear.watchface.utility, androidx.wear.watchface.style, androidx.wear.watchface.client, androidx.wear.watchface" />
     <uses-feature android:name="android.hardware.type.watch" />
     <uses-permission android:name="android.permission.VIBRATE" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
@@ -88,6 +88,20 @@
             <meta-data android:name="android.support.wearable.complications.SUPPORTED_TYPES" android:value="SHORT_TEXT,LONG_TEXT" />
             <!-- every 30 minutes; a new schedule from the phone asks straight away (Link) -->
             <meta-data android:name="android.support.wearable.complications.UPDATE_PERIOD_SECONDS" android:value="1800" />
+        </service>
+        <!-- the Schedule tile (swipe from the watch face): the next game or practice and the two after it. Off before Android 8. -->
+        <service
+            android:name=".ScheduleTileService"
+            android:exported="true"
+            android:enabled="@bool/face_on"
+            android:icon="@mipmap/ic_schedule"
+            android:label="@string/schedule_name"
+            android:description="@string/schedule_tile_about"
+            android:permission="com.google.android.wearable.permission.BIND_TILE_PROVIDER">
+            <intent-filter>
+                <action android:name="androidx.wear.tiles.action.BIND_TILE_PROVIDER" />
+            </intent-filter>
+            <meta-data android:name="androidx.wear.tiles.PREVIEW" android:resource="@drawable/tile_schedule_preview" />
         </service>
         <activity android:name=".FairwayActivity" android:exported="true" android:icon="@mipmap/ic_fairway" android:roundIcon="@mipmap/ic_fairway"
             android:label="@string/fairway_name" android:launchMode="singleTask" android:taskAffinity="com.steele.family.fairway">
