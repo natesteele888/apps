@@ -22,7 +22,7 @@ if ! adb shell "cat /proc/net/tcp /proc/net/tcp6 2>/dev/null" | grep -qiE ':15B3
 fi
 adb shell "cat /proc/net/tcp /proc/net/tcp6 2>/dev/null" | grep -iE ':15B3 [0-9A-F:]+ 0A' || echo "still no listener on 5555"
 cat ~/.android/adbkey | adb shell "run-as com.steele.dugout sh -c 'mkdir -p files/adb && cat > files/adb/adbkey'"
-cat ~/.android/adbkey.pub | adb shell "run-as com.steele.dugout sh -c 'cat > files/adb/adbkey.pub'"
+adb pubkey ~/.android/adbkey | adb shell "run-as com.steele.dugout sh -c 'cat > files/adb/adbkey.pub'"
 adb logcat -c
 set +e
 adb shell am instrument -w -r com.steele.dugout.test/androidx.test.runner.AndroidJUnitRunner | tee /tmp/instr.txt
