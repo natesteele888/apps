@@ -1,0 +1,17 @@
+{
+  "name": "Snack Shack Screen",
+  "short_name": "Snack Shack",
+  "description": "Turn a TV at the field into a screen that plays the latest league info on a loop, straight from a Google Drive folder.",
+  "id": "./",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#061510",
+  "theme_color": "#0c2a1b",
+  "icons": [
+    { "src": "/apps/icons/snackshack-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/apps/icons/snackshack-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/apps/icons/snackshack-maskable.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

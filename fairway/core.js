@@ -784,10 +784,11 @@
     return out;
   }
   // What Jack says walking up to a hole: par and yards, then the golfer's own notes in their own words.
-  function holeTalk(ev, pl, h, notes, level) {
+  function holeTalk(ev, pl, h, notes, level, bag) {
     const hole = ev.course.holes[h - 1], tee = teeOf(ev, pl), y = yards(ev.course, h, tee.id);
     const mine = ((notes || {})[courseKey(ev.course)] || {})[h] || [];
     let s = `Hole ${h}, par ${hole.par}${y ? `, ${y} yards` : ""}.`;
+    if (bag && hole.par === 3 && y) { const c = clubFor(bag, y); if (c) s += " " + clubWords(c) + "."; }
     if (mine.length) s += " Your notes: " + mine.map(t => speakable(t, level)).filter(Boolean).map(t => (/[.!?]$/.test(t) ? t : t + ".")).join(" ");
     return s;
   }
@@ -861,6 +862,123 @@
     const out = Object.keys(table).map(k => table[k]).sort((a, b) => b.pts - a.pts || b.wins - a.wins || a.name.localeCompare(b.name));
     out.forEach((x, i) => { x.place = out.findIndex(y => y.pts === x.pts) + 1; });
     return { year, events: Object.keys(events).length, list: out };
+  }
+
+  /* ---------- My bag: which clubs you carry and how far each goes (kept on the golfer's phone) ---------- */
+  // Typical carry yards stand in until the golfer sets their own.
+  const CLUBS = [["dr", "Driver", 230], ["3w", "3 wood", 210], ["5w", "5 wood", 195], ["hy", "Hybrid", 185], ["4i", "4 iron", 175], ["5i", "5 iron", 165], ["6i", "6 iron", 155],
+    ["7i", "7 iron", 145], ["8i", "8 iron", 135], ["9i", "9 iron", 125], ["pw", "Pitching wedge", 115], ["gw", "Gap wedge", 100], ["sw", "Sand wedge", 85], ["lw", "Lob wedge", 65]];
+  const CLUB_IDS = CLUBS.map(c => c[0]), BAG_DEFAULT = ["dr", "3w", "5w", "hy", "5i", "6i", "7i", "8i", "9i", "pw", "gw", "sw"];
+  function cleanBag(x) {
+    x = x && typeof x === "object" ? x : {};
+    const on = []; (Array.isArray(x.on) ? x.on : BAG_DEFAULT).forEach(c => { if (CLUB_IDS.indexOf(c) >= 0 && on.indexOf(c) < 0) on.push(c); });
+    const y = {}; Object.keys(x.y && typeof x.y === "object" ? x.y : {}).forEach(c => { const v = Math.round(Number(x.y[c])); if (CLUB_IDS.indexOf(c) >= 0 && v >= 10 && v <= 400) y[c] = v; });
+    return { on: on.length ? on : BAG_DEFAULT.slice(), y };
+  }
+  // The clubs in the bag, longest first, each with its yards and whether the golfer set them.
+  function bagList(bag) {
+    bag = cleanBag(bag);
+    return CLUBS.filter(c => bag.on.indexOf(c[0]) >= 0).map(c => ({ id: c[0], n: c[1], y: bag.y[c[0]] || c[2], set: !!bag.y[c[0]] })).sort((a, b) => b.y - a.y);
+  }
+  // The shortest club that still gets there; past the longest club it's the longest club, inside the shortest it's a touch shot.
+  function clubFor(bag, yds) {
+    const l = bagList(bag); if (!l.length || !(yds > 0)) return null;
+    if (yds > l[0].y) return Object.assign({ long: true }, l[0]);
+    const last = l[l.length - 1];
+    if (yds < last.y - 20) return Object.assign({ touch: true }, last);
+    return l.filter(c => c.y >= yds).pop();
+  }
+  function clubWords(c) { return !c ? "" : c.long ? `${c.n}, and it won't get there` : c.touch ? `A soft ${c.n.toLowerCase()}` : c.n; }
+
+  /* ---------- hole map: a picture of the hole, its tee and green, GPS yards and tap-to-measure (all on the phone) ---------- */
+  // A hole's map: img a JPEG picture, ar its width over height, tee and green as spots on the picture (0 to 1 across
+  // and down), and GPS marks gt (tee), gc, gf, gb (middle, front and back of the green).
+  const YD = 1.0936133;
+  const fix = v => (v && Number.isFinite(v.lat) && Number.isFinite(v.lon) && Math.abs(v.lat) <= 90 && Math.abs(v.lon) <= 180 ? { lat: Math.round(v.lat * 1e7) / 1e7, lon: Math.round(v.lon * 1e7) / 1e7, acc: Math.max(0, Math.min(999, Math.round(Number(v.acc) || 0))) } : null);
+  const spot = v => (Array.isArray(v) && v.length === 2 && v.every(n => Number.isFinite(n) && n >= 0 && n <= 1) ? [Math.round(v[0] * 1e4) / 1e4, Math.round(v[1] * 1e4) / 1e4] : null);
+  function cleanHoleMap(x) {
+    if (!x || typeof x !== "object") return null;
+    const o = {};
+    if (typeof x.img === "string" && x.img.length <= 400000 && /^data:image\/jpeg;base64,[A-Za-z0-9+/=]+$/.test(x.img)) { o.img = x.img; o.ar = Number(x.ar) > 0.1 && Number(x.ar) < 10 ? Math.round(Number(x.ar) * 1e4) / 1e4 : 0.75; }
+    ["tee", "green"].forEach(k => { const s = spot(x[k]); if (s) o[k] = s; });
+    ["gt", "gc", "gf", "gb"].forEach(k => { const f = fix(x[k]); if (f) o[k] = f; });
+    return Object.keys(o).length ? o : null;
+  }
+  const yardsBetween = (a, b) => Math.round(metres(a, b) * YD);
+  // Live yards from where you stand to the green's middle, front and back (whichever are marked).
+  function greenYards(m, at) {
+    if (!m || !at) return null;
+    const o = {}; [["c", "gc"], ["f", "gf"], ["b", "gb"]].forEach(([k, g]) => { if (m[g]) o[k] = yardsBetween(at, m[g]); });
+    return Object.keys(o).length ? o : null;
+  }
+  // Picture distance in units of the picture's height, so a wide picture isn't squashed.
+  const picDist = (m, a, b) => Math.hypot((a[0] - b[0]) * (m.ar || 1), a[1] - b[1]);
+  // Yards per picture unit: from the marked tee and green on GPS when both are marked, else the scorecard yards.
+  function picScale(m, cardYards) {
+    if (!m || !m.tee || !m.green) return null;
+    const d = picDist(m, m.tee, m.green); if (d < 0.02) return null;
+    const y = m.gt && m.gc ? yardsBetween(m.gt, m.gc) : cardYards;
+    return y > 0 ? y / d : null;
+  }
+  // Tap a spot on the picture: yards from the tee (or from you) and on to the green.
+  function tapMeasure(m, cardYards, p, from) {
+    const k = picScale(m, cardYards), s = spot(p); if (!k || !s) return null;
+    const start = spot(from) || m.tee;
+    return { from: Math.round(picDist(m, start, s) * k), to: Math.round(picDist(m, s, m.green) * k), fromYou: !!spot(from) };
+  }
+  // Where a GPS spot falls on the picture, from the tee and green marked both on the picture and on GPS.
+  function gpsToPic(m, at) {
+    if (!m || !at || !m.tee || !m.green || !m.gt || !m.gc) return null;
+    const lat0 = m.gt.lat * Math.PI / 180, en = g => [(g.lon - m.gt.lon) * Math.cos(lat0), -(g.lat - m.gt.lat)];
+    const ar = m.ar || 1, P = s => [s[0] * ar, s[1]];
+    const g1 = en(m.gt), g2 = en(m.gc), g = en(at), i1 = P(m.tee), i2 = P(m.green);
+    // one turn-and-stretch that puts the GPS tee and green onto the picture's tee and green
+    const dg = [g2[0] - g1[0], g2[1] - g1[1]], di = [i2[0] - i1[0], i2[1] - i1[1]], den = dg[0] * dg[0] + dg[1] * dg[1];
+    if (den < 1e-14) return null;
+    const a = [(di[0] * dg[0] + di[1] * dg[1]) / den, (di[1] * dg[0] - di[0] * dg[1]) / den];
+    const rel = [g[0] - g1[0], g[1] - g1[1]], x = i1[0] + a[0] * rel[0] - a[1] * rel[1], y = i1[1] + a[1] * rel[0] + a[0] * rel[1];
+    const out = [x / ar, y];
+    return out[0] >= -0.05 && out[0] <= 1.05 && out[1] >= -0.05 && out[1] <= 1.05 ? [Math.max(0, Math.min(1, out[0])), Math.max(0, Math.min(1, out[1]))] : null;
+  }
+
+  /* ---------- who's where: every group as a dot on a course overview, placed by the hole they're on ---------- */
+  // Each hole as a line from tee to green in a 100 by 100 box. With GPS tee and green marks for every hole it's the
+  // real layout; otherwise each nine goes up and back in three rows, like a routing card. No one's location is used.
+  function whereLayout(ev, maps) {
+    const n = holeCount(ev), ms = [];
+    for (let h = 1; h <= n; h++) { const m = maps && maps[h]; if (!m || !m.gt || !m.gc) { ms.length = 0; break; } ms.push(m); }
+    if (ms.length === n) {
+      const lat0 = ms[0].gt.lat * Math.PI / 180, pts = [];
+      ms.forEach(m => { pts.push(m.gt, m.gc); });
+      const xy = g => [g.lon * Math.cos(lat0), -g.lat];
+      const all = pts.map(xy), minX = Math.min.apply(null, all.map(p => p[0])), maxX = Math.max.apply(null, all.map(p => p[0]));
+      const minY = Math.min.apply(null, all.map(p => p[1])), maxY = Math.max.apply(null, all.map(p => p[1])), span = Math.max(maxX - minX, maxY - minY) || 1;
+      const ox = (100 - (maxX - minX) / span * 88) / 2, oy = (100 - (maxY - minY) / span * 88) / 2;
+      const f = g => { const p = xy(g); return [Math.round((ox + (p[0] - minX) / span * 88) * 10) / 10, Math.round((oy + (p[1] - minY) / span * 88) * 10) / 10]; };
+      return { real: true, holes: ms.map((m, i) => ({ h: i + 1, a: f(m.gt), b: f(m.gc) })) };
+    }
+    const holes = [], nines = Math.max(1, Math.ceil(n / 9)), colW = 100 / nines;
+    for (let k = 0; k < nines; k++) {
+      for (let i = 0; i < 9 && k * 9 + i < n; i++) {
+        const row = Math.floor(i / 3), back = row % 2 === 1, col = back ? 2 - (i % 3) : i % 3, cw = colW / 3, left = k * colW + col * cw, y = 80 - row * 30;
+        const l = Math.round((left + cw * 0.15) * 10) / 10, r = Math.round((left + cw * 0.85) * 10) / 10;
+        holes.push({ h: k * 9 + i + 1, a: [back ? r : l, y + 8], b: [back ? l : r, y - 8] });
+      }
+    }
+    return { real: false, holes };
+  }
+  // A dot for each group still out there, partway along the hole it's on; groups on the same hole spread out.
+  function groupSpots(ev, layout) {
+    const gs = groups(ev), byHole = {}, out = [];
+    gs.forEach(g => { if (!g.done && g.on) (byHole[g.on] = byHole[g.on] || []).push(g); });
+    Object.keys(byHole).forEach(h => {
+      const hole = layout.holes.find(x => x.h === +h); if (!hole) return;
+      byHole[h].forEach((g, i, l) => {
+        const t = l.length === 1 ? 0.55 : 0.25 + 0.6 * i / (l.length - 1);
+        out.push({ g: g.g, h: +h, x: Math.round((hole.a[0] + (hole.b[0] - hole.a[0]) * t) * 10) / 10, y: Math.round((hole.a[1] + (hole.b[1] - hole.a[1]) * t) * 10) / 10, n: g.players.length, started: g.thru > 0 });
+      });
+    });
+    return { spots: out.sort((a, b) => a.g - b.g), done: gs.filter(g => g.done).map(g => g.g) };
   }
 
   /* ---------- changes: the same dotted paths the shared database takes ---------- */
@@ -976,5 +1094,7 @@
     BETS, BET_AMTS, cleanBets, cleanBetMarks, betOn, betAmt, betPlayers, wolfOrder, wolfOf, betTally, money,
     TEE_SHOTS, cleanHoleNote, cleanHoleNotes, holeLine, nextHole, jackNoticed,
     JACK_LANGS, cleanJack, jackLevel, speakable, courseKey, cleanCourseNotes, holeTalk,
-    roundDone, recap, seasonRace, SEASON_PTS };
+    roundDone, recap, seasonRace, SEASON_PTS,
+    CLUBS, cleanBag, bagList, clubFor, clubWords,
+    cleanHoleMap, yardsBetween, greenYards, picScale, tapMeasure, gpsToPic, whereLayout, groupSpots };
 });

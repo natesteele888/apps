@@ -256,6 +256,49 @@ const pl = (ev, id) => Object.assign({ id }, ev.p[id]);
     eq(C.seasonRace(two, y - 1).list.length, 0, 'only this year counts');
   });
 
+  await test('core My bag: typical yards until you set yours, the shortest club that gets there, and Jack names it on a par 3', () => {
+    const b = C.cleanBag(null);
+    eq(C.bagList(b)[0].id, 'dr', 'longest first'); eq(C.bagList(b)[0].set, false);
+    eq(C.clubFor(b, 150).n, '6 iron'); eq(C.clubWords(C.clubFor(b, 300)), "Driver, and it won't get there"); eq(C.clubWords(C.clubFor(b, 40)), 'A soft sand wedge');
+    const mine = C.cleanBag({ on: ['dr', '7i', 'zz'], y: { '7i': 160, dr: '250', zz: 3, pw: 5 } });
+    deq(mine, { on: ['dr', '7i'], y: { '7i': 160, dr: 250 } }, 'unknown clubs and silly yards dropped');
+    eq(C.clubFor(mine, 150).n, '7 iron', 'your own yards win');
+    const ev = twoPlayers(), h = ev.course.holes.findIndex(x => x.par === 3) + 1;
+    ok(/par 3, \d+ yards\. [A-Z]/.test(C.holeTalk(ev, ev.p.aaaaaa1, h, {}, 'clean', mine)), 'a club is named on a par 3');
+    ok(!/iron|wood|Driver|wedge|Hybrid/.test(C.holeTalk(ev, ev.p.aaaaaa1, 1, {}, 'clean', mine)), 'not on a par 4');
+  });
+
+  await test('core hole map: cleaning, GPS yards to the green, tap-to-measure and your GPS spot on the picture', () => {
+    const N = 111320, gt = { lat: 40, lon: -75, acc: 4 }, gc = { lat: 40 + 400 / N, lon: -75, acc: 4 };
+    const m = C.cleanHoleMap({ img: 'data:image/jpeg;base64,AAAA', ar: 0.5, tee: [0.5, 0.9], green: [0.5, 0.1], gt, gc, gf: { lat: gc.lat - 12 / N, lon: -75, acc: 3 }, owner: 'x', tee2: 1 });
+    deq(Object.keys(m).sort(), ['ar', 'gc', 'gf', 'green', 'gt', 'img', 'tee'], 'odd fields dropped');
+    eq(C.cleanHoleMap({ img: 'data:image/png;base64,AA' }), null, 'only JPEG pictures'); eq(C.cleanHoleMap({ tee: [2, 0] }), null, 'spots stay on the picture');
+    eq(C.yardsBetween(gt, gc), 437, '400 metres is 437 yards');
+    const mid = { lat: 40 + 200 / N, lon: -75 }, gy = C.greenYards(m, mid); ok(Math.abs(gy.c - 219) <= 1, 'middle ' + gy.c); ok(Math.abs(gy.f - 205) <= 1, 'front ' + gy.f); eq(gy.b, undefined);
+    deq(C.tapMeasure(m, 999, [0.5, 0.5]), { from: 219, to: 219, fromYou: false }, 'GPS marks beat the scorecard yards for the scale');
+    const card = C.tapMeasure({ tee: [0.5, 0.9], green: [0.5, 0.1], ar: 1 }, 400, [0.5, 0.5]); eq(card.from, 200); eq(card.to, 200);
+    const pic = C.gpsToPic(m, mid); ok(Math.abs(pic[0] - 0.5) < 0.001 && Math.abs(pic[1] - 0.5) < 0.001, 'halfway up the hole is halfway up the picture');
+    const east = C.gpsToPic(m, { lat: mid.lat, lon: -75 + 50 / (N * Math.cos(40 * Math.PI / 180)) }); ok(Math.abs(east[0] - 0.7) < 0.002, 'right of the line is right on the picture: ' + east[0]);
+    eq(C.gpsToPic(m, { lat: 41, lon: -75 }), null, 'off the picture shows nothing');
+    eq(C.gpsToPic({ tee: [0.5, 0.9], green: [0.5, 0.1] }, mid), null, 'needs the GPS marks too');
+  });
+
+  await test("core who's where: a routing card until every hole is marked, then the real layout, and each group on its hole", () => {
+    const ev = C.demoEvent(NOW), n = C.holeCount(ev);
+    const lay = C.whereLayout(ev, {}); eq(lay.real, false); eq(lay.holes.length, n);
+    ok(lay.holes.every(x => [x.a[0], x.a[1], x.b[0], x.b[1]].every(v => v >= 0 && v <= 100)), 'inside the box');
+    eq(lay.holes[0].a[0] < lay.holes[0].b[0], true, 'hole 1 plays left to right'); eq(lay.holes[3].a[0] > lay.holes[3].b[0], true, 'hole 4 comes back');
+    const nine = { course: { holes: ev.course.holes.slice(0, 9) } }; eq(C.whereLayout(nine, {}).holes.length, 9, 'a nine-hole course');
+    const N = 111320, maps = {};
+    for (let h = 1; h <= n; h++) maps[h] = { gt: { lat: 40 + h * 300 / N, lon: -75 }, gc: { lat: 40 + (h * 300 + 250) / N, lon: -75 } };
+    eq(C.whereLayout(ev, maps).real, true, 'every tee and green marked');
+    const part = Object.assign({}, maps); delete part[7]; eq(C.whereLayout(ev, part).real, false, 'one hole missing keeps the routing card');
+    const at = C.groupSpots(ev, lay), gs = C.groups(ev).filter(g => !g.done);
+    eq(at.spots.length, gs.length, 'a dot for each group still out');
+    at.spots.forEach(s => { const g = gs.find(x => x.g === s.g); eq(s.h, g.on, 'group ' + s.g + ' sits on its hole'); });
+    ok(!JSON.stringify(at).match(/lat|lon/), 'no locations in the dots');
+  });
+
   /* ===================== PART 2: the page ===================== */
   let server, browser;
   try { server = await startServer('fairway'); browser = await launch(); }
@@ -468,6 +511,59 @@ const pl = (ev, id) => Object.assign({ id }, ev.p[id]);
     await page.click('#rcshare'); await page.waitForFunction(() => /Shared in the chat/.test(document.querySelector('#rcshare').textContent));
     await page.click('[data-tab=games]'); await page.waitForSelector('.season li');
     ok(/Alpha Test · you/.test(await page.textContent('.season')), 'you are marked in the race');
+    const wide = await page.evaluate(() => document.documentElement.scrollWidth); assert.ok(wide <= 390, 'no sideways scroll at 390 px, got ' + wide);
+    deq(errors, []); await ctx.close();
+  });
+
+  if (browser) await test('page: My bag saves on this phone and the next par 3 names a club from it', async () => {
+    const { page, errors, ctx } = await open();
+    await page.click('#new'); await page.fill('#nn', 'Bag Day'); await page.fill('#nme', 'Alpha Test');
+    await page.locator('#nf [type=submit]').click(); await page.waitForFunction(() => window.FW.debug.S.ev);
+    await page.click('[data-tab=score]'); await page.waitForSelector('#jackopen');
+    await page.click('#jackopen'); await page.click('#jbag'); await page.fill('[data-yds="7i"]', '172'); await page.click('#bagsave');
+    eq(await page.evaluate(() => JSON.parse(localStorage.getItem('fw:bag')).y['7i']), 172);
+    await page.waitForSelector('#jn'); await page.click('.sheet-h .x');
+    const before = await page.evaluate(() => { const ev = window.FW.debug.S.ev; return ev.course.holes.findIndex(x => x.par === 3); });
+    await page.evaluate(h => { window.FW.debug.S.hole = h; window.FW.debug.render(); }, before);
+    await page.locator('.scorer li').first().locator('.val').click();
+    await page.waitForSelector('.hreview');
+    ok(/From your bag:/.test(await page.textContent('.hreview')), 'the par 3 coming up names a club');
+    const wide = await page.evaluate(() => document.documentElement.scrollWidth); assert.ok(wide <= 390, 'no sideways scroll at 390 px, got ' + wide);
+    deq(errors, []); await ctx.close();
+  });
+
+  if (browser) await test('page: hole map, add a picture, set the tee and green, tap to measure, GPS yards once the green is marked', async () => {
+    const { page, errors, ctx } = await open({ ctx: { geolocation: { latitude: 40, longitude: -75, accuracy: 4 }, permissions: ['geolocation'] } });
+    await page.click('#new'); await page.fill('#nn', 'Map Day'); await page.fill('#nme', 'Alpha Test');
+    await page.locator('#nf [type=submit]').click(); await page.waitForFunction(() => window.FW.debug.S.ev);
+    await page.click('[data-tab=score]'); await page.waitForSelector('#mapopen'); await page.click('#mapopen');
+    const png = await page.evaluate(() => { const c = document.createElement('canvas'); c.width = 300; c.height = 600; const x = c.getContext('2d'); x.fillStyle = '#5a8f4e'; x.fillRect(0, 0, 300, 600); return c.toDataURL('image/png').split(',')[1]; });
+    await page.setInputFiles('#mapimg', { name: 'hole.png', mimeType: 'image/png', buffer: Buffer.from(png, 'base64') });
+    await page.waitForSelector('.hmap img');
+    const box = await page.locator('.hmap').boundingBox();
+    await page.mouse.click(box.x + box.width / 2, box.y + box.height * 0.9); await page.waitForFunction(() => /middle of the green/.test(document.querySelector('#maphint').textContent));
+    await page.mouse.click(box.x + box.width / 2, box.y + box.height * 0.1); await page.waitForFunction(() => /Tap anywhere/.test(document.querySelector('#maphint').textContent));
+    await page.mouse.click(box.x + box.width / 2, box.y + box.height * 0.5);
+    await page.waitForFunction(() => /From the tee: \d+ yds · to the green: \d+ yds/.test(document.querySelector('#maphint').textContent));
+    await page.click('#gpson'); await page.waitForSelector('[data-mk=gc]');
+    await ctx.setGeolocation({ latitude: 40.003, longitude: -75, accuracy: 4 }); await page.waitForTimeout(3500);
+    await page.click('[data-mk=gc]');
+    await ctx.setGeolocation({ latitude: 40.0012, longitude: -75, accuracy: 4 }); await page.waitForTimeout(3500);
+    await page.waitForFunction(() => { const b = document.querySelector('.gyds .mid b'); return b && +b.textContent > 150 && +b.textContent < 250; });
+    const saved = await page.evaluate(() => Object.keys(localStorage).filter(k => k.indexOf('fw:map:') === 0).length); eq(saved, 1, 'the map is kept on this phone');
+    const shared = await page.evaluate(() => JSON.stringify(window.FW.debug.S.ev)); ok(!/40\.003|"gc"|base64/.test(shared), 'no location or picture in the shared tournament');
+    await page.click('.sheet-h .x');
+    const wide = await page.evaluate(() => document.documentElement.scrollWidth); assert.ok(wide <= 390, 'no sideways scroll at 390 px, got ' + wide);
+    deq(errors, []); await ctx.close();
+  });
+
+  if (browser) await test("page: who's where shows each group as a dot on the Course view, yours in gold", async () => {
+    const { page, errors, ctx } = await open();
+    await page.click('#demo'); await page.waitForSelector('.lb tbody tr');
+    await page.click('[data-bm=course]'); await page.waitForSelector('.where svg');
+    const dots = await page.locator('.where .wdot').count(), out = await page.evaluate(() => window.FairwayCore.groups(window.FW.debug.S.ev).filter(g => !g.done).length);
+    eq(dots, out, 'one dot per group still out'); ok(/Group \d+ (on|starting on) hole \d+/.test(await page.textContent('.wlist')));
+    ok(/never by anyone's location/.test(await page.textContent('#bsub')));
     const wide = await page.evaluate(() => document.documentElement.scrollWidth); assert.ok(wide <= 390, 'no sideways scroll at 390 px, got ' + wide);
     deq(errors, []); await ctx.close();
   });

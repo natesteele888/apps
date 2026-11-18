@@ -1,0 +1,35 @@
+/* Copyright (c) 2026 Nate Steele. All rights reserved. See LICENSE.
+   Sized off the screen itself (vmin), so it reads the same on a 720p stick, a 1080p TV or a 4K set. */
+html, body { margin: 0; height: 100%; background: #000; color: #fff; overflow: hidden; cursor: none; }
+body { font-family: Roboto, "Segoe UI", system-ui, -apple-system, Arial, sans-serif; -webkit-font-smoothing: antialiased; }
+#stage { position: fixed; top: 0; right: 0; bottom: 0; left: 0; }
+.slide { position: absolute; top: 0; right: 0; bottom: 0; left: 0; opacity: 0; transition: opacity .8s ease; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+.slide.on { opacity: 1; }
+.slide .bg { position: absolute; top: -5%; right: -5%; bottom: -5%; left: -5%; background-size: cover; background-position: center; filter: blur(40px) brightness(.45); }
+.slide img, .slide video { position: relative; max-width: 100%; max-height: 100%; width: 100%; height: 100%; object-fit: contain; }
+.card { position: relative; box-sizing: border-box; width: 100%; height: 100%; padding: 7vmin 9vmin; display: flex; flex-direction: column; justify-content: center;
+  background: radial-gradient(ellipse at 20% 0%, #1d5c3a 0%, #0c2a1b 55%, #061510 100%); }
+.card .kicker { font-size: 3.4vmin; font-weight: 700; letter-spacing: .18em; text-transform: uppercase; color: #ffd34d; margin: 0 0 2vmin; }
+.card .big { font-size: 10vmin; line-height: 1.02; font-weight: 800; margin: 0; letter-spacing: -.01em; }
+.card .small { font-size: 4.4vmin; line-height: 1.3; margin: 3vmin 0 0; color: #d7e8dd; max-width: 70ch; }
+.card ul { list-style: none; padding: 0; margin: 4vmin 0 0; display: flex; flex-wrap: wrap; gap: 1.6vmin 4vmin; }
+.card li { font-size: 5.4vmin; font-weight: 700; }
+.card li:before { content: ""; display: inline-block; width: 1.6vmin; height: 1.6vmin; border-radius: 50%; background: #ffd34d; margin: 0 2vmin .6vmin 0; vertical-align: middle; }
+.games { margin: 3vmin 0 0; display: grid; grid-template-columns: auto 1fr; gap: 1.8vmin 4vmin; align-items: baseline; }
+.games .t { font-size: 5vmin; font-weight: 800; color: #ffd34d; white-space: nowrap; }
+.games .g { font-size: 5vmin; font-weight: 700; }
+.games .w { display: block; font-size: 3.2vmin; font-weight: 500; color: #b9d2c3; }
+.games .ended { opacity: .45; }
+.days { margin: 3vmin 0 0; display: grid; gap: 2.4vmin; }
+.days .d { font-size: 3.4vmin; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: #ffd34d; }
+.days .e { font-size: 4.6vmin; font-weight: 700; }
+.bigclock { font-size: 22vmin; font-weight: 800; line-height: 1; margin: 2vmin 0 0; font-variant-numeric: tabular-nums; }
+.chip { position: fixed; right: 2.2vmin; bottom: 2.2vmin; padding: .9vmin 1.8vmin; border-radius: 99px; background: rgba(0,0,0,.55); font-size: 2.6vmin; font-weight: 700;
+  font-variant-numeric: tabular-nums; display: flex; align-items: center; gap: 1.2vmin; z-index: 5; }
+.dot { display: none; width: 1.4vmin; height: 1.4vmin; border-radius: 50%; background: #ff9f43; }
+.offline .dot { display: inline-block; }
+.hint { position: fixed; left: 2.2vmin; bottom: 2.2vmin; padding: .9vmin 1.8vmin; border-radius: 1vmin; background: rgba(0,0,0,.6); font-size: 2.2vmin; color: #d7e8dd; z-index: 5; max-width: 60vw; }
+.info { position: fixed; left: 50%; top: 50%; transform: translate(-50%, -50%); background: rgba(8,20,14,.94); border: .3vmin solid #2c6b49; border-radius: 2vmin; padding: 4vmin 5vmin;
+  font-size: 3vmin; line-height: 1.5; z-index: 9; min-width: 50vmin; }
+.info b { color: #ffd34d; }
+@media (prefers-reduced-motion: reduce) { .slide { transition: none; } }

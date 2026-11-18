@@ -43,6 +43,7 @@
         <div class="row2">${Rec ? `<button type="button" class="btn" id="jmic">Say it</button>` : ""}<button type="button" class="btn primary" id="jsave">Save note</button></div>
         <p class="msg small" id="jmsg" role="status"></p>` : `<p class="msg small">Five notes is the most for one hole. Remove one to add another.</p>`}
         ${canSpeak() ? `<button type="button" class="btn block" id="jread">Read hole ${h} to me</button>` : ""}
+        ${FW.bag ? `<button type="button" class="btn ghost block" id="jbag">My bag</button>` : ""}
         <button type="button" class="btn ghost block" id="jset">Jack's settings · ${esc(C.JACK_LANGS.find(x => x[0] === js.lang)[1])}</button>`;
       $$("[data-del]", box).forEach(b => b.onclick = () => { const n = l.slice(); n.splice(+b.dataset.del, 1); setNotes(ev.course, h, n); draw(box); u.render(); });
       const save = $("#jsave", box);
@@ -61,8 +62,9 @@
         rec.onend = () => { mic.disabled = false; const m = $("#jmsg", box); if (m && m.textContent === "Listening…") m.textContent = ""; };
         try { rec.start(); } catch (e) { mic.disabled = false; $("#jmsg", box).textContent = "This phone can't listen here. Type the note instead."; }
       };
-      const rd = $("#jread", box); if (rd) rd.onclick = () => J.say(C.holeTalk(ev, mine, h, J.allNotes(), C.jackLevel(J.settings())));
+      const rd = $("#jread", box); if (rd) rd.onclick = () => J.say(C.holeTalk(ev, mine, h, J.allNotes(), C.jackLevel(J.settings()), FW.bag ? FW.bag.get() : null));
       $("#jset", box).onclick = () => J.settingsSheet(() => J.sheet(ev, mine, h));
+      const jb = $("#jbag", box); if (jb) jb.onclick = () => FW.bag.sheet(() => J.sheet(ev, mine, h));
     };
     u.sheet("Jack · hole " + h, "", draw);
   };

@@ -2914,6 +2914,16 @@
           }
         ]
       }
+    },
+    {
+      "id": "snackshack",
+      "name": "Snack Shack Screen",
+      "live": "https://natesteele888.github.io/apps/snackshack/",
+      "repo": "natesteele888/apps",
+      "path": "snackshack/",
+      "toolboxIds": [],
+      "private": true,
+      "store": false
     }
   ],
   "comingSoon": []

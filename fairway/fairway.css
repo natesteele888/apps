@@ -484,3 +484,39 @@ a.btn { text-decoration: none; }
 .season .pos { font-weight: 800; color: var(--green); text-align: center; }
 .season .nm small { display: block; color: var(--muted); }
 .season .pts { font-variant-numeric: tabular-nums; }
+/* my bag */
+.bag .ritem { gap: 8px; }
+.bag input[type=number] { width: 76px; min-height: 40px; padding: 6px 8px; text-align: right; flex: none; }
+.bag small { color: var(--muted); flex: none; }
+/* hole map */
+.hmap { position: relative; width: 100%; height: 0; border-radius: 12px; overflow: hidden; background: #e8efe6; border: 1px solid var(--line); cursor: crosshair; }
+.hmap img, .hmap svg { position: absolute; left: 0; top: 0; width: 100%; height: 100%; }
+.hmap img { object-fit: fill; }
+.hmap.none { height: auto; padding: 24px 16px; cursor: default; text-align: center; color: var(--muted); }
+.hmap .mline { stroke: #fff; stroke-width: .6; stroke-dasharray: 1.6 1.2; }
+.hmap .mtee { fill: #fff; stroke: #1b1b1b; stroke-width: .5; }
+.hmap .mgreen { fill: none; stroke: #fff; stroke-width: .9; }
+.hmap .mtap { fill: var(--gold); stroke: #1b1b1b; stroke-width: .4; }
+.hmap .myou { fill: #1f6fd1; stroke: #fff; stroke-width: .8; }
+.gyds { display: grid; grid-template-columns: 1fr 1.3fr 1fr; gap: 6px; text-align: center; margin: 8px 0; }
+.gyds div { background: var(--paper); border: 1px solid var(--line); border-radius: 12px; padding: 6px 4px; }
+.gyds small { display: block; color: var(--muted); font-size: 12px; }
+.gyds b { font-size: 22px; font-variant-numeric: tabular-nums; }
+.gyds .mid { background: var(--green); color: #fff; border-color: var(--green); }
+.gyds .mid small { color: #cfe0d2; }
+.gyds .mid b { font-size: 30px; }
+.filebtn { position: relative; overflow: hidden; }
+.filebtn input { position: absolute; left: 0; top: 0; right: 0; bottom: 0; opacity: 0; width: 100%; height: 100%; min-height: 0; cursor: pointer; }
+.mapbar { border-color: var(--gold); background: #fffaf0; }
+/* who's where */
+.where { background: #e8efe6; border: 1px solid var(--line); border-radius: 14px; padding: 6px; }
+.where svg { display: block; width: 100%; height: auto; }
+.where .wh line { stroke: #9cc58a; stroke-width: 3.2; stroke-linecap: round; }
+.where .wh .wgr { fill: #6fa955; }
+.where .wh text { font: 700 3.6px var(--sans); fill: var(--muted); text-anchor: middle; }
+.where .wdot circle { fill: var(--green); stroke: #fff; stroke-width: .8; }
+.where .wdot text { font: 800 4px var(--sans); fill: #fff; text-anchor: middle; }
+.where .wdot.mine circle { fill: var(--gold); }
+.where .wdot.mine text { fill: #1b1b1b; }
+.wlist { list-style: none; margin: 8px 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 14px; }
+.wlist li.mine { color: var(--green); font-weight: 700; }
