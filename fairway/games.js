@@ -83,7 +83,7 @@
       if (C.betOn(ev, "green") && par === 3) parts.push(pickOne("bgr", "Greenie (on in one, then par)", m.gr));
       if (C.betOn(ev, "sandy")) parts.push(pickMany("sa", "Sandies (out of the sand, then par)", m.sa));
       if (C.betOn(ev, "snake")) parts.push(pickMany("tp", "Three-putts (the last one holds the snake)", m.tp));
-      $(".sheet-b", box).innerHTML = `<label class="fld"><span>Hole</span><select id="bh">${ev.course.holes.map((x, i) => `<option value="${i + 1}" ${i + 1 === h ? "selected" : ""}>Hole ${i + 1} · par ${x.par}</option>`).join("")}</select></label>
+      $(".sheet-b", box).innerHTML = `<label class="fld"><span>Hole</span><select id="bh">${ev.course.holes.map((x, i) => `<option value="${i + 1}" ${i + 1 === h ? "selected" : ""}>Hole ${C.holeNo(ev.course, i + 1)} · par ${x.par}</option>`).join("")}</select></label>
         ${parts.length ? parts.join("") : `<p class="msg">Nothing to mark on this hole for today's games. Skins, Nassau and best ball come straight from the scores.</p>`}
         ${parts.length ? `<button type="button" class="btn primary block" id="bmsave">Save</button>` : ""}`;
       $("#bh", box).onchange = e => { h = +e.target.value; draw(box); };
@@ -96,7 +96,7 @@
         if ($("[data-sa]", box)) { const l = many("sa"); patch[base + "sa"] = l.length ? l : C.DELETE; }
         if ($("[data-tp]", box)) { const l = many("tp"); patch[base + "tp"] = l.length ? l : C.DELETE; }
         $$("[data-wolf]", box).forEach(s => { patch[base + "wp." + s.dataset.wolf] = s.value || C.DELETE; });
-        u.write(patch); u.closeSheet(); u.toast("Marked hole " + h);
+        u.write(patch); u.closeSheet(); u.toast("Marked hole " + C.holeNo(ev.course, h));
       };
     };
     u.sheet("Mark a hole", "", draw);

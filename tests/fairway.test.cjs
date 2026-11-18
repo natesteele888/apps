@@ -185,6 +185,17 @@ const pl = (ev, id) => Object.assign({ id }, ev.p[id]);
     ev.fmt.kind = 'teams'; eq(C.keepsCard(ev, 'aaaaaa1'), true, 'everyone keeps a card outside a scramble'); eq(C.teamBoard(ev).find(t => t.id === 't1').toPar, 0 - 1 + 9 - ev.course.holes[0].par);
   });
 
+  await test('core: a back nine shares the full course\'s notes and maps, and every line says the number on the sign', () => {
+    const c = C.monoosnockCourse(), b9 = C.nineOf(c, 'back'), f9 = C.nineOf(c, 'front');
+    eq(C.courseKey(b9), C.courseKey(c)); eq(C.courseKey(f9), C.courseKey(c));
+    const byName = { name: 'Elm Hill', tees: c.tees, holes: c.holes };
+    eq(C.courseKey(C.nineOf(byName, 'back')), C.courseKey(byName), 'a course with no id too');
+    const ev = C.newEvent({ name: 'B', course: b9, now: NOW }); ev.p.aaaaaa1 = C.newPlayer(ev, { name: 'Al Ace', tee: b9.tees[0].id, now: NOW });
+    const notes = { [C.courseKey(c)]: { 10: ['Aim at the barn'], 1: ['Front nine note'] } };
+    const talk = C.holeTalk(ev, ev.p.aaaaaa1, 1, notes, 'clean');
+    ok(/^Hole 10, par/.test(talk), talk); ok(/Aim at the barn/.test(talk)); ok(!/Front nine/.test(talk));
+  });
+
   await test('core: hole art that comes with the app, by course, and the same pictures for a front or back nine', () => {
     const c = C.monoosnockCourse();
     eq(C.holeArt(c, 1), null, 'no pictures listed yet');

@@ -771,11 +771,11 @@
         else {
           let carry = 1, won = 0;
           for (let h = 1; h <= n; h++) {
-            if (!sides.every(s => all(s.m, h))) { lines.push(`Hole ${h} waits on everyone's score${carry > 1 ? `, ${carry} skins riding` : ""}.`); carry = 0; break; }
+            if (!sides.every(s => all(s.m, h))) { lines.push(`Hole ${holeNo(ev.course, h)} waits on everyone's score${carry > 1 ? `, ${carry} skins riding` : ""}.`); carry = 0; break; }
             const best = sides.map(s => Math.min.apply(null, s.m.map(p => sc(p, h)))), low = Math.min.apply(null, best), at = best.filter(v => v === low).length;
             if (at > 1) { carry++; continue; }
             const w = sides[best.indexOf(low)];
-            lines.push(`Hole ${h}: ${w.n}${carry > 1 ? ` wins ${carry} skins` : " wins the skin"}.`);
+            lines.push(`Hole ${holeNo(ev.course, h)}: ${w.n}${carry > 1 ? ` wins ${carry} skins` : " wins the skin"}.`);
             pay(w.m, who.filter(p => w.m.indexOf(p) < 0), unit * carry, real); won += carry; carry = 1;
           }
           if (carry > 1) lines.push(`${carry - 1} skin${carry > 2 ? "s" : ""} carried past the last hole.`);
@@ -806,23 +806,23 @@
       } else if (g === "ctp") {
         ctpBoard(ev, r).forEach(x => {
           const b = x.list.find(e => who.indexOf(e.pid) >= 0);
-          if (!b) { lines.push(`Hole ${x.h}: nobody on yet.`); return; }
-          lines.push(`Hole ${x.h}: ${nm(b.pid)}, ${fmtFeet(b.d)}.`); pay([b.pid], others(b.pid), unit, real);
+          if (!b) { lines.push(`Hole ${holeNo(ev.course, x.h)}: nobody on yet.`); return; }
+          lines.push(`Hole ${holeNo(ev.course, x.h)}: ${nm(b.pid)}, ${fmtFeet(b.d)}.`); pay([b.pid], others(b.pid), unit, real);
         });
         if (!(ev.ctph || []).length) lines.push("Pick the closest to the pin holes on the Score tab.");
       } else if (g === "long" || g === "green" || g === "sandy") {
         for (let h = 1; h <= n; h++) {
           const m = bm[key(r, h)] || {}, parFor = id => parOf(ev.course, h, (ev.p[id] || {}).tee);
-          if (g === "long" && m.ld && who.indexOf(m.ld) >= 0) { lines.push(`Hole ${h}: ${nm(m.ld)}.`); pay([m.ld], others(m.ld), unit, real); }
+          if (g === "long" && m.ld && who.indexOf(m.ld) >= 0) { lines.push(`Hole ${holeNo(ev.course, h)}: ${nm(m.ld)}.`); pay([m.ld], others(m.ld), unit, real); }
           if (g === "green" && m.gr && who.indexOf(m.gr) >= 0) {
             const v = sc(m.gr, h);
-            if (v == null) lines.push(`Hole ${h}: ${nm(m.gr)}, once they make par.`);
-            else if (v <= parFor(m.gr)) { lines.push(`Hole ${h}: ${nm(m.gr)}.`); pay([m.gr], others(m.gr), unit, real); }
-            else lines.push(`Hole ${h}: ${nm(m.gr)} hit it close but missed par.`);
+            if (v == null) lines.push(`Hole ${holeNo(ev.course, h)}: ${nm(m.gr)}, once they make par.`);
+            else if (v <= parFor(m.gr)) { lines.push(`Hole ${holeNo(ev.course, h)}: ${nm(m.gr)}.`); pay([m.gr], others(m.gr), unit, real); }
+            else lines.push(`Hole ${holeNo(ev.course, h)}: ${nm(m.gr)} hit it close but missed par.`);
           }
           if (g === "sandy") (m.sa || []).filter(p => who.indexOf(p) >= 0).forEach(p => {
             const v = sc(p, h);
-            if (v != null && v <= parFor(p)) { lines.push(`Hole ${h}: ${nm(p)}.`); pay([p], others(p), unit, real); }
+            if (v != null && v <= parFor(p)) { lines.push(`Hole ${holeNo(ev.course, h)}: ${nm(p)}.`); pay([p], others(p), unit, real); }
           });
         }
         if (!lines.length) lines.push(g === "long" ? "Mark the long drive from Mark a hole." : g === "green" ? "Greenies: on the green in one on a par 3 and make par. Mark them from Mark a hole." : "Sandies: out of the sand and par or better. Mark them from Mark a hole.");
@@ -842,9 +842,9 @@
             if (!pick || !all(order, h) || (pick !== "lone" && order.indexOf(pick) < 0)) continue;
             const a = pick === "lone" ? [w] : [w, pick], b = order.filter(p => a.indexOf(p) < 0);
             const ba = Math.min.apply(null, a.map(p => sc(p, h))), bb = Math.min.apply(null, b.map(p => sc(p, h)));
-            if (ba === bb) { lines.push(`${pre}hole ${h}: halved.`); continue; }
+            if (ba === bb) { lines.push(`${pre}hole ${holeNo(ev.course, h)}: halved.`); continue; }
             const stake = pick === "lone" ? 2 * unit : unit, win = ba < bb ? a : b, lose = ba < bb ? b : a;
-            lines.push(`${pre}hole ${h}: ${pick === "lone" ? (ba < bb ? `${nm(w)} wins alone` : `${nm(w)} loses alone`) : `${win.map(nm).join(" and ")} win`}.`);
+            lines.push(`${pre}hole ${holeNo(ev.course, h)}: ${pick === "lone" ? (ba < bb ? `${nm(w)} wins alone` : `${nm(w)} loses alone`) : `${win.map(nm).join(" and ")} win`}.`);
             lose.forEach(l => win.forEach(x => { tally[l] -= stake; tally[x] += stake; }));
           }
           if (real) order.forEach(p => { bal[p] += tally[p]; });
@@ -943,7 +943,9 @@
   }
   // Notes are filed by course (its id, or its name) and hole: up to 5 short notes a hole.
   const NOTE_MAX = 200, NOTES_PER_HOLE = 5;
-  function courseKey(course) { return course && course.id ? "id:" + clip(course.id, 40) : "n:" + clip(course && course.name, 60).toLowerCase(); }
+  // A front or back nine shares the full course's key, so notes and hole maps (kept by the number on the hole's sign)
+  // are the same whichever way it's played.
+  function courseKey(course) { return course && course.id ? "id:" + clip(String(course.id).replace(/-(f9|b9)$/, ""), 40) : "n:" + clip(course && course.name, 60).replace(/ \((front|back) 9\)$/, "").toLowerCase(); }
   function cleanCourseNotes(x) {
     const out = {}; if (!x || typeof x !== "object") return out;
     Object.keys(x).slice(0, 50).forEach(ck => {
@@ -961,8 +963,8 @@
   // What Jack says walking up to a hole: par and yards, then the golfer's own notes in their own words.
   function holeTalk(ev, pl, h, notes, level, bag) {
     const tee = teeOf(ev, pl), y = yards(ev.course, h, tee.id), par = parOf(ev.course, h, tee.id);
-    const mine = ((notes || {})[courseKey(ev.course)] || {})[h] || [];
-    let s = `Hole ${h}, par ${par}${y ? `, ${y} yards` : ""}.`;
+    const mine = ((notes || {})[courseKey(ev.course)] || {})[holeNo(ev.course, h)] || [];
+    let s = `Hole ${holeNo(ev.course, h)}, par ${par}${y ? `, ${y} yards` : ""}.`;
     if (bag && par === 3 && y) { const c = clubFor(bag, y); if (c) s += " " + clubWords(c) + "."; }
     if (mine.length) s += " Your notes: " + mine.map(t => speakable(t, level)).filter(Boolean).map(t => (/[.!?]$/.test(t) ? t : t + ".")).join(" ");
     return s;

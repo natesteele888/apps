@@ -534,7 +534,7 @@
         <button type="button" class="btn small" id="rdgo">${quick ? "Back to home" : "See the board"}</button></div>` : "";
     el.innerHTML = `${finHtml}${gs.length > 1 ? `<div class="pills small" role="group" aria-label="Group">${gs.map(x => `<button type="button" class="pill" data-g="${x.g}" aria-pressed="${x.g === g.g}">Group ${x.g}</button>`).join("")}</div>` : ""}
       ${ev.rounds > 1 ? `<div class="pills small" role="group" aria-label="Round">${Array.from({ length: ev.rounds }, (_, i) => `<button type="button" class="pill" data-sr="${i + 1}" aria-pressed="${r === i + 1}">Round ${i + 1}${i + 1 === ev.cur ? " (now)" : ""}</button>`).join("")}</div>` : ""}
-      <div class="strip" data-keep="strip" role="group" aria-label="Hole">${order.map(k => { const done = rs.every(x => x.scores[k - 1] != null), some = rs.some(x => x.scores[k - 1] != null); return `<button type="button" data-h="${k}" aria-pressed="${k === h}" class="${done ? "done" : some ? "part" : ""}">${k}</button>`; }).join("")}</div>
+      <div class="strip" data-keep="strip" role="group" aria-label="Hole">${order.map(k => { const done = rs.every(x => x.scores[k - 1] != null), some = rs.some(x => x.scores[k - 1] != null); return `<button type="button" data-h="${k}" aria-pressed="${k === h}" class="${done ? "done" : some ? "part" : ""}">${C.holeNo(ev.course, k)}</button>`; }).join("")}</div>
       <div class="holecard"><div class="hn"><small>Hole</small><b>${C.holeNo(ev.course, h)}</b></div><div class="hinfo"><b>Par ${hole.par}</b><small>${hole.tp ? ev.course.tees.filter(t => hole.tp[t.id] && g.players.some(p => p.tee === t.id)).map(t => esc(t.name) + " par " + hole.tp[t.id] + " · ").join("") : ""}Handicap ${hole.hcp}</small></div>
         <div class="hy">${ev.course.tees.filter(t => g.players.some(p => p.tee === t.id)).map(t => `<span>${teeDot(t)}${C.yards(ev.course, h, t.id) || "–"} yds</span>`).join("")}</div></div>
       ${caddieRow(ev, g, r, h, mine)}
@@ -576,7 +576,7 @@
     const n = C.holeCount(ev), halves = n === 18 ? [[1, 9, "Out"], [10, 18, "In"]] : [[1, 9, "Tot"]];
     return halves.map(([a, b, lbl]) => {
       const holes = []; for (let k = a; k <= b; k++) holes.push(k);
-      return `<div class="cardwrap" data-keep="gc${a}"><table class="sc"><thead><tr><th class="nm">Hole</th>${holes.map(k => `<th class="${k === hl ? "hl" : ""}">${k}</th>`).join("")}<th>${lbl}</th></tr>
+      return `<div class="cardwrap" data-keep="gc${a}"><table class="sc"><thead><tr><th class="nm">Hole</th>${holes.map(k => `<th class="${k === hl ? "hl" : ""}">${C.holeNo(ev.course, k)}</th>`).join("")}<th>${lbl}</th></tr>
         <tr class="parrow"><th class="nm">Par</th>${holes.map(k => `<td>${ev.course.holes[k - 1].par}</td>`).join("")}<td>${holes.reduce((s, k) => s + ev.course.holes[k - 1].par, 0)}</td></tr></thead><tbody>
         ${list.map(p => { let t = 0, any = false; return `<tr><th class="nm">${esc(p.n.split(" ")[0])}</th>${holes.map(k => { const v = C.strokes(p, r, k); if (v != null) { t += v; any = true; } return `<td>${v == null ? "" : `<span class="mk ${C.mark(v - ev.course.holes[k - 1].par)}">${v}</span>`}</td>`; }).join("")}<td class="sum">${any ? t : ""}</td></tr>`; }).join("")}
       </tbody></table></div>`;
@@ -590,7 +590,7 @@
     el.innerHTML = `<div class="pad0">${FW.where.html(ev)}<h2 class="sec">${esc(c.name)} <small>par ${C.coursePar(c)}</small></h2>
       <ul class="teesum">${c.tees.map(t => `<li class="${mine && mine.tee === t.id ? "mine" : ""}">${teeLabel(c, t)}${mine && mine.tee === t.id ? " <i class='chip'>Your tees</i>" : ""}</li>`).join("")}</ul>
       ${halves.map(([a, b, lbl]) => { const hs = []; for (let k = a; k <= b; k++) hs.push(k);
-        return `<div class="cardwrap" data-keep="cc${a}"><table class="sc course"><thead><tr><th class="nm">Hole</th>${hs.map(k => `<th>${k}</th>`).join("")}<th>${lbl}</th></tr></thead><tbody>
+        return `<div class="cardwrap" data-keep="cc${a}"><table class="sc course"><thead><tr><th class="nm">Hole</th>${hs.map(k => `<th>${C.holeNo(c, k)}</th>`).join("")}<th>${lbl}</th></tr></thead><tbody>
           ${c.tees.map(t => `<tr class="${mine && mine.tee === t.id ? "mine" : ""}"><th class="nm">${teeDot(t)}${esc(t.name)}</th>${hs.map(k => `<td>${C.yards(c, k, t.id) || ""}</td>`).join("")}<td class="sum">${hs.reduce((s, k) => s + C.yards(c, k, t.id), 0) || ""}</td></tr>`).join("")}
           <tr class="parrow"><th class="nm">Par</th>${hs.map(k => `<td>${c.holes[k - 1].par}</td>`).join("")}<td class="sum">${hs.reduce((s, k) => s + c.holes[k - 1].par, 0)}</td></tr>
           <tr class="hcprow"><th class="nm">Hcp</th>${hs.map(k => `<td>${c.holes[k - 1].hcp}</td>`).join("")}<td></td></tr>
@@ -699,7 +699,7 @@
   function holeSketch(ev, h, teeId, big) {
     const hole = ev.course.holes[h - 1], par = C.parOf(ev.course, h, teeId);
     const p = M.plan({ seed: ev.course.name + " " + h, par, yards: C.yards(ev.course, h, teeId), hcp: hole.hcp });
-    const sk = M.svg(p, { id: (big ? "hb" : "hs") + h, big, title: "Sketch of hole " + h + ", par " + par });
+    const sk = M.svg(p, { id: (big ? "hb" : "hs") + h, big, title: "Sketch of hole " + C.holeNo(ev.course, h) + ", par " + par });
     // the course's own drawing of the hole when the app has one; the sketch stays underneath in case it can't load
     const art = C.holeArt(ev.course, h);
     return art ? `<img class="holeart" src="${esc(art)}" alt="Hole ${C.holeNo(ev.course, h)}, par ${par}" decoding="async"><span class="skfb">${sk}</span>` : sk;
@@ -708,7 +708,7 @@
   function artFallback(el) { $$("img.holeart", el).forEach(i => { const drop = () => i.remove(); i.onerror = drop; if (i.complete && !i.naturalWidth && i.getAttribute("src")) drop(); }); }
   function teeLine(ev, g, r, h, mine) {
     const sub = subjectOf(g, mine), hole = ev.course.holes[h - 1];
-    return J.lineFor({ kind: "tee", par: C.parOf(ev.course, h, sub.tee), y: C.yards(ev.course, h, sub.tee), hcp: hole.hcp, n: sub.n, h }, jackLevel());
+    return J.lineFor({ kind: "tee", par: C.parOf(ev.course, h, sub.tee), y: C.yards(ev.course, h, sub.tee), hcp: hole.hcp, n: sub.n, h: C.holeNo(ev.course, h) }, jackLevel());
   }
   function caddieRow(ev, g, r, h, mine) {
     if (!M || !J || !FW.jack) return "";
@@ -716,7 +716,7 @@
     if (!S.jack || S.jack.key !== key) S.jack = Object.assign({ key }, teeLine(ev, g, r, h, mine));
     const lock = js.kid ? "Kid's profile: clean" : ev.fam ? "Family event: clean" : C.JACK_LANGS[jackLevel()][1];
     return `<div class="hplus">
-      <button type="button" class="sketch" id="hsketch" aria-label="Hole ${h} sketch. Tap to make it bigger">${holeSketch(ev, h, sub.tee, false)}</button>
+      <button type="button" class="sketch" id="hsketch" aria-label="Hole ${C.holeNo(ev.course, h)} sketch. Tap to make it bigger">${holeSketch(ev, h, sub.tee, false)}</button>
       <div class="jack" aria-live="polite"><div class="jhead"><span class="jface" aria-hidden="true">J</span><span><b>Jack</b><small>${esc(lock)}</small></span><button type="button" class="link" id="jkset">Settings</button></div>
         <p class="jline" id="jline">${esc(S.jack.text)}</p>
         <div class="jbtns"><button type="button" class="btn small" id="jask">Ask Jack</button>${"speechSynthesis" in window ? `<button type="button" class="btn small ghost" id="jsay">Say it</button>` : ""}</div></div>
@@ -735,12 +735,12 @@
     const p = ev.p[pid], par = C.parOf(ev.course, h, p.tee), x = C.round(ev, Object.assign({ id: pid }, p), r);
     const tp = x.toPar - (cur == null ? 0 : cur - par) + (val - par), thru = x.thru + (cur == null ? 1 : 0);
     const rows = C.standings(ev), lead = rows.length > 1 && rows[0].id === pid;
-    const line = J.lineFor({ kind: "score", par, diff: val - par, tp, thru, n: p.n, h, lead }, jackLevel());
+    const line = J.lineFor({ kind: "score", par, diff: val - par, tp, thru, n: p.n, h: C.holeNo(ev.course, h), lead }, jackLevel());
     S.jack = Object.assign({ key: [S.code, r, S.group, h, jackLevel()].join(":") }, line);
   }
   function sketchSheet(ev, g, h, mine) {
     const sub = subjectOf(g, mine), hole = ev.course.holes[h - 1], y = C.yards(ev.course, h, sub.tee), own = mine && mine.g === g.g;
-    sheet("Hole " + h, `<div class="mapbig">${holeSketch(ev, h, sub.tee, true)}</div>
+    sheet("Hole " + C.holeNo(ev.course, h), `<div class="mapbig">${holeSketch(ev, h, sub.tee, true)}</div>
       <p class="maplegend"><b>Par ${C.parOf(ev.course, h, sub.tee)}</b>${y ? ` · ${y} yds from the ${esc(C.teeOf(ev, sub).name)} tees` : ""} · Handicap ${hole.hcp}</p>
       <p class="msg small">${C.holeArt(ev.course, h) ? "The course's own drawing of the hole." : "A pencil sketch drawn from the hole's par and yardage, not the real layout. Numbers on the fairway are yards to the middle of the green."}${own ? " For GPS yards, add your own picture on the hole map." : ""}</p>
       ${own ? `<button type="button" class="btn block" id="skmap">Open the hole map</button>` : ""}`, box => {
@@ -790,7 +790,7 @@
   }
   function ctpList(h, r) {
     const ev = S.ev, x = C.ctpBoard(ev, r).find(y => y.h === h); if (!x) return;
-    sheet("Hole " + h + ": closest to the pin", `${x.list.length ? `<ol class="ctplist">${x.list.map(e => `<li><span><b>${esc(e.name)}</b><small>${e.m === "tape" ? "Measured with a tape" : "GPS, give or take " + esc(e.acc) + " ft"}</small></span><span>${esc(C.fmtFeet(e.d))}${e.ph ? ` <button type="button" class="link" data-ph="${esc(e.ph)}">Photo</button>` : ""}</span></li>`).join("")}</ol>` : `<p class="msg">Nobody has measured a ball here yet.</p>`}
+    sheet("Hole " + C.holeNo(S.ev.course, h) + ": closest to the pin", `${x.list.length ? `<ol class="ctplist">${x.list.map(e => `<li><span><b>${esc(e.name)}</b><small>${e.m === "tape" ? "Measured with a tape" : "GPS, give or take " + esc(e.acc) + " ft"}</small></span><span>${esc(C.fmtFeet(e.d))}${e.ph ? ` <button type="button" class="link" data-ph="${esc(e.ph)}">Photo</button>` : ""}</span></li>`).join("")}</ol>` : `<p class="msg">Nobody has measured a ball here yet.</p>`}
       <div id="phbox"></div><button type="button" class="btn primary block" id="meas">Measure a ball</button>
       <p class="msg small">Phone GPS is close, not exact: usually within 10 to 30 feet. For a tight finish, measure with a tape and enter it.</p>`, box => {
       $("#meas", box).onclick = () => ctpSheet(h, r);
@@ -806,7 +806,7 @@
     const pick = (mine && g && g.players.some(p => p.id === mine.id)) ? mine.id : g ? g.players[0].id : null;
     if (!pick) return;
     const st = { pin: null, ball: null, photo: null };
-    sheet("Hole " + h + ": measure a ball", `<label class="fld"><span>Whose ball</span><select id="cw">${C.players(ev).sort((a, b) => a.g - b.g || a.n.localeCompare(b.n)).map(p => `<option value="${esc(p.id)}" ${p.id === pick ? "selected" : ""}>${esc(p.n)} (group ${p.g})</option>`).join("")}</select></label>
+    sheet("Hole " + C.holeNo(S.ev.course, h) + ": measure a ball", `<label class="fld"><span>Whose ball</span><select id="cw">${C.players(ev).sort((a, b) => a.g - b.g || a.n.localeCompare(b.n)).map(p => `<option value="${esc(p.id)}" ${p.id === pick ? "selected" : ""}>${esc(p.n)} (group ${p.g})</option>`).join("")}</select></label>
       <ol class="steps"><li id="s1"><b>Stand right at the hole</b> and tap Mark pin. Hold still for a few seconds.<button type="button" class="btn block" id="mpin">Mark pin</button><small class="gps" id="g1"></small></li>
         <li id="s2"><b>Walk to the ball</b>, stand over it and tap Mark ball.<button type="button" class="btn block" id="mball" disabled>Mark ball</button><small class="gps" id="g2"></small></li></ol>
       <div id="cres"></div>
@@ -915,7 +915,7 @@
     const n = C.holeCount(ev), halves = n === 18 ? [[1, 9, "Out"], [10, 18, "In"]] : [[1, n, "Tot"]], c = ev.course;
     return halves.map(([a, b, lbl]) => { const hs = []; for (let k = a; k <= b; k++) hs.push(k);
       const sum = hs.reduce((s, k) => s + (x.scores[k - 1] || 0), 0), any = hs.some(k => x.scores[k - 1] != null);
-      return `<table class="sc pcard"><thead><tr><th class="nm">Hole</th>${hs.map(k => `<th>${k}</th>`).join("")}<th>${lbl}</th></tr></thead><tbody>
+      return `<table class="sc pcard"><thead><tr><th class="nm">Hole</th>${hs.map(k => `<th>${C.holeNo(c, k)}</th>`).join("")}<th>${lbl}</th></tr></thead><tbody>
         <tr class="ydrow"><th class="nm">Yds</th>${hs.map(k => `<td>${C.yards(c, k, p.tee) || ""}</td>`).join("")}<td>${hs.reduce((s, k) => s + C.yards(c, k, p.tee), 0) || ""}</td></tr>
         <tr class="parrow"><th class="nm">Par</th>${hs.map(k => `<td>${x.pars[k - 1]}</td>`).join("")}<td>${hs.reduce((s, k) => s + x.pars[k - 1], 0)}</td></tr>
         <tr><th class="nm">Score</th>${hs.map(k => { const v = x.scores[k - 1]; return `<td>${v == null ? "" : `<span class="mk ${C.mark(v - x.pars[k - 1])}">${v}</span>`}</td>`; }).join("")}<td class="sum">${any ? sum : ""}</td></tr>
