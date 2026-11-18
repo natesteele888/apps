@@ -176,6 +176,57 @@ const event = (id, date, away, home, state, done) => ({ id, date, competitions: 
     await page.click('[data-view="stats"]'); await page.waitForSelector('.empty'); assert.ok(/Make some NHL picks/.test(await page.textContent('#view')));
     eq(errors.length, 0, errors.join(' | ')); await ctx.close();
   });
+  await test('page: other players\' picks stay hidden until you lock in yours, then show; locked picks can\'t change', async () => {
+    const { ctx, page, errors } = await open();
+    await page.goto(server.url); await page.waitForSelector('[data-sport]');
+    await page.click('[data-sport="mlb"]'); await page.waitForSelector('.game');
+    await page.evaluate(d => { window.__data.gp_picks['p2_mlb-' + d] = { uid: 'p2', week: 'mlb-' + d, picks: { ['MLB-' + d + '-3']: 'EEE' } }; window.__notify(); }, TODAY);
+    await page.waitForTimeout(200);
+    const open3 = page.locator('.game').nth(2);
+    assert.ok(!/Player Two/.test(await open3.textContent()), 'no names on an open game before locking');
+    assert.ok(!/\d pick/.test(await open3.textContent()), 'not even a count');
+    assert.ok(await page.locator('#lockin').isDisabled(), 'nothing picked yet, nothing to lock');
+    await page.click('.side[data-t="FFF"]'); await page.waitForSelector('.side.mine');
+    await page.click('#lockin'); eq(await page.textContent('#lockin'), 'Tap again to lock', 'the first tap asks to confirm');
+    await page.click('#lockin'); await page.waitForSelector('.lockbar.done');
+    const w = await page.evaluate(() => window.__writes.filter(x => x[0] === 'gp_picks').pop());
+    assert.ok(w[2].locked && w[2].picks['MLB-' + TODAY + '-3'] === 'FFF', JSON.stringify(w));
+    assert.ok(/Player Two/.test(await open3.textContent()), 'their pick shows once locked in');
+    eq(await open3.locator('.side:not([disabled])').count(), 0, 'a locked slate can\'t change');
+    eq(errors.length, 0, errors.join(' | ')); await ctx.close();
+  });
+  await test('page: a challenge shows up for the player challenged, picks stay hidden both ways until locked, and players can challenge back', async () => {
+    const { ctx, page, errors } = await open({ ctx: { viewport: { width: 390, height: 844 } } });
+    await page.goto(server.url); await page.waitForSelector('[data-sport]');
+    await page.click('[data-sport="mlb"]'); await page.waitForSelector('.game');
+    await page.evaluate(d => { window.__data.gp_picks['p2_mlb-' + d] = { uid: 'p2', week: 'mlb-' + d, picks: { ['MLB-' + d + '-3']: 'EEE' }, ch: { to: ['me1'], at: '2026-11-09T12:00:00Z' } }; window.__notify(); }, TODAY);
+    await page.waitForSelector('.chin'); assert.ok(/Player Two\s*challenged you/.test(await page.textContent('.chin')));
+    assert.ok(/Head to head/.test(await page.textContent('.chbar')) && /Player Two/.test(await page.textContent('.chbar')));
+    assert.ok(!/Player Two/.test(await page.locator('.game').nth(2).textContent()), 'the challenger\'s pick is hidden');
+    await page.click('.side[data-t="FFF"]'); await page.waitForSelector('.side.mine');
+    await page.click('#chOpen'); await page.waitForSelector('.chlist input[value="p2"]');
+    await page.screenshot({ path: path.join(SHOTS, 'picks-challenge.png'), fullPage: true });
+    await page.check('.chlist input[value="p2"]'); await page.click('#chSend');
+    await page.waitForFunction(() => window.__writes.some(x => x[0] === 'gp_picks' && x[2].ch));
+    let w = await page.evaluate(() => window.__writes.filter(x => x[0] === 'gp_picks').pop());
+    eq(JSON.stringify(w[2].ch.to), '["p2"]'); eq(w[2].picks['MLB-' + TODAY + '-3'], 'FFF', 'the challenge keeps the picks');
+    await page.click('#lockin'); await page.click('#lockin'); await page.waitForSelector('.lockbar.done');
+    w = await page.evaluate(() => window.__writes.filter(x => x[0] === 'gp_picks').pop());
+    assert.ok(w[2].locked && w[2].ch && w[2].ch.to[0] === 'p2', 'locking keeps the challenge: ' + JSON.stringify(w[2]));
+    eq(await page.locator('.chin').count(), 0, 'a locked challenge leaves the to-do list');
+    assert.ok(/Player Two/.test(await page.locator('.game').nth(2).textContent()), 'picks show once locked');
+    eq(await page.evaluate(() => document.documentElement.scrollWidth), 390);
+    eq(errors.length, 0, errors.join(' | ')); await ctx.close();
+  });
+  await test('page: a challenge link opens the slate and joins the challenge', async () => {
+    const { ctx, page, errors } = await open();
+    await page.goto(server.url + '?slate=nba-' + TODAY + '&vs=p2'); await page.waitForSelector('[data-sport="nba"][aria-pressed="true"]', { timeout: 6000 });
+    await page.waitForFunction(() => window.__writes.some(x => x[0] === 'gp_picks' && x[2].ch));
+    const w = await page.evaluate(() => window.__writes.filter(x => x[0] === 'gp_picks').pop());
+    eq(w[1], 'me1_nba-' + TODAY); eq(JSON.stringify(w[2].ch.to), '["p2"]');
+    eq(await page.evaluate(() => location.search), '', 'the link is cleared from the address bar');
+    eq(errors.length, 0, errors.join(' | ')); await ctx.close();
+  });
   await test('page: each team\'s record shows under its name, and open games show a win-chance gauge', async () => {
     const { ctx, page, errors } = await open();
     await page.goto(server.url); await page.waitForSelector('.game');
