@@ -232,6 +232,9 @@ input:focus, select:focus, textarea:focus { outline: 0; border-color: var(--gree
 .teeedit { display: grid; gap: 6px; margin-bottom: 6px; }
 .teerow { display: grid; grid-template-columns: auto 1fr 110px auto; align-items: center; gap: 6px; }
 .teerow .x { width: 40px; height: 40px; border: 0; background: none; font-size: 24px; color: var(--danger); cursor: pointer; }
+.teerow .crsl { grid-column: 2 / -1; display: flex; gap: 6px; }
+.teerow .crsl input { width: 96px; }
+.lb .chc { color: var(--muted, #6b7280); font-size: 12px; font-weight: 400; }
 
 /* share */
 .share { text-align: center; background: #fff; border: 1px solid var(--line); border-radius: 18px; padding: 16px; margin-bottom: 10px; }

@@ -78,6 +78,34 @@ const pl = (ev, id) => Object.assign({ id }, ev.p[id]);
     eq(C.cleanCourse({ tees: [{ id: 'w' }], holes: [{ par: 4, tp: { w: 4, zz: 5 } }] }).holes[0].tp, undefined);
   });
 
+  await test('core: handicaps give World Handicap System course handicaps and net scores (Monoosnock ratings)', () => {
+    const c = C.monoosnockCourse();
+    deq(c.tees.map(t => [t.cr, t.sl]), [[69.6, 126], [66.4, 122], [72.5, 128]], 'ratings and slopes from the card');
+    // index x slope / 113 + (rating - par), rounded
+    eq(C.courseHc(c, { tee: 'whiteblue', hc: 10 }), 11); eq(C.courseHc(c, { tee: 'green', hc: 10 }), 7);
+    eq(C.courseHc(c, { tee: 'ladies', hc: 20 }), 23); eq(C.courseHc(c, { tee: 'green', hc: 0 }), -4, 'a scratch golfer from the short tees gives strokes');
+    eq(C.courseHc(c, { tee: 'green' }), null);
+    eq(C.courseHc(C.sampleCourse(), { tee: 'blue', hc: 12.6 }), 13, 'no rating on the card: the index, rounded');
+    // strokes go on the hardest holes first, a second lap past 18, and a plus handicap gives back on the easiest
+    const g11 = C.strokesBy(c, 11); eq(g11.reduce((a, b) => a + b, 0), 11); eq(g11[5], 1, 'hole 6 is handicap 1'); eq(g11[13], 0, 'hole 14 is handicap 18');
+    const g23 = C.strokesBy(c, 23); eq(g23[5], 2); eq(g23[13], 1); eq(g23.reduce((a, b) => a + b, 0), 23);
+    const gp = C.strokesBy(c, -2); eq(gp[13], -1); eq(gp[4], -1); eq(gp.reduce((a, b) => a + b, 0), -2);
+    // a round: 5 on the handicap-1 sixth (par 5) with a stroke is a net par
+    const ev = C.newEvent({ name: 'Net', course: c, now: NOW });
+    ev.p.aaaaaa1 = C.newPlayer(ev, { name: 'High', tee: 'whiteblue', hc: 10, group: 1, now: NOW });
+    ev.p.bbbbbb1 = C.newPlayer(ev, { name: 'Low', tee: 'whiteblue', hc: 0, group: 1, now: NOW });
+    ev.p.cccccc1 = C.newPlayer(ev, { name: 'Nobody', tee: 'whiteblue', group: 1, now: NOW });
+    ev.p.aaaaaa1.s['1_6'] = 6; ev.p.bbbbbb1.s['1_6'] = 5; ev.p.cccccc1.s['1_6'] = 5;
+    const x = C.round(ev, pl(ev, 'aaaaaa1'), 1); eq(x.toPar, 1); eq(x.net, 0); eq(x.ch, 11);
+    eq(C.round(ev, pl(ev, 'cccccc1'), 1).net, 0, 'no index: net is gross');
+    eq(C.standings(ev)[0].name === 'High', false, 'gross: the high handicap is behind');
+    const sn = C.standings(ev, { net: true }); eq(sn[0].pos, 'T1'); eq(sn[0].net, 0);
+    ev.p.bbbbbb1.s['1_6'] = 6; eq(C.standings(ev, { net: true })[0].name, 'High', 'net: the stroke wins it');
+    // a rating and slope from the builder survive cleaning, nonsense doesn't
+    const cc = C.cleanCourse({ tees: [{ id: 'w', cr: '71.25', sl: '131' }, { id: 'b', cr: 'x', sl: 400 }], holes: [] });
+    eq(cc.tees[0].cr, 71.3); eq(cc.tees[0].sl, 131); eq(cc.tees[1].cr, undefined); eq(cc.tees[1].sl, undefined);
+  });
+
   await test('core: to-par words and colors match the Masters board (red under, green over)', () => {
     eq(C.fmtPar(0), 'E'); eq(C.fmtPar(-3), '-3'); eq(C.fmtPar(2), '+2');
     eq(C.tone(-1), 'under'); eq(C.tone(1), 'over'); eq(C.tone(0), 'even');
