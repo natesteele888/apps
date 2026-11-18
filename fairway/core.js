@@ -549,6 +549,47 @@
   const picksLocked = ev => players(ev).some(p => Object.keys(p.s || {}).some(k => k.indexOf("1_") === 0));
   function pickCounts(ev) { const o = {}; Object.keys(ev.pk || {}).forEach(pid => { const t = ev.pk[pid]; if (ev.p[pid] && ev.teams && ev.teams[t]) o[t] = (o[t] || 0) + 1; }); return o; }
 
+  /* ---------- predictions: each golfer's picks before tee off ---------- */
+  // Kept on the golfer's own record (pd): w = who wins, lo = who shoots the low round (tournaments of two rounds or
+  // more), sc = the winning score to par. They lock with the first score, and are scored when the tournament ends:
+  // 3 points for the winner, 2 for the low round, 2 for the closest winning score (ties all get the points).
+  const PRED_PTS = { w: 3, lo: 2, sc: 2 };
+  function cleanPred(x) {
+    if (!x || typeof x !== "object") return null;
+    const o = {};
+    if (isPid(x.w)) o.w = x.w;
+    if (isPid(x.lo)) o.lo = x.lo;
+    if (Number.isInteger(x.sc) && x.sc >= -40 && x.sc <= 80) o.sc = x.sc;
+    return Object.keys(o).length ? o : null;
+  }
+  function predictions(ev) {
+    const locked = picksLocked(ev) || ev.done, multi = ev.rounds > 1;
+    const list = players(ev).filter(p => p.pd).map(p => ({ id: p.id, name: p.n, pd: p.pd, pts: 0, hit: {} }));
+    const out = { locked, multi, list, done: ev.done, winners: [], low: [], lowScore: null, winScore: null };
+    if (!ev.done) return out;
+    const st = standings(ev).filter(x => x.holes);
+    if (st.length) {
+      out.winScore = st[0].toPar;
+      out.winners = st.filter(x => x.toPar === st[0].toPar).map(x => x.id);
+      if (multi) {
+        let best = null; const n = holeCount(ev);
+        st.forEach(row => row.rounds.forEach(x => { if (x.thru === n && (best == null || x.strokes < best)) best = x.strokes; }));
+        out.lowScore = best;
+        if (best != null) out.low = st.filter(row => row.rounds.some(x => x.thru === n && x.strokes === best)).map(row => row.id);
+      }
+    }
+    const guesses = list.filter(e => Number.isInteger(e.pd.sc) && out.winScore != null);
+    const closest = guesses.length ? Math.min.apply(null, guesses.map(e => Math.abs(e.pd.sc - out.winScore))) : null;
+    list.forEach(e => {
+      if (e.pd.w && out.winners.indexOf(e.pd.w) >= 0) { e.hit.w = true; e.pts += PRED_PTS.w; }
+      if (multi && e.pd.lo && out.low.indexOf(e.pd.lo) >= 0) { e.hit.lo = true; e.pts += PRED_PTS.lo; }
+      if (closest != null && Number.isInteger(e.pd.sc) && Math.abs(e.pd.sc - out.winScore) === closest) { e.hit.sc = true; e.pts += PRED_PTS.sc; }
+    });
+    list.sort((a, b) => b.pts - a.pts || a.name.localeCompare(b.name));
+    list.forEach(e => { e.place = list.findIndex(x => x.pts === e.pts) + 1; });
+    return out;
+  }
+
   /* ---------- tee times and the calendar file ---------- */
   function cleanTt(x, n) {
     if (!x || typeof x !== "object") return null;
@@ -1115,12 +1156,15 @@
       const pl = { n: cleanName(x.n) || "Player", tee: ev.course.tees.some(t => t.id === x.tee) ? x.tee : ev.course.tees[0].id, g: int(x.g, 1, 60, 1), st: int(x.st, 1, n, 1), at: Number(x.at) || 0, s: {} };
       const hc = typeof x.hc === "number" ? cleanHc(x.hc) : null; if (hc != null) pl.hc = hc;
       if (isTid(x.t)) pl.t = x.t;
+      const pd = cleanPred(x.pd); if (pd) pl.pd = pd;
       Object.keys(x.s && typeof x.s === "object" ? x.s : {}).forEach(k => {
         const m = /^([1-4])_([0-9]{1,2})$/.exec(k), v = x.s[k];
         if (m && +m[1] <= ev.rounds && +m[2] >= 1 && +m[2] <= n && Number.isInteger(v) && v >= 1 && v <= 20) pl.s[k] = v;
       });
       ev.p[id] = pl;
     });
+    // a pick can only name someone who is in the tournament
+    players(ev).forEach(pl => { const pd = pl.pd; if (!pd) return; ["w", "lo"].forEach(k => { if (pd[k] && !ev.p[pd[k]]) delete pd[k]; }); if (!Object.keys(pd).length) delete ev.p[pl.id].pd; });
     ev.ctph = cleanCtpHoles(d.ctph, n);
     Object.keys(d.ctp && typeof d.ctp === "object" ? d.ctp : {}).forEach(k => {
       const m = /^([1-4])_([0-9]{1,2})$/.exec(k), box = d.ctp[k];
@@ -1208,7 +1252,7 @@
     fmtPar, tone, scoreName, mark, stats, demoEvent, applyPatch, historyRows, myRounds, sameName, boardNames,
     cleanCtpHoles, cleanCtpEntry, ctpBoard, metres, averageFix, ctpMeasure, fmtFeet,
     cleanHc, isDate, isTime, isTid, cleanRally, cleanFmt, rallyList, officialPatch, openGroup, teamIds, pickSlots, teamOf, draftState, pickPatch,
-    draftStartPatch, pickCaptains, teamBoard, TEAM_SCORING, matchStatus, matchIds, autoMatches, picksLocked, pickCounts, cleanTt, teeTime, fmtTime, fmtDate,
+    draftStartPatch, pickCaptains, teamBoard, TEAM_SCORING, matchStatus, matchIds, autoMatches, picksLocked, pickCounts, PRED_PTS, cleanPred, predictions, cleanTt, teeTime, fmtTime, fmtDate,
     reminders, icsFor, directions, cleanMsg, shout, BINGO, BINGO_AUTO, bingoCard, bingoState, cleanBingo,
     BETS, BET_AMTS, cleanBets, cleanBetMarks, betOn, betAmt, betPlayers, wolfOrder, wolfOf, betTally, money,
     TEE_SHOTS, cleanHoleNote, cleanHoleNotes, holeLine, nextHole, jackNoticed,

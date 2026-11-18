@@ -548,3 +548,6 @@ h3.sub { font: 700 13px/1 var(--sans); letter-spacing: .12em; text-transform: up
 .mybest b { display: block; font-size: 22px; }
 .ritem > span > small { display: block; }
 .list + .list.rounds { margin-top: 8px; }
+
+/* predictions */
+.predform { display: grid; gap: 10px; margin-bottom: 12px; }

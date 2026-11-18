@@ -152,6 +152,26 @@ const pl = (ev, id) => Object.assign({ id }, ev.p[id]);
     eq(C.cleanCourse(Object.assign({}, c, { h0: 9 })).h0, undefined, 'an 18-hole course never gets an offset');
   });
 
+  await test('core: predictions lock with the first score and are scored when the tournament ends', () => {
+    const ev = C.newEvent({ name: 'P', course: C.sampleCourse(), rounds: 2, now: NOW });
+    ['aaaaaa1', 'bbbbbb1', 'cccccc1'].forEach((id, i) => { ev.p[id] = C.newPlayer(ev, { name: ['Al Ace', 'Bo Bogey', 'Cy Chip'][i], tee: ev.course.tees[0].id, now: NOW }); });
+    ev.p.aaaaaa1.pd = { w: 'aaaaaa1', lo: 'bbbbbb1', sc: -1 }; ev.p.bbbbbb1.pd = { w: 'bbbbbb1', sc: 5 }; ev.p.cccccc1.pd = { w: 'zzzzzz9', sc: 'x' };
+    let x = C.cleanEvent(JSON.parse(JSON.stringify(ev)));
+    deq(x.p.aaaaaa1.pd, { w: 'aaaaaa1', lo: 'bbbbbb1', sc: -1 }); eq(x.p.cccccc1.pd, undefined, 'a pick of nobody and a bad score are dropped');
+    let pr = C.predictions(x); eq(pr.locked, false); eq(pr.list.length, 2); eq(pr.multi, true);
+    const n = C.holeCount(x), par = h => x.course.holes[h - 1].par;
+    for (let r = 1; r <= 2; r++) for (let h = 1; h <= n; h++) {
+      x.p.aaaaaa1.s[r + '_' + h] = par(h) + (h === 1 && r === 1 ? 1 : 0);       // +1 over two rounds
+      x.p.bbbbbb1.s[r + '_' + h] = par(h) + (r === 1 ? 0 : 1);                  // a round at par, then a bad one
+      x.p.cccccc1.s[r + '_' + h] = par(h) + 1;
+    }
+    pr = C.predictions(x); eq(pr.locked, true); eq(pr.list[0].pts, 0, 'not scored until the end');
+    x.done = true; pr = C.predictions(x);
+    deq(pr.winners, ['aaaaaa1']); eq(pr.winScore, 1); eq(pr.lowScore, C.coursePar(x.course)); deq(pr.low, ['aaaaaa1', 'bbbbbb1'], 'both shot a round at par');
+    eq(pr.list[0].id, 'aaaaaa1'); eq(pr.list[0].pts, 3 + 2 + 2); deq(pr.list[0].hit, { w: true, lo: true, sc: true });
+    eq(pr.list[1].pts, 0); eq(C.cleanPred({ sc: 1.5 }), null);
+  });
+
   await test('core: to-par words and colors match the Masters board (red under, green over)', () => {
     eq(C.fmtPar(0), 'E'); eq(C.fmtPar(-3), '-3'); eq(C.fmtPar(2), '+2');
     eq(C.tone(-1), 'under'); eq(C.tone(1), 'over'); eq(C.tone(0), 'even');
