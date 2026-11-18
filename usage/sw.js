@@ -1,6 +1,6 @@
 // Steele Usage: network first, so updates show up right away; falls back to the last saved copy of the app when offline.
 // Only the app's own files are cached. GitHub API traffic (and the token in it) is never cached.
-const CACHE = "usage-v1";
+const CACHE = "usage-v2";
 const SHELL = ["./", "manifest.json", "/apps/icons/usage-192.png", "/apps/icons/usage-512.png"];
 self.addEventListener("install", e => {
   self.skipWaiting();
