@@ -214,7 +214,7 @@ service cloud.firestore {
     // the app's own birdie shouts are the only things that can change after posting, and nothing can be deleted.
     function fwOk(d) {
       return d.keys().hasOnly(['v', 'name', 'created', 'updated', 'rounds', 'cur', 'done', 'course', 'p', 'ctph', 'ctp',
-          'rally', 'fmt', 'teams', 'dr', 'm', 'pk', 'tt'])
+          'rally', 'fmt', 'teams', 'dr', 'm', 'pk', 'tt', 'bg'])
         && d.v == 1 && d.name is string && d.name.size() > 0 && d.name.size() <= 60
         && d.created is number && d.updated is number
         && d.rounds is int && d.rounds >= 1 && d.rounds <= 4
@@ -237,7 +237,8 @@ service cloud.firestore {
         && (!('m' in d) || (d.m is map && d.m.size() <= 60))
         && (!('pk' in d) || (d.pk is map && d.pk.size() <= 120))
         && (!('tt' in d) || (d.tt is map && d.tt.keys().hasOnly(['date', 'where', 'g'])
-            && (!('g' in d.tt) || (d.tt.g is map && d.tt.g.size() <= 60))));
+            && (!('g' in d.tt) || (d.tt.g is map && d.tt.g.size() <= 60))))
+        && (!('bg' in d) || (d.bg is map && d.bg.size() <= 120));
     }
     function fwMsg(d) {
       return d.keys().hasOnly(['k', 'n', 't', 'at', 'by', 'o', 'v'])

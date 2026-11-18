@@ -475,6 +475,14 @@ test('fairway phase 1: rally, format, teams, draft, matchups, picks and tee time
   await assertFails(updateDoc(ref, { 'dr.ord': 'all', updated: 7 }));
 });
 
+test('fairway games: bingo marks fit in the tournament, capped', async () => {
+  const ref = doc(anon(), 'golf_events/' + FW_CODE);
+  await assertSucceeds(setDoc(ref, fwEvent()));
+  await assertSucceeds(updateDoc(doc(stranger(), 'golf_events/' + FW_CODE), { 'bg.pl0000001': [3, 7], updated: 2 }));
+  await assertFails(updateDoc(ref, { bg: 'all', updated: 3 }));
+  await assertFails(updateDoc(ref, { bg: Object.fromEntries(Array.from({ length: 121 }, (_, i) => ['pl' + String(i).padStart(7, '0'), [3]])), updated: 3 }));
+});
+
 test('fairway phase 1: the chat lives under the tournament; votes and birdie shouts are the only edits', async () => {
   const chat = id => doc(anon(), 'golf_events/' + FW_CODE + '/chat/' + id);
   const msg = { k: 'm', by: 'pl0000001', n: 'Test Golfer', t: 'On my way', at: 1 };
