@@ -165,7 +165,7 @@ main#view { outline: none; }
 .progress i { display: block; height: 100%; width: 0; background: var(--accent); transition: width .2s linear; }
 
 /* ---------- player ---------- */
-.player { --maxh: 36dvh; display: flex; flex-direction: column; height: 100vh; height: 100dvh; max-width: 720px; margin: 0 auto; background: var(--bg); overflow: hidden; }
+.player { --maxh: 36vh; display: flex; flex-direction: column; height: 100vh; height: 100dvh; max-width: 720px; margin: 0 auto; background: var(--bg); overflow: hidden; }
 .pl-head {
   flex: none; display: flex; align-items: center; gap: 4px; min-height: 52px;
   padding: calc(4px + env(safe-area-inset-top)) calc(6px + env(safe-area-inset-right)) 4px calc(6px + env(safe-area-inset-left));
@@ -309,7 +309,7 @@ main#view { outline: none; }
 
 /* ---------- wide and landscape ---------- */
 @media (min-width: 900px), (orientation: landscape) and (max-height: 600px) {
-  .player { --maxh: calc(100dvh - 52px - env(safe-area-inset-top) - 150px); display: grid; grid-template-columns: minmax(0, 1fr) 360px; grid-template-rows: auto minmax(0, 1fr); max-width: none; }
+  .player { --maxh: calc(100vh - 52px - env(safe-area-inset-top) - 150px); display: grid; grid-template-columns: minmax(0, 1fr) 360px; grid-template-rows: auto minmax(0, 1fr); max-width: none; }
   .pl-head { grid-column: 1 / -1; }
   .pl-left { grid-column: 1; grid-row: 2; min-height: 0; overflow-y: auto; }
   .pl-right { grid-column: 2; grid-row: 2; border-left: 1px solid var(--line); }
@@ -319,7 +319,7 @@ main#view { outline: none; }
   .sheet-wrap.dock.open .sheet { transform: none; }
 }
 @media (min-width: 900px) and (min-height: 601px) {
-  .player { --maxh: calc(100dvh - 52px - 180px); }
+  .player { --maxh: calc(100vh - 52px - 180px); }
 }
 @media (max-width: 360px) {
   .home-top h1 { font-size: 25px; white-space: nowrap; }
@@ -335,4 +335,12 @@ main#view { outline: none; }
 }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+}
+
+/* Newer phones size the video by the visible screen (dvh). Older ones (iOS before 15.4) keep the vh values above;
+   a dvh inside --maxh would make the video's width invalid there and let it grow past the screen. */
+@supports (height: 1dvh) {
+  .player { --maxh: 36dvh; }
+  @media (min-width: 900px), (orientation: landscape) and (max-height: 600px) { .player { --maxh: calc(100dvh - 52px - env(safe-area-inset-top) - 150px); } }
+  @media (min-width: 900px) and (min-height: 601px) { .player { --maxh: calc(100dvh - 52px - 180px); } }
 }
