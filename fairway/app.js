@@ -145,7 +145,8 @@
      ====================================================================== */
   // Your finished rounds on this phone (by the name you play under): best and average for each course, and the last few.
   function myRoundsHtml() {
-    const name = FW.LS.get("fw:name", ""); if (!name) return "";
+    // a quick round with the name left empty is played as "Me"
+    const name = FW.LS.get("fw:name", "") || "Me";
     const m = C.myRounds(FW.history(), name); if (!m.list.length) return "";
     const fmtD = d => new Date(d).toLocaleDateString(undefined, { month: "short", day: "numeric" });
     return `<section class="pad"><h2 class="sec">Your rounds <small>${m.list.length} finished</small></h2>
@@ -166,7 +167,7 @@
       </section>
       ${mine.length ? `<section class="pad"><h2 class="sec">Your tournaments</h2><ul class="list">${mine.map(m => {
         const ev = FW.cacheGet(m.code);
-        const sub = ev ? `${esc(ev.course.name)} · ${C.players(ev).length} players` : "Tap to open";
+        const sub = ev ? `${esc(ev.course.name)} · ${C.players(ev).length} player${C.players(ev).length === 1 ? "" : "s"}` : "Tap to open";
         return `<li><button type="button" class="row" data-open="${esc(m.code)}"><span><b>${esc((ev && ev.name) || m.name || "Tournament")}</b><small>${sub}</small></span><span class="chips">${m.demo ? '<i class="chip">Demo</i>' : ""}${m.round ? '<i class="chip">Round</i>' : m.org ? '<i class="chip">Yours</i>' : ""}${m.local && !m.demo ? '<i class="chip">This phone</i>' : ""}</span></button></li>`;
       }).join("")}</ul></section>` : ""}
       ${myRoundsHtml()}
@@ -525,7 +526,13 @@
     const order = C.playOrder(n, g.start), rs = g.players.map(p => C.round(ev, p, r));
     if (S.hole == null || S.holeGroup !== g.g) { S.hole = order.find(h => rs.some(x => x.scores[h - 1] == null)) || order[order.length - 1]; S.holeGroup = g.g; }
     const h = S.hole, hole = ev.course.holes[h - 1], idx = order.indexOf(h), allIn = rs.every(x => x.scores[h - 1] != null);
-    el.innerHTML = `${gs.length > 1 ? `<div class="pills small" role="group" aria-label="Group">${gs.map(x => `<button type="button" class="pill" data-g="${x.g}" aria-pressed="${x.g === g.g}">Group ${x.g}</button>`).join("")}</div>` : ""}
+    // the whole group has a score on every hole: say so, with the totals, instead of leaving them on the last hole
+    const quick = !!(FW.mineGet(S.code) || {}).round, fin = !ev.demo && rs.length && rs.every(x => x.done);
+    const finHtml = fin ? `<div class="rdone" role="status"><b>${quick ? "Round done" : "Your group is done"}</b>
+        <small>${g.players.map((p, i) => esc(tname(p) || p.n) + " " + rs[i].strokes + " (" + esc(C.fmtPar(rs[i].toPar)) + ")").join(" · ")}</small>
+        <small>${quick ? "Saved to Your rounds on the home screen. You can still fix a score below." : "Check the card below. Final standings are on the Board."}</small>
+        <button type="button" class="btn small" id="rdgo">${quick ? "Back to home" : "See the board"}</button></div>` : "";
+    el.innerHTML = `${finHtml}${gs.length > 1 ? `<div class="pills small" role="group" aria-label="Group">${gs.map(x => `<button type="button" class="pill" data-g="${x.g}" aria-pressed="${x.g === g.g}">Group ${x.g}</button>`).join("")}</div>` : ""}
       ${ev.rounds > 1 ? `<div class="pills small" role="group" aria-label="Round">${Array.from({ length: ev.rounds }, (_, i) => `<button type="button" class="pill" data-sr="${i + 1}" aria-pressed="${r === i + 1}">Round ${i + 1}${i + 1 === ev.cur ? " (now)" : ""}</button>`).join("")}</div>` : ""}
       <div class="strip" data-keep="strip" role="group" aria-label="Hole">${order.map(k => { const done = rs.every(x => x.scores[k - 1] != null), some = rs.some(x => x.scores[k - 1] != null); return `<button type="button" data-h="${k}" aria-pressed="${k === h}" class="${done ? "done" : some ? "part" : ""}">${k}</button>`; }).join("")}</div>
       <div class="holecard"><div class="hn"><small>Hole</small><b>${C.holeNo(ev.course, h)}</b></div><div class="hinfo"><b>Par ${hole.par}</b><small>${hole.tp ? ev.course.tees.filter(t => hole.tp[t.id] && g.players.some(p => p.tee === t.id)).map(t => esc(t.name) + " par " + hole.tp[t.id] + " · ").join("") : ""}Handicap ${hole.hcp}</small></div>
@@ -542,6 +549,7 @@
       <h2 class="sec">Group ${g.g} card</h2>${groupCard(ev, g.players, r, order, h)}
       ${!mine && !isOrg() ? `<p class="msg">You're watching. To keep score for this group, tap Join on the Share tab.</p>` : ""}`;
     const co = $("#ctpopen", el); if (co) co.onclick = () => ctpList(h, r);
+    const rd = $("#rdgo", el); if (rd) rd.onclick = () => { if (quick) go("home", {}, false); else { S.tab = "board"; render(); window.scrollTo(0, 0); } };
     wireCaddie(el, ev, g, r, h, mine);
     $$("[data-g]", el).forEach(b => b.onclick = () => { S.group = +b.dataset.g; S.hole = null; render(); });
     $$("[data-sr]", el).forEach(b => b.onclick = () => { S.scoreRound = +b.dataset.sr; S.hole = null; render(); });
