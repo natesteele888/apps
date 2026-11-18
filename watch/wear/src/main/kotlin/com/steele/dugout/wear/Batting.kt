@@ -348,17 +348,19 @@ internal fun PlayingScreen(st: BatState) {
     }
 }
 
-/** The batting order: tap a batter to jump to them; press and hold one to swap in a bench player. */
+/** The batting order: tap a batter to jump to them; press and hold one to swap in a bench player. The Lineup card is at the top. */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun OrderScreen(onDone: () -> Unit, onSwap: (String) -> Unit) {
+fun OrderScreen(onDone: () -> Unit, onSwap: (String) -> Unit, onCard: () -> Unit = {}) {
     val ctx = LocalContext.current
     val st = PhoneLink.state.collectAsState().value
     val lineup = st?.lineup ?: emptyList()
     val busy = st?.busy == true
-    val list = rememberScalingLazyListState(initialCenterItemIndex = (st?.batter ?: 0) + 1)
+    val list = rememberScalingLazyListState(initialCenterItemIndex = (st?.batter ?: 0) + 2)
     ScalingLazyColumn(state = list, modifier = Modifier.fillMaxSize()) {
         item { ListHeader { Text("Batting order") } }
+        // who plays where each inning (Walk-Up's Positions by inning on the phone)
+        item { Chip(onClick = onCard, label = { Text("Lineup card", maxLines = 1) }, secondaryLabel = { Text("Who plays where", maxLines = 1) }, colors = ChipDefaults.secondaryChipColors(), modifier = Modifier.fillMaxWidth()) }
         itemsIndexed(lineup, key = { _, b -> b.id }) { i, b ->
             val up = st != null && i == st.batter
             PlayerRow(
