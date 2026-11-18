@@ -58,6 +58,18 @@
     });
     return { id: "monoosnock", name: "Monoosnock Country Club", tees, holes, ready: true };
   }
+  // Just one nine of an 18-hole course, for a quick nine: holes 1-9 ("front") or 10-18 ("back"), with the handicap
+  // order kept (ranked 1 to 9 within the nine) and each tee's rating halved for nine holes. The slope stays.
+  function nineOf(course, which) {
+    if (!course || course.holes.length !== 18) return course;
+    const from = which === "back" ? 9 : 0, holes = course.holes.slice(from, from + 9).map(h => JSON.parse(JSON.stringify(h)));
+    holes.map((h, i) => i).sort((a, b) => holes[a].hcp - holes[b].hcp || a - b).forEach((i, k) => { holes[i].hcp = k + 1; });
+    const tees = course.tees.map(t => Object.assign({}, t, t.cr ? { cr: Math.round(t.cr * 5) / 10 } : {}));
+    const out = { name: clip(course.name + (which === "back" ? " (back 9)" : " (front 9)"), 60), tees, holes };
+    if (which === "back") out.h0 = 9;
+    if (course.id) out.id = clip(course.id + (which === "back" ? "-b9" : "-f9"), 40);
+    return out;
+  }
   // The courses that come with the app, ahead of the ones built on this phone.
   const readyCourses = () => [monoosnockCourse()];
 
@@ -112,8 +124,12 @@
     if (c.id) out.id = clip(c.id, 40);
     if (c.sample) out.sample = true;
     if (c.ready) out.ready = true;
+    // the back nine of an 18-hole course, played on its own: its holes are 10 to 18 on the signs (quick rounds only)
+    if (c.h0 === 9 && n === 9) out.h0 = 9;
     return out;
   }
+  // The number on the hole's sign: hole 1 of a back-nine round is the 10th.
+  function holeNo(course, h) { return h + ((course && course.h0) || 0); }
   function cleanName(s) { return clip(s, NAME_MAX); }
   // A handicap index as golfers say it (+2.1 is written -2.1 here), or null when there isn't one.
   function cleanHc(v) { if (v == null || v === "") return null; const n = Number(String(v).replace(/^\+/, "-")); return Number.isFinite(n) && n >= -10 && n <= 54 ? Math.round(n * 10) / 10 : null; }
@@ -1187,7 +1203,7 @@
   }
 
   return { VERSION, MAX_PLAYERS, MAX_ROUNDS, MAX_TEES, NAME_MAX, EVENT_MAX, TEE_COLORS, DEMO_NAMES, DELETE,
-    courseHc, strokesBy, sampleCourse, monoosnockCourse, readyCourses, parOf, parsFor, parText, newCode, isCode, newPid, isPid, cleanCourse, cleanName, newEvent, newPlayer, cleanEvent,
+    courseHc, strokesBy, nineOf, holeNo, sampleCourse, monoosnockCourse, readyCourses, parOf, parsFor, parText, newCode, isCode, newPid, isPid, cleanCourse, cleanName, newEvent, newPlayer, cleanEvent,
     key, holeCount, coursePar, players, teeOf, yards, teeYards, playOrder, strokes, round, standings, groups,
     fmtPar, tone, scoreName, mark, stats, demoEvent, applyPatch, historyRows, myRounds, sameName, boardNames,
     cleanCtpHoles, cleanCtpEntry, ctpBoard, metres, averageFix, ctpMeasure, fmtFeet,
