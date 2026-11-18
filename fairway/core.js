@@ -33,6 +33,34 @@
     return { id: "sample-pines", name: "Sample Pines (made-up demo course)", tees, holes, sample: true };
   }
 
+  /* ---------- ready-made real courses, from each club's own printed scorecard ---------- */
+  // Monoosnock Country Club, Leominster MA: nine holes played twice (holes 10 to 18 are 1 to 9 again, with the
+  // even handicaps). From the club's scorecard PDF (monoosnockcountryclub.com, wp-content/uploads/2023/02/Scorecard.pdf).
+  // Ladies play holes 5 and 14 as par 4 (par 72); White/Blue and Green play them as par 3 (par 70).
+  // The card prints 2941 for the White/Blue nine; its own holes add up to 2950, and the app adds the holes.
+  // Ratings and slopes on the card: White/Blue 69.6/126, Green 66.4/122, Ladies 72.5/128.
+  const MONO_PAR = [4, 5, 4, 3, 3, 5, 4, 3, 4];
+  const MONO_LPAR = [4, 5, 4, 3, 4, 5, 4, 3, 4];
+  const MONO_WB = [341, 491, 360, 157, 210, 438, 369, 221, 363];
+  const MONO_GR = [324, 435, 347, 140, 177, 409, 352, 195, 301];
+  const MONO_LD = [324, 435, 347, 140, 211, 409, 352, 195, 301];
+  const MONO_HCP = [9, 5, 3, 15, 17, 1, 7, 13, 11, 10, 6, 4, 16, 18, 2, 8, 14, 12];
+  function monoosnockCourse() {
+    const tees = [
+      { id: "whiteblue", name: "White/Blue", color: TEE_COLORS.blue },
+      { id: "green", name: "Green", color: TEE_COLORS.green },
+      { id: "ladies", name: "Ladies", color: TEE_COLORS.red }
+    ];
+    const holes = MONO_HCP.map((hcp, i) => {
+      const k = i % 9, h = { par: MONO_PAR[k], hcp, y: { whiteblue: MONO_WB[k], green: MONO_GR[k], ladies: MONO_LD[k] } };
+      if (MONO_LPAR[k] !== MONO_PAR[k]) h.tp = { ladies: MONO_LPAR[k] };
+      return h;
+    });
+    return { id: "monoosnock", name: "Monoosnock Country Club", tees, holes, ready: true };
+  }
+  // The courses that come with the app, ahead of the ones built on this phone.
+  const readyCourses = () => [monoosnockCourse()];
+
   /* ---------- ids ---------- */
   const B32 = "abcdefghijklmnopqrstuvwxyz234567";
   function rand(n, alphabet) {
@@ -67,11 +95,18 @@
       const h = (Array.isArray(c.holes) && c.holes[i]) || {};
       const y = {};
       tees.forEach(t => { const v = int(h.y && h.y[t.id], 0, 800, 0); if (v) y[t.id] = v; });
-      holes.push({ par: int(h.par, 3, 6, 4), hcp: int(h.hcp, 1, 18, i + 1), y });
+      const hole = { par: int(h.par, 3, 6, 4), hcp: int(h.hcp, 1, 18, i + 1), y };
+      // a tee that plays the hole at a different par (ladies' par 4 on a men's par 3), only where it differs
+      if (h.tp && typeof h.tp === "object") {
+        const tp = {}; tees.forEach(t => { const v = int(h.tp[t.id], 3, 6, 0); if (v && v !== hole.par) tp[t.id] = v; });
+        if (Object.keys(tp).length) hole.tp = tp;
+      }
+      holes.push(hole);
     }
     const out = { name: clip(c.name, 60) || "My course", tees, holes };
     if (c.id) out.id = clip(c.id, 40);
     if (c.sample) out.sample = true;
+    if (c.ready) out.ready = true;
     return out;
   }
   function cleanName(s) { return clip(s, NAME_MAX); }
@@ -82,7 +117,7 @@
     o = o || {};
     const now = o.now || Date.now();
     const course = cleanCourse(o.course || sampleCourse());
-    delete course.sample; // a tournament keeps its own copy of the course, the same shape the database checks
+    delete course.sample; delete course.ready; // a tournament keeps its own copy of the course, the same shape the database checks
     return { v: 1, name: clip(o.name, EVENT_MAX) || "Golf day", created: now, updated: now, rounds: int(o.rounds, 1, MAX_ROUNDS, 1), cur: 1, done: false, course, p: {}, ctph: cleanCtpHoles(o.ctph, course.holes.length), ctp: {} };
   }
   function newPlayer(ev, o) {
@@ -97,7 +132,16 @@
   /* ---------- reading a tournament ---------- */
   const key = (r, h) => r + "_" + h;
   const holeCount = ev => ev.course.holes.length;
-  const coursePar = course => course.holes.reduce((a, h) => a + h.par, 0);
+  // A hole's par from one set of tees (most holes are the same par from every tee), and a whole card's par.
+  function parOf(course, hole, teeId) { const h = course.holes[hole - 1]; return h ? (h.tp && h.tp[teeId]) || h.par : 4; }
+  const parsFor = (course, teeId) => course.holes.map((h, i) => parOf(course, i + 1, teeId));
+  const coursePar = (course, teeId) => parsFor(course, teeId).reduce((a, p) => a + p, 0);
+  // "par 70 (Ladies 72)" when a tee plays a different par, for course lists.
+  function parText(course) {
+    const base = course.holes.reduce((a, h) => a + h.par, 0);
+    const odd = course.tees.filter(t => coursePar(course, t.id) !== base).map(t => t.name + " " + coursePar(course, t.id));
+    return "par " + base + (odd.length ? " (" + odd.join(", ") + ")" : "");
+  }
   const players = ev => Object.keys(ev.p || {}).filter(isPid).map(id => Object.assign({ id }, ev.p[id]));
   function teeOf(ev, pl) { return ev.course.tees.find(t => t.id === pl.tee) || ev.course.tees[0]; }
   function yards(course, hole, teeId) { const h = course.holes[hole - 1]; return h && h.y ? h.y[teeId] || 0 : 0; }
@@ -108,16 +152,16 @@
 
   // One player's round: scores by hole, strokes, to par, how far through and the hole they're on.
   function round(ev, pl, r) {
-    const n = holeCount(ev), order = playOrder(n, pl.st), sc = [];
+    const n = holeCount(ev), order = playOrder(n, pl.st), sc = [], pars = parsFor(ev.course, pl.tee);
     let tot = 0, par = 0, thru = 0;
-    for (let h = 1; h <= n; h++) { const v = strokes(pl, r, h); sc.push(v); if (v != null) { tot += v; par += ev.course.holes[h - 1].par; thru++; } }
+    for (let h = 1; h <= n; h++) { const v = strokes(pl, r, h); sc.push(v); if (v != null) { tot += v; par += pars[h - 1]; thru++; } }
     const next = order.find(h => sc[h - 1] == null) || null;
     // the last hole they finished, in their own order (where the board's marker sits)
     let last = null; for (const h of order) if (sc[h - 1] != null) last = h;
     // to par after each hole, in play order (the classic board shows this number for every hole)
     const run = {}; let acc = 0;
-    order.forEach(h => { const v = sc[h - 1]; if (v != null) { acc += v - ev.course.holes[h - 1].par; run[h] = acc; } });
-    return { r, scores: sc, strokes: tot, par, toPar: tot - par, thru, done: thru === n, started: thru > 0, next, last, order, run, out: half(ev, sc, 0), inn: n === 18 ? half(ev, sc, 9) : null };
+    order.forEach(h => { const v = sc[h - 1]; if (v != null) { acc += v - pars[h - 1]; run[h] = acc; } });
+    return { r, pars, scores: sc, strokes: tot, par, toPar: tot - par, thru, done: thru === n, started: thru > 0, next, last, order, run, out: half(ev, sc, 0), inn: n === 18 ? half(ev, sc, 9) : null };
   }
   function half(ev, sc, from) { let t = 0, any = false; for (let i = from; i < from + 9 && i < sc.length; i++) if (sc[i] != null) { t += sc[i]; any = true; } return any ? t : null; }
 
@@ -173,7 +217,7 @@
       let run = 0;
       x.order.forEach(h => {
         const v = x.scores[h - 1]; if (v == null) return;
-        const par = ev.course.holes[h - 1].par, d = v - par;
+        const par = x.pars[h - 1], d = v - par;
         o.holes++;
         if (v === 1) o.aces++;
         if (d <= -2) o.eagles++; else if (d === -1) o.birdies++; else if (d === 0) o.pars++; else if (d === 1) o.bogeys++; else o.doubles++;
@@ -493,7 +537,7 @@
   // What a score says in the chat when it's worth shouting about (birdie or better).
   function shout(ev, pid, r, h, v) {
     const pl = ev.p[pid]; if (!pl || !v) return null;
-    const d = v - ev.course.holes[h - 1].par; if (d > -1) return null;
+    const d = v - parOf(ev.course, h, pl.tee); if (d > -1) return null;
     return scoreName(d, v) + "! " + pl.n + " on " + h + (ev.rounds > 1 ? " (round " + r + ")" : "") + ".";
   }
 
@@ -512,10 +556,10 @@
   function bingoAuto(ev, pid, r) {
     const pl = ev.p[pid], got = {}; if (!pl) return got;
     ev.course.holes.forEach((hole, i) => {
-      const v = strokes(pl, r, i + 1); if (v == null) return;
-      if (v < hole.par) got[0] = true;
-      if (v === hole.par && hole.par === 5) got[1] = true;
-      if (v === hole.par && hole.par === 3) got[2] = true;
+      const v = strokes(pl, r, i + 1), par = parOf(ev.course, i + 1, pl.tee); if (v == null) return;
+      if (v < par) got[0] = true;
+      if (v === par && par === 5) got[1] = true;
+      if (v === par && par === 3) got[2] = true;
     });
     return got;
   }
@@ -637,17 +681,17 @@
         if (!(ev.ctph || []).length) lines.push("Pick the closest to the pin holes on the Score tab.");
       } else if (g === "long" || g === "green" || g === "sandy") {
         for (let h = 1; h <= n; h++) {
-          const m = bm[key(r, h)] || {}, par = holes[h - 1].par;
+          const m = bm[key(r, h)] || {}, parFor = id => parOf(ev.course, h, (ev.p[id] || {}).tee);
           if (g === "long" && m.ld && who.indexOf(m.ld) >= 0) { lines.push(`Hole ${h}: ${nm(m.ld)}.`); pay([m.ld], others(m.ld), unit, real); }
           if (g === "green" && m.gr && who.indexOf(m.gr) >= 0) {
             const v = sc(m.gr, h);
             if (v == null) lines.push(`Hole ${h}: ${nm(m.gr)}, once they make par.`);
-            else if (v <= par) { lines.push(`Hole ${h}: ${nm(m.gr)}.`); pay([m.gr], others(m.gr), unit, real); }
+            else if (v <= parFor(m.gr)) { lines.push(`Hole ${h}: ${nm(m.gr)}.`); pay([m.gr], others(m.gr), unit, real); }
             else lines.push(`Hole ${h}: ${nm(m.gr)} hit it close but missed par.`);
           }
           if (g === "sandy") (m.sa || []).filter(p => who.indexOf(p) >= 0).forEach(p => {
             const v = sc(p, h);
-            if (v != null && v <= par) { lines.push(`Hole ${h}: ${nm(p)}.`); pay([p], others(p), unit, real); }
+            if (v != null && v <= parFor(p)) { lines.push(`Hole ${h}: ${nm(p)}.`); pay([p], others(p), unit, real); }
           });
         }
         if (!lines.length) lines.push(g === "long" ? "Mark the long drive from Mark a hole." : g === "green" ? "Greenies: on the green in one on a par 3 and make par. Mark them from Mark a hole." : "Sandies: out of the sand and par or better. Mark them from Mark a hole.");
@@ -728,12 +772,12 @@
     const order = playOrder(holeCount(ev), pl.st), i = order.indexOf(h);
     if (i < 0 || i >= order.length - 1) return null;
     const nh = order[i + 1], hole = ev.course.holes[nh - 1], tee = teeOf(ev, pl);
-    return { h: nh, par: hole.par, hcp: hole.hcp, yds: yards(ev.course, nh, tee.id) || null, tee: tee.name };
+    return { h: nh, par: parOf(ev.course, nh, pl.tee), hcp: hole.hcp, yds: yards(ev.course, nh, tee.id) || null, tee: tee.name };
   }
   // Plain, clean words about a pattern in the last few holes. No AI here, just counting.
   function jackNoticed(ev, pl, r, notes) {
     const order = playOrder(holeCount(ev), pl.st).filter(h => strokes(pl, r, h) != null);
-    const last = order.slice(-4), recent = last.map(h => ({ h, v: strokes(pl, r, h), par: ev.course.holes[h - 1].par, n: notes[key(r, h)] || {} }));
+    const last = order.slice(-4), recent = last.map(h => ({ h, v: strokes(pl, r, h), par: parOf(ev.course, h, pl.tee), n: notes[key(r, h)] || {} }));
     if (recent.length < 3) return null;
     const tees = recent.filter(x => x.par > 3 && x.n.t), missed = tees.filter(x => x.n.t !== "fairway").length;
     if (tees.length >= 3 && missed >= 3) return `You've missed ${missed} of your last ${tees.length} fairways. Club down off the tee for a few holes and play from the short grass.`;
@@ -785,10 +829,10 @@
   }
   // What Jack says walking up to a hole: par and yards, then the golfer's own notes in their own words.
   function holeTalk(ev, pl, h, notes, level, bag) {
-    const hole = ev.course.holes[h - 1], tee = teeOf(ev, pl), y = yards(ev.course, h, tee.id);
+    const tee = teeOf(ev, pl), y = yards(ev.course, h, tee.id), par = parOf(ev.course, h, tee.id);
     const mine = ((notes || {})[courseKey(ev.course)] || {})[h] || [];
-    let s = `Hole ${h}, par ${hole.par}${y ? `, ${y} yards` : ""}.`;
-    if (bag && hole.par === 3 && y) { const c = clubFor(bag, y); if (c) s += " " + clubWords(c) + "."; }
+    let s = `Hole ${h}, par ${par}${y ? `, ${y} yards` : ""}.`;
+    if (bag && par === 3 && y) { const c = clubFor(bag, y); if (c) s += " " + clubWords(c) + "."; }
     if (mine.length) s += " Your notes: " + mine.map(t => speakable(t, level)).filter(Boolean).map(t => (/[.!?]$/.test(t) ? t : t + ".")).join(" ");
     return s;
   }
@@ -812,15 +856,15 @@
     champ.label = champ.name === "A tie at the top" ? "Tied at the top" : last ? "Champion" : "Leading the day";
     const low = rs.slice().sort((a, b) => a.x.strokes - b.x.strokes)[0];
     items.push({ k: "Low round", t: `${low.p.n}, ${low.x.strokes} (${fmtPar(low.x.toPar)})` });
-    const birdies = rs.map(o => ({ o, n: o.x.scores.filter((v, i) => v != null && v < holes[i].par).length })).sort((a, b) => b.n - a.n);
+    const birdies = rs.map(o => ({ o, n: o.x.scores.filter((v, i) => v != null && v < o.x.pars[i]).length })).sort((a, b) => b.n - a.n);
     if (birdies[0].n) items.push({ k: "Most birdies", t: `${birdies[0].o.p.n}, ${birdies[0].n}` });
     let worst = null;
-    rs.forEach(o => o.x.scores.forEach((v, i) => { if (v != null && (!worst || v - holes[i].par > worst.d)) worst = { p: o.p, v, h: i + 1, d: v - holes[i].par }; }));
-    if (worst && worst.d >= 2) items.push({ k: "Worst hole", t: `${worst.p.n}'s ${worst.v} on the par ${holes[worst.h - 1].par} ${ordinal(worst.h)}` });
+    rs.forEach(o => o.x.scores.forEach((v, i) => { if (v != null && (!worst || v - o.x.pars[i] > worst.d)) worst = { p: o.p, v, h: i + 1, d: v - o.x.pars[i], par: o.x.pars[i] }; }));
+    if (worst && worst.d >= 2) items.push({ k: "Worst hole", t: `${worst.p.n}'s ${worst.v} on the par ${worst.par} ${ordinal(worst.h)}` });
     // on the move: biggest climb from halfway (in each golfer's own order) to the finish
     const n = holeCount(ev);
     if (n === 18 && ps.length >= 3) {
-      const half = rs.map(o => ({ id: o.p.id, v: o.x.order.slice(0, 9).reduce((a, h) => a + o.x.scores[h - 1] - holes[h - 1].par, 0) }));
+      const half = rs.map(o => ({ id: o.p.id, v: o.x.order.slice(0, 9).reduce((a, h) => a + o.x.scores[h - 1] - o.x.pars[h - 1], 0) }));
       const place = (list, id) => { const me = list.find(x => x.id === id).v; return list.filter(x => x.v < me).length + 1; };
       const fin = rs.map(o => ({ id: o.p.id, v: o.x.toPar }));
       const moves = rs.map(o => ({ p: o.p, up: place(half, o.p.id) - place(fin, o.p.id) })).sort((a, b) => b.up - a.up);
@@ -1085,7 +1129,7 @@
   }
 
   return { VERSION, MAX_PLAYERS, MAX_ROUNDS, MAX_TEES, NAME_MAX, EVENT_MAX, TEE_COLORS, DEMO_NAMES, DELETE,
-    sampleCourse, newCode, isCode, newPid, isPid, cleanCourse, cleanName, newEvent, newPlayer, cleanEvent,
+    sampleCourse, monoosnockCourse, readyCourses, parOf, parsFor, parText, newCode, isCode, newPid, isPid, cleanCourse, cleanName, newEvent, newPlayer, cleanEvent,
     key, holeCount, coursePar, players, teeOf, yards, teeYards, playOrder, strokes, round, standings, groups,
     fmtPar, tone, scoreName, mark, stats, demoEvent, applyPatch, historyRows, sameName, boardNames,
     cleanCtpHoles, cleanCtpEntry, ctpBoard, metres, averageFix, ctpMeasure, fmtFeet,

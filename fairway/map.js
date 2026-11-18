@@ -50,7 +50,7 @@
   M.wire = function (el, ev, mine, h) { const b = $("#mapopen", el); if (b) b.onclick = () => M.sheet(ev, mine, h); };
 
   M.sheet = function (ev, mine, h) {
-    const u = U(), esc = u.esc, tee = C.teeOf(ev, mine), card = C.yards(ev.course, h, tee.id), par = ev.course.holes[h - 1].par;
+    const u = U(), esc = u.esc, tee = C.teeOf(ev, mine), card = C.yards(ev.course, h, tee.id), par = C.parOf(ev.course, h, tee.id);
     let mode = null, tap = null, gpsErr = false;
     const club = y => (FW.bag && y > 0 ? C.clubWords(FW.bag.club(y)) : "");
     const draw = box => {

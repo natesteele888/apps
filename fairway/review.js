@@ -22,7 +22,7 @@
   R.html = function (ev, pl, r, h) {
     const u = U(), esc = u.esc, v = C.strokes(pl, r, h);
     if (v == null) return "";
-    const hole = ev.course.holes[h - 1], n = R.notes(u.S.code)[C.key(r, h)] || {}, d = v - hole.par;
+    const hole = Object.assign({}, ev.course.holes[h - 1], { par: C.parOf(ev.course, h, pl.tee) }), n = R.notes(u.S.code)[C.key(r, h)] || {}, d = v - hole.par;
     const line = C.holeLine(hole.par, v, n), nx = C.nextHole(ev, pl, r, h), tip = C.jackNoticed(ev, pl, r, R.notes(u.S.code));
     return `<section class="hreview" aria-label="Your hole ${h}">
       <div class="hr-h"><b>Your ${h}</b><span>${v} · ${esc(C.scoreName(d, v))}</span></div>
