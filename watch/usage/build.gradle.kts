@@ -39,4 +39,6 @@ kotlin { jvmToolchain(17) }
 dependencies {
     implementation("androidx.core:core-ktx:1.15.0")
     implementation("androidx.activity:activity-ktx:1.9.3")
+    // Google's account screen for the read-only Firebase usage grant (Identity AuthorizationClient)
+    implementation("com.google.android.gms:play-services-auth:21.2.0")
 }

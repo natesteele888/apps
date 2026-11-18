@@ -19,6 +19,14 @@ import android.webkit.WebViewClient
 import android.widget.FrameLayout
 import androidx.activity.ComponentActivity
 import androidx.activity.OnBackPressedCallback
+import androidx.activity.result.IntentSenderRequest
+import androidx.activity.result.contract.ActivityResultContracts
+import com.google.android.gms.auth.api.identity.AuthorizationRequest
+import com.google.android.gms.auth.api.identity.AuthorizationResult
+import com.google.android.gms.auth.api.identity.Identity
+import com.google.android.gms.common.api.ApiException
+import com.google.android.gms.common.api.Scope
+import java.util.concurrent.Executors
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.ByteArrayInputStream
@@ -61,6 +69,19 @@ if(!r.ok){window.__su={state:'error'};return}return r.json().then(function(j){wi
     private var readId = 0
     private var last: String? = null
 
+    // Firebase: a read-only Google grant (Cloud Monitoring and Firebase project list). Android's own Google
+    // account screen asks once; after that the short-lived access token is fetched silently for each read and
+    // is never saved, logged or sent anywhere but Google's own APIs.
+    private val io = Executors.newSingleThreadExecutor()
+    private var fbBusy = false
+    private var fbLast: String? = null
+    private val fbAsk = registerForActivityResult(ActivityResultContracts.StartIntentSenderForResult()) { r ->
+        try {
+            val res = Identity.getAuthorizationClient(this).getAuthorizationResultFromIntent(r.data)
+            fbRead(res)
+        } catch (e: ApiException) { fbBusy = false; fbSend(if (r.resultCode == RESULT_CANCELED) "signedout" else fbState(e)) }
+    }
+
     @SuppressLint("SetJavaScriptEnabled")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -81,7 +102,10 @@ if(!r.ok){window.__su={state:'error'};return}return r.json().then(function(j){wi
                     if (req.url.host == HOST && req.url.path == "/apps/install.js") return WebResourceResponse("text/javascript", "utf-8", ByteArrayInputStream(ByteArray(0)))
                     return null
                 }
-                override fun onPageFinished(view: WebView, url: String?) { last?.let { send(it) } ?: readClaude() }
+                override fun onPageFinished(view: WebView, url: String?) {
+                    last?.let { send(it) } ?: readClaude()
+                    fbLast?.let { sendFb(it) } ?: readFirebase(false)
+                }
             }
         }
         root.addView(page, FrameLayout.LayoutParams(MATCH_PARENT, MATCH_PARENT))
@@ -100,7 +124,7 @@ if(!r.ok){window.__su={state:'error'};return}return r.json().then(function(j){wi
         page.loadUrl(PAGE)
     }
 
-    override fun onResume() { super.onResume(); if (signIn == null) readClaude() }
+    override fun onResume() { super.onResume(); if (signIn == null) { readClaude(); readFirebase(false) } }
 
     override fun onPause() { super.onPause(); CookieManager.getInstance().flush() }
 
@@ -109,6 +133,8 @@ if(!r.ok){window.__su={state:'error'};return}return r.json().then(function(j){wi
         @JavascriptInterface fun refreshClaude() { ui.post { readClaude() } }
         @JavascriptInterface fun signIn() { ui.post { openSignIn() } }
         @JavascriptInterface fun signOut() { ui.post { signOutClaude() } }
+        @JavascriptInterface fun refreshFirebase() { ui.post { readFirebase(false) } }
+        @JavascriptInterface fun connectFirebase() { ui.post { readFirebase(true) } }
     }
 
     /** Any Claude cookies at all on this phone. Whether they still sign you in, Claude itself answers when asked. */
@@ -229,12 +255,52 @@ if(!r.ok){window.__su={state:'error'};return}return r.json().then(function(j){wi
         cm.removeAllCookies { cm.flush(); send("""{"state":"signedout"}""") }
     }
 
+    /** Reads Firebase usage. With ask false it never shows a screen: no grant yet just means "not connected". */
+    private fun readFirebase(ask: Boolean) {
+        if (fbBusy) return
+        fbBusy = true
+        val req = AuthorizationRequest.builder()
+            .setRequestedScopes(listOf(Scope(FirebaseUsage.SCOPE_MONITORING), Scope(FirebaseUsage.SCOPE_FIREBASE)))
+            .build()
+        Identity.getAuthorizationClient(this).authorize(req)
+            .addOnSuccessListener { res ->
+                val pi = res.pendingIntent
+                when {
+                    res.hasResolution() && ask && pi != null -> fbAsk.launch(IntentSenderRequest.Builder(pi.intentSender).build())
+                    res.hasResolution() -> { fbBusy = false; fbSend("signedout") }
+                    else -> fbRead(res)
+                }
+            }
+            .addOnFailureListener { e -> fbBusy = false; fbSend(fbState(e)) }
+    }
+
+    private fun fbRead(res: AuthorizationResult) {
+        val token = res.accessToken
+        if (token.isNullOrEmpty()) { fbBusy = false; fbSend("error"); return }
+        io.execute {
+            val json = try { FirebaseUsage.read(token) }
+                       catch (e: FirebaseUsage.AuthError) { """{"state":"signedout"}""" }
+                       catch (e: Exception) { """{"state":"error"}""" }
+            ui.post { fbBusy = false; sendFb(json) }
+        }
+    }
+
+    /** DEVELOPER_ERROR (10) means Google doesn't know this app yet: the one-time setup isn't done. */
+    private fun fbState(e: Exception): String = if (e is ApiException && e.statusCode == 10) "setup" else "error"
+
+    private fun fbSend(state: String) = sendFb(JSONObject().put("state", state).toString())
+
+    private fun sendFb(json: String) {
+        fbLast = json
+        page.evaluateJavascript("window.steeleFirebase&&window.steeleFirebase($json)", null)
+    }
+
     private fun openOutside(u: Uri) {
         try { startActivity(Intent(Intent.ACTION_VIEW, u)) } catch (e: ActivityNotFoundException) { /* nothing can open it */ }
     }
 
     override fun onDestroy() {
-        reader?.destroy(); signIn?.destroy(); page.destroy()
+        io.shutdownNow(); reader?.destroy(); signIn?.destroy(); page.destroy()
         super.onDestroy()
     }
 }
