@@ -199,6 +199,8 @@ input:focus, select:focus, textarea:focus { outline: 0; border-color: var(--gree
 .sword { font-weight: 700; color: var(--muted); }
 .sword.under { color: var(--under); }
 .sword.over { color: var(--over); }
+.pillrow { display: flex; flex-wrap: wrap; gap: 0 12px; }
+.lb .pts { font: 700 22px var(--cond); color: var(--ink); }
 .sword .pku { font-size: 14px; margin: -12px -8px; padding: 12px 8px; color: var(--muted); font-weight: 600; }
 .sword .clr { font-size: 14px; margin: -12px -8px -12px 4px; padding: 12px 8px; color: var(--muted); }
 .navrow { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 12px 0; }
