@@ -23,7 +23,12 @@
   };
   R.wire = function (el, ev, r) {
     const b = $("#rcshare", el); if (!b) return;
-    b.onclick = () => { const rc = C.recap(ev, r); if (!rc) return; FW.phase1.autoPost(rc.text, "recap" + r); shared[U().S.code + ":" + r] = true; b.disabled = true; b.textContent = "Shared in the chat"; };
+    b.onclick = () => {
+      const rc = C.recap(ev, r); if (!rc) return;
+      // Mark it shared first: posting to a phone-only tournament's chat can redraw the Board straight away.
+      shared[U().S.code + ":" + r] = true; b.disabled = true; b.textContent = "Shared in the chat";
+      FW.phase1.autoPost(rc.text, "recap" + r);
+    };
   };
 
   R.seasonHtml = function () {
