@@ -39,6 +39,7 @@ object PitchStore {
         prefs?.edit()?.putString("log", PitchCore.toJson(log.value).toString())?.putString("resting", JSONObject(resting.value).toString())?.apply()
         if (push) app?.let { PhoneLink.putPitch(it, PitchCore.toJson(log.value).toString()) }
         Tiles.pitch(app)
+        PitchComplicationService.update(app)
     }
 
     /**
