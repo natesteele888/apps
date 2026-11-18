@@ -326,6 +326,11 @@ input:focus, select:focus, textarea:focus { outline: 0; border-color: var(--gree
 .ctpbest b { display: block; }
 .ctpbar { display: flex; width: 100%; justify-content: space-between; align-items: center; gap: 10px; text-align: left; margin: 0 0 10px; padding: 10px 14px; border-radius: 14px; border: 2px solid var(--gold); background: #fffaf0; cursor: pointer; }
 .ctpbar b, .ctpbar small { display: block; }
+/* the group finished every hole */
+.rdone { display: grid; gap: 4px; margin: 0 0 12px; padding: 12px 14px; border-radius: 14px; border: 2px solid var(--green); background: #eef6f0; }
+.rdone b { font: 700 19px var(--serif); color: var(--green); }
+.rdone small { font-size: 14px; }
+.rdone .btn { justify-self: start; margin-top: 6px; }
 .ctplist { margin: 0 0 10px; padding-left: 22px; }
 .ctplist li { padding: 8px 0; border-bottom: 1px solid var(--line); }
 .ctplist li { display: list-item; }
