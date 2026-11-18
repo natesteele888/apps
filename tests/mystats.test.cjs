@@ -81,7 +81,10 @@ const ROWS = [
     const writes = [];
     // one handler (Playwright tries the newest route first, so two would let the catch-all win): the fake SDK for
     // app-compat, nothing for auth and firestore
-    await page.route(/gstatic\.com\/firebasejs\//, r => r.fulfill({ contentType: 'text/javascript', body: /firebase-app-compat\.js/.test(r.request().url()) ? FAKE_FB : '' }));
+    await page.route(/gstatic\.com\/firebasejs\//, r => {
+      if (opts.sdkDown && opts.sdkDown.on) { opts.sdkDown.asked++; return r.abort(); }
+      return r.fulfill({ contentType: 'text/javascript', body: /firebase-app-compat\.js/.test(r.request().url()) ? FAKE_FB : '' });
+    });
     await page.route(/firestore\.googleapis\.com/, async r => {
       const q = r.request();
       if (q.method() === 'PATCH') { writes.push({ url: q.url(), body: JSON.parse(q.postData()) }); return r.fulfill({ status: opts.status || 200, contentType: 'application/json', body: '{}' }); }
@@ -136,6 +139,18 @@ const ROWS = [
       eq(await o.page.getByRole('button', { name: 'Send to the watch' }).isDisabled(), true);
       eq(o.writes.length, 0);
       await o.ctx.close();
+    });
+
+    await test('page: no signal for sign-in shows Try again, which signs in once signal is back', async () => {
+      const sdkDown = { on: true, asked: 0 };
+      const { ctx, page, errors } = await open({ linked: true, sdkDown });
+      await page.getByText(/No connection\. My Stats needs signal/).waitFor();
+      sdkDown.on = false;
+      await page.getByRole('button', { name: 'Try again' }).click();
+      await page.getByRole('button', { name: 'Sign in with Google' }).waitFor();
+      eq(await page.evaluate(() => [...document.scripts].filter(s => /firebase-app-compat/.test(s.src)).length), 1, 'app script loaded once');
+      eq(errors.filter(e => !/ERR_FAILED|Failed to load resource/.test(e)).length, 0, errors.join('\n'));
+      await ctx.close();
     });
 
     await test('page: an account that can\'t read player stats is told so', async () => {

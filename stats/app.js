@@ -14,8 +14,11 @@
 
   let fb = null, rows = null, list = [], user = null;
 
-  const loadSdk = () => ["app", "auth", "firestore"].reduce((p, n) => p.then(() => new Promise((res, rej) => {
-    const el = document.createElement("script"); el.src = SDK + n + "-compat.js"; el.onload = res; el.onerror = () => rej(new Error("offline"));
+  // a retry after weak signal only fetches the scripts that didn't load, never one twice
+  const loaded = new Set();
+  const loadSdk = () => ["app", "auth", "firestore"].reduce((p, n) => p.then(() => loaded.has(n) ? null : new Promise((res, rej) => {
+    const el = document.createElement("script"); el.src = SDK + n + "-compat.js";
+    el.onload = () => { loaded.add(n); res(); }; el.onerror = () => { el.remove(); rej(new Error("offline")); };
     document.head.appendChild(el);
   })), Promise.resolve());
 
@@ -110,12 +113,23 @@
     WL.panel($("wl"), { btn: "btn", btnPri: "btn pri", intro: "On the watch, open My Stats. It shows a code: type it here.", linkedText: "Stats go to it from here.", onLinked: () => drawSend(true) });
   }
 
-  (async () => {
-    drawWatch();
-    WL.onChange(() => drawSend(false));
+  let starting = false;
+  async function start() {
+    if (fb || starting) return;
+    starting = true;
     $("signin").innerHTML = "<p>Loading…</p>";
-    try { await loadSdk(); } catch (e) { $("signin").innerHTML = '<p class="msg err">No connection. My Stats needs signal to sign in.</p>'; return; }
+    try { await loadSdk(); } catch (e) {
+      starting = false;
+      $("signin").innerHTML = '<p class="msg err">No connection. My Stats needs signal to sign in.</p><button class="btn" id="retry">Try again</button>';
+      $("retry").onclick = start;
+      return;
+    }
     fb = window.firebase; fb.initializeApp(DASHBOARD);
     fb.auth().onAuthStateChanged(u => { user = u; rows = null; if (u) loadStats(); else { drawSignin(); drawPlayer(); $("send").hidden = true; } });
-  })();
+  }
+
+  drawWatch();
+  WL.onChange(() => drawSend(false));
+  addEventListener("online", start);   // signal came back: try again by itself
+  start();
 })();
