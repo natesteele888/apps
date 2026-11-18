@@ -106,6 +106,22 @@ const pl = (ev, id) => Object.assign({ id }, ev.p[id]);
     eq(cc.tees[0].cr, 71.3); eq(cc.tees[0].sl, 131); eq(cc.tees[1].cr, undefined); eq(cc.tees[1].sl, undefined);
   });
 
+  await test('core: team best ball and best 2 count the low scores on each hole, against each golfer\'s own par', () => {
+    const ev = C.newEvent({ name: 'BB', course: C.monoosnockCourse(), now: NOW });
+    const add = (id, n, tee, t) => { ev.p[id] = C.newPlayer(ev, { name: n, tee, group: 1, now: NOW }); ev.p[id].t = t; };
+    ev.teams = { t1: { n: 'Team One', cap: 'aaaaaa1' }, t2: { n: 'Team Two', cap: 'cccccc1' } };
+    add('aaaaaa1', 'A One', 'green', 't1'); add('bbbbbb1', 'B One', 'ladies', 't1'); add('cccccc1', 'C Two', 'green', 't2'); add('dddddd1', 'D Two', 'green', 't2');
+    // hole 5: men's par 3, ladies' par 4. A 3 / B 4 (both par), C 2 (birdie) / D 6
+    ev.p.aaaaaa1.s['1_5'] = 3; ev.p.bbbbbb1.s['1_5'] = 4; ev.p.cccccc1.s['1_5'] = 2; ev.p.dddddd1.s['1_5'] = 6;
+    const tot = C.teamBoard(ev), b1 = C.teamBoard(ev, 'best1'), b2 = C.teamBoard(ev, 'best2');
+    eq(tot.find(t => t.id === 't1').toPar, 0); eq(tot.find(t => t.id === 't2').toPar, 2); eq(tot[0].id, 't1');
+    eq(b1[0].id, 't2', 'best ball: the birdie wins the hole'); eq(b1[0].toPar, -1); eq(b1[1].toPar, 0); eq(b1[0].holes, 1);
+    eq(b2[0].id, 't1'); eq(b2[0].toPar, 0); eq(b2[1].toPar, 2);
+    // a best-2 hole waits until two teammates have a score
+    ev.p.aaaaaa1.s['1_6'] = 4; eq(C.teamBoard(ev, 'best2').find(t => t.id === 't1').holes, 1); eq(C.teamBoard(ev, 'best1').find(t => t.id === 't1').holes, 2);
+    deq(C.TEAM_SCORING, ['total', 'best1', 'best2']);
+  });
+
   await test('core: to-par words and colors match the Masters board (red under, green over)', () => {
     eq(C.fmtPar(0), 'E'); eq(C.fmtPar(-3), '-3'); eq(C.fmtPar(2), '+2');
     eq(C.tone(-1), 'under'); eq(C.tone(1), 'over'); eq(C.tone(0), 'even');

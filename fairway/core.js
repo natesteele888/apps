@@ -460,8 +460,25 @@
     return a.slice(0, n).map(p => p.id);
   }
   // Each team's members (captain first, then in draft order) and its total to par, best first.
-  function teamBoard(ev) {
+  // how: "total" (every player's to par added up, the default), "best1" (best ball: the team's low score on each
+  // hole) or "best2" (the two low scores on each hole). A best-ball hole counts once that many teammates have a
+  // score on it; each player's score is against their own tees' par.
+  const TEAM_SCORING = ["total", "best1", "best2"];
+  function teamBest(ev, members, k) {
+    let toPar = 0, holes = 0; const n = holeCount(ev);
+    for (let r = 1; r <= ev.rounds; r++) {
+      const xs = members.map(p => round(ev, p, r));
+      for (let h = 1; h <= n; h++) {
+        const d = xs.map(x => (x.scores[h - 1] == null ? null : x.scores[h - 1] - x.pars[h - 1])).filter(v => v != null).sort((a, b) => a - b);
+        if (d.length < k) continue;
+        toPar += d.slice(0, k).reduce((a, b) => a + b, 0); holes++;
+      }
+    }
+    return { toPar, holes };
+  }
+  function teamBoard(ev, how) {
     const ids = teamIds(ev); if (!ids.length) return [];
+    const best = how === "best1" ? 1 : how === "best2" ? 2 : 0;
     const rows = standings(ev), byId = {}; rows.forEach(r => { byId[r.id] = r; });
     const pkOrder = (ev.dr && ev.dr.pk) || [];
     const out = ids.map(t => {
@@ -469,7 +486,8 @@
         .sort((a, b) => (a.id === ev.teams[t].cap ? -1 : b.id === ev.teams[t].cap ? 1 : 0) || pkOrder.indexOf(a.id) - pkOrder.indexOf(b.id));
       const hcs = members.map(hcOf).filter(v => v != null);
       const played = members.filter(p => byId[p.id] && byId[p.id].holes);
-      return { id: t, name: ev.teams[t].n, cap: ev.teams[t].cap, members, toPar: played.reduce((a, p) => a + byId[p.id].toPar, 0), holes: played.reduce((a, p) => a + byId[p.id].holes, 0),
+      const bb = best ? teamBest(ev, members, best) : null;
+      return { id: t, name: ev.teams[t].n, cap: ev.teams[t].cap, members, toPar: bb ? bb.toPar : played.reduce((a, p) => a + byId[p.id].toPar, 0), holes: bb ? bb.holes : played.reduce((a, p) => a + byId[p.id].holes, 0),
         avg: hcs.length ? Math.round((hcs.reduce((a, b) => a + b, 0) / hcs.length) * 10) / 10 : null };
     });
     out.sort((a, b) => (a.holes ? 0 : 1) - (b.holes ? 0 : 1) || a.toPar - b.toPar || a.name.localeCompare(b.name));
@@ -1162,7 +1180,7 @@
     fmtPar, tone, scoreName, mark, stats, demoEvent, applyPatch, historyRows, sameName, boardNames,
     cleanCtpHoles, cleanCtpEntry, ctpBoard, metres, averageFix, ctpMeasure, fmtFeet,
     cleanHc, isDate, isTime, isTid, cleanRally, cleanFmt, rallyList, officialPatch, openGroup, teamIds, pickSlots, teamOf, draftState, pickPatch,
-    draftStartPatch, pickCaptains, teamBoard, matchStatus, matchIds, autoMatches, picksLocked, pickCounts, cleanTt, teeTime, fmtTime, fmtDate,
+    draftStartPatch, pickCaptains, teamBoard, TEAM_SCORING, matchStatus, matchIds, autoMatches, picksLocked, pickCounts, cleanTt, teeTime, fmtTime, fmtDate,
     reminders, icsFor, directions, cleanMsg, shout, BINGO, BINGO_AUTO, bingoCard, bingoState, cleanBingo,
     BETS, BET_AMTS, cleanBets, cleanBetMarks, betOn, betAmt, betPlayers, wolfOrder, wolfOf, betTally, money,
     TEE_SHOTS, cleanHoleNote, cleanHoleNotes, holeLine, nextHole, jackNoticed,
