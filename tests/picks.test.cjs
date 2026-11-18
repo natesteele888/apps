@@ -176,6 +176,25 @@ const event = (id, date, away, home, state, done) => ({ id, date, competitions: 
     await page.click('[data-view="stats"]'); await page.waitForSelector('.empty'); assert.ok(/Make some NHL picks/.test(await page.textContent('#view')));
     eq(errors.length, 0, errors.join(' | ')); await ctx.close();
   });
+  await test('page: other players\' picks stay hidden until you lock in yours, then show; locked picks can\'t change', async () => {
+    const { ctx, page, errors } = await open();
+    await page.goto(server.url); await page.waitForSelector('[data-sport]');
+    await page.click('[data-sport="mlb"]'); await page.waitForSelector('.game');
+    await page.evaluate(d => { window.__data.gp_picks['p2_mlb-' + d] = { uid: 'p2', week: 'mlb-' + d, picks: { ['MLB-' + d + '-3']: 'EEE' } }; window.__notify(); }, TODAY);
+    await page.waitForTimeout(200);
+    const open3 = page.locator('.game').nth(2);
+    assert.ok(!/Player Two/.test(await open3.textContent()), 'no names on an open game before locking');
+    assert.ok(!/\d pick/.test(await open3.textContent()), 'not even a count');
+    assert.ok(await page.locator('#lockin').isDisabled(), 'nothing picked yet, nothing to lock');
+    await page.click('.side[data-t="FFF"]'); await page.waitForSelector('.side.mine');
+    await page.click('#lockin'); eq(await page.textContent('#lockin'), 'Tap again to lock', 'the first tap asks to confirm');
+    await page.click('#lockin'); await page.waitForSelector('.lockbar.done');
+    const w = await page.evaluate(() => window.__writes.filter(x => x[0] === 'gp_picks').pop());
+    assert.ok(w[2].locked && w[2].picks['MLB-' + TODAY + '-3'] === 'FFF', JSON.stringify(w));
+    assert.ok(/Player Two/.test(await open3.textContent()), 'their pick shows once locked in');
+    eq(await open3.locator('.side:not([disabled])').count(), 0, 'a locked slate can\'t change');
+    eq(errors.length, 0, errors.join(' | ')); await ctx.close();
+  });
   await test('page: each team\'s record shows under its name, and open games show a win-chance gauge', async () => {
     const { ctx, page, errors } = await open();
     await page.goto(server.url); await page.waitForSelector('.game');
