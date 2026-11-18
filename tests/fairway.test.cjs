@@ -172,6 +172,19 @@ const pl = (ev, id) => Object.assign({ id }, ev.p[id]);
     eq(pr.list[1].pts, 0); eq(C.cleanPred({ sc: 1.5 }), null);
   });
 
+  await test('core: a scramble: teams play one ball and the captain keeps the card', () => {
+    const ev = C.newEvent({ name: 'S', course: C.sampleCourse(), now: NOW }); ev.fmt = C.cleanFmt({ kind: 'scramble', nt: 2 });
+    eq(C.cleanFmt({ kind: 'scramble' }).kind, 'scramble'); eq(C.teamKind(ev.fmt), true); eq(C.teamKind({ kind: 'solo' }), false); eq(C.isScramble(ev), true);
+    const add = (id, n, t, at) => { ev.p[id] = C.newPlayer(ev, { name: n, tee: ev.course.tees[0].id, now: at }); ev.p[id].t = t; };
+    add('aaaaaa1', 'A One', 't1', 1); add('bbbbbb1', 'B One', 't1', 2); add('cccccc1', 'C Two', 't2', 3); add('dddddd1', 'D Two', 't2', 4);
+    ev.teams = { t1: { n: 'Team One', cap: 'bbbbbb1' }, t2: { n: 'Team Two', cap: null } };
+    eq(C.cardKeeper(ev, 't1'), 'bbbbbb1'); eq(C.cardKeeper(ev, 't2'), 'cccccc1', 'no captain: the first to join');
+    eq(C.keepsCard(ev, 'aaaaaa1'), false); eq(C.keepsCard(ev, 'bbbbbb1'), true); eq(C.keepsCard(ev, 'dddddd1'), false);
+    ev.p.bbbbbb1.s['1_1'] = ev.course.holes[0].par - 1; ev.p.aaaaaa1.s['1_1'] = 9; ev.p.cccccc1.s['1_1'] = ev.course.holes[0].par;
+    const tb = C.teamBoard(ev); eq(tb[0].id, 't1'); eq(tb[0].toPar, -1, 'only the captain\'s card counts'); eq(tb[1].toPar, 0); eq(tb[0].holes, 1);
+    ev.fmt.kind = 'teams'; eq(C.keepsCard(ev, 'aaaaaa1'), true, 'everyone keeps a card outside a scramble'); eq(C.teamBoard(ev).find(t => t.id === 't1').toPar, 0 - 1 + 9 - ev.course.holes[0].par);
+  });
+
   await test('core: to-par words and colors match the Masters board (red under, green over)', () => {
     eq(C.fmtPar(0), 'E'); eq(C.fmtPar(-3), '-3'); eq(C.fmtPar(2), '+2');
     eq(C.tone(-1), 'under'); eq(C.tone(1), 'over'); eq(C.tone(0), 'even');

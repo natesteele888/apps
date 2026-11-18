@@ -271,7 +271,7 @@
         <label class="fld"><span>How many do you want?</span><input id="ngoal" type="number" min="2" max="120" inputmode="numeric" value="12"></label>
         <label class="fld"><span>A note for everyone (optional)</span><input id="nnote" maxlength="140" placeholder="Morning tee time, captains and a draft if we get 12"></label>` : ""}
       <p class="stepno">How do you want to play?</p>
-      <div class="pick" id="nkind">${[["teams", "Teams with a draft", "Captains pick their teams"], ["solo", "Everyone for themselves", "Lowest score wins"], ["match", "Match play", "Head to head, hole by hole"]].map(([k, t, d]) => `<button type="button" class="pk${kind === k ? " on" : ""}" data-nk="${k}"><span class="grow"><b>${t}</b><small>${d}</small></span><span class="ck" aria-hidden="true"></span></button>`).join("")}</div>
+      <div class="pick" id="nkind">${[["teams", "Teams with a draft", "Captains pick their teams"], ["scramble", "Scramble", "Teams play one ball; the captain keeps the card"], ["solo", "Everyone for themselves", "Lowest score wins"], ["match", "Match play", "Head to head, hole by hole"]].map(([k, t, d]) => `<button type="button" class="pk${kind === k ? " on" : ""}" data-nk="${k}"><span class="grow"><b>${t}</b><small>${d}</small></span><span class="ck" aria-hidden="true"></span></button>`).join("")}</div>
       <fieldset class="fld"><legend>Course</legend><div class="opts">${courses.map(c => `<label class="opt"><input type="radio" name="course" value="${esc(c.id)}" ${c.id === pick ? "checked" : ""}><span><b>${esc(c.name)}</b><small>${c.holes.length} holes · ${C.parText(c)} · ${c.tees.map(t => esc(t.name)).join(", ")}</small></span></label>`).join("")}</div>
         <button type="button" class="btn ghost small" id="nb">Build a new course</button></fieldset>
       <fieldset class="fld"><legend>Rounds</legend><div class="seg" role="radiogroup">${[1, 2, 3, 4].map(n => `<label><input type="radio" name="rounds" value="${n}" ${n === 1 ? "checked" : ""}><span>${n}</span></label>`).join("")}</div></fieldset>
@@ -454,7 +454,9 @@
   /* ---------- Board: the leaders, and the classic hole-by-hole board ---------- */
   function tabBoard(el, ev) {
     const hasHc = C.players(ev).some(p => Number.isFinite(p.hc)), net = hasHc && S.net && S.boardMode === "leaders";
-    const rows = C.standings(ev, { net }), r = S.boardRound || Math.min(ev.cur, ev.rounds), n = C.holeCount(ev);
+    const scr = C.isScramble(ev) && C.teamIds(ev).length;
+    const rows = C.standings(ev, { net }).filter(row => !scr || C.keepsCard(ev, row.id)).map(row => { const t = scr ? C.teamOf(ev, row.id) : null; return t ? Object.assign({}, row, { name: ev.teams[t].n }) : row; });
+    const r = S.boardRound || Math.min(ev.cur, ev.rounds), n = C.holeCount(ev);
     const seg = `<div class="pills" role="group" aria-label="Board">${[["leaders", "Leaders"], ["holes", "Hole by hole"], ["field", "Field"], ["course", "Course"]].map(([k, l]) => `<button type="button" class="pill" data-bm="${k}" aria-pressed="${S.boardMode === k}">${l}</button>`).join("")}</div>`;
     if (S.boardMode === "field" || S.boardMode === "course") {
       el.innerHTML = seg + `<div id="bsub"></div>`; (S.boardMode === "field" ? tabField : tabCourse)($("#bsub", el), ev); wireBoard(el); return;
@@ -516,7 +518,10 @@
     const gs = C.groups(ev), mine = me();
     if (!gs.length) { el.innerHTML = emptyField(); wireBoard(el); return; }
     if (S.group == null || !gs.some(g => g.g === S.group)) S.group = mine ? mine.g : gs[0].g;
-    const g = gs.find(x => x.g === S.group), r = S.scoreRound || Math.min(ev.cur, ev.rounds), n = C.holeCount(ev);
+    const g0 = gs.find(x => x.g === S.group), r = S.scoreRound || Math.min(ev.cur, ev.rounds), n = C.holeCount(ev);
+    const scr = C.isScramble(ev), g = scr ? Object.assign({}, g0, { players: g0.players.filter(p => C.keepsCard(ev, p.id)) }) : g0;
+    if (!g.players.length) { el.innerHTML = `${gs.length > 1 ? `<div class="pills small" role="group" aria-label="Group">${gs.map(x => `<button type="button" class="pill" data-g="${x.g}" aria-pressed="${x.g === g0.g}">Group ${x.g}</button>`).join("")}</div>` : ""}<div class="empty"><p>Your captain keeps the card</p><p class="msg">It's a scramble: each team plays one ball and the captain keeps its score. Follow along on the Board.</p></div>`; $$("[data-g]", el).forEach(b => b.onclick = () => { S.group = +b.dataset.g; S.hole = null; render(); }); return; }
+    const tname = p => { const t = scr ? C.teamOf(ev, p.id) : null; return t ? ev.teams[t].n : null; };
     const order = C.playOrder(n, g.start), rs = g.players.map(p => C.round(ev, p, r));
     if (S.hole == null || S.holeGroup !== g.g) { S.hole = order.find(h => rs.some(x => x.scores[h - 1] == null)) || order[order.length - 1]; S.holeGroup = g.g; }
     const h = S.hole, hole = ev.course.holes[h - 1], idx = order.indexOf(h), allIn = rs.every(x => x.scores[h - 1] != null);
@@ -529,7 +534,7 @@
       ${(ev.ctph || []).indexOf(h) >= 0 ? (() => { const x = C.ctpBoard(ev, r).find(y => y.h === h); return `<button type="button" class="ctpbar" id="ctpopen"><span><b>Closest to the pin</b><small>${x.best ? esc(x.best.name) + ", " + esc(C.fmtFeet(x.best.d)) : "Nobody measured yet"}</small></span><span class="chev">Measure</span></button>`; })() : ""}
       ${mine && mine.g === g.g ? FW.map.holeHtml(ev, h) + FW.jack.holeHtml(ev, h) : ""}
       <ul class="scorer">${g.players.map((p, i) => { const v = rs[i].scores[h - 1], d = v == null ? null : v - rs[i].pars[h - 1], t = C.teeOf(ev, p);
-        return `<li data-pid="${esc(p.id)}"><button type="button" class="sname" data-player="${esc(p.id)}">${teeDot(t)}<span><b>${esc(p.n)}</b><small>${rs[i].thru ? parText(rs[i].toPar) + " thru " + rs[i].thru : "No scores yet"}${rs[i].gets[h - 1] > 0 ? " · gets " + (rs[i].gets[h - 1] > 1 ? rs[i].gets[h - 1] + " strokes" : "a stroke") : rs[i].gets[h - 1] < 0 ? " · gives a stroke" : ""}${mine && mine.id === p.id ? " · you" : ""}</small></span></button>
+        return `<li data-pid="${esc(p.id)}"><button type="button" class="sname" data-player="${esc(p.id)}">${teeDot(t)}<span><b>${esc(tname(p) || p.n)}</b><small>${rs[i].thru ? parText(rs[i].toPar) + " thru " + rs[i].thru : "No scores yet"}${rs[i].gets[h - 1] > 0 ? " · gets " + (rs[i].gets[h - 1] > 1 ? rs[i].gets[h - 1] + " strokes" : "a stroke") : rs[i].gets[h - 1] < 0 ? " · gives a stroke" : ""}${mine && mine.id === p.id ? " · you" : ""}</small></span></button>
           <div class="stepper"><button type="button" class="minus" aria-label="One less for ${esc(p.n)}">−</button><button type="button" class="val ${v == null ? "empty" : C.mark(d)}" aria-label="${v == null ? "Set par for " + esc(p.n) : esc(p.n) + ": " + v}">${v == null ? "Par?" : v}</button><button type="button" class="plus" aria-label="One more for ${esc(p.n)}">+</button></div>
           <small class="sword ${d == null ? "" : C.tone(d)}">${v == null ? "" : esc(C.scoreName(d, v))}${v != null ? ` <button type="button" class="link clr" aria-label="Clear ${esc(p.n)}'s score">clear</button>` : ""}</small></li>`; }).join("")}</ul>
       ${mine && mine.g === g.g ? FW.review.html(ev, mine, r, h) : ""}

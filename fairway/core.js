@@ -362,14 +362,14 @@
      PHASE 1: getting a tournament going, the format, the draft, teams, matchups, picks and tee times.
      Every part is optional on a tournament, so older tournaments read the same as before.
        rally: { on, date "YYYY-MM-DD", note, goal, r: { id: { n, s "in"|"maybe"|"out", at } } }
-       fmt:   { kind "solo"|"teams"|"match", nt teams, draft "snake"|"straight", clk seconds, mt "singles"|"2v2"|"both"|"none" }
+       fmt:   { kind "solo"|"teams"|"scramble"|"match", nt teams, draft "snake"|"straight", clk seconds, mt "singles"|"2v2"|"both"|"none" }
        teams: { "t1": { n, cap: playerId } }       a player's team comes from the draft (see teamOf), or p.<id>.t
        dr:    { on, done, ord: [teamId], pk: [playerId], at }   the draft: round-one order and every pick so far
        m:     { id: { a: [playerId], b: [playerId], r } }      singles (one a side) and 2v2 best ball
        pk:    { playerId: teamId }                              "who wins?" picks, bragging rights only
        tt:    { date, where, g: { "1": "08:10" } }             tee times by group
      ====================================================================== */
-  const KINDS = ["solo", "teams", "match"], DRAFTS = ["snake", "straight"], CLOCKS = [0, 30, 60, 300], MTS = ["singles", "2v2", "both", "none"];
+  const KINDS = ["solo", "teams", "scramble", "match"], DRAFTS = ["snake", "straight"], CLOCKS = [0, 30, 60, 300], MTS = ["singles", "2v2", "both", "none"];
   const isDate = s => typeof s === "string" && /^20[0-9]{2}-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])$/.test(s);
   const isTime = s => typeof s === "string" && /^([01][0-9]|2[0-3]):[0-5][0-9]$/.test(s);
   const isTid = s => typeof s === "string" && /^t[1-8]$/.test(s);
@@ -492,8 +492,25 @@
     }
     return { toPar, holes };
   }
+  // Teams play with a captain and a draft in both "teams" and "scramble" tournaments.
+  const teamKind = f => !!f && (f.kind === "teams" || f.kind === "scramble");
+  const isScramble = ev => !!(ev && ev.fmt && ev.fmt.kind === "scramble");
+  // In a scramble the team plays one ball and one card: the captain's (or, with no captain, the first teammate's).
+  function cardKeeper(ev, t) {
+    if (!ev.teams || !ev.teams[t]) return null;
+    const cap = ev.teams[t].cap; if (cap && ev.p[cap] && teamOf(ev, cap) === t) return cap;
+    const m = players(ev).filter(p => teamOf(ev, p.id) === t).sort((a, b) => a.at - b.at || a.n.localeCompare(b.n))[0];
+    return m ? m.id : null;
+  }
+  // Does this golfer keep a card? Everyone does, except a scramble teammate whose team's card someone else keeps.
+  function keepsCard(ev, pid) {
+    if (!ev.p[pid]) return false;
+    const t = isScramble(ev) ? teamOf(ev, pid) : null;
+    return !t || cardKeeper(ev, t) === pid;
+  }
   function teamBoard(ev, how) {
     const ids = teamIds(ev); if (!ids.length) return [];
+    if (isScramble(ev)) how = "scr";
     const best = how === "best1" ? 1 : how === "best2" ? 2 : 0;
     const rows = standings(ev), byId = {}; rows.forEach(r => { byId[r.id] = r; });
     const pkOrder = (ev.dr && ev.dr.pk) || [];
@@ -502,7 +519,8 @@
         .sort((a, b) => (a.id === ev.teams[t].cap ? -1 : b.id === ev.teams[t].cap ? 1 : 0) || pkOrder.indexOf(a.id) - pkOrder.indexOf(b.id));
       const hcs = members.map(hcOf).filter(v => v != null);
       const played = members.filter(p => byId[p.id] && byId[p.id].holes);
-      const bb = best ? teamBest(ev, members, best) : null;
+      const keep = how === "scr" ? cardKeeper(ev, t) : null, kr = keep && byId[keep];
+      const bb = how === "scr" ? { toPar: kr ? kr.toPar : 0, holes: kr ? kr.holes : 0 } : best ? teamBest(ev, members, best) : null;
       return { id: t, name: ev.teams[t].n, cap: ev.teams[t].cap, members, toPar: bb ? bb.toPar : played.reduce((a, p) => a + byId[p.id].toPar, 0), holes: bb ? bb.holes : played.reduce((a, p) => a + byId[p.id].holes, 0),
         avg: hcs.length ? Math.round((hcs.reduce((a, b) => a + b, 0) / hcs.length) * 10) / 10 : null };
     });
@@ -1264,7 +1282,7 @@
     fmtPar, tone, scoreName, mark, stats, demoEvent, applyPatch, historyRows, myRounds, sameName, boardNames,
     cleanCtpHoles, cleanCtpEntry, ctpBoard, metres, averageFix, ctpMeasure, fmtFeet,
     cleanHc, isDate, isTime, isTid, cleanRally, cleanFmt, rallyList, officialPatch, openGroup, teamIds, pickSlots, teamOf, draftState, pickPatch,
-    draftStartPatch, pickCaptains, teamBoard, TEAM_SCORING, matchStatus, matchIds, autoMatches, picksLocked, pickCounts, PRED_PTS, cleanPred, predictions, cleanTt, teeTime, fmtTime, fmtDate,
+    draftStartPatch, pickCaptains, teamBoard, TEAM_SCORING, teamKind, isScramble, cardKeeper, keepsCard, matchStatus, matchIds, autoMatches, picksLocked, pickCounts, PRED_PTS, cleanPred, predictions, cleanTt, teeTime, fmtTime, fmtDate,
     reminders, icsFor, directions, cleanMsg, shout, BINGO, BINGO_AUTO, bingoCard, bingoState, cleanBingo,
     BETS, BET_AMTS, cleanBets, cleanBetMarks, betOn, betAmt, betPlayers, wolfOrder, wolfOf, betTally, money,
     TEE_SHOTS, cleanHoleNote, cleanHoleNotes, holeLine, nextHole, jackNoticed,
