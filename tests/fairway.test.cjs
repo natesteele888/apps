@@ -185,6 +185,17 @@ const pl = (ev, id) => Object.assign({ id }, ev.p[id]);
     ev.fmt.kind = 'teams'; eq(C.keepsCard(ev, 'aaaaaa1'), true, 'everyone keeps a card outside a scramble'); eq(C.teamBoard(ev).find(t => t.id === 't1').toPar, 0 - 1 + 9 - ev.course.holes[0].par);
   });
 
+  await test('core: hole art that comes with the app, by course, and the same pictures for a front or back nine', () => {
+    const c = C.monoosnockCourse();
+    eq(C.holeArt(c, 1), null, 'no pictures listed yet');
+    C.HOLE_ART.monoosnock.holes = [1, 10];
+    try {
+      eq(C.holeArt(c, 1), 'art/monoosnock/1.webp'); eq(C.holeArt(c, 2), null);
+      eq(C.holeArt(C.nineOf(c, 'front'), 1), 'art/monoosnock/1.webp'); eq(C.holeArt(C.nineOf(c, 'back'), 1), 'art/monoosnock/10.webp');
+      eq(C.holeArt(C.sampleCourse(), 1), null); eq(C.holeArt({ id: 'constructor', holes: [] }, 1), null); eq(C.holeArt(null, 1), null);
+    } finally { C.HOLE_ART.monoosnock.holes = []; }
+  });
+
   await test('core: to-par words and colors match the Masters board (red under, green over)', () => {
     eq(C.fmtPar(0), 'E'); eq(C.fmtPar(-3), '-3'); eq(C.fmtPar(2), '+2');
     eq(C.tone(-1), 'under'); eq(C.tone(1), 'over'); eq(C.tone(0), 'even');

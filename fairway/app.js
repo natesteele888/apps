@@ -691,8 +691,13 @@
   function holeSketch(ev, h, teeId, big) {
     const hole = ev.course.holes[h - 1], par = C.parOf(ev.course, h, teeId);
     const p = M.plan({ seed: ev.course.name + " " + h, par, yards: C.yards(ev.course, h, teeId), hcp: hole.hcp });
-    return M.svg(p, { id: (big ? "hb" : "hs") + h, big, title: "Sketch of hole " + h + ", par " + par });
+    const sk = M.svg(p, { id: (big ? "hb" : "hs") + h, big, title: "Sketch of hole " + h + ", par " + par });
+    // the course's own drawing of the hole when the app has one; the sketch stays underneath in case it can't load
+    const art = C.holeArt(ev.course, h);
+    return art ? `<img class="holeart" src="${esc(art)}" alt="Hole ${C.holeNo(ev.course, h)}, par ${par}" decoding="async"><span class="skfb">${sk}</span>` : sk;
   }
+  // A hole picture that won't load (no signal yet, or a missing file) gives way to the sketch.
+  function artFallback(el) { $$("img.holeart", el).forEach(i => { const drop = () => i.remove(); i.onerror = drop; if (i.complete && !i.naturalWidth && i.getAttribute("src")) drop(); }); }
   function teeLine(ev, g, r, h, mine) {
     const sub = subjectOf(g, mine), hole = ev.course.holes[h - 1];
     return J.lineFor({ kind: "tee", par: C.parOf(ev.course, h, sub.tee), y: C.yards(ev.course, h, sub.tee), hcp: hole.hcp, n: sub.n, h }, jackLevel());
@@ -711,6 +716,7 @@
   }
   function wireCaddie(el, ev, g, r, h, mine) {
     const mp = $("#hsketch", el); if (mp) mp.onclick = () => sketchSheet(ev, g, h, mine);
+    artFallback(el);
     const st = $("#jkset", el); if (st) st.onclick = () => FW.jack.settingsSheet(() => { closeSheet(); S.jack = null; render(); });
     const ask = $("#jask", el); if (ask) ask.onclick = () => { const k = S.jack && S.jack.key; S.jack = Object.assign({ key: k }, teeLine(ev, g, r, h, mine)); const ln = $("#jline", el); if (ln) ln.textContent = S.jack.text; };
     const ag = $("#jsay", el); if (ag) ag.onclick = () => S.jack && FW.jack.say(S.jack.text);
@@ -728,8 +734,9 @@
     const sub = subjectOf(g, mine), hole = ev.course.holes[h - 1], y = C.yards(ev.course, h, sub.tee), own = mine && mine.g === g.g;
     sheet("Hole " + h, `<div class="mapbig">${holeSketch(ev, h, sub.tee, true)}</div>
       <p class="maplegend"><b>Par ${C.parOf(ev.course, h, sub.tee)}</b>${y ? ` · ${y} yds from the ${esc(C.teeOf(ev, sub).name)} tees` : ""} · Handicap ${hole.hcp}</p>
-      <p class="msg small">A pencil sketch drawn from the hole's par and yardage, not the real layout. Numbers on the fairway are yards to the middle of the green.${own ? " For the real hole, add your own picture on the hole map." : ""}</p>
+      <p class="msg small">${C.holeArt(ev.course, h) ? "The course's own drawing of the hole." : "A pencil sketch drawn from the hole's par and yardage, not the real layout. Numbers on the fairway are yards to the middle of the green."}${own ? " For GPS yards, add your own picture on the hole map." : ""}</p>
       ${own ? `<button type="button" class="btn block" id="skmap">Open the hole map</button>` : ""}`, box => {
+      artFallback(box);
       const b = $("#skmap", box); if (b) b.onclick = () => { closeSheet(); FW.map.sheet(ev, mine, h); };
     });
   }

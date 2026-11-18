@@ -130,6 +130,16 @@
   }
   // The number on the hole's sign: hole 1 of a back-nine round is the 10th.
   function holeNo(course, h) { return h + ((course && course.h0) || 0); }
+  // Hole art that comes with the app: one picture per hole, by course id, shown in place of the pencil sketch.
+  // To add a course's art, put the pictures in fairway/art/<course id>/ named by hole number (1.webp to 18.webp) and
+  // list the holes that have one here. A front or back nine of that course uses the same pictures.
+  const HOLE_ART = { monoosnock: { ext: "webp", holes: [] } };
+  function holeArt(course, h) {
+    if (!course || !course.id) return null;
+    const base = String(course.id).replace(/-(f9|b9)$/, ""), a = Object.prototype.hasOwnProperty.call(HOLE_ART, base) ? HOLE_ART[base] : null;
+    const n = holeNo(course, h);
+    return a && a.holes.indexOf(n) >= 0 ? "art/" + base + "/" + n + "." + a.ext : null;
+  }
   function cleanName(s) { return clip(s, NAME_MAX); }
   // A handicap index as golfers say it (+2.1 is written -2.1 here), or null when there isn't one.
   function cleanHc(v) { if (v == null || v === "") return null; const n = Number(String(v).replace(/^\+/, "-")); return Number.isFinite(n) && n >= -10 && n <= 54 ? Math.round(n * 10) / 10 : null; }
@@ -1277,7 +1287,7 @@
   }
 
   return { VERSION, MAX_PLAYERS, MAX_ROUNDS, MAX_TEES, NAME_MAX, EVENT_MAX, TEE_COLORS, DEMO_NAMES, DELETE,
-    courseHc, strokesBy, nineOf, holeNo, sampleCourse, monoosnockCourse, readyCourses, parOf, parsFor, parText, newCode, isCode, newPid, isPid, cleanCourse, cleanName, newEvent, newPlayer, cleanEvent,
+    courseHc, strokesBy, nineOf, holeNo, HOLE_ART, holeArt, sampleCourse, monoosnockCourse, readyCourses, parOf, parsFor, parText, newCode, isCode, newPid, isPid, cleanCourse, cleanName, newEvent, newPlayer, cleanEvent,
     key, holeCount, coursePar, players, teeOf, yards, teeYards, playOrder, strokes, round, standings, groups,
     fmtPar, tone, scoreName, mark, stats, demoEvent, applyPatch, historyRows, myRounds, sameName, boardNames,
     cleanCtpHoles, cleanCtpEntry, ctpBoard, metres, averageFix, ctpMeasure, fmtFeet,
