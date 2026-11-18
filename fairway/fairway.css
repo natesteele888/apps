@@ -469,3 +469,18 @@ a.btn { text-decoration: none; }
 .hrnote { color: var(--ink) !important; font-style: italic; margin-top: 2px; }
 .hrseg button:disabled { opacity: .4; cursor: default; }
 .ritem .x { flex: none; width: 40px; height: 40px; border: 0; background: none; font-size: 24px; color: var(--danger); cursor: pointer; }
+/* round recap and season race */
+.recap { background: var(--green); color: #fff; border-radius: 16px; padding: 14px 16px; margin: 0 0 12px; display: grid; gap: 2px; }
+.recap .rc-eye { color: var(--gold); font-weight: 700; text-transform: uppercase; letter-spacing: .1em; font-size: 12px; }
+.recap .rc-champ { font-size: 22px; }
+.recap .rc-line { color: #cfe0d2; }
+.recap ul { list-style: none; margin: 10px 0 4px; padding: 0; display: grid; gap: 6px; }
+.recap li { display: grid; grid-template-columns: auto 1fr; gap: 8px; align-items: start; font-size: 14.5px; }
+.recap .msg { color: #cfe0d2; margin: 0; }
+.recap .btn { background: var(--gold); border-color: var(--gold); color: #1b1b1b; }
+.season { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.season li { display: grid; grid-template-columns: 28px 1fr auto; align-items: center; gap: 10px; padding: 10px 14px; background: var(--paper); border: 1px solid var(--line); border-radius: 12px; }
+.season li.mine { background: #fff8e1; }
+.season .pos { font-weight: 800; color: var(--green); text-align: center; }
+.season .nm small { display: block; color: var(--muted); }
+.season .pts { font-variant-numeric: tabular-nums; }
