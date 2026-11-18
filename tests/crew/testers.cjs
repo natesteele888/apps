@@ -41,12 +41,21 @@ async function probe(page) {
 async function testPage(browser, name, rel, phoneKey, port) {
   const ctx = await browser.newContext({ ...PHONES[phoneKey], serviceWorkers: 'block', acceptDownloads: true, permissions: [] });
   const blocked = new Set();
-  await ctx.route('**/*', r => { const u = new URL(r.request().url()); if (u.hostname === '127.0.0.1' || u.hostname === 'localhost') return r.continue(); blocked.add(u.hostname); return r.abort(); });
+  await ctx.route('**/*', r => {
+    const u = new URL(r.request().url());
+    if (u.hostname === '127.0.0.1' || u.hostname === 'localhost') return r.continue();
+    // The apps' shared install bar and health check load from the live site; hand them this repo's own copy instead.
+    const shared = u.hostname === 'natesteele888.github.io' && u.pathname.match(/^\/apps\/(install|health|watchlink)\.js$/);
+    if (shared && fs.existsSync(path.join(ROOT, 'apps', shared[1] + '.js'))) return r.fulfill({ path: path.join(ROOT, 'apps', shared[1] + '.js'), contentType: 'text/javascript' });
+    blocked.add(u.hostname); return r.abort();
+  });
   const page = await ctx.newPage(); const errors = []; const failed = [];
   page.on('pageerror', e => errors.push('crash: ' + e.message.split('\n')[0]));
-  page.on('console', m => { if (m.type() === 'error' && !/Failed to load resource|net::ERR_FAILED|ERR_BLOCKED|firebase|firestore|googleapis|gstatic|install\.js|health\.js/i.test(m.text())) errors.push('console: ' + m.text().slice(0, 160)); });
+  page.on('console', m => { if (m.type() === 'error' && !/Failed to load resource|net::ERR_FAILED|ERR_BLOCKED|firebase|firestore|googleapis|gstatic|install\.js|health\.js|Service worker registration failed/i.test(m.text())) errors.push('console: ' + m.text().slice(0, 160).replace(/\n[\s\S]*/, '')); });
   page.on('response', r => { if (r.status() === 404 && new URL(r.url()).hostname === '127.0.0.1') failed.push(new URL(r.url()).pathname); });
-  page.on('dialog', d => d.dismiss().catch(() => {}));
+  // A question box gets a made-up answer (stays on this test phone); an "are you sure?" box always gets No.
+  page.on('dialog', d => { (d.type() === 'prompt' ? d.accept('Crew test') : d.type() === 'alert' ? d.accept() : d.dismiss()).catch(() => {}); page.__acted = true; });
+  page.on('download', () => { page.__acted = true; }); page.on('filechooser', () => { page.__acted = true; });
   const url = `http://127.0.0.1:${port}/${rel}`; const t0 = Date.now();
   try { await page.goto(url, { waitUntil: 'load', timeout: 20000 }); } catch (e) { errors.push('load: ' + e.message.split('\n')[0]); }
   await page.waitForTimeout(1200);
@@ -66,13 +75,16 @@ async function testPage(browser, name, rel, phoneKey, port) {
       const loc = page.locator('button, [role=button]').filter({ hasText: lab }).first();
       const target = (await loc.count()) ? loc : page.locator(`[aria-label="${lab.replace(/"/g, '\\"')}"]`).first();
       if (!(await target.count()) || !(await target.isVisible())) continue;
+      // A tab or toggle that's already on does nothing when tapped again; that's not a dead button.
+      if (await target.evaluate(e => e.getAttribute('aria-selected') === 'true' || e.getAttribute('aria-current') === 'page' || /(^|\s)(on|active|sel|selected|current)(\s|$)/.test(e.className))) continue;
+      page.__acted = false;
       await page.evaluate(() => { window.__muts = 0; new MutationObserver(m => { window.__muts += m.length; }).observe(document.documentElement, { subtree: true, childList: true, attributes: true, characterData: true }); });
       const href0 = page.url();
       await target.click({ timeout: 3000 });
       await page.waitForTimeout(450);
       const muts = await page.evaluate(() => window.__muts).catch(() => 1);
       tapped.push(lab);
-      if (!muts && page.url() === href0) dead.push(lab);
+      if (!muts && !page.__acted && page.url() === href0) dead.push(lab);
       if (errors.length > before) crashedOn.push(`${lab} -> ${errors[errors.length - 1]}`);
     } catch (e) { if (!/intercept|not visible|timeout/i.test(e.message)) crashedOn.push(`${lab} -> ${e.message.split('\n')[0].slice(0, 120)}`); }
   }
