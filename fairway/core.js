@@ -890,6 +890,57 @@
   }
   function clubWords(c) { return !c ? "" : c.long ? `${c.n}, and it won't get there` : c.touch ? `A soft ${c.n.toLowerCase()}` : c.n; }
 
+  /* ---------- hole map: a picture of the hole, its tee and green, GPS yards and tap-to-measure (all on the phone) ---------- */
+  // A hole's map: img a JPEG picture, ar its width over height, tee and green as spots on the picture (0 to 1 across
+  // and down), and GPS marks gt (tee), gc, gf, gb (middle, front and back of the green).
+  const YD = 1.0936133;
+  const fix = v => (v && Number.isFinite(v.lat) && Number.isFinite(v.lon) && Math.abs(v.lat) <= 90 && Math.abs(v.lon) <= 180 ? { lat: Math.round(v.lat * 1e7) / 1e7, lon: Math.round(v.lon * 1e7) / 1e7, acc: Math.max(0, Math.min(999, Math.round(Number(v.acc) || 0))) } : null);
+  const spot = v => (Array.isArray(v) && v.length === 2 && v.every(n => Number.isFinite(n) && n >= 0 && n <= 1) ? [Math.round(v[0] * 1e4) / 1e4, Math.round(v[1] * 1e4) / 1e4] : null);
+  function cleanHoleMap(x) {
+    if (!x || typeof x !== "object") return null;
+    const o = {};
+    if (typeof x.img === "string" && x.img.length <= 400000 && /^data:image\/jpeg;base64,[A-Za-z0-9+/=]+$/.test(x.img)) { o.img = x.img; o.ar = Number(x.ar) > 0.1 && Number(x.ar) < 10 ? Math.round(Number(x.ar) * 1e4) / 1e4 : 0.75; }
+    ["tee", "green"].forEach(k => { const s = spot(x[k]); if (s) o[k] = s; });
+    ["gt", "gc", "gf", "gb"].forEach(k => { const f = fix(x[k]); if (f) o[k] = f; });
+    return Object.keys(o).length ? o : null;
+  }
+  const yardsBetween = (a, b) => Math.round(metres(a, b) * YD);
+  // Live yards from where you stand to the green's middle, front and back (whichever are marked).
+  function greenYards(m, at) {
+    if (!m || !at) return null;
+    const o = {}; [["c", "gc"], ["f", "gf"], ["b", "gb"]].forEach(([k, g]) => { if (m[g]) o[k] = yardsBetween(at, m[g]); });
+    return Object.keys(o).length ? o : null;
+  }
+  // Picture distance in units of the picture's height, so a wide picture isn't squashed.
+  const picDist = (m, a, b) => Math.hypot((a[0] - b[0]) * (m.ar || 1), a[1] - b[1]);
+  // Yards per picture unit: from the marked tee and green on GPS when both are marked, else the scorecard yards.
+  function picScale(m, cardYards) {
+    if (!m || !m.tee || !m.green) return null;
+    const d = picDist(m, m.tee, m.green); if (d < 0.02) return null;
+    const y = m.gt && m.gc ? yardsBetween(m.gt, m.gc) : cardYards;
+    return y > 0 ? y / d : null;
+  }
+  // Tap a spot on the picture: yards from the tee (or from you) and on to the green.
+  function tapMeasure(m, cardYards, p, from) {
+    const k = picScale(m, cardYards), s = spot(p); if (!k || !s) return null;
+    const start = spot(from) || m.tee;
+    return { from: Math.round(picDist(m, start, s) * k), to: Math.round(picDist(m, s, m.green) * k), fromYou: !!spot(from) };
+  }
+  // Where a GPS spot falls on the picture, from the tee and green marked both on the picture and on GPS.
+  function gpsToPic(m, at) {
+    if (!m || !at || !m.tee || !m.green || !m.gt || !m.gc) return null;
+    const lat0 = m.gt.lat * Math.PI / 180, en = g => [(g.lon - m.gt.lon) * Math.cos(lat0), -(g.lat - m.gt.lat)];
+    const ar = m.ar || 1, P = s => [s[0] * ar, s[1]];
+    const g1 = en(m.gt), g2 = en(m.gc), g = en(at), i1 = P(m.tee), i2 = P(m.green);
+    // one turn-and-stretch that puts the GPS tee and green onto the picture's tee and green
+    const dg = [g2[0] - g1[0], g2[1] - g1[1]], di = [i2[0] - i1[0], i2[1] - i1[1]], den = dg[0] * dg[0] + dg[1] * dg[1];
+    if (den < 1e-14) return null;
+    const a = [(di[0] * dg[0] + di[1] * dg[1]) / den, (di[1] * dg[0] - di[0] * dg[1]) / den];
+    const rel = [g[0] - g1[0], g[1] - g1[1]], x = i1[0] + a[0] * rel[0] - a[1] * rel[1], y = i1[1] + a[1] * rel[0] + a[0] * rel[1];
+    const out = [x / ar, y];
+    return out[0] >= -0.05 && out[0] <= 1.05 && out[1] >= -0.05 && out[1] <= 1.05 ? [Math.max(0, Math.min(1, out[0])), Math.max(0, Math.min(1, out[1]))] : null;
+  }
+
   /* ---------- changes: the same dotted paths the shared database takes ---------- */
   // patch keys look like "p.abc123.s.1_7" or "name"; a value of DELETE removes the field.
   const DELETE = { __delete: true };
@@ -1004,5 +1055,6 @@
     TEE_SHOTS, cleanHoleNote, cleanHoleNotes, holeLine, nextHole, jackNoticed,
     JACK_LANGS, cleanJack, jackLevel, speakable, courseKey, cleanCourseNotes, holeTalk,
     roundDone, recap, seasonRace, SEASON_PTS,
-    CLUBS, cleanBag, bagList, clubFor, clubWords };
+    CLUBS, cleanBag, bagList, clubFor, clubWords,
+    cleanHoleMap, yardsBetween, greenYards, picScale, tapMeasure, gpsToPic };
 });

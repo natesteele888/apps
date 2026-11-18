@@ -267,6 +267,21 @@ const pl = (ev, id) => Object.assign({ id }, ev.p[id]);
     ok(!/iron|wood|Driver|wedge|Hybrid/.test(C.holeTalk(ev, ev.p.aaaaaa1, 1, {}, 'clean', mine)), 'not on a par 4');
   });
 
+  await test('core hole map: cleaning, GPS yards to the green, tap-to-measure and your GPS spot on the picture', () => {
+    const N = 111320, gt = { lat: 40, lon: -75, acc: 4 }, gc = { lat: 40 + 400 / N, lon: -75, acc: 4 };
+    const m = C.cleanHoleMap({ img: 'data:image/jpeg;base64,AAAA', ar: 0.5, tee: [0.5, 0.9], green: [0.5, 0.1], gt, gc, gf: { lat: gc.lat - 12 / N, lon: -75, acc: 3 }, owner: 'x', tee2: 1 });
+    deq(Object.keys(m).sort(), ['ar', 'gc', 'gf', 'green', 'gt', 'img', 'tee'], 'odd fields dropped');
+    eq(C.cleanHoleMap({ img: 'data:image/png;base64,AA' }), null, 'only JPEG pictures'); eq(C.cleanHoleMap({ tee: [2, 0] }), null, 'spots stay on the picture');
+    eq(C.yardsBetween(gt, gc), 437, '400 metres is 437 yards');
+    const mid = { lat: 40 + 200 / N, lon: -75 }, gy = C.greenYards(m, mid); ok(Math.abs(gy.c - 219) <= 1, 'middle ' + gy.c); ok(Math.abs(gy.f - 205) <= 1, 'front ' + gy.f); eq(gy.b, undefined);
+    deq(C.tapMeasure(m, 999, [0.5, 0.5]), { from: 219, to: 219, fromYou: false }, 'GPS marks beat the scorecard yards for the scale');
+    const card = C.tapMeasure({ tee: [0.5, 0.9], green: [0.5, 0.1], ar: 1 }, 400, [0.5, 0.5]); eq(card.from, 200); eq(card.to, 200);
+    const pic = C.gpsToPic(m, mid); ok(Math.abs(pic[0] - 0.5) < 0.001 && Math.abs(pic[1] - 0.5) < 0.001, 'halfway up the hole is halfway up the picture');
+    const east = C.gpsToPic(m, { lat: mid.lat, lon: -75 + 50 / (N * Math.cos(40 * Math.PI / 180)) }); ok(Math.abs(east[0] - 0.7) < 0.002, 'right of the line is right on the picture: ' + east[0]);
+    eq(C.gpsToPic(m, { lat: 41, lon: -75 }), null, 'off the picture shows nothing');
+    eq(C.gpsToPic({ tee: [0.5, 0.9], green: [0.5, 0.1] }, mid), null, 'needs the GPS marks too');
+  });
+
   /* ===================== PART 2: the page ===================== */
   let server, browser;
   try { server = await startServer('fairway'); browser = await launch(); }
@@ -452,6 +467,31 @@ const pl = (ev, id) => Object.assign({ id }, ev.p[id]);
     await page.locator('.scorer li').first().locator('.val').click();
     await page.waitForSelector('.hreview');
     ok(/From your bag:/.test(await page.textContent('.hreview')), 'the par 3 coming up names a club');
+    const wide = await page.evaluate(() => document.documentElement.scrollWidth); assert.ok(wide <= 390, 'no sideways scroll at 390 px, got ' + wide);
+    deq(errors, []); await ctx.close();
+  });
+
+  if (browser) await test('page: hole map, add a picture, set the tee and green, tap to measure, GPS yards once the green is marked', async () => {
+    const { page, errors, ctx } = await open({ ctx: { geolocation: { latitude: 40, longitude: -75, accuracy: 4 }, permissions: ['geolocation'] } });
+    await page.click('#new'); await page.fill('#nn', 'Map Day'); await page.fill('#nme', 'Alpha Test');
+    await page.locator('#nf [type=submit]').click(); await page.waitForFunction(() => window.FW.debug.S.ev);
+    await page.click('[data-tab=score]'); await page.waitForSelector('#mapopen'); await page.click('#mapopen');
+    const png = await page.evaluate(() => { const c = document.createElement('canvas'); c.width = 300; c.height = 600; const x = c.getContext('2d'); x.fillStyle = '#5a8f4e'; x.fillRect(0, 0, 300, 600); return c.toDataURL('image/png').split(',')[1]; });
+    await page.setInputFiles('#mapimg', { name: 'hole.png', mimeType: 'image/png', buffer: Buffer.from(png, 'base64') });
+    await page.waitForSelector('.hmap img');
+    const box = await page.locator('.hmap').boundingBox();
+    await page.mouse.click(box.x + box.width / 2, box.y + box.height * 0.9); await page.waitForFunction(() => /middle of the green/.test(document.querySelector('#maphint').textContent));
+    await page.mouse.click(box.x + box.width / 2, box.y + box.height * 0.1); await page.waitForFunction(() => /Tap anywhere/.test(document.querySelector('#maphint').textContent));
+    await page.mouse.click(box.x + box.width / 2, box.y + box.height * 0.5);
+    await page.waitForFunction(() => /From the tee: \d+ yds · to the green: \d+ yds/.test(document.querySelector('#maphint').textContent));
+    await page.click('#gpson'); await page.waitForSelector('[data-mk=gc]');
+    await ctx.setGeolocation({ latitude: 40.003, longitude: -75, accuracy: 4 }); await page.waitForTimeout(3500);
+    await page.click('[data-mk=gc]');
+    await ctx.setGeolocation({ latitude: 40.0012, longitude: -75, accuracy: 4 }); await page.waitForTimeout(3500);
+    await page.waitForFunction(() => { const b = document.querySelector('.gyds .mid b'); return b && +b.textContent > 150 && +b.textContent < 250; });
+    const saved = await page.evaluate(() => Object.keys(localStorage).filter(k => k.indexOf('fw:map:') === 0).length); eq(saved, 1, 'the map is kept on this phone');
+    const shared = await page.evaluate(() => JSON.stringify(window.FW.debug.S.ev)); ok(!/40\.003|"gc"|base64/.test(shared), 'no location or picture in the shared tournament');
+    await page.click('.sheet-h .x');
     const wide = await page.evaluate(() => document.documentElement.scrollWidth); assert.ok(wide <= 390, 'no sideways scroll at 390 px, got ' + wide);
     deq(errors, []); await ctx.close();
   });
