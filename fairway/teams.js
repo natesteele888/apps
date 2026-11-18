@@ -111,11 +111,11 @@
   /* ======================================================================
      SET IT UP: one question, then the usual settings, tap a row to change it
      ====================================================================== */
-  const KIND = [["teams", "Teams with a draft", "Captains pick their teams"], ["solo", "Everyone for themselves", "Lowest score wins"], ["match", "Match play", "Head to head, hole by hole"]];
+  const KIND = [["teams", "Teams with a draft", "Captains pick their teams"], ["scramble", "Scramble", "Draft teams that play one ball; the captain keeps the card"], ["solo", "Everyone for themselves", "Lowest score wins"], ["match", "Match play", "Head to head, hole by hole"]];
   const DETAILS = [
-    ["nt", "Teams", [2, 3, 4, 5, 6, 7, 8], v => v + " teams", f => f.kind === "teams"],
-    ["draft", "Draft order", ["snake", "straight"], v => (v === "snake" ? "Snake" : "Straight"), f => f.kind === "teams"],
-    ["clk", "Pick clock", [60, 30, 300, 0], v => (v ? (v < 60 ? v + " seconds" : v / 60 + (v === 60 ? " minute" : " minutes")) : "No clock"), f => f.kind === "teams"],
+    ["nt", "Teams", [2, 3, 4, 5, 6, 7, 8], v => v + " teams", C.teamKind],
+    ["draft", "Draft order", ["snake", "straight"], v => (v === "snake" ? "Snake" : "Straight"), C.teamKind],
+    ["clk", "Pick clock", [60, 30, 300, 0], v => (v ? (v < 60 ? v + " seconds" : v / 60 + (v === 60 ? " minute" : " minutes")) : "No clock"), C.teamKind],
     ["mt", "Matchups", ["singles", "2v2", "both", "none"], v => ({ singles: "Singles", "2v2": "2v2", both: "Both", none: "None" }[v]), f => f.kind !== "solo"]
   ];
   P.setupSheet = function () {
@@ -140,7 +140,7 @@
     const u = U(), esc = u.esc, f = C.cleanFmt(ev.fmt), org = u.isOrg(), me = u.me();
     if (tick) { clearInterval(tick); tick = null; }
     const parts = [];
-    if (f.kind === "teams") {
+    if (C.teamKind(f)) {
       const st = C.draftState(ev);
       if (!st.started) parts.push(captainsHtml(ev, f, org, me));
       else if (!st.done) parts.push(draftHtml(ev, st, org, me));
@@ -179,10 +179,11 @@
   // How the team board counts, picked on this phone (nothing is saved to the tournament).
   const TS_LABEL = { total: "All count", best1: "Best ball", best2: "Best 2" };
   const TS_LEGEND = { total: "Each team's score is every player's to par added up.", best1: "Best ball: each hole counts the team's low score, against that golfer's par.", best2: "Best 2: each hole counts the team's two low scores added up." };
+  TS_LEGEND.scr = "Scramble: each team plays one ball, and the captain's card is the team's score.";
   function boardHtml(ev) {
     const u = U(), esc = u.esc, base = C.teamBoard(ev), small = Math.min.apply(null, base.map(t => t.members.length).concat([9]));
-    const opts = C.TEAM_SCORING.filter(k => k === "total" || (k === "best1" ? small >= 2 : small >= 3));
-    const how = opts.indexOf(u.S.tsc) >= 0 ? u.S.tsc : "total", tb = how === "total" ? base : C.teamBoard(ev, how);
+    const opts = C.isScramble(ev) ? ["scr"] : C.TEAM_SCORING.filter(k => k === "total" || (k === "best1" ? small >= 2 : small >= 3));
+    const how = C.isScramble(ev) ? "scr" : opts.indexOf(u.S.tsc) >= 0 ? u.S.tsc : "total", tb = how === "total" || how === "scr" ? base : C.teamBoard(ev, how);
     return `<h2 class="sec">Team board</h2>${opts.length > 1 ? `<div class="pills small" role="group" aria-label="How teams score">${opts.map(k => `<button type="button" class="pill" data-tsc="${k}" aria-pressed="${how === k}">${TS_LABEL[k]}</button>`).join("")}</div>` : ""}<div class="tboard">${tb.map(t => `<div class="trow"><span class="pos">${esc(t.pos)}</span><span class="tn"><b>${esc(t.name)}</b><small>${t.members.map(p => esc(p.n.split(" ")[0])).join(", ")}${t.avg != null ? " · avg " + t.avg : ""}</small></span><span class="score">${t.holes ? u.parText(t.toPar) : "<span class='tp'>–</span>"}</span></div>`).join("")}</div>
       <p class="legend">${TS_LEGEND[how]}</p>
       <div class="rosters">${tb.map(t => `<div class="roster"><h3>${esc(t.name)}</h3><ol>${t.members.map(p => `<li><button type="button" data-player="${esc(p.id)}">${esc(p.n)}${p.id === t.cap ? " <i class='chip'>C</i>" : ""}</button></li>`).join("")}</ol></div>`).join("")}</div>`;
