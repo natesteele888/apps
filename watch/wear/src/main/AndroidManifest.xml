@@ -76,7 +76,7 @@
             </intent-filter>
         </activity>
 
-        <!-- Tiles (swipe from the watch face): Pitch Count with +1 and Undo on the tile, and today's league Scores -->
+        <!-- Tiles (swipe from the watch face): Pitch Count with +1 and Undo on the tile, a Walk-Up Stop, and today's league Scores -->
         <service
             android:name=".PitchTileService"
             android:exported="true"
@@ -89,6 +89,19 @@
                 <action android:name="androidx.wear.tiles.action.BIND_TILE_PROVIDER" />
             </intent-filter>
             <meta-data android:name="androidx.wear.tiles.PREVIEW" android:resource="@drawable/tile_pitch_preview" />
+        </service>
+        <service
+            android:name=".WalkUpTileService"
+            android:exported="true"
+            android:enabled="@bool/tiles_on"
+            android:icon="@mipmap/ic_walkup"
+            android:label="@string/walkup_name"
+            android:description="@string/walkup_tile_about"
+            android:permission="com.google.android.wearable.permission.BIND_TILE_PROVIDER">
+            <intent-filter>
+                <action android:name="androidx.wear.tiles.action.BIND_TILE_PROVIDER" />
+            </intent-filter>
+            <meta-data android:name="androidx.wear.tiles.PREVIEW" android:resource="@drawable/tile_walkup_preview" />
         </service>
         <service
             android:name=".ScoresTileService"

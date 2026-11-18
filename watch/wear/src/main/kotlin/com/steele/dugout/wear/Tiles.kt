@@ -20,6 +20,7 @@ import androidx.wear.tiles.TileBuilders
 import androidx.wear.tiles.TileService
 import com.google.common.util.concurrent.ListenableFuture
 import com.steele.dugout.shared.LeagueScores
+import com.steele.dugout.shared.Proto
 import com.steele.dugout.shared.Zone
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -34,12 +35,13 @@ import java.time.format.DateTimeFormatter
 import java.util.Locale
 
 /*
- * Tiles: the cards you swipe to from the watch face. Two of them, each added from the watch's tile list:
+ * Tiles: the cards you swipe to from the watch face. Three of them, each added from the watch's tile list:
  *   Pitch Count: who's pitching, the count, how many are left, in the same green, yellow and red as the app,
  *                with +1 and Undo right on the tile, so a coach can count without opening anything.
+ *   Walk-Up:     one big Stop for whatever the phone is playing.
  *   Scores:      today's MAC League games, Lunenburg's first.
  * Tap anywhere else on a tile to open its app. Tiles need Wear OS 2 (Android 8) or newer: on an Android Wear 2.0 watch
- * the two services stay switched off (res/values/bools.xml), and everything else works the same.
+ * the tile services stay switched off (res/values/bools.xml), and everything else works the same.
  */
 object Tiles {
     /** asks the watch to draw a tile again because its data changed; does nothing where tiles aren't available */
@@ -113,7 +115,7 @@ object Tiles {
         req.deviceConfiguration.screenShape == DeviceParametersBuilders.SCREEN_SHAPE_ROUND
 }
 
-/** what both tiles share: answers off the main thread's coroutine scope, and an empty resource list (no pictures) */
+/** what the tiles share: answers off the main thread's coroutine scope, and an empty resource list (no pictures) */
 abstract class DugoutTile : TileService() {
     protected val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
 
@@ -317,5 +319,66 @@ class ScoresTileService : DugoutTile() {
         val s = if (t.toLocalDate() == LocalDate.now(ZoneId.systemDefault())) "Updated " + DateTimeFormatter.ofPattern("h:mm a", Locale.US).format(t)
         else "Updated " + DateTimeFormatter.ofPattern("MMM d", Locale.US).format(t)
         return if (offline) "$s · offline" else s
+    }
+}
+
+/**
+ * The Walk-Up tile: a quick stop. One big Stop cuts whatever the phone is playing (a walk-up song or a game sound)
+ * without opening anything, the same as Stop in Walk-Up. Tap the top of the tile to open Walk-Up. It says whether the
+ * stop reached the phone, so a coach knows to grab the phone when it didn't.
+ */
+class WalkUpTileService : DugoutTile() {
+    override fun onTileRequest(requestParams: RequestBuilders.TileRequest): ListenableFuture<TileBuilders.Tile> = answer {
+        val p = getSharedPreferences("tiles", MODE_PRIVATE)
+        val seq = p.getInt("walkSeq", 0)
+        if (requestParams.currentState.lastClickableId == "stop.$seq") {
+            p.edit().putInt("walkSeq", seq + 1).apply()
+            Buzz.tick(this)
+            val sent = withTimeoutOrNull(4_000) { PhoneLink.sendNow(this@WalkUpTileService, Proto.cmd("stop", "now" to true)) } ?: false
+            lastStop = System.currentTimeMillis() to sent
+            if (!sent) Buzz.pattern(this, 40, 60, 40)
+        }
+        Tiles.tile(layout(requestParams, p.getInt("walkSeq", 0)), 60 * 60_000L)
+    }
+
+    private fun layout(req: RequestBuilders.TileRequest, seq: Int): LayoutElement {
+        val w = Tiles.width(req)
+        val last = lastStop?.takeIf { System.currentTimeMillis() - it.first < 60_000L }
+        val (line, lineColor) = when {
+            last == null -> "Stops the music on your phone" to Tiles.MUTED
+            last.second -> "Stop sent to your phone" to 0xFF86EFAC.toInt()
+            else -> "Phone not in reach. Open Dugout on it." to 0xFFFCA5A5.toInt()
+        }
+        val top = LayoutElementBuilders.Column.Builder()
+            .setHorizontalAlignment(LayoutElementBuilders.HORIZONTAL_ALIGN_CENTER)
+            .setModifiers(ModifiersBuilders.Modifiers.Builder().setClickable(Tiles.click("open", Tiles.open(this, WalkUpActivity::class.java))).build())
+            .addContent(Tiles.text("Walk-Up", 14f, 0xFF93C5FD.toInt(), bold = true))
+            .addContent(Tiles.text("Tap here to open", 10f, Tiles.MUTED))
+            .build()
+        val load = ActionBuilders.LoadAction.Builder().build()
+        val col = LayoutElementBuilders.Column.Builder()
+            .setHorizontalAlignment(LayoutElementBuilders.HORIZONTAL_ALIGN_CENTER)
+            .addContent(top)
+            .addContent(Tiles.space(8f))
+            .addContent(Tiles.button("STOP", 0xFFDC2626.toInt(), w * 0.56f, 52f, 20f, Tiles.click("stop.$seq", load)))
+            .addContent(Tiles.space(8f))
+            .addContent(
+                LayoutElementBuilders.Box.Builder().setWidth(dp(w * 0.7f))
+                    .setHorizontalAlignment(LayoutElementBuilders.HORIZONTAL_ALIGN_CENTER)
+                    .addContent(Tiles.text(line, 11f, lineColor, lines = 2))
+                    .build(),
+            )
+            .build()
+        return LayoutElementBuilders.Box.Builder()
+            .setWidth(expand()).setHeight(expand())
+            .setHorizontalAlignment(LayoutElementBuilders.HORIZONTAL_ALIGN_CENTER)
+            .setVerticalAlignment(LayoutElementBuilders.VERTICAL_ALIGN_CENTER)
+            .addContent(col)
+            .build()
+    }
+
+    private companion object {
+        /** when the last stop was pressed, and whether the phone got it */
+        var lastStop: Pair<Long, Boolean>? = null
     }
 }
