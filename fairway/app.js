@@ -489,7 +489,7 @@
   function tabCourse(el, ev) {
     const c = ev.course, mine = me(), n = c.holes.length;
     const halves = n === 18 ? [[1, 9, "Out"], [10, 18, "In"]] : [[1, n, "Tot"]];
-    el.innerHTML = `<div class="pad0"><h2 class="sec">${esc(c.name)} <small>par ${C.coursePar(c)}</small></h2>
+    el.innerHTML = `<div class="pad0">${FW.where.html(ev)}<h2 class="sec">${esc(c.name)} <small>par ${C.coursePar(c)}</small></h2>
       <ul class="teesum">${c.tees.map(t => `<li class="${mine && mine.tee === t.id ? "mine" : ""}">${teeLabel(c, t)}${mine && mine.tee === t.id ? " <i class='chip'>Your tees</i>" : ""}</li>`).join("")}</ul>
       ${halves.map(([a, b, lbl]) => { const hs = []; for (let k = a; k <= b; k++) hs.push(k);
         return `<div class="cardwrap" data-keep="cc${a}"><table class="sc course"><thead><tr><th class="nm">Hole</th>${hs.map(k => `<th>${k}</th>`).join("")}<th>${lbl}</th></tr></thead><tbody>
