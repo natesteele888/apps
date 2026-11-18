@@ -62,7 +62,7 @@ const text = (page, id) => page.$eval('#' + id, e => e.textContent.trim());
     eq(await text(page, 'heroBig'), '231');
     assert.ok(/Actions minutes left/.test(await text(page, 'heroLbl')));
     assert.ok(/Resets .*Nov 30.*7 PM/.test(await text(page, 'heroFoot')), await text(page, 'heroFoot'));
-    assert.ok(/12 d 18 h/.test(await text(page, 'monthReset')), await text(page, 'monthReset'));
+    eq(await text(page, 'monthReset'), '12d 18h'); eq(await text(page, 'monthDate'), 'Nov 30');
     eq(await page.$$eval('#monthBar .seg.warn', s => s.length), 11);
     const repos = await page.$$eval('#repos .rn', e => e.map(x => x.textContent));
     eq(repos.join(','), 'web-apps,site,reports');

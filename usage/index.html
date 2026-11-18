@@ -23,7 +23,7 @@
   --bg:#0B0F17; --panel:#141A26; --panel-2:#1B2232; --line:rgba(170,190,230,.13); --line-2:rgba(170,190,230,.24);
   --text:#EEF2FA; --text-2:#A6B0C6; --text-3:#717C94;
   --ok:#3FD6A0; --warn:#FFB547; --bad:#FF6E5E; --accent:#6EA8FF; --empty:#283044;
-  --radius:22px; --body:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --radius:18px; --body:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
 }
 *{box-sizing:border-box}
 html,body{margin:0;min-height:100%}
@@ -31,79 +31,81 @@ body{background:var(--bg);color:var(--text);font:15px/1.4 var(--body);-webkit-fo
 button,input,select{font:inherit;color:inherit}
 button{cursor:pointer}
 .hidden{display:none!important}
-.wrap{max-width:560px;margin:0 auto;padding:calc(12px + env(safe-area-inset-top,0px)) 14px 0}
-header{display:flex;align-items:center;gap:10px;margin:2px 2px 12px}
+.wrap{max-width:560px;margin:0 auto;padding:calc(10px + env(safe-area-inset-top,0px)) 12px 0}
+header{display:flex;align-items:center;gap:8px;margin:0 2px 10px}
 .brand{display:flex;align-items:center;gap:9px;flex:1;min-width:0}
 .brand svg{flex:none}
-.brand h1{font-size:21px;margin:0;letter-spacing:-.01em;white-space:nowrap}
+.brand h1{font-size:19px;margin:0;letter-spacing:-.01em;white-space:nowrap}
 .brand h1 b{color:var(--accent)}
-.iconbtn{background:var(--panel);border:1px solid var(--line);border-radius:12px;width:42px;height:42px;display:grid;place-items:center;flex:none}
-.iconbtn svg{width:22px;height:22px;stroke:var(--text-2);fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.iconbtn{background:var(--panel);border:1px solid var(--line);border-radius:11px;width:36px;height:36px;display:grid;place-items:center;flex:none}
+.iconbtn svg{width:19px;height:19px;stroke:var(--text-2);fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
 .iconbtn.spin svg{animation:spin .9s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
-.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:18px;margin-bottom:12px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:12px 14px;margin-bottom:10px}
 /* hero */
-.hero .lbl{color:var(--text-2);font-size:17px}
-.hero .big{font-size:64px;font-weight:800;letter-spacing:.02em;line-height:1.05;margin:4px 0 6px;font-variant-numeric:tabular-nums}
+.hero .lbl{color:var(--text-2);font-size:13.5px}
+.hero .big{font-size:42px;font-weight:800;letter-spacing:.02em;line-height:1.05;margin:2px 0 4px;font-variant-numeric:tabular-nums}
 .hero .big.ok{color:var(--ok)} .hero .big.warn{color:var(--warn)} .hero .big.bad{color:var(--bad)}
-.hero .tip{display:flex;gap:8px;align-items:flex-start;color:var(--ok);font-size:13.5px;font-weight:600;margin:6px 0 10px}
+.hero .tip{display:flex;gap:8px;align-items:flex-start;color:var(--ok);font-size:12.5px;font-weight:600;margin:2px 0 4px}
 .hero .tip svg{flex:none;margin-top:1px}
 .hero .tip.warn{color:var(--warn)}
-.hero .foot{color:var(--text-2);font-size:15px}
+.hero .foot{color:var(--text-3);font-size:12.5px}
 /* meter */
 .meter{border-color:var(--line-2);position:relative;overflow:hidden}
 .meter.bad{border-color:rgba(255,110,94,.6)} .meter.warn{border-color:rgba(255,181,71,.5)}
-.mhead{display:flex;align-items:center;gap:9px;margin-bottom:10px}
-.mhead .logo{width:30px;height:30px;border-radius:8px;background:#fff;display:grid;place-items:center;flex:none}
-.mhead .nm{font-weight:700;font-size:18px}
-.badge{background:var(--panel-2);color:var(--text-2);border-radius:8px;padding:2px 8px;font-size:13px;font-weight:600;white-space:nowrap}
-.mhead .when{margin-left:auto;color:var(--text-3);font-size:13px;display:flex;align-items:center;gap:6px;white-space:nowrap}
+.mhead{display:flex;align-items:center;gap:8px;margin-bottom:4px}
+.mhead .logo{width:24px;height:24px;border-radius:6px;background:#fff;display:grid;place-items:center;flex:none}
+.mhead .nm{font-weight:700;font-size:16px}
+.badge{background:var(--panel-2);color:var(--text-2);border-radius:7px;padding:1px 7px;font-size:12px;font-weight:600;white-space:nowrap}
+.mhead .when{margin-left:auto;color:var(--text-3);font-size:12px;display:flex;align-items:center;gap:6px;white-space:nowrap}
 .dot{width:8px;height:8px;border-radius:50%;background:var(--ok);display:inline-block}
 .dot.stale{background:var(--warn)} .dot.err{background:var(--bad)}
-.mrow{display:grid;grid-template-columns:auto 1fr;grid-template-areas:"pct name" "bar bar" "sub sub";column-gap:10px;row-gap:6px;padding:8px 0}
+.mrow{display:grid;grid-template-columns:46px 74px minmax(0,1fr) auto;align-items:center;column-gap:8px;padding:6px 0}
 .mrow+.mrow{border-top:1px solid var(--line)}
-.mrow .pct{grid-area:pct;font-weight:800;font-size:24px;font-variant-numeric:tabular-nums}
+.mrow .pct{font-weight:800;font-size:18px;font-variant-numeric:tabular-nums}
 .mrow .pct.ok{color:var(--text)} .mrow .pct.warn{color:var(--warn)} .mrow .pct.bad{color:var(--bad)}
-.mrow .name{grid-area:name;align-self:center;font-weight:600;font-size:17px}
-.mrow .name small{color:var(--text-3);font-weight:500;font-size:13px;margin-left:4px}
-.mrow .bar{grid-area:bar}
-.mrow .sub{grid-area:sub;color:var(--text-2);font-size:13.5px;display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap}
-.segs{position:relative;display:grid;grid-template-columns:repeat(12,1fr);gap:4px;padding-bottom:9px}
-.seg{height:16px;border-radius:4px;background:var(--empty)}
+.mrow .name{font-weight:600;font-size:14.5px;line-height:1.15;min-width:0}
+.mrow .name small{display:block;color:var(--text-3);font-weight:500;font-size:11px;white-space:nowrap}
+.mrow .rt{text-align:right;line-height:1.15;white-space:nowrap}
+.mrow .rt b{display:block;font-size:13px;font-weight:600;color:var(--text-2);font-variant-numeric:tabular-nums}
+.mrow .rt small{color:var(--text-3);font-size:11px}
+.segs{position:relative;display:grid;grid-template-columns:repeat(12,1fr);gap:3px;padding-bottom:7px}
+.seg{height:12px;border-radius:3px;background:var(--empty)}
 .seg.ok{background:var(--ok)} .seg.warn{background:var(--warn)} .seg.bad{background:var(--bad)}
-.tri{position:absolute;bottom:0;width:0;height:0;border-left:7px solid transparent;border-right:7px solid transparent;border-bottom:9px solid #fff;transform:translateX(-50%)}
-.mfoot{display:flex;flex-wrap:wrap;gap:6px 12px;color:var(--text-3);font-size:13px;margin-top:6px}
+.tri{position:absolute;bottom:0;width:0;height:0;border-left:5px solid transparent;border-right:5px solid transparent;border-bottom:7px solid #fff;transform:translateX(-50%)}
+.mfoot{display:flex;flex-wrap:wrap;gap:4px 12px;color:var(--text-3);font-size:11.5px;margin-top:4px}
 .mfoot b{color:var(--text-2);font-weight:600}
 /* boxed sections */
 .box{border:1px solid var(--line-2);background:transparent}
-.boxhead{display:flex;align-items:center;gap:8px;font-weight:700;font-size:14.5px;margin-bottom:12px}
+.boxhead{display:flex;align-items:center;gap:7px;font-weight:700;font-size:13.5px;margin-bottom:8px}
 .boxhead svg{flex:none}
 .boxhead .spacer{flex:1}
 .tabs{display:flex;background:var(--panel-2);border-radius:10px;padding:3px;gap:2px}
-.tabs button{border:0;background:none;color:var(--text-3);font-size:12.5px;font-weight:700;padding:5px 9px;border-radius:8px}
+.tabs button{border:0;background:none;color:var(--text-3);font-size:11.5px;font-weight:700;padding:4px 8px;border-radius:8px}
 .tabs button.on{background:var(--accent);color:#08122A}
-.inner{border:1px solid var(--line);border-radius:16px;padding:12px;background:#0F1420}
+.inner{border:1px solid var(--line);border-radius:12px;padding:8px 10px;background:#0F1420}
 .inner+.inner{margin-top:10px}
-.chartlbl{display:flex;gap:10px;align-items:center;color:var(--text-2);font-size:12.5px;margin-bottom:6px}
+.chartlbl{display:flex;gap:10px;flex-wrap:wrap;align-items:center;color:var(--text-2);font-size:11px;margin-bottom:4px}
 .chartlbl b{color:var(--accent)}
 .key{display:inline-flex;align-items:center;gap:5px}
 .key i{display:inline-block;width:14px;height:3px;border-radius:2px;background:var(--accent)}
 .key i.dash{background:repeating-linear-gradient(90deg,var(--bad) 0 4px,transparent 4px 7px)}
 .key i.dot2{background:repeating-linear-gradient(90deg,var(--text-3) 0 2px,transparent 2px 5px)}
 svg.chart{display:block;width:100%;height:auto}
-.repo{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 10px;padding:8px 0}
-.repo+.repo{border-top:1px solid var(--line)}
+.repo{display:grid;grid-template-columns:minmax(0,1fr) 34% auto;align-items:center;gap:10px;padding:4px 0;font-size:13.5px}
 .repo .rn{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.repo .rm{color:var(--text-2);font-variant-numeric:tabular-nums;text-align:right;white-space:nowrap}
-.repo .rb{grid-column:1/-1;height:7px;border-radius:4px;background:var(--empty);overflow:hidden}
-.repo .rb i{display:block;height:100%;border-radius:4px;background:var(--accent)}
-.sched{display:flex;flex-direction:column;gap:8px;color:var(--text-2)}
-.sched div{display:flex;gap:8px;align-items:center}
-.sched b{color:var(--text)}
+.repo .rm{color:var(--text-2);font-variant-numeric:tabular-nums;text-align:right;white-space:nowrap;font-size:12.5px}
+.repo .rb{height:6px;border-radius:3px;background:var(--empty);overflow:hidden}
+.repo .rb i{display:block;height:100%;border-radius:3px;background:var(--accent)}
+.more{background:none;border:0;color:var(--accent);font-weight:600;font-size:12.5px;padding:4px 0 0}
+.slot{display:flex;align-items:center;gap:10px;border:1px dashed var(--line-2);background:transparent;width:100%;text-align:left;color:var(--text-2)}
+.slot .clogo{width:24px;height:24px;border-radius:6px;background:#D97757;display:grid;place-items:center;flex:none}
+.slot b{display:block;color:var(--text);font-size:15px}
+.slot small{color:var(--text-3);font-size:11.5px}
 .empty{color:var(--text-3);font-size:14px}
 /* pills */
-.pills{display:flex;flex-wrap:wrap;gap:10px;margin:18px 0 10px}
-.pill{border:1px solid var(--line-2);background:transparent;border-radius:14px;padding:10px 14px;display:inline-flex;align-items:center;gap:8px;color:var(--text-2);font-weight:600}
+.pills{display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin:4px 0 6px}
+.pill{border:1px solid var(--line-2);background:transparent;border-radius:11px;padding:6px 11px;font-size:13px;display:inline-flex;align-items:center;gap:8px;color:var(--text-2);font-weight:600}
 .pill.on{background:#fff;color:#0B0F17;border-color:#fff}
 .pill.muted{opacity:.7}
 .status{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;color:var(--text-3);font-size:12.5px;margin:4px 2px}
@@ -130,7 +132,7 @@ svg.chart{display:block;width:100%;height:auto}
 .setrow span{color:var(--text-2)}
 .note{color:var(--text-3);font-size:13px}
 .toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom));transform:translateX(-50%);background:#fff;color:#0B0F17;padding:10px 16px;border-radius:12px;font-weight:600;z-index:60;max-width:calc(100% - 32px)}
-@media (max-width:360px){.hero .big{font-size:52px}.brand h1{font-size:18px}}
+@media (max-width:360px){.hero .big{font-size:36px}.brand h1{font-size:17px}.mrow{grid-template-columns:40px minmax(0,1fr) auto;grid-template-areas:"pct name rt" "bar bar bar"}.mrow .pct{grid-area:pct}.mrow .name{grid-area:name}.mrow .bar{grid-area:bar;margin-top:4px}.mrow .rt{grid-area:rt}}
 </style>
 </head>
 <body>
@@ -175,44 +177,47 @@ svg.chart{display:block;width:100%;height:auto}
         <span class="when"><span class="dot" id="freshDot"></span><span id="whenTxt"></span></span>
       </div>
       <div class="mrow">
-        <div class="pct" id="monthPct"></div><div class="name">This month <small id="monthUsed"></small></div>
+        <div class="pct" id="monthPct"></div><div class="name">Month<small id="monthUsed"></small></div>
         <div class="bar" id="monthBar"></div>
-        <div class="sub"><span id="monthLeft"></span><span id="monthReset"></span></div>
+        <div class="rt"><b id="monthReset"></b><small id="monthDate"></small></div>
       </div>
       <div class="mrow">
-        <div class="pct" id="todayPct"></div><div class="name">Today <small id="todayUsed"></small></div>
+        <div class="pct" id="todayPct"></div><div class="name">Today<small id="todayUsed"></small></div>
         <div class="bar" id="todayBar"></div>
-        <div class="sub"><span id="todayNote"></span><span id="todayReset"></span></div>
+        <div class="rt"><b id="todayReset"></b><small>day ends</small></div>
       </div>
       <div class="mfoot" id="mfoot"></div>
     </section>
 
+    <button class="card slot" id="claudeSlot" type="button">
+      <span class="clogo" aria-hidden="true"><svg width="15" height="15" viewBox="0 0 24 24"><path fill="#fff" d="M12 2l1.6 6.3L19 4.9l-3.4 5.5L22 12l-6.4 1.6 3.4 5.5-5.4-3.4L12 22l-1.6-6.3L5 19.1l3.4-5.5L2 12l6.4-1.6L5 4.9l5.4 3.4z"/></svg></span>
+      <span><b>Claude</b><small>5-hour and weekly limits go here once there's a way to read them</small></span>
+    </button>
+
     <section class="card box">
       <div class="boxhead">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#6EA8FF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l5-6 4 4 8-9"/><path d="M15 6h5v5"/></svg>
-        <span>Trend &amp; reset</span><span class="spacer"></span>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#6EA8FF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l5-6 4 4 8-9"/><path d="M15 6h5v5"/></svg>
+        <span>Trend</span><span class="spacer"></span>
         <div class="tabs" role="tablist"><button type="button" data-view="total" class="on">Running total</button><button type="button" data-view="day">Per day</button></div>
       </div>
       <div class="inner">
         <div class="chartlbl" id="chartLbl"></div>
         <div id="chart"></div>
       </div>
-      <div class="inner sched" id="sched"></div>
     </section>
 
     <section class="card box">
       <div class="boxhead">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#6EA8FF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#6EA8FF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>
         <span>What used the minutes</span>
       </div>
       <div id="repos"></div>
     </section>
 
     <div class="pills">
-      <button class="pill muted" id="claudePill" type="button">＋ Claude · coming later</button>
       <button class="pill" id="wakePill" type="button">☀ Keep screen on</button>
+      <div class="status" style="flex:1"><span id="statusLeft"></span><span id="statusRight"></span></div>
     </div>
-    <div class="status"><span id="statusLeft"></span><span id="statusRight"></span></div>
   </main>
 </div>
 
@@ -373,34 +378,32 @@ function render() {
   $('monthPct').textContent = Math.round(pct * 100) + '%'; $('monthPct').className = 'pct ' + lv;
   $('monthUsed').textContent = fmt(used) + ' of ' + fmt(plan);
   $('monthBar').innerHTML = segs(pct, elapsed, lv);
-  $('monthLeft').textContent = pct >= 1 ? 'Out of minutes' : fmt(plan - used) + ' left';
-  $('monthReset').textContent = span(toReset) + ' · ' + MON[new Date(p.end).getMonth()] + ' ' + new Date(p.end).getDate();
+  $('monthReset').textContent = span(toReset, true).replace(/d/, 'd ').replace(/h(?=\d)/, 'h ');
+  $('monthDate').textContent = MON[new Date(p.end).getMonth()] + ' ' + new Date(p.end).getDate();
   const perDay = plan / p.days, hasDaily = Object.keys(d.daily).length > 0;
   const today = d.daily[now().getUTCDate()] || 0, tPct = today / perDay, tLv = level(tPct);
   $('todayPct').textContent = hasDaily ? Math.round(tPct * 100) + '%' : '–'; $('todayPct').className = 'pct ' + tLv;
-  $('todayUsed').textContent = hasDaily ? fmt(today) + ' of ~' + fmt(perDay) + ' a day' : '';
+  $('todayUsed').textContent = hasDaily ? fmt(today) + ' of ~' + fmt(perDay) + ' a day' : 'no daily detail';
   $('todayBar').innerHTML = segs(hasDaily ? tPct : 0, (t - p.dayStart) / 864e5, tLv);
-  $('todayNote').textContent = hasDaily ? (today > perDay ? 'Over the daily pace' : 'Within the daily pace') : 'GitHub sent no daily detail';
-  $('todayReset').textContent = 'Day ends ' + clock(p.dayStart + 864e5);
+  $('todayReset').textContent = clock(p.dayStart + 864e5);
   const osTxt = Object.entries(d.os).filter(x => x[1] > 0).map(([k, v]) => '<span>' + k + ' <b>' + fmt(v) + '</b>' + (k !== 'Linux' ? ' ×' + weight(k) : '') + '</span>').join('');
   $('mfoot').innerHTML = (osTxt || '<span>No runs yet this month</span>') + '<span>Billed <b>$' + (d.billed || 0).toFixed(2) + '</b></span>' + (S.demo ? '<span><b>Sample numbers</b></span>' : '');
   /* chart, schedule, repos */
   drawChart(d, p, plan);
-  $('sched').innerHTML = '<div>' + clockIco() + '<b>' + esc(dayLabel(p.end)) + ', ' + clock(p.end) + '</b> (' + span(toReset) + ') · Actions minutes reset</div>' +
-    (runOut && runOut < p.end ? '<div>' + clockIco() + '<span>' + esc(dayLabel(runOut)) + ' (' + span(runOut - t) + ') · runs out at this pace</span></div>' : '');
   drawRepos(d);
   tickStatus();
 }
 function bolt() { return '<svg width="16" height="18" viewBox="0 0 16 18" aria-hidden="true"><path d="M9 0L1 10h6l-1 8 8-10H8z" fill="currentColor"/></svg>'; }
-function clockIco() { return '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#6EA8FF" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>'; }
 function drawRepos(d) {
-  const list = Object.entries(d.repos).filter(x => x[1] > 0).sort((a, b) => b[1] - a[1]).slice(0, 6);
+  const all = Object.entries(d.repos).filter(x => x[1] > 0).sort((a, b) => b[1] - a[1]), list = S.allRepos ? all : all.slice(0, 3);
   if (!list.length) { $('repos').innerHTML = '<p class="empty">' + (d.source === 'legacy' ? 'GitHub only sent a month total, so there’s no repo breakdown.' : 'No Actions minutes used yet this month.') + '</p>'; return; }
   const top = list[0][1], tot = Object.values(d.repos).reduce((a, b) => a + b, 0) || 1;
-  $('repos').innerHTML = list.map(([n, v]) => '<div class="repo"><span class="rn">' + esc(n) + '</span><span class="rm">' + fmt(v) + ' min · ' + Math.round(v / tot * 100) + '%</span><span class="rb"><i style="width:' + (v / top * 100).toFixed(1) + '%"></i></span></div>').join('');
+  $('repos').innerHTML = list.map(([n, v]) => '<div class="repo"><span class="rn">' + esc(n) + '</span><span class="rb"><i style="width:' + (v / top * 100).toFixed(1) + '%"></i></span><span class="rm">' + fmt(v) + ' · ' + Math.round(v / tot * 100) + '%</span></div>').join('') +
+    (all.length > 3 ? '<button class="more" id="moreRepos" type="button">' + (S.allRepos ? 'Show top 3' : 'Show all ' + all.length) + '</button>' : '');
+  const mb = $('moreRepos'); if (mb) mb.onclick = () => { S.allRepos = !S.allRepos; drawRepos(d); };
 }
 function drawChart(d, p, plan) {
-  const W = 340, H = 130, L = 30, R = 6, T = 8, B = 18, iw = W - L - R, ih = H - T - B;
+  const W = 340, H = 96, L = 26, R = 4, T = 6, B = 16, iw = W - L - R, ih = H - T - B;
   const today = now().getUTCDate(), x = day => L + (day - 1) / Math.max(1, p.days - 1) * iw;
   let pts = [], vals = [];
   const hasDaily = Object.keys(d.daily).length > 0;
@@ -499,7 +502,7 @@ $('setupSave').onclick = () => {
   S.token = tk; put(K.token, tk); S.demo = false; put(K.demo, null); $('setupToken').value = ''; load(true);
 };
 $('setupDemo').onclick = () => { S.demo = true; put(K.demo, '1'); load(); };
-$('claudePill').onclick = () => toast('Claude usage has no public feed yet. It’ll get its own card when one exists.');
+$('claudeSlot').onclick = () => toast('Claude has no public usage feed yet, so this card is saved for when there is one.');
 $('wakePill').onclick = toggleWake;
 document.querySelectorAll('.tabs button').forEach(b => b.onclick = () => { S.view = b.dataset.view; put(K.view, S.view); if (S.data) drawChart(S.data, period(), S.plan); });
 document.addEventListener('visibilitychange', async () => {
