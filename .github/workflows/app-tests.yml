@@ -24,7 +24,7 @@ jobs:
         # run.sh matches by name, so "locker" also runs locker-back, "picks" runs picks-stats,
         # "eightcount" runs all three Eight Count files and "walkup" all three Walk-Up files.
         app: [health, numbers, bills, catchlog, photoblueprint, picks, getready, eightcount, playboard, locker,
-              practiceclock, read20, whoswhere, tournamentpack, walkup, scoreboard, fairway, filmlite, secretary, situations, snackshack, usage]
+              practiceclock, read20, whoswhere, tournamentpack, walkup, scoreboard, fairway, filmlite, secretary, situations, snackshack, usage, mystats]
     name: ${{ matrix.app }}
     steps:
       - uses: actions/checkout@v4
