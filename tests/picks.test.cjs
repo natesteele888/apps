@@ -3,6 +3,7 @@
 const assert = require('assert');
 const path = require('path');
 const C = require('../apps/picks/core.js');
+const X = require('../apps/picks/stats.js');
 const { launch, startServer, newPage, SHOTS } = require('./lib.cjs');
 const results = [];
 async function test(name, fn) {
@@ -58,6 +59,27 @@ const event = (id, date, away, home, state, done) => ({ id, date, competitions: 
     eq(by.BBB.f, 1); eq(by.BBB.fw, 1); eq(by.AAA.a, 1); eq(by.AAA.al, 1); eq(by.CCC.f, 1); eq(by.CCC.fw + by.CCC.fl, 0, 'an unplayed game has no result'); eq(C.teamStats(picks, weeks, 'u1', 'nhl').length, 0);
   });
 
+  await test('core: win chance from ESPN\'s predictor, the moneyline, or the records and home field', () => {
+    eq(X.mlProb('-150'), 0.6); eq(X.mlProb('+150'), 0.4); eq(X.mlProb('EVEN'), 0.5); eq(X.mlProb('12'), null); eq(X.mlProb(null), null);
+    const o = X.oddsChance({ odds: [{ moneyline: { home: { close: { odds: '-198' } }, away: { close: { odds: '+164' } } } }] });
+    eq(o.src, 'odds'); assert.ok(Math.abs(o.home - 0.637) < 0.001 && Math.abs(o.away + o.home - 1) < 1e-9, 'the bookmaker\'s cut is taken out: ' + JSON.stringify(o));
+    eq(X.oddsChance({ odds: [{ awayTeamOdds: { moneyLine: 120 }, homeTeamOdds: { moneyLine: -140 } }] }).src, 'odds', 'the older shape works too');
+    eq(X.oddsChance({}), null); eq(X.oddsChance({ odds: [{ details: 'LAR -3.5' }] }), null);
+    const S = (n, v) => ({ name: n, value: v });
+    const p = X.predictorChance({ homeTeam: { statistics: [S('gameProjection', 64.591), S('teamChanceLoss', 35.127)] }, awayTeam: { statistics: [S('gameProjection', 35.127), S('teamChanceLoss', 64.591)] } });
+    eq(p.src, 'espn'); assert.deepStrictEqual(X.percents(p), { away: 35, home: 65 });
+    assert.deepStrictEqual(X.percents(X.predictorChance({ homeTeam: { statistics: [] }, awayTeam: { statistics: [S('gameProjection', 21.491), S('teamChanceLoss', 78.509)] } })), { away: 21, home: 79 }, 'one side filled in');
+    eq(X.predictorChance({}), null); eq(X.predictorChance(null), null);
+    assert.deepStrictEqual(X.parseRecord('5-3-1'), { w: 5, l: 3, x: 1 }); eq(X.parseRecord('junk'), null);
+    const even = X.estimateChance('6-4', '6-4', 'nfl', false); assert.ok(even.home > 0.5 && even.home < 0.6, 'home field tips an even game: ' + even.home);
+    eq(X.estimateChance('6-4', '6-4', 'nfl', true).home, 0.5, 'no home field at a neutral site');
+    assert.ok(X.estimateChance('9-1', '1-9', 'nfl', false).away > 0.7, 'the better record is favoured'); assert.ok(X.estimateChance('', '', 'nba', false).home > 0.5, 'no records yet: home field only');
+    assert.ok(X.estimateChance('17-0', '0-17', 'nfl', true).away <= 0.95, 'never a sure thing');
+    const pc = X.percents({ away: 0.333, home: 0.667 }); eq(pc.away + pc.home, 100); eq(X.percents(null), null);
+    eq(X.url.predictor('nfl', '401873079'), 'https://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401873079/competitions/401873079/predictor');
+    eq(!!X.PREDICTS.nfl && !!X.PREDICTS.nba && !X.PREDICTS.mlb && !X.PREDICTS.nhl, true);
+  });
+
   /* ---------- the page, with Firebase and ESPN stubbed ---------- */
   const server = await startServer('picks');
   const browser = await launch();
@@ -90,6 +112,9 @@ const event = (id, date, away, home, state, done) => ({ id, date, competitions: 
     window.firebase = { initializeApp() {}, firestore: () => db, auth: Object.assign(() => auth, { GoogleAuthProvider: function () { this.setCustomParameters = () => {}; } }) };
   })();`;
   // ESPN: a fake scoreboard for any league, keyed on the URL. NFL week 10; a daily slate on TODAY with one final, one live, one upcoming.
+  const rec = (c, summary) => Object.assign(c, { records: [{ type: 'total', summary }, { type: 'home', summary: '1-1' }] });
+  // ESPN's matchup predictor: one NFL game has a number (Zetas 70%); anything else gets an empty answer.
+  const predictor = url => /NFL-w10-3\/predictor/.test(url) ? { homeTeam: { statistics: [{ name: 'gameProjection', value: 70.2 }] }, awayTeam: { statistics: [{ name: 'gameProjection', value: 29.8 }] } } : {};
   function espn(url, now) {
     const u = new URL(url); const daily = /dates=(\d{8})/.exec(url);
     const day = daily ? daily[1].replace(/(\d{4})(\d{2})(\d{2})/, '$1-$2-$3') : null;
@@ -100,12 +125,15 @@ const event = (id, date, away, home, state, done) => ({ id, date, competitions: 
     return { events: [
       event(base + '-1', '2026-11-09T00:10:00Z', team('AAA', sport + ' Alphas', 'Alpha City', '112233', false, '3', false), team('BBB', sport + ' Betas', 'Beta Town', 'aabbcc', true, '5', true), 'post', true),
       event(base + '-2', '2026-11-09T18:00:00Z', team('CCC', sport + ' Gammas', 'Gamma', '336699', false, '1'), team('DDD', sport + ' Deltas', 'Delta', '993366', true, '1'), 'in', false),
-      event(base + '-3', '2026-11-10T00:30:00Z', team('EEE', sport + ' Epsilons', 'Epsilon', '229955', false, null), team('FFF', sport + ' Zetas', 'Zeta', '552299', true, null), 'pre', false)] };
+      event(base + '-3', '2026-11-10T00:30:00Z', rec(team('EEE', sport + ' Epsilons', 'Epsilon', '229955', false, null), '7-2'), rec(team('FFF', sport + ' Zetas', 'Zeta', '0b162a', true, null), '3-6-1'), 'pre', false)] };
   }
   async function open(opts) {
     const { ctx, page, errors } = await newPage(browser, { ctx: opts && opts.ctx });
     await page.route(/www\.gstatic\.com\/firebasejs/, r => r.fulfill({ status: 200, contentType: 'application/javascript', body: r.request().url().includes('firebase-app') ? FIREBASE_STUB : '' }));
     await page.route(/site\.api\.espn\.com/, r => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(espn(r.request().url())) }));
+    const asked = [];
+    await page.route(/sports\.core\.api\.espn\.com/, r => { asked.push(r.request().url()); r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(predictor(r.request().url())) }); });
+    page.__asked = asked;
     await page.addInitScript(([d, out]) => { window.__today = d; if (out) window.__signedOut = true; }, [TODAY + 'T20:00:00Z', !!(opts && opts.signedOut)]);
     return { ctx, page, errors };
   }
@@ -146,6 +174,31 @@ const event = (id, date, away, home, state, done) => ({ id, date, competitions: 
     assert.ok(/NHL leaderboard/.test(await page.textContent('#view')) && /no results/.test(await page.textContent('.board .lrow')), 'the NHL board is separate');
     assert.ok(/All leagues together/.test(await page.textContent('#view')));
     await page.click('[data-view="stats"]'); await page.waitForSelector('.empty'); assert.ok(/Make some NHL picks/.test(await page.textContent('#view')));
+    eq(errors.length, 0, errors.join(' | ')); await ctx.close();
+  });
+  await test('page: each team\'s record shows under its name, and open games show a win-chance gauge', async () => {
+    const { ctx, page, errors } = await open();
+    await page.goto(server.url); await page.waitForSelector('.game');
+    await page.waitForFunction(() => /ESPN/.test((document.querySelector('.wp-src') || {}).textContent || ''));
+    const cards = page.locator('.game');
+    eq(await cards.nth(2).locator('.side.aw .trec').textContent(), '7-2'); eq(await cards.nth(2).locator('.side.hm .trec').textContent(), '3-6-1', 'NFL ties show');
+    assert.ok(/Epsilon NFL Epsilons, 7-2/.test(await cards.nth(2).locator('.side.aw').getAttribute('aria-label')), 'a screen reader hears the record');
+    eq(await page.locator('.wp').count(), 1, 'only the game that has not started gets a gauge');
+    eq(await cards.nth(2).locator('.wp-n').allTextContents().then(x => x.join(' ')), '30% 70%');
+    eq(await cards.nth(2).locator('.wp-n.fav').textContent(), '70%', 'the favourite is marked');
+    assert.ok(/ESPN matchup predictor/.test(await cards.nth(2).locator('.wp-src').textContent()));
+    assert.ok(/Chance to win: NFL Epsilons 30%, NFL Zetas 70%/.test(await cards.nth(2).locator('.wp').getAttribute('aria-label')));
+    const seg = await cards.nth(2).locator('.wp-bar i').evaluateAll(x => x.map(i => [i.getBoundingClientRect().width, getComputedStyle(i).backgroundColor]));
+    assert.ok(seg[0][0] > 30 && seg[1][0] > seg[0][0] * 2, 'the bar splits about 30/70: ' + JSON.stringify(seg));
+    assert.ok(seg[1][1] !== 'rgb(11, 22, 42)', 'a very dark team colour is lightened so it shows on the card');
+    eq(page.__asked.length, 1, 'ESPN is asked only about the open game'); assert.ok(/football\/leagues\/nfl\/events\/NFL-w10-3\/competitions\/NFL-w10-3\/predictor$/.test(page.__asked[0]), page.__asked[0]);
+    eq(await page.evaluate(() => document.documentElement.scrollWidth), 390, 'nothing runs off a 390 px phone');
+    await page.screenshot({ path: path.join(SHOTS, 'picks-gauge.png') });
+    // MLB has no ESPN predictor: the gauge is an estimate from the records and home field, and nothing extra is fetched
+    await page.click('[data-sport="mlb"]'); await page.waitForSelector('.wp');
+    assert.ok(/estimate from records and home field/.test(await page.textContent('.wp-src')));
+    eq(await page.locator('.wp-n.fav').textContent(), X.percents(X.estimateChance('7-2', '3-6-1', 'mlb', false)).away + '%', 'the better record is favoured');
+    eq(page.__asked.length, 1);
     eq(errors.length, 0, errors.join(' | ')); await ctx.close();
   });
   await test('page: 320 px phone: the league tabs and a game card fit', async () => {

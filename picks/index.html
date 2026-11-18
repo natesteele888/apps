@@ -57,6 +57,18 @@ nav.views button[aria-current="page"]{color:var(--ink);border-bottom-color:var(-
 @keyframes lock{40%{transform:scale(1.15);filter:brightness(1.3)}}
 .tname{font-size:13px;text-align:center;line-height:1.2}
 .tname small{display:block;color:var(--ink-dim);font-size:11px}
+.trec{font-family:Teko,sans-serif;font-size:20px;line-height:1;font-weight:600;font-variant-numeric:tabular-nums;letter-spacing:.03em}
+.wp{padding:0 12px 10px}
+.wp-row{display:flex;align-items:center;gap:8px}
+.wp-n{font-family:Teko,sans-serif;font-size:21px;line-height:1;font-weight:600;color:var(--ink-dim);min-width:40px;text-align:center;font-variant-numeric:tabular-nums}
+.wp-n.fav{color:var(--gold)}
+.wp-bar{flex:1;display:flex;height:10px;border-radius:5px;overflow:hidden;background:var(--panel-2);box-shadow:inset 0 0 0 1px var(--line)}
+.wp-bar i{display:block;height:100%;min-width:3px}
+.wp-bar i+i{flex:1;border-left:2px solid var(--panel)}
+.wp-src{text-align:center;font-size:11px;color:var(--ink-dim);margin-top:4px}
+.wp-wait .wp-bar{animation:wpw 1.2s ease-in-out infinite alternate}
+@keyframes wpw{to{opacity:.45}}
+@media(prefers-reduced-motion:reduce){.wp-wait .wp-bar{animation:none}}
 .who{font-size:11.5px;color:var(--ink-dim);text-align:center;min-height:16px}
 .who b{color:var(--ink)}
 .mid{width:46px;flex:none;display:flex;flex-direction:column;align-items:center;justify-content:center;border-left:1px solid var(--line-soft);border-right:1px solid var(--line-soft);font-size:10.5px;color:var(--ink-dim);gap:2px}
@@ -206,7 +218,7 @@ function contrast(hex){hex=String(hex||"").replace("#","");if(hex.length!==6)ret
 function store(k,v){try{if(v===undefined)return localStorage.getItem(k);localStorage.setItem(k,v)}catch(_){return null}}
 
 const S={user:null,me:null,isOwner:false,players:{},weeks:{},picks:{},view:"picks",sel:null,selBy:{},sport:C.SPORTS[store("gp.sport")]?store("gp.sport"):"nfl",season:null,codes:[],loading:false,
-  extra:{},team:null,lsub:store("gp.lsub")||"standings"}; // extra: the scoreboard's team ids, records and top players, in memory only
+  extra:{},wp:{},team:null,lsub:store("gp.lsub")||"standings"}; // extra: the scoreboard's team ids, records and top players; wp: ESPN's win chances per game; both in memory only
 let db,unsubs=[];
 
 /* ---------- routing between screens ---------- */
@@ -332,8 +344,39 @@ async function loadSlate(key,quiet){
     const old=S.weeks[key];const changed=!old||JSON.stringify(old.games)!==JSON.stringify(games);
     S.weeks[key]={games,updatedAt:new Date().toISOString()};
     if(changed&&Object.keys(games).length)db.doc("gp_weeks/"+key).set(S.weeks[key]).catch(()=>{});
+    loadChances(key);
   }catch(_){if(!quiet)toast("Couldn't load the games. Check your signal.")}
   S.loading=false;if(S.view==="picks")render();
+}
+
+/* ---------- win chance on each open game ----------
+   ESPN's matchup predictor where it has one (NFL, NBA), else the moneyline on the scoreboard, else an estimate from the
+   two records and home field (GPStats). Asked once per game per visit; kept in memory only. */
+const X_=window.GPStats;
+async function loadChances(key){
+  const sp=C.sportOf(key),wk=S.weeks[key];if(!X_||!X_.PREDICTS[sp]||!wk)return;
+  const todo=Object.entries(wk.games).filter(([id,g])=>!started(g)&&S.wp[key+"|"+id]===undefined);if(!todo.length)return;
+  todo.forEach(([id])=>S.wp[key+"|"+id]="wait");
+  await Promise.all(todo.map(([id])=>fetch(X_.url.predictor(sp,id)).then(r=>r.ok?r.json():null).then(d=>{S.wp[key+"|"+id]=X_.predictorChance(d)},()=>{S.wp[key+"|"+id]=null})));
+  if(S.view==="picks"&&S.sel===key)rerender();
+}
+// The chance for one game: an object, "wait" while ESPN's answer is on its way, or null when there's nothing to go on.
+function chanceOf(id){
+  const w=S.wp[S.sel+"|"+id];if(w==="wait"||(w&&w.src))return w;
+  const e=S.extra[S.sel]&&S.extra[S.sel][id];if(!e||!X_)return null;
+  return e.odds||X_.estimateChance(e.away&&e.away.records.total,e.home&&e.home.records.total,C.sportOf(S.sel),e.neutral);
+}
+// A team colour light enough to see on the dark card.
+function barColor(hex){const h=String(hex||"").replace("#","");if(!/^[0-9a-f]{6}$/i.test(h))return"#8a948b";const c=[0,2,4].map(i=>parseInt(h.slice(i,i+2),16));
+  if((.299*c[0]+.587*c[1]+.114*c[2])/255>=.35)return"#"+h;return"#"+c.map(v=>Math.round(v+(255-v)*.45).toString(16).padStart(2,"0")).join("")}
+const WP_SRC={espn:"ESPN matchup predictor",odds:"from the betting odds",est:"estimate from records and home field"};
+function gauge(g,ch){
+  if(ch==="wait")return`<div class="wp wp-wait" aria-hidden="true"><div class="wp-row"><b class="wp-n">&nbsp;</b><div class="wp-bar"></div><b class="wp-n">&nbsp;</b></div><div class="wp-src">Win chance…</div></div>`;
+  const p=ch&&X_.percents(ch);if(!p)return"";
+  const fa=p.away>p.home?" fav":"",fh=p.home>p.away?" fav":"";
+  return`<div class="wp" role="img" aria-label="Chance to win: ${esc(g.away.name)} ${p.away}%, ${esc(g.home.name)} ${p.home}% (${esc(WP_SRC[ch.src])})">
+    <div class="wp-row" aria-hidden="true"><b class="wp-n${fa}">${p.away}%</b><div class="wp-bar"><i style="width:${p.away}%;background:${esc(barColor(g.away.color))}"></i><i style="background:${esc(barColor(g.home.color))}"></i></div><b class="wp-n${fh}">${p.home}%</b></div>
+    <div class="wp-src" aria-hidden="true">Win chance · ${esc(WP_SRC[ch.src])}</div></div>`;
 }
 const started=g=>C.started(g,window.__today?new Date(window.__today):undefined);
 
@@ -359,17 +402,19 @@ function renderPicks(){
 }
 function gameCard(id,g,mine){
   const lock=started(g);const all=S.picks[S.sel]||{};
-  const side=(t,cls)=>{const isMine=mine[id]===t.abbr;const res=g.done&&isMine?(g.winner===t.abbr?" right":" wrong"):"";
+  const ex=S.extra[S.sel]&&S.extra[S.sel][id];
+  const side=(t,cls)=>{const rec=ex&&ex[cls==="hm"?"home":"away"];const r=rec&&rec.records&&rec.records.total||"";const isMine=mine[id]===t.abbr;const res=g.done&&isMine?(g.winner===t.abbr?" right":" wrong"):"";
     const who=lock?Object.entries(all).filter(([u,p])=>p[id]===t.abbr).map(([u])=>S.players[u]?S.players[u].name:"?"):[];
     const n=Object.values(all).filter(p=>p[id]===t.abbr).length;
-    return `<button class="side ${cls}${isMine?" mine":""}${res}" data-g="${id}" data-t="${esc(t.abbr)}" ${lock?"disabled":""} aria-pressed="${isMine}" aria-label="${esc(t.city+" "+t.name)}${isMine?", your pick":""}">
+    return `<button class="side ${cls}${isMine?" mine":""}${res}" data-g="${id}" data-t="${esc(t.abbr)}" ${lock?"disabled":""} aria-pressed="${isMine}" aria-label="${esc(t.city+" "+t.name)}${r?", "+esc(r):""}${isMine?", your pick":""}">
       <span class="badge" style="background:${esc(t.color)};color:${contrast(t.color)}">${esc(t.abbr)}</span>
       <span class="tname">${esc(t.name)}<small>${esc(t.city)}</small></span>
+      ${r?`<span class="trec">${esc(r)}</span>`:""}
       <span class="who">${lock?(who.length?who.map(w=>`<b>${esc(w)}</b>`).join(", "):"&nbsp;"):(n?`${n} pick${n>1?"s":""}`:"&nbsp;")}</span></button>`};
   let date="";try{date=new Date(g.date).toLocaleString(undefined,{weekday:"short",month:"short",day:"numeric",hour:"numeric",minute:"2-digit"})}catch(_){}
   const sc=g.away.score!=null&&g.state!=="pre"?`<div class="score"><span class="${g.done?"f":""}">${esc(g.away.score)}</span><span>–</span><span class="${g.done?"f":""}">${esc(g.home.score)}</span></div>`:"";
   return `<div class="game"><div class="gtop"><span>${esc(date)}</span><span>${g.done?"Final":lock?"Locked · in progress":mine[id]?"Picked":"Open"}</span></div>
-    <div class="matchup">${side(g.away,"aw")}<div class="mid"><span>${C.sport(S.sport).emoji}</span><span>at</span></div>${side(g.home,"hm")}</div>${sc}
+    <div class="matchup">${side(g.away,"aw")}<div class="mid"><span>${C.sport(S.sport).emoji}</span><span>at</span></div>${side(g.home,"hm")}</div>${lock?"":gauge(g,chanceOf(id))}${sc}
     ${xWhere(id)}<button class="x-scoutbtn" type="button" data-scout="${esc(id)}">📊 Scout this matchup</button></div>`;
 }
 async function pick(gid,abbr){

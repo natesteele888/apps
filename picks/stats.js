@@ -25,8 +25,11 @@
     roster: (id, team) => SITE + sport(id).path + "/teams/" + encodeURIComponent(team) + "/roster",
     // the season's team leaders (core API; type 2 = regular season). Athletes come back as links only, so names come from the roster.
     leaders: (id, team, year) => "https://sports.core.api.espn.com/v2/sports/" + sport(id).path.replace("/", "/leagues/") + "/seasons/" + year + "/types/2/teams/" + encodeURIComponent(team) + "/leaders",
-    schedule: (id, team, season) => SITE + sport(id).path + "/teams/" + encodeURIComponent(team) + "/schedule" + (season ? "?season=" + season : "")
+    schedule: (id, team, season) => SITE + sport(id).path + "/teams/" + encodeURIComponent(team) + "/schedule" + (season ? "?season=" + season : ""),
+    // ESPN's matchup predictor for one game (its own win chance for each side). Only the NFL and NBA have one.
+    predictor: (id, game) => "https://sports.core.api.espn.com/v2/sports/" + sport(id).path.replace("/", "/leagues/") + "/events/" + encodeURIComponent(game) + "/competitions/" + encodeURIComponent(game) + "/predictor"
   };
+  const PREDICTS = { nfl: true, nba: true };
 
   /* ---------- small helpers ---------- */
   const num = v => (v == null || v === "" || isNaN(+v) ? null : +v);
@@ -143,10 +146,51 @@
       const one = x => x && { id: String((x.team && x.team.id) || x.id || ""), abbr: (x.team && x.team.abbreviation) || "", leaders: leaders(x), records: records(x), logo: logoOf(x.team) };
       const g = game(ev) || {};
       out[String(ev.id)] = { away: one(c.competitors.find(x => x.homeAway === "away")), home: one(c.competitors.find(x => x.homeAway === "home")), pre: !((c.status && c.status.type && c.status.type.state) && c.status.type.state !== "pre"),
-        venue: g.venue || "", place: g.place || "", tv: g.tv || "", note: g.note || "" };
+        venue: g.venue || "", place: g.place || "", tv: g.tv || "", note: g.note || "", neutral: !!c.neutralSite, odds: oddsChance(c) };
     });
     return out;
   }
+
+  /* ---------- who's likely to win: each side's chance (0 to 1), and where the number came from ----------
+     ESPN's matchup predictor first, then the sportsbook moneyline on the scoreboard (with the bookmaker's cut taken out),
+     else an estimate from the two records and home field. */
+  const clamp = (p, lo, hi) => Math.min(hi, Math.max(lo, p));
+  const pair = (away, home, src) => { const t = away + home; return t > 0 && isFinite(t) ? { away: away / t, home: home / t, src } : null; };
+  // An American moneyline ("-198", "+164", "EVEN") as the chance it implies.
+  function mlProb(ml) {
+    const s = String(ml == null ? "" : ml).trim().toUpperCase(); if (s === "EVEN" || s === "EV" || s === "PK") return 0.5;
+    const n = Number(s.replace(/^\+/, "")); if (!isFinite(n) || Math.abs(n) < 100) return null;
+    return n < 0 ? -n / (-n + 100) : 100 / (n + 100);
+  }
+  function oddsChance(c) {
+    const o = c && Array.isArray(c.odds) && c.odds[0]; if (!o) return null;
+    const m = o.moneyline || {}, pick = (side, alt) => { const x = m[side] || {}; const v = (x.close && x.close.odds) || (x.current && x.current.odds) || (x.open && x.open.odds); return v != null ? v : alt && alt.moneyLine; };
+    const a = mlProb(pick("away", o.awayTeamOdds)), h = mlProb(pick("home", o.homeTeamOdds));
+    return a != null && h != null ? pair(a, h, "odds") : null;
+  }
+  // ESPN's predictor answer → chances. It sometimes fills in only one side, so the other is read from that side's chance to lose.
+  function predictorChance(d) {
+    const v = (t, k) => { const s = ((t && t.statistics) || []).find(x => x && x.name === k); return s ? num(s.value) : null; };
+    const A = d && d.awayTeam, H = d && d.homeTeam;
+    let a = v(A, "gameProjection"), h = v(H, "gameProjection");
+    if (a == null) a = v(H, "teamChanceLoss"); if (h == null) h = v(A, "teamChanceLoss");
+    if (a == null && h != null) a = 100 - h; if (h == null && a != null) h = 100 - a;
+    return a != null && h != null && a >= 0 && h >= 0 ? pair(a, h, "espn") : null;
+  }
+  // "7-2", "5-3-1" → wins, losses, and the third number (ties in the NFL, overtime losses in the NHL).
+  function parseRecord(r) { const m = /^(\d+)-(\d+)(?:-(\d+))?$/.exec(String(r || "").trim()); return m ? { w: +m[1], l: +m[2], x: +(m[3] || 0) } : null; }
+  // Home teams win a bit more often in every league; how much, in log-odds. k pulls a short record toward .500.
+  const EDGE = { nfl: { home: 0.2, k: 3 }, nba: { home: 0.3, k: 5 }, nhl: { home: 0.15, k: 5 }, mlb: { home: 0.1, k: 10 } };
+  function estimateChance(awayRec, homeRec, id, neutral) {
+    const e = EDGE[id] || EDGE.nfl, ot = !!sport(id).ot;
+    const strength = r => { const x = parseRecord(r) || { w: 0, l: 0, x: 0 }; const w = x.w + (ot ? 0 : x.x / 2), gp = x.w + x.l + x.x; return (w + e.k) / (gp + 2 * e.k); };
+    const pa = strength(awayRec), ph = strength(homeRec);
+    const logit = p => Math.log(p / (1 - p));
+    const z = logit(ph) - logit(pa) + (neutral ? 0 : e.home), h = clamp(1 / (1 + Math.exp(-z)), 0.05, 0.95);
+    return { away: 1 - h, home: h, src: "est" };
+  }
+  // Whole percents that add up to 100, for the gauge.
+  function percents(ch) { if (!ch) return null; const a = Math.round(ch.away * 100); return { away: a, home: 100 - a }; }
 
   /* ---------- one team ---------- */
   // From the team's schedule, seen from that team's side: results (newest first), what's next, and the rest.
@@ -247,5 +291,5 @@
   }
   const pctText = p => (p == null ? "" : p >= 1 ? "1.000" : "." + String(Math.round(p * 1000)).padStart(3, "0"));
 
-  return { SPORTS, ORDER, sport, url, parseStandings, parseGames, seasonOf, teamView, leaders, records, extras, headToHead, tally, seasonYear, rosterMap, teamLeaders, picture, localDay, addDays, dayList, dayLabel, when, pctText, scoreOf };
+  return { SPORTS, ORDER, sport, url, PREDICTS, mlProb, oddsChance, predictorChance, parseRecord, estimateChance, percents, parseStandings, parseGames, seasonOf, teamView, leaders, records, extras, headToHead, tally, seasonYear, rosterMap, teamLeaders, picture, localDay, addDays, dayList, dayLabel, when, pctText, scoreOf };
 });
