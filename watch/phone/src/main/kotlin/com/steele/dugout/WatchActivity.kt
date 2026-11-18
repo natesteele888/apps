@@ -43,6 +43,8 @@ class WatchActivity : ComponentActivity() {
     private lateinit var gcText: TextView
     private lateinit var gcInput: EditText
     private lateinit var delayRow: LinearLayout
+    private lateinit var watchAddr: EditText
+    private var updating = false
 
     private val pick = registerForActivityResult(ActivityResultContracts.GetContent()) { uri ->
         val id = photoFor ?: return@registerForActivityResult
@@ -60,6 +62,15 @@ class WatchActivity : ComponentActivity() {
         col.addView(text("Watch and pitching", 22f))
         watchText = text("Looking for your watch…", 15f, Color.parseColor("#94A3B8"))
         col.addView(watchText)
+        col.addView(text("\nUpdate the watch app", 18f))
+        col.addView(text("Puts the newest Dugout watch app on the watch over Wi-Fi, no computer needed. On the watch, Debug over Wi-Fi must be on (Settings, Developer options). Type the address it shows, like 192.168.1.141:5555. The first time, the watch asks to allow debugging: tick Always allow and tap OK.", 14f, Color.parseColor("#94A3B8")))
+        watchAddr = EditText(this).apply {
+            hint = "Watch address, like 192.168.1.141:5555"; setSingleLine(); setTextColor(Color.WHITE); setHintTextColor(Color.parseColor("#64748B"))
+            inputType = android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS
+            setText(WatchInstaller.savedAddress(this@WatchActivity))
+        }
+        col.addView(watchAddr, LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT))
+        col.addView(button("Update the watch app") { updateWatch() })
         col.addView(text("\nSong countdown", 18f))
         col.addView(text("After the green ring closes on the watch, it counts down before the song starts. Tap the watch anywhere during the countdown to cancel, so nothing plays by mistake.", 14f, Color.parseColor("#94A3B8")))
         delayRow = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
@@ -151,6 +162,49 @@ class WatchActivity : ComponentActivity() {
             try { WearLink.putGcTeam(this@WatchActivity, id) } catch (e: Exception) { /* sent when the watch connects */ }
             showGc()
             Toast.makeText(this@WatchActivity, "Sent. Open GC Scores on the watch.", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    /** checks the watch's version, downloads the newest watch build and installs it on the watch, saying each step */
+    private fun updateWatch() {
+        if (updating) return
+        val typed = watchAddr.text.toString()
+        val addr = WatchInstaller.parse(typed)
+        if (addr == null) {
+            Toast.makeText(this, "Type the address shown under Debug over Wi-Fi on the watch, like 192.168.1.141:5555.", Toast.LENGTH_LONG).show()
+            return
+        }
+        WatchInstaller.saveAddress(this, typed)
+        updating = true
+        val dlg = android.app.AlertDialog.Builder(this).setTitle("Updating the watch app").setMessage("Looking for the newest watch build…").setCancelable(false).show()
+        fun say(m: String) = runOnUiThread { dlg.setMessage(m) }
+        lifecycleScope.launch {
+            val (host, port) = addr
+            val msg = withContext(Dispatchers.IO) {
+                try {
+                    val rel = WatchInstaller.newest()
+                    say("Connecting to the watch at $host. If the watch asks to allow debugging, tick Always allow and tap OK.")
+                    val have = try {
+                        WatchInstaller.connect(this@WatchActivity, host, port).use { WatchInstaller.installedVersion(it, packageName) }
+                    } catch (e: Exception) {
+                        return@withContext "Couldn't reach the watch at $host:$port. Check that Debug over Wi-Fi is still on and shows that address, and that the phone is on the same Wi-Fi as the watch."
+                    }
+                    if (have >= rel.version) return@withContext "The watch already has the newest watch app (version $have)."
+                    val apk = WatchInstaller.fetch(this@WatchActivity, rel) { pct -> say("Downloading watch build ${rel.version}… $pct%") }
+                    say("Installing on the watch… keep the watch close and awake.")
+                    try {
+                        WatchInstaller.connect(this@WatchActivity, host, port).use { WatchInstaller.install(it, apk) }
+                    } finally { apk.delete() }
+                    "Done. The watch app is now version ${rel.version}. Open Walk-Up on the watch."
+                } catch (e: WatchInstaller.Problem) {
+                    e.message ?: "The watch app didn't update."
+                } catch (e: Exception) {
+                    "The watch app didn't update. Check the phone's connection and try again."
+                }
+            }
+            updating = false
+            dlg.dismiss()
+            if (!isFinishing) android.app.AlertDialog.Builder(this@WatchActivity).setTitle("Watch app").setMessage(msg).setPositiveButton("OK", null).show()
         }
     }
 

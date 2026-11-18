@@ -198,6 +198,63 @@ const pl = (ev, id) => Object.assign({ id }, ev.p[id]);
     eq(C.money(3.5), '$3.50'); eq(C.money(4), '$4');
   });
 
+  await test('core hole review: one plain line, the next hole from your tees, and Jack only speaks up on a pattern', () => {
+    const ev = twoPlayers(), a = ev.p.aaaaaa1, pars = ev.course.holes.map(h => h.par);
+    eq(C.holeLine(4, 5, { t: 'left', p: 2, x: 1, b: true }), 'Missed left, 2 putts, 1 penalty, in the sand');
+    eq(C.holeLine(4, 4, { t: 'fairway', p: 2 }), 'Fairway, 2 putts, green in regulation');
+    eq(C.holeLine(3, 3, { t: 'fairway', p: 2 }), '2 putts, green in regulation', 'no tee shot on a par 3');
+    eq(C.holeLine(4, 4, null), '');
+    const nx = C.nextHole(ev, a, 1, 1); eq(nx.h, 2); eq(nx.par, pars[1]); ok(nx.yds > 0); eq(C.nextHole(ev, a, 1, 18), null, 'nothing after the last hole');
+    a.st = 10; eq(C.nextHole(ev, a, 1, 18).h, 1, 'a start on 10 goes 18 then 1'); a.st = 1;
+    deq(C.cleanHoleNotes({ '1_3': { t: 'shank', p: 9, b: 1 }, '1_4': { p: 2, email: 'x' }, '5_1': { p: 1 } }), { '1_4': { p: 2 } }, 'odd values, odd fields and odd holes are dropped');
+    const notes = {};
+    [1, 2].forEach(h => { a.s['1_' + h] = pars[h - 1]; notes['1_' + h] = { t: 'fairway', p: 2 }; });
+    eq(C.jackNoticed(ev, a, 1, notes), null, 'too few holes to call it a pattern');
+    a.s['1_3'] = pars[2]; notes['1_3'] = { t: 'fairway', p: 2 }; eq(C.jackNoticed(ev, a, 1, notes), null, 'a steady run says nothing');
+    const long = [1, 2, 3, 4, 5, 6].filter(h => pars[h - 1] > 3).slice(0, 3);
+    long.forEach(h => { a.s['1_' + h] = pars[h - 1] + 1; notes['1_' + h] = { t: 'right', p: 2 }; });
+    const all = Object.keys(a.s).map(k => +k.split('_')[1]).sort((x, y) => x - y), last4 = all.slice(-4).filter(h => pars[h - 1] > 3);
+    if (last4.length >= 3 && last4.every(h => notes['1_' + h].t !== 'fairway')) ok(/fairways/.test(C.jackNoticed(ev, a, 1, notes)), 'missed fairways get noticed');
+    const b = ev.p.bbbbbb1, bn = {}; [1, 2, 3].forEach(h => { b.s['1_' + h] = pars[h - 1] + 1; bn['1_' + h] = { p: 3 }; });
+    ok(/three-putts/.test(C.jackNoticed(ev, b, 1, bn)), 'three-putts get noticed');
+    for (const w of ['damn', 'hell']) ok(!/\b(damn|hell)\b/i.test(C.jackNoticed(ev, b, 1, bn) + (C.jackNoticed(ev, a, 1, notes) || '')), 'clean words only: ' + w);
+  });
+
+  await test('core Jack: Clean by default, kids locked to Clean, Super crude needs the adult check and earbuds, notes per course and hole', () => {
+    eq(C.cleanJack({}).lang, 'clean', 'Clean is the default');
+    eq(C.cleanJack({ lang: 'lot', kid: true }).lang, 'clean', 'a kid or beginner profile is always Clean');
+    eq(C.cleanJack({ lang: 'crude' }).lang, 'lot', 'no Super crude without the adult check');
+    eq(C.jackLevel({ lang: 'crude', adult: true }), 'lot', 'Super crude drops to A lot without earbuds');
+    eq(C.jackLevel({ lang: 'crude', adult: true, buds: true }), 'crude');
+    eq(C.speakable('I really fucking hate this hole. Stay up on the right', 'clean'), 'I really hate this hole. Stay up on the right');
+    eq(C.speakable('pass the shell, hello', 'clean'), 'pass the shell, hello', 'only whole swear words drop out');
+    eq(C.speakable('I really fucking hate this hole', 'lot'), 'I really fucking hate this hole', 'their own words at the higher levels');
+    const ev = twoPlayers(), ck = C.courseKey(ev.course);
+    const notes = C.cleanCourseNotes({ [ck]: { 3: ['Hate this hole', 'Stay up on the right', '', 'x'.repeat(300)], 19: ['no such hole'] }, bad: { 1: ['x'] } });
+    eq(notes[ck][3].length, 3); eq(notes[ck][3][2].length, 200, 'notes are capped'); eq(notes[ck][19], undefined); eq(notes.bad, undefined);
+    const talk = C.holeTalk(ev, ev.p.aaaaaa1, 3, notes, 'clean');
+    ok(/^Hole 3, par \d, \d+ yards\. Your notes: Hate this hole\. Stay up on the right\./.test(talk), talk);
+    eq(C.courseKey({ name: 'Sample Pines' }), 'n:sample pines');
+  });
+
+  await test('core recap and season race: made once every card is in, champion, low round, worst hole, then points across the year', () => {
+    const ev = twoPlayers(), pars = ev.course.holes.map(h => h.par);
+    ev.p.cccccc1 = C.newPlayer(ev, { name: 'Charlie Test', tee: 'blue', g: 1, st: 1 });
+    eq(C.recap(ev, 1), null, 'nothing until the cards are in');
+    ['aaaaaa1', 'bbbbbb1', 'cccccc1'].forEach((id, i) => pars.forEach((par, j) => { ev.p[id].s['1_' + (j + 1)] = par + (i === 1 ? 1 : 0); }));
+    ev.p.aaaaaa1.s['1_2'] -= 1; ev.p.cccccc1.s['1_6'] += 3;
+    const rc = C.recap(ev, 1);
+    eq(rc.champ.name, 'Alpha Test'); eq(rc.champ.label, 'Champion'); ok(/^-1, won by/.test(rc.champ.line), rc.champ.line);
+    eq(rc.items.find(i => i.k === 'Low round').t, 'Alpha Test, ' + (pars.reduce((a, b) => a + b, 0) - 1) + ' (-1)');
+    eq(rc.items.find(i => i.k === 'Worst hole').t, "Charlie Test's " + (pars[5] + 3) + ' on the par ' + pars[5] + ' 6th');
+    ok(rc.text.length <= 500, 'fits in one chat message'); ok(/^Round recap, Test Cup\. Champion: Alpha Test/.test(rc.text), rc.text);
+    const y = new Date(NOW).getUTCFullYear(), hist = C.historyRows(ev, 'aaaaaaaaaaaaaaaaaaaa');
+    const two = hist.concat(hist.map(h => Object.assign({}, h, { code: 'bbbbbbbbbbbbbbbbbbbb', toPar: h.name === 'Bravo Test' ? -9 : h.toPar })));
+    const sr = C.seasonRace(two, y);
+    eq(sr.events, 2); eq(sr.list[0].pts, 800, 'a win (500) and a second (300)'); eq(sr.list[0].wins, 1);
+    eq(C.seasonRace(two, y - 1).list.length, 0, 'only this year counts');
+  });
+
   /* ===================== PART 2: the page ===================== */
   let server, browser;
   try { server = await startServer('fairway'); browser = await launch(); }
@@ -311,6 +368,61 @@ const pl = (ev, id) => Object.assign({ id }, ev.p[id]);
     await page.waitForFunction(() => /holds the snake/.test(document.body.textContent));
     ok(/Bravo Test\s*owes\s*Alpha Test/.test(await page.locator('.owes').textContent()), 'who owes who shows up');
     ok(/never moves money/.test(await page.textContent('body')));
+    const wide = await page.evaluate(() => document.documentElement.scrollWidth); assert.ok(wide <= 390, 'no sideways scroll at 390 px, got ' + wide);
+    deq(errors, []); await ctx.close();
+  });
+
+  if (browser) await test('page: once your score is in, the hole review saves taps on this phone and shows the next hole', async () => {
+    const { page, errors, ctx } = await open();
+    await page.click('#new'); await page.fill('#nn', 'Review Day'); await page.fill('#nme', 'Alpha Test');
+    await page.locator('#nf [type=submit]').click(); await page.waitForFunction(() => window.FW.debug.S.ev);
+    await page.click('[data-tab=score]'); await page.waitForSelector('.scorer');
+    eq(await page.locator('.hreview').count(), 0, 'no review before a score');
+    await page.locator('.scorer li').first().locator('.val').click();
+    await page.waitForSelector('.hreview');
+    ok(/Up next/.test(await page.textContent('.hreview')), 'the next hole is shown');
+    const par = await page.evaluate(() => window.FW.debug.S.ev.course.holes[window.FW.debug.S.hole - 1].par);
+    if (par > 3) await page.click('[data-hn=t][data-v=left]');
+    await page.click('[data-hn=p][data-v="2"]');
+    await page.waitForFunction(() => /2 putts/.test(document.querySelector('.hreview').textContent));
+    const saved = await page.evaluate(() => JSON.stringify(localStorage)); ok(/fw:hn:/.test(saved), 'kept on this phone');
+    const shared = await page.evaluate(() => JSON.stringify(window.FW.debug.S.ev)); ok(!/"putts"|"hn"/.test(shared), 'never in the shared tournament');
+    const wide = await page.evaluate(() => document.documentElement.scrollWidth); assert.ok(wide <= 390, 'no sideways scroll at 390 px, got ' + wide);
+    deq(errors, []); await ctx.close();
+  });
+
+  if (browser) await test('page: Jack keeps a caddie note for the hole on this phone, and it shows on the Score tab', async () => {
+    const { page, errors, ctx } = await open();
+    await page.click('#new'); await page.fill('#nn', 'Notes Day'); await page.fill('#nme', 'Alpha Test');
+    await page.locator('#nf [type=submit]').click(); await page.waitForFunction(() => window.FW.debug.S.ev);
+    await page.click('[data-tab=score]'); await page.waitForSelector('#jackopen');
+    await page.click('#jackopen'); await page.fill('#jn', 'Stay up on the right'); await page.click('#jsave');
+    await page.waitForFunction(() => /Stay up on the right/.test(document.querySelector('#jackopen').textContent));
+    const saved = await page.evaluate(() => localStorage.getItem('fw:cnotes')); ok(/Stay up on the right/.test(saved), 'kept on this phone');
+    const shared = await page.evaluate(() => JSON.stringify(window.FW.debug.S.ev)); ok(!/Stay up on the right/.test(shared), 'never in the shared tournament');
+    await page.click('#jset'); await page.click('[data-js=lang][data-v=crude]'); await page.waitForSelector('#jadult');
+    await page.click('#jno'); eq(await page.locator('[data-js=lang][data-v=clean]').getAttribute('aria-pressed'), 'true', 'still Clean after saying no');
+    await page.check('#jkid'); ok(await page.locator('[data-js=lang][data-v=lot]').isDisabled(), 'a kid profile locks the other levels');
+    await page.click('#jdone');
+    eq(await page.evaluate(() => JSON.parse(localStorage.getItem('fw:jack')).lang), 'clean');
+    const wide = await page.evaluate(() => document.documentElement.scrollWidth); assert.ok(wide <= 390, 'no sideways scroll at 390 px, got ' + wide);
+    deq(errors, []); await ctx.close();
+  });
+
+  if (browser) await test('page: the round recap tops the board once every card is in, and the season race shows on Games', async () => {
+    const { page, errors, ctx } = await open();
+    await page.click('#new'); await page.fill('#nn', 'Recap Day'); await page.fill('#nme', 'Alpha Test');
+    await page.locator('#nf [type=submit]').click(); await page.waitForFunction(() => window.FW.debug.S.ev);
+    await page.evaluate(() => { const S = window.FW.debug.S, C = window.FairwayCore, me = window.FW.ui.me(), id = C.newPid(), patch = {};
+      patch['p.' + id] = C.newPlayer(S.ev, { name: 'Bravo Test', tee: S.ev.course.tees[0].id, g: 1, st: 1 });
+      S.ev.course.holes.forEach((h, i) => { patch['p.' + me.id + '.s.1_' + (i + 1)] = h.par; });
+      window.FW.ui.write(patch);
+      const p2 = {}; window.FW.debug.S.ev.course.holes.forEach((h, i) => { p2['p.' + id + '.s.1_' + (i + 1)] = h.par + 1; }); window.FW.ui.write(p2); });
+    await page.click('[data-tab=board]'); await page.waitForSelector('.recap');
+    ok(/Alpha Test/.test(await page.textContent('.recap .rc-champ')));
+    await page.click('#rcshare'); await page.waitForFunction(() => /Shared in the chat/.test(document.querySelector('#rcshare').textContent));
+    await page.click('[data-tab=games]'); await page.waitForSelector('.season li');
+    ok(/Alpha Test · you/.test(await page.textContent('.season')), 'you are marked in the race');
     const wide = await page.evaluate(() => document.documentElement.scrollWidth); assert.ok(wide <= 390, 'no sideways scroll at 390 px, got ' + wide);
     deq(errors, []); await ctx.close();
   });

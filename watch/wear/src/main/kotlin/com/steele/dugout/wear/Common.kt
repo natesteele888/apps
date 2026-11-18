@@ -84,10 +84,14 @@ fun WalkUpApp() {
     var order by rememberSaveable { mutableStateOf(false) }
     var sounds by rememberSaveable { mutableStateOf(false) }
     var swapFor by rememberSaveable { mutableStateOf<String?>(null) }
+    // the Lineup card (LineupCard.kt), opened from the batting order, and the inning it showed last
+    var card by rememberSaveable { mutableStateOf(false) }
+    var cardInning by rememberSaveable { mutableStateOf(0) }
     val out = swapFor
     when {
         out != null -> BackScreen(onBack = { swapFor = null }) { BenchScreen(out, onDone = { swapFor = null }) }
-        order -> BackScreen(onBack = { order = false }) { OrderScreen(onDone = { order = false }, onSwap = { swapFor = it }) }
+        card -> BackScreen(onBack = { card = false }) { LineupCardScreen(cardInning, onInning = { cardInning = it }, onDone = { card = false }) }
+        order -> BackScreen(onBack = { order = false }) { OrderScreen(onDone = { order = false }, onSwap = { swapFor = it }, onCard = { card = true }) }
         sounds -> BackScreen(onBack = { sounds = false }) { SoundsScreen(onDone = { sounds = false }) }
         else -> BattingScreen(onOrder = { order = true }, onSounds = { sounds = true })
     }

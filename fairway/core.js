@@ -692,6 +692,177 @@
     return { who, games, bal, owes };
   }
 
+  /* ---------- after a hole: how it went, the hole coming up and what Jack noticed ---------- */
+  // "How it went" stays on the golfer's own phone, never in the shared tournament: t tee shot, p putts, x penalties, b in the sand.
+  const TEE_SHOTS = ["fairway", "left", "right", "short"];
+  function cleanHoleNote(x) {
+    if (!x || typeof x !== "object") return null;
+    const o = {};
+    if (TEE_SHOTS.indexOf(x.t) >= 0) o.t = x.t;
+    if (Number.isInteger(x.p) && x.p >= 0 && x.p <= 6) o.p = x.p;
+    if (Number.isInteger(x.x) && x.x >= 0 && x.x <= 6) o.x = x.x;
+    if (x.b === true) o.b = true;
+    return Object.keys(o).length ? o : null;
+  }
+  function cleanHoleNotes(x) {
+    const out = {}; if (!x || typeof x !== "object") return out;
+    Object.keys(x).forEach(k => { if (/^[1-4]_([1-9]|1[0-8])$/.test(k)) { const v = cleanHoleNote(x[k]); if (v) out[k] = v; } });
+    return out;
+  }
+  // One plain line: "Missed left, 2 putts, 1 penalty, in the sand". Greens in regulation come from the score and putts.
+  function holeLine(par, v, n) {
+    if (!n) return "";
+    const out = [];
+    if (n.t && par > 3) out.push(n.t === "fairway" ? "Fairway" : n.t === "short" ? "Short of the fairway" : "Missed " + n.t);
+    if (n.p != null) {
+      out.push(n.p === 0 ? "holed it from off the green" : n.p === 1 ? "1 putt" : n.p + " putts");
+      if (v != null && v - n.p <= par - 2) out.push("green in regulation");
+    }
+    if (n.x) out.push(n.x === 1 ? "1 penalty" : n.x + " penalties");
+    if (n.b) out.push("in the sand");
+    const s = out.join(", ");
+    return s.charAt(0).toUpperCase() + s.slice(1);
+  }
+  // The next hole in this golfer's own order, with the yards from their tees.
+  function nextHole(ev, pl, r, h) {
+    const order = playOrder(holeCount(ev), pl.st), i = order.indexOf(h);
+    if (i < 0 || i >= order.length - 1) return null;
+    const nh = order[i + 1], hole = ev.course.holes[nh - 1], tee = teeOf(ev, pl);
+    return { h: nh, par: hole.par, hcp: hole.hcp, yds: yards(ev.course, nh, tee.id) || null, tee: tee.name };
+  }
+  // Plain, clean words about a pattern in the last few holes. No AI here, just counting.
+  function jackNoticed(ev, pl, r, notes) {
+    const order = playOrder(holeCount(ev), pl.st).filter(h => strokes(pl, r, h) != null);
+    const last = order.slice(-4), recent = last.map(h => ({ h, v: strokes(pl, r, h), par: ev.course.holes[h - 1].par, n: notes[key(r, h)] || {} }));
+    if (recent.length < 3) return null;
+    const tees = recent.filter(x => x.par > 3 && x.n.t), missed = tees.filter(x => x.n.t !== "fairway").length;
+    if (tees.length >= 3 && missed >= 3) return `You've missed ${missed} of your last ${tees.length} fairways. Club down off the tee for a few holes and play from the short grass.`;
+    const pen = recent.slice(-3).filter(x => x.n.x);
+    if (pen.length >= 2) return "Two penalties in three holes. Pick the safe side of the hole and take the trouble out of play.";
+    const three = recent.filter(x => x.n.p >= 3).length;
+    if (three >= 2) return `${three} three-putts in your last ${recent.length} holes. Lag the long ones close and take your two.`;
+    const run = recent.slice(-3).reduce((a, x) => a + x.v - x.par, 0);
+    if (run <= -2) return `${-run} under over your last three holes. Keep doing exactly what you're doing.`;
+    if (run >= 5) return "A rough patch. Fairways and the middle of the green for the next couple of holes; bogey is fine.";
+    return null;
+  }
+
+  /* ---------- Jack's settings and each golfer's own caddie notes (both kept on the golfer's phone) ---------- */
+  const JACK_LANGS = [["clean", "Clean"], ["little", "A little"], ["lot", "A lot"], ["crude", "Super crude"]], JACK_LISTEN = ["hey", "always", "off"];
+  // Kid and beginner profiles are locked to Clean; Super crude needs the adult check and only plays through earbuds.
+  function cleanJack(x) {
+    x = x && typeof x === "object" ? x : {};
+    const o = { lang: JACK_LANGS.some(l => l[0] === x.lang) ? x.lang : "clean", kid: x.kid === true, adult: x.adult === true, buds: x.buds === true, listen: JACK_LISTEN.indexOf(x.listen) >= 0 ? x.listen : "hey" };
+    if (o.kid) o.lang = "clean";
+    if (o.lang === "crude" && !o.adult) o.lang = "lot";
+    return o;
+  }
+  // The level Jack actually speaks at right now: Super crude drops to A lot whenever the earbuds aren't in.
+  function jackLevel(j) { j = cleanJack(j); return j.lang === "crude" && !j.buds ? "lot" : j.lang; }
+  // Swearing only, never anything sexual. At Clean the swears simply drop out of what Jack reads aloud.
+  const SWEARS = /\b(f+u+c+k\w*|motherf\w*|sh[i1]t\w*|bullsh\w*|ass(hole)?s?|bastards?|bitch\w*|crap\w*|piss\w*|god ?dam\w*|dam(n|mit)\w*(?: it)?|hell)\b/gi;
+  function speakable(text, level) {
+    const t = clip(text, 400);
+    if (level !== "clean") return t;
+    return t.replace(SWEARS, "").replace(/\s{2,}/g, " ").replace(/\s+([,.!?])/g, "$1").replace(/([.!?])[,\s]*,\s*/g, "$1 ").replace(/^[,\s]+/, "").trim();
+  }
+  // Notes are filed by course (its id, or its name) and hole: up to 5 short notes a hole.
+  const NOTE_MAX = 200, NOTES_PER_HOLE = 5;
+  function courseKey(course) { return course && course.id ? "id:" + clip(course.id, 40) : "n:" + clip(course && course.name, 60).toLowerCase(); }
+  function cleanCourseNotes(x) {
+    const out = {}; if (!x || typeof x !== "object") return out;
+    Object.keys(x).slice(0, 50).forEach(ck => {
+      const holes = x[ck]; if (!/^(id|n):/.test(ck) || !holes || typeof holes !== "object") return;
+      const o = {};
+      Object.keys(holes).forEach(h => {
+        if (!/^([1-9]|1[0-8])$/.test(h)) return;
+        const l = (Array.isArray(holes[h]) ? holes[h] : []).map(t => clip(t, NOTE_MAX)).filter(Boolean).slice(0, NOTES_PER_HOLE);
+        if (l.length) o[h] = l;
+      });
+      if (Object.keys(o).length) out[ck] = o;
+    });
+    return out;
+  }
+  // What Jack says walking up to a hole: par and yards, then the golfer's own notes in their own words.
+  function holeTalk(ev, pl, h, notes, level) {
+    const hole = ev.course.holes[h - 1], tee = teeOf(ev, pl), y = yards(ev.course, h, tee.id);
+    const mine = ((notes || {})[courseKey(ev.course)] || {})[h] || [];
+    let s = `Hole ${h}, par ${hole.par}${y ? `, ${y} yards` : ""}.`;
+    if (mine.length) s += " Your notes: " + mine.map(t => speakable(t, level)).filter(Boolean).map(t => (/[.!?]$/.test(t) ? t : t + ".")).join(" ");
+    return s;
+  }
+
+  /* ---------- round recap: made from the cards once every card in a round is in ---------- */
+  const ordinal = n => n + (n % 100 >= 11 && n % 100 <= 13 ? "th" : ["th", "st", "nd", "rd"][n % 10] || "th");
+  function roundDone(ev, r) { const ps = players(ev); return ps.length >= 2 && ps.every(p => round(ev, p, r).done); }
+  function recap(ev, r) {
+    if (!roundDone(ev, r)) return null;
+    const ps = players(ev), rs = ps.map(p => ({ p, x: round(ev, p, r) })), items = [], holes = ev.course.holes;
+    const last = r === ev.rounds;
+    // champions: the winning team, or the leader (overall on the last day, else the day's low round)
+    let champ = null;
+    const tb = teamBoard(ev).filter(t => t.holes);
+    if (tb.length >= 2 && last) champ = { name: tb[0].pos.charAt(0) === "T" ? "A tie at the top" : tb[0].name, line: tb[0].pos.charAt(0) === "T" ? tb.filter(t => t.toPar === tb[0].toPar).map(t => t.name).join(" and ") : `${fmtPar(tb[0].toPar)} as a team${tb[1] ? `, won by ${tb[1].toPar - tb[0].toPar}` : ""}` };
+    else {
+      const st = last ? standings(ev).filter(x => x.holes) : rs.slice().sort((a, b) => a.x.toPar - b.x.toPar).map(o => ({ name: o.p.n, toPar: o.x.toPar }));
+      const tied = st.filter(x => x.toPar === st[0].toPar);
+      champ = tied.length > 1 ? { name: "A tie at the top", line: tied.map(x => x.name).join(" and ") + " at " + fmtPar(st[0].toPar) } : { name: st[0].name, line: `${fmtPar(st[0].toPar)}${st[1] ? `, ${last ? "won by" : "by"} ${st[1].toPar - st[0].toPar}` : ""}` };
+    }
+    champ.label = champ.name === "A tie at the top" ? "Tied at the top" : last ? "Champion" : "Leading the day";
+    const low = rs.slice().sort((a, b) => a.x.strokes - b.x.strokes)[0];
+    items.push({ k: "Low round", t: `${low.p.n}, ${low.x.strokes} (${fmtPar(low.x.toPar)})` });
+    const birdies = rs.map(o => ({ o, n: o.x.scores.filter((v, i) => v != null && v < holes[i].par).length })).sort((a, b) => b.n - a.n);
+    if (birdies[0].n) items.push({ k: "Most birdies", t: `${birdies[0].o.p.n}, ${birdies[0].n}` });
+    let worst = null;
+    rs.forEach(o => o.x.scores.forEach((v, i) => { if (v != null && (!worst || v - holes[i].par > worst.d)) worst = { p: o.p, v, h: i + 1, d: v - holes[i].par }; }));
+    if (worst && worst.d >= 2) items.push({ k: "Worst hole", t: `${worst.p.n}'s ${worst.v} on the par ${holes[worst.h - 1].par} ${ordinal(worst.h)}` });
+    // on the move: biggest climb from halfway (in each golfer's own order) to the finish
+    const n = holeCount(ev);
+    if (n === 18 && ps.length >= 3) {
+      const half = rs.map(o => ({ id: o.p.id, v: o.x.order.slice(0, 9).reduce((a, h) => a + o.x.scores[h - 1] - holes[h - 1].par, 0) }));
+      const place = (list, id) => { const me = list.find(x => x.id === id).v; return list.filter(x => x.v < me).length + 1; };
+      const fin = rs.map(o => ({ id: o.p.id, v: o.x.toPar }));
+      const moves = rs.map(o => ({ p: o.p, up: place(half, o.p.id) - place(fin, o.p.id) })).sort((a, b) => b.up - a.up);
+      if (moves[0].up >= 2) items.push({ k: "On the move", t: `${moves[0].p.n}, up ${moves[0].up} spots on the back nine` });
+    }
+    // side games and the rest of the fun
+    const sg = [];
+    if (ev.bets) {
+      const t = betTally(ev, r), top = Object.keys(t.bal).sort((a, b) => t.bal[b] - t.bal[a])[0];
+      if (top && t.bal[top] > 0) sg.push(`${ev.p[top].n} up ${money(t.bal[top])}`);
+    }
+    ctpBoard(ev, r).forEach(x => { if (x.best) sg.push(`CTP ${x.h}: ${x.best.name}, ${fmtFeet(x.best.d)}`); });
+    const bingo = ps.filter(p => bingoState(ev, p.id, r).line).map(p => p.n);
+    if (bingo.length) sg.push("Bingo: " + bingo.join(", "));
+    if (sg.length) items.push({ k: "Side games", t: sg.join(". ") });
+    const title = (ev.rounds > 1 ? `Round ${r} recap` : "Round recap");
+    let text = `${title}, ${ev.name}. ${champ.name === "A tie at the top" ? "A tie at the top: " + champ.line : champ.label + ": " + champ.name + ", " + champ.line}. ` + items.map(i => `${i.k}: ${i.t}.`).join(" ");
+    if (text.length > 480) text = text.slice(0, 477) + "...";
+    return { title, champ, items, text };
+  }
+
+  /* ---------- season race: points from every finished tournament this phone has followed this year ---------- */
+  const SEASON_PTS = [500, 300, 190, 135, 110, 100, 90, 85, 80, 75, 70, 65, 60, 55, 50];
+  function seasonRace(hist, year) {
+    const rows = (Array.isArray(hist) ? hist : []).filter(h => h && typeof h.name === "string" && typeof h.code === "string" && Number.isFinite(h.toPar) && new Date(h.date || 0).getUTCFullYear() === year);
+    const events = {}; rows.forEach(h => { (events[h.code] = events[h.code] || []).push(h); });
+    const table = {};
+    Object.keys(events).forEach(code => {
+      const by = {}; events[code].forEach(h => { const k = cleanName(h.name).toLowerCase(); const o = by[k] = by[k] || { name: cleanName(h.name), toPar: 0, rounds: 0, tw: false, bonus: 0 }; o.toPar += h.toPar; o.rounds++; if (h.tw) o.tw = true; o.bonus += (h.sg ? 50 : 0) + (h.bg ? 25 : 0); });
+      const list = Object.keys(by).map(k => Object.assign({ k }, by[k])), most = Math.max.apply(null, list.map(x => x.rounds));
+      const full = list.filter(x => x.rounds === most).sort((a, b) => a.toPar - b.toPar);
+      list.forEach(x => {
+        const place = x.rounds === most ? full.filter(y => y.toPar < x.toPar).length + 1 : null;
+        const pts = (place ? SEASON_PTS[place - 1] || 40 : 25) + (x.tw ? 100 : 0) + x.bonus;
+        const t = table[x.k] = table[x.k] || { name: x.name, pts: 0, events: 0, wins: 0 };
+        t.pts += pts; t.events++; if (place === 1) t.wins++;
+      });
+    });
+    const out = Object.keys(table).map(k => table[k]).sort((a, b) => b.pts - a.pts || b.wins - a.wins || a.name.localeCompare(b.name));
+    out.forEach((x, i) => { x.place = out.findIndex(y => y.pts === x.pts) + 1; });
+    return { year, events: Object.keys(events).length, list: out };
+  }
+
   /* ---------- changes: the same dotted paths the shared database takes ---------- */
   // patch keys look like "p.abc123.s.1_7" or "name"; a value of DELETE removes the field.
   const DELETE = { __delete: true };
@@ -766,10 +937,20 @@
     return ev;
   }
   // What one finished round looks like in this phone's history (for "previous rounds" on a player card).
+  // tw: on the winning team once it's over; sg: the round's biggest side-game winner; bg: got a bingo. The season race counts them.
   function historyRows(ev, code) {
+    const tb = ev.done ? teamBoard(ev).filter(t => t.holes) : [], winTeam = tb.length >= 2 && tb[0].toPar < tb[1].toPar ? tb[0] : null, topSg = {};
+    for (let r = 1; r <= ev.rounds; r++) if (ev.bets) { const t = betTally(ev, r), top = Object.keys(t.bal).sort((a, b) => t.bal[b] - t.bal[a])[0]; if (top && t.bal[top] > 0) topSg[r] = top; }
     return players(ev).map(pl => {
       const out = [];
-      for (let r = 1; r <= ev.rounds; r++) { const x = round(ev, pl, r); if (x.done) out.push({ code, event: ev.name, course: ev.course.name, date: ev.created, r, strokes: x.strokes, toPar: x.toPar, name: pl.n }); }
+      for (let r = 1; r <= ev.rounds; r++) {
+        const x = round(ev, pl, r); if (!x.done) continue;
+        const row = { code, event: ev.name, course: ev.course.name, date: ev.created, r, strokes: x.strokes, toPar: x.toPar, name: pl.n };
+        if (winTeam && winTeam.members.some(m => m.id === pl.id)) row.tw = true;
+        if (topSg[r] === pl.id) row.sg = true;
+        if (bingoState(ev, pl.id, r).line) row.bg = true;
+        out.push(row);
+      }
       return out;
     }).reduce((a, b) => a.concat(b), []);
   }
@@ -792,5 +973,8 @@
     cleanHc, isDate, isTime, isTid, cleanRally, cleanFmt, rallyList, officialPatch, openGroup, teamIds, pickSlots, teamOf, draftState, pickPatch,
     draftStartPatch, pickCaptains, teamBoard, matchStatus, matchIds, autoMatches, picksLocked, pickCounts, cleanTt, teeTime, fmtTime, fmtDate,
     reminders, icsFor, directions, cleanMsg, shout, BINGO, BINGO_AUTO, bingoCard, bingoState, cleanBingo,
-    BETS, BET_AMTS, cleanBets, cleanBetMarks, betOn, betAmt, betPlayers, wolfOrder, wolfOf, betTally, money };
+    BETS, BET_AMTS, cleanBets, cleanBetMarks, betOn, betAmt, betPlayers, wolfOrder, wolfOf, betTally, money,
+    TEE_SHOTS, cleanHoleNote, cleanHoleNotes, holeLine, nextHole, jackNoticed,
+    JACK_LANGS, cleanJack, jackLevel, speakable, courseKey, cleanCourseNotes, holeTalk,
+    roundDone, recap, seasonRace, SEASON_PTS };
 });

@@ -226,6 +226,25 @@ const strip = p => { const q = JSON.parse(JSON.stringify(p)); delete q.id; q.blo
     const bk = C.skipBack(C.settle(r, T + 12 * MIN), T + 12 * MIN); eq(bk.holding, false); eq(C.runPos(bk, T + 12 * MIN).segIndex, 0); eq(C.runPos(bk, T + 12 * MIN).remainingMs, 10 * MIN);
   });
 
+  await test('core: what a linked watch gets (names, lengths, the clock numbers), and "none" with no practice', async () => {
+    deq(C.watchSummary(null, T), { v: 1, at: T, none: true }); deq(C.watchSummary(undefined, T), { v: 1, at: T, none: true }); deq(C.watchSummary({ plan: 'x' }, T), { v: 1, at: T, none: true });
+    const p = P([{ name: 'Warm-up', min: 10 }, { name: 'Hitting', min: 5, type: 'stations', stations: 3, labels: ['Tee', '', 'Soft toss'] }, { name: 'x'.repeat(40), min: 5, note: 'not sent' }], { name: 'Tuesday', wait: true });
+    let r = C.newRun(p, T, TODAY);
+    let w = C.watchSummary(r, T + 1000);
+    eq(w.v, 1); eq(w.at, T + 1000); eq(w.name, 'Tuesday'); eq(w.wait, true); eq(w.ack, 0); eq(w.startMs, T); eq(w.pausedMs, 0); eq(w.pausedAt, null); eq(w.finished, false); eq(w.hold, false);
+    deq(w.segs, [{ n: 'Warm-up', d: 10 * MIN }, { n: 'Hitting · Tee', d: 5 * MIN }, { n: 'Hitting · Station 2', d: 5 * MIN }, { n: 'Hitting · Soft toss', d: 5 * MIN }, { n: 'x'.repeat(40), d: 5 * MIN }]);
+    assert.ok(!/not sent/.test(JSON.stringify(w)), 'notes stay on the phone');
+    // a minute added to the station that is on shows in its length; a hold and a pause come through as they are
+    r = C.skipNext(r, T + 2 * MIN); r = C.adjustCurrent(r, T + 2 * MIN, MIN).run;
+    w = C.watchSummary(r, T + 2 * MIN); eq(w.segs[1].d, 6 * MIN); eq(w.ack, 1); eq(w.startMs, T - 8 * MIN);
+    const h = C.settle(r, T + 12 * MIN); w = C.watchSummary(h, T + 12 * MIN); eq(w.hold, true); eq(w.pausedAt, T + 8 * MIN, 'held where the station ended');
+    w = C.watchSummary(C.pauseRun(C.newRun(p, T, TODAY), T + MIN), T + 2 * MIN); eq(w.pausedAt, T + MIN); eq(w.hold, false);
+    eq(C.watchSummary(C.endRun(r, T + 3 * MIN), T + 3 * MIN).finished, true);
+    // a big plan stays small enough for the watch link (40 KB)
+    const big = C.sanitizePlan({ name: 'Big', blocks: Array.from({ length: 60 }, (_, i) => ({ name: 'Block ' + 'y'.repeat(30) + i, min: 3, type: 'stations', stations: 8, labels: Array(8).fill('z'.repeat(24)) })) });
+    w = C.watchSummary(C.newRun(big, T, TODAY), T); eq(w.segs.length, 200); assert.ok(JSON.stringify(w).length < 40000, JSON.stringify(w).length + ' bytes');
+  });
+
   await test('core: saved run state is checked when it is loaded', async () => {
     const rp = P([10, 5, 5]); let r = C.newRun(rp, T, TODAY);
     r = C.resumeRun(C.pauseRun(C.adjustCurrent(r, T + MIN, MIN).run, T + 2 * MIN), T + 4 * MIN);
@@ -1082,9 +1101,9 @@ const strip = p => { const q = JSON.parse(JSON.stringify(p)); delete q.id; q.blo
   await test('Offline: after one visit the app opens and runs with no network, with its own cache only', async () => {
     const { ctx, page, errors } = await fresh({ sw: true, data: dataDoc([BB()]), init: () => { if (!sessionStorage.getItem('__c')) { sessionStorage.setItem('__c', '1'); caches.open('locker-v1').then(c => c.put('/x', new Response('x'))); caches.open('practiceclock-v0').then(c => c.put('/y', new Response('y'))); } } });
     await page.evaluate(() => navigator.serviceWorker.ready.then(() => 1));
-    await page.waitForFunction(async () => { const k = await caches.keys(); return k.includes('practiceclock-v1') && !k.includes('practiceclock-v0') && (await (await caches.open('practiceclock-v1')).keys()).length >= 10; }, null, { timeout: 8000 });
-    const cached = await page.evaluate(async () => (await (await caches.open('practiceclock-v1')).keys()).map(r => new URL(r.url).pathname));
-    for (const f of ['/apps/practiceclock/', '/apps/practiceclock/manifest.json', '/apps/practiceclock/practiceclock.css', '/apps/practiceclock/core.js', '/apps/practiceclock/app.js', '/apps/practiceclock/editor.js', '/apps/practiceclock/runner.js', '/apps/practiceclock/settings.js', '/apps/practiceclock/boot.js', '/apps/icons/practiceclock-192.png', '/apps/icons/practiceclock-512.png']) assert.ok(cached.includes(f), 'cached ' + f + ' in ' + cached.join());
+    await page.waitForFunction(async () => { const k = await caches.keys(); return k.includes('practiceclock-v2') && !k.includes('practiceclock-v0') && (await (await caches.open('practiceclock-v2')).keys()).length >= 10; }, null, { timeout: 8000 });
+    const cached = await page.evaluate(async () => (await (await caches.open('practiceclock-v2')).keys()).map(r => new URL(r.url).pathname));
+    for (const f of ['/apps/practiceclock/', '/apps/practiceclock/manifest.json', '/apps/practiceclock/practiceclock.css', '/apps/practiceclock/core.js', '/apps/practiceclock/app.js', '/apps/practiceclock/editor.js', '/apps/practiceclock/runner.js', '/apps/practiceclock/settings.js', '/apps/practiceclock/boot.js', '/apps/watchlink.js', '/apps/icons/practiceclock-192.png', '/apps/icons/practiceclock-512.png']) assert.ok(cached.includes(f), 'cached ' + f + ' in ' + cached.join());
     await page.reload(); await page.waitForTimeout(300); assert.ok(await page.evaluate(() => !!navigator.serviceWorker.controller), 'the page is controlled by the worker before going offline');
     await ctx.setOffline(true);
     await page.reload(); await page.waitForSelector('.plan', { timeout: 6000 }); eq(await T_(page, '.plan .nm'), 'Baseball 90 min');

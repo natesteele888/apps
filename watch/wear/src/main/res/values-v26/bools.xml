@@ -1,4 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <bool name="tiles_on">true</bool>
+    <!-- Live score on the watch face: on for Android 8 and newer (Wear OS 2 on Android 8+, Wear OS 3, 4 and 5) -->
+    <bool name="face_on">true</bool>
 </resources>

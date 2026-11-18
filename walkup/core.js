@@ -15,7 +15,9 @@
     // "keep playing": how far past the clip a song may run when the coach holds on the watch, and its fade at the end
     defExt: 30, maxExt: 60, extFade: 2,
     // game sounds: how many buttons, how long a button's name, how many can wait in Up next
-    board: 12, boardLabel: 30, queue: 10
+    board: 12, boardLabel: 30, queue: 10,
+    // positions by inning: the most innings a game can have
+    innings: 9
   };
   var BUNDLE_CHUNK = 196608; // bytes per base64 chunk in a "back up everything" file (a multiple of 3)
   var ATTACK = 0.008, END_RAMP = 0.01, VOICE_RAMP = 0.02;
@@ -770,7 +772,73 @@
   function queueAdd(q, id) { q = Array.isArray(q) ? q.slice() : []; if (typeof id === "string" && q.indexOf(id) < 0 && q.length < LIM.queue) q.push(id); return q; }
   function queueDrop(q, i) { q = Array.isArray(q) ? q.slice() : []; if (i >= 0 && i < q.length) q.splice(i, 1); return q; }
 
-  function emptyState() { return { v: 1, roster: [], lineup: [], batter: 0, songs: [], board: defaultBoard(), announcer: factoryAnnouncer(), settings: sanitizeSettings({}) }; }
+  /* ---------- positions by inning: who plays where in each inning (the lineup card) ---------- */
+  /* def: { n: innings in the game (1 to 9, 6 unless changed), pos: { playerId: ["P", "SS", "Bench", "", ...] } }, one entry per inning.
+     "" means not set yet; "Bench" means the player sits that inning. Players are the batting order first, then the bench. */
+  var DEF_POS = ["P", "C", "1B", "2B", "3B", "SS", "LF", "CF", "RF"], DEF_BENCH = "Bench", DEF_INN = 6;
+  function defPos(x) {
+    var s = typeof x === "string" ? x.trim().toUpperCase() : "";
+    if (s === "BENCH") return DEF_BENCH;
+    return DEF_POS.indexOf(s) >= 0 ? s : "";
+  }
+  function emptyDef() { return { n: DEF_INN, pos: {} }; }
+  /* ids: the roster's ids as { id: 1 } (anyone else is dropped); each row is cut to the most innings a game can have */
+  function sanitizeDef(r, ids) {
+    r = isObj(r) ? r : {};
+    var out = { n: int(r.n, 1, LIM.innings, DEF_INN), pos: {} }, src = isObj(r.pos) ? r.pos : {};
+    Object.keys(src).forEach(function (id) {
+      if (!ID_RE.test(id) || !(ids && ids[id] === 1) || !Array.isArray(src[id])) return;
+      var a = src[id].slice(0, LIM.innings).map(defPos);
+      while (a.length && !a[a.length - 1]) a.pop();
+      if (a.length) out.pos[id] = a;
+    });
+    return out;
+  }
+  /* k counts from 0 */
+  function defGet(def, id, k) { var a = def && isObj(def.pos) && Object.prototype.hasOwnProperty.call(def.pos, id) && Array.isArray(def.pos[id]) ? def.pos[id] : null; return a && k >= 0 ? defPos(a[k]) : ""; }
+  function defSet(def, id, k, pos) {
+    if (!def || !ID_RE.test(String(id)) || !(k >= 0 && k < LIM.innings)) return def;
+    if (!isObj(def.pos)) def.pos = {};
+    var a = Object.prototype.hasOwnProperty.call(def.pos, id) && Array.isArray(def.pos[id]) ? def.pos[id].slice(0, LIM.innings) : [];
+    while (a.length <= k) a.push("");
+    a[k] = defPos(pos);
+    while (a.length && !a[a.length - 1]) a.pop();
+    if (a.length) def.pos[id] = a; else delete def.pos[id];
+    return def;
+  }
+  /* one player's positions for the game's innings, for the watch: always def.n long */
+  function defRow(def, id) { var out = []; for (var k = 0; k < (def ? def.n : 0); k++) out.push(defGet(def, id, k)); return out; }
+  /* has anyone got a position (or a seat on the bench) in any inning of this game? */
+  function defUsed(def, ids) { return (ids || []).some(function (id) { return defRow(def, id).some(Boolean); }); }
+  /* inning k for these players: who is at each position, who sits, who isn't set, and what's wrong */
+  function defInning(def, ids, k) {
+    var by = {}, sit = [], open = [], placed = 0;
+    DEF_POS.forEach(function (p) { by[p] = []; });
+    (ids || []).forEach(function (id) {
+      var p = defGet(def, id, k);
+      if (p === DEF_BENCH) sit.push(id); else if (p) { by[p].push(id); placed++; } else open.push(id);
+    });
+    var dupes = DEF_POS.filter(function (p) { return by[p].length > 1; }), missing = DEF_POS.filter(function (p) { return !by[p].length; });
+    return { k: k, by: by, sit: sit, open: open, placed: placed, empty: placed === 0, dupes: dupes, missing: missing, ok: placed > 0 && !dupes.length && !missing.length };
+  }
+  /* every inning of the game, checked */
+  function defCheck(def, ids) { var out = []; for (var k = 0; k < (def ? def.n : 0); k++) out.push(defInning(def, ids, k)); return out; }
+  /* a short warning for an inning that has a position twice or a position nobody plays, or "" (an inning with nobody placed yet has none) */
+  function defWarn(inn) {
+    if (!inn || inn.empty) return "";
+    var bits = inn.dupes.map(function (p) { return inn.by[p].length + " at " + p; });
+    if (inn.missing.length) bits.push("no " + inn.missing.join(", "));
+    return bits.join(" · ");
+  }
+  /* "Copy inning 1 to all": every player plays their inning-1 spot in every inning of the game */
+  function defCopyFirst(def, ids) {
+    (ids || []).forEach(function (id) { var p = defGet(def, id, 0); for (var k = 1; k < def.n; k++) defSet(def, id, k, p); });
+    return def;
+  }
+  /* does any inning after the first already have something in it (so a copy would write over it)? */
+  function defLaterUsed(def, ids) { return (ids || []).some(function (id) { return defRow(def, id).slice(1).some(Boolean); }); }
+
+  function emptyState() { return { v: 1, roster: [], lineup: [], batter: 0, songs: [], board: defaultBoard(), announcer: factoryAnnouncer(), settings: sanitizeSettings({}), def: emptyDef() }; }
   function sanitizeState(raw) {
     var r = isObj(raw) ? raw : {}, st = emptyState();
     var seenS = Object.create(null), seenP = Object.create(null), seenV = Object.create(null), seenT = Object.create(null);
@@ -784,6 +852,7 @@
     st.announcer = isObj(r.announcer) ? sanitizePolish(r.announcer) : factoryAnnouncer();
     st.settings = sanitizeSettings(r.settings);
     st.board = sanitizeBoard(r.board, st.songs);
+    st.def = sanitizeDef(r.def, ids);
     return st;
   }
   /* every saved audio file the state points at, as keys like "s:abc123" and "v:def456" */
@@ -1035,7 +1104,9 @@
     sanitizeSettings: sanitizeSettings, sanitizeSong: sanitizeSong, sanitizeVoice: sanitizeVoice, sanitizeState: sanitizeState, emptyState: emptyState,
     defaultBoard: defaultBoard, sanitizeBoard: sanitizeBoard, tileRegion: tileRegion, queueAdd: queueAdd, queueDrop: queueDrop,
     audioKeys: audioKeys, counts: counts, makeBackup: makeBackup, validateBackup: validateBackup, sampleState: sampleState,
-    voiceScore: voiceScore, pickVoice: pickVoice, normName: normName, songOwner: songOwner, introGuess: introGuess, clipOwner: clipOwner, activeVoice: activeVoice, saysName: saysName, fillLineup: fillLineup, loudStart: loudStart, clubRows: clubRows, applyRows: applyRows
+    voiceScore: voiceScore, pickVoice: pickVoice, normName: normName, songOwner: songOwner, introGuess: introGuess, clipOwner: clipOwner, activeVoice: activeVoice, saysName: saysName, fillLineup: fillLineup, loudStart: loudStart, clubRows: clubRows, applyRows: applyRows,
+    DEF_POS: DEF_POS, DEF_BENCH: DEF_BENCH, defPos: defPos, emptyDef: emptyDef, sanitizeDef: sanitizeDef, defGet: defGet, defSet: defSet, defRow: defRow, defUsed: defUsed,
+    defInning: defInning, defCheck: defCheck, defWarn: defWarn, defCopyFirst: defCopyFirst, defLaterUsed: defLaterUsed
   };
   root.WalkupCore = api;
   if (typeof module !== "undefined" && module.exports) module.exports = api;
