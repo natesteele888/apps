@@ -242,6 +242,21 @@ const pl = (ev, id) => Object.assign({ id }, ev.p[id]);
     eq(C.nextHole(b9, b9.p.aaaaaa1, 1, 1).n, 11);
   });
 
+  await test('core: the card as text for Messages', () => {
+    const ev = C.newEvent({ name: 'T', course: C.sampleCourse(), now: NOW });
+    ev.p.aaaaaa1 = C.newPlayer(ev, { name: 'Al Ace', tee: ev.course.tees[0].id, now: NOW });
+    ev.p.bbbbbb1 = C.newPlayer(ev, { name: 'Bo Bogey', tee: ev.course.tees[0].id, now: NOW + 1 });
+    for (let h = 1; h <= 18; h++) ev.p.aaaaaa1.s['1_' + h] = ev.course.holes[h - 1].par;
+    ev.p.bbbbbb1.s['1_1'] = 7;
+    const t = C.cardText(ev, C.players(ev), 1, 'Nov 18').split('\n');
+    eq(t[0], ev.course.name + ' · Nov 18 (par ' + C.coursePar(ev.course) + ')');
+    eq(t[2], 'Al Ace: ' + C.coursePar(ev.course) + ' (E)'); ok(/^Out: (\d+ ){8}\d+ = \d+$/.test(t[3]), t[3]); ok(/^In: /.test(t[4]));
+    eq(t[6], 'Bo Bogey: 7 (+' + (7 - ev.course.holes[0].par) + ') thru 1'); eq(t[7], 'Out: 7 - - - - - - - - = 7'); eq(t[8], '');
+    const b9 = C.newEvent({ name: 'B', course: C.nineOf(C.monoosnockCourse(), 'back'), now: NOW });
+    b9.p.aaaaaa1 = C.newPlayer(b9, { name: 'Al Ace', tee: b9.course.tees[0].id, now: NOW }); b9.p.aaaaaa1.s['1_1'] = 4;
+    ok(C.cardText(b9, C.players(b9), 1).indexOf('Holes 10-18: 4 ') >= 0);
+  });
+
   await test('core: hole art that comes with the app, by course, and the same pictures for a front or back nine', () => {
     const c = C.monoosnockCourse();
     eq(C.holeArt(c, 1), null, 'no pictures listed yet');
