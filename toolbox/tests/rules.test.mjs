@@ -521,7 +521,7 @@ test('watch link: anyone with the link code can create, read and update it, sign
   await assertSucceeds(setDoc(doc(anon(), 'fw_links/' + WL_KEY), { gr: '{"v":2}', updated: wlNow() }));
   await assertSucceeds(getDoc(doc(anon(), 'fw_links/' + WL_KEY)));
   await assertSucceeds(updateDoc(doc(anon(), 'fw_links/' + WL_KEY), { w: '{"v":1,"e":[]}' }));
-  await assertSucceeds(updateDoc(doc(stranger(), 'fw_links/' + WL_KEY), { cc: '{}', r20: '{}', pp: '{}', gp: '{}', updated: wlNow() }));
+  await assertSucceeds(updateDoc(doc(stranger(), 'fw_links/' + WL_KEY), { cc: '{}', r20: '{}', pp: '{}', gp: '{}', sc: '{"v":1,"ev":[]}', updated: wlNow() }));
 });
 
 test('watch link: no listing, no deleting, the code must be 26 letters and digits 2-7, and only the known text fields', async () => {

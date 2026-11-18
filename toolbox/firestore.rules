@@ -288,10 +288,11 @@ service cloud.firestore {
       allow get: if key.matches('[a-z2-7]{26}');
       allow list, delete: if false;
       allow create, update: if key.matches('[a-z2-7]{26}')
-        && request.resource.data.keys().hasOnly(['gr', 'cc', 'r20', 'pp', 'gp', 'w', 'updated'])
+        && request.resource.data.keys().hasOnly(['gr', 'cc', 'r20', 'pp', 'gp', 'sc', 'w', 'updated'])
         && fwText(request.resource.data, 'gr', 400000) && fwText(request.resource.data, 'w', 200000)
         && fwText(request.resource.data, 'cc', 20000) && fwText(request.resource.data, 'r20', 20000)
         && fwText(request.resource.data, 'pp', 40000) && fwText(request.resource.data, 'gp', 20000)
+        && fwText(request.resource.data, 'sc', 40000)
         && (!('updated' in request.resource.data) || request.resource.data.updated is timestamp);
     }
     // Linking: the watch shows an 8-letter code; the phone leaves its link code under it for a minute or two, the watch
