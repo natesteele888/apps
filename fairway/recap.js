@@ -32,12 +32,14 @@
   };
 
   R.seasonHtml = function () {
-    const u = U(), esc = u.esc, year = new Date().getFullYear(), s = C.seasonRace(FW.history(), year), me = u.me();
+    // rounds saved before quick rounds were marked are found by the phone's own list of its rounds
+    const hist = FW.history().map(h => (!h.q && (FW.mineGet(h.code) || {}).round ? Object.assign({}, h, { q: true }) : h));
+    const u = U(), esc = u.esc, year = new Date().getFullYear(), s = C.seasonRace(hist, year), me = u.me();
     if (!s.list.length) return `<h2 class="sec">Season race <small>${year}</small></h2><p class="msg">Finish a round and the year's points race starts here.</p>`;
     const mine = me ? s.list.find(x => C.sameName(x.name, me.n)) : null, top = s.list.slice(0, 10);
     if (mine && top.indexOf(mine) < 0) top.push(mine);
     return `<h2 class="sec">Season race <small>${year} · ${s.events} tournament${s.events === 1 ? "" : "s"}</small></h2>
-      <ol class="season">${top.map(x => `<li class="${x === mine ? "mine" : ""}"><span class="pos">${x.place}</span><span class="nm"><b>${esc(x.name)}${x === mine ? " · you" : ""}</b><small>${x.wins ? x.wins + (x.wins === 1 ? " win · " : " wins · ") : ""}${x.events} event${x.events === 1 ? "" : "s"}</small></span><b class="pts">${x.pts.toLocaleString()}</b></li>`).join("")}</ol>
-      <p class="msg small">Points for where you finish each tournament (500 for a win), plus 100 for a winning team, 50 for the day's best side-game haul and 25 for a bingo. From the tournaments on this phone.</p>`;
+      <ol class="season">${top.map(x => `<li class="${x === mine ? "mine" : ""}"><span class="pos">${x.place}</span><span class="nm"><b>${esc(x.name)}${x === mine ? " · you" : ""}</b><small>${x.wins ? x.wins + (x.wins === 1 ? " win · " : " wins · ") : ""}${x.events ? x.events + " event" + (x.events === 1 ? "" : "s") + " · " : ""}${x.rounds} round${x.rounds === 1 ? "" : "s"}${x.avg != null ? ", averages " + esc(C.fmtPar(Math.round(x.avg))) : ""}${x.best ? " · best " + x.best.strokes : ""}</small></span><b class="pts">${x.pts.toLocaleString()}</b></li>`).join("")}</ol>
+      <p class="msg small">Points for where you finish each tournament (500 for a win), plus 100 for a winning team, 50 for the day's best side-game haul and 25 for a bingo. Quick rounds add to your rounds, average (to par for 18 holes) and best 18, not your points. From the rounds on this phone.</p>`;
   };
 })();

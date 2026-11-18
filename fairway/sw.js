@@ -1,6 +1,6 @@
 // Fairway: network first, so updates show up right away; the last saved copy when there's no signal on the course.
 // Caches the app and the Firebase code it needs to start. Scores stay in Firestore's own copy on the phone, never here.
-const CACHE = "fairway-v21";
+const CACHE = "fairway-v22";
 const SHELL = ["./", "manifest.json", "fairway.css", "core.js", "qr.js", "store.js", "sound.js", "teams.js", "games.js", "review.js", "jack.js", "recap.js", "bag.js", "map.js", "where.js", "holemap.js", "caddie.js", "app.js", "watch.js", "../watchlink.js", "/apps/icons/fairway-192.png", "/apps/icons/fairway-512.png", "../install.js", "../health.js"];
 // Same version as store.js loads: change them together.
 const FIREBASE = ["app", "firestore"].map(n => `https://www.gstatic.com/firebasejs/11.6.0/firebase-${n}-compat.js`);
