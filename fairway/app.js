@@ -149,15 +149,16 @@
       <div class="crest" aria-hidden="true"><svg viewBox="0 0 64 64"><circle cx="32" cy="32" r="30" fill="none" stroke="currentColor" stroke-width="2"/><path d="M26 48V14l16 7-16 7" fill="currentColor"/><ellipse cx="32" cy="48" rx="13" ry="3" fill="none" stroke="currentColor" stroke-width="2"/></svg></div>
       <h1>Fairway</h1><p class="tag">Live golf tournament scoring</p></header>
       <section class="pad">
-        <button type="button" class="btn primary block" id="rally">Get a tournament going</button>
-        <button type="button" class="btn block" id="new">Start one now</button>
+        <button type="button" class="btn primary block" id="round">Start a round</button>
+        <button type="button" class="btn block" id="rally">Get a tournament going</button>
+        <button type="button" class="btn block" id="new">Start a tournament now</button>
         <button type="button" class="btn block" id="join">Join a tournament</button>
         <button type="button" class="btn ghost block" id="demo">See the demo board</button>
       </section>
       ${mine.length ? `<section class="pad"><h2 class="sec">Your tournaments</h2><ul class="list">${mine.map(m => {
         const ev = FW.cacheGet(m.code);
         const sub = ev ? `${esc(ev.course.name)} · ${C.players(ev).length} players` : "Tap to open";
-        return `<li><button type="button" class="row" data-open="${esc(m.code)}"><span><b>${esc((ev && ev.name) || m.name || "Tournament")}</b><small>${sub}</small></span><span class="chips">${m.demo ? '<i class="chip">Demo</i>' : ""}${m.org ? '<i class="chip">Yours</i>' : ""}${m.local && !m.demo ? '<i class="chip">This phone</i>' : ""}</span></button></li>`;
+        return `<li><button type="button" class="row" data-open="${esc(m.code)}"><span><b>${esc((ev && ev.name) || m.name || "Tournament")}</b><small>${sub}</small></span><span class="chips">${m.demo ? '<i class="chip">Demo</i>' : ""}${m.round ? '<i class="chip">Round</i>' : m.org ? '<i class="chip">Yours</i>' : ""}${m.local && !m.demo ? '<i class="chip">This phone</i>' : ""}</span></button></li>`;
       }).join("")}</ul></section>` : ""}
       <section class="pad"><h2 class="sec">Courses</h2><ul class="list">
         ${C.readyCourses().filter(c => !courses.some(x => x.id === c.id)).map(c => `<li><button type="button" class="row" data-course="${esc(c.id)}"><span><b>${esc(c.name)}</b><small>${c.holes.length} holes · ${C.parText(c)} · ${c.tees.map(t => esc(t.name)).join(", ")}</small></span><i class="chip">Ready</i></button></li>`).join("")}
@@ -165,12 +166,13 @@
         ${courses.map(c => `<li><button type="button" class="row" data-course="${esc(c.id)}"><span><b>${esc(c.name)}</b><small>${c.holes.length} holes · ${C.parText(c)} · ${c.tees.length} tee${c.tees.length > 1 ? "s" : ""}</small></span></button></li>`).join("")}
       </ul><button type="button" class="btn ghost block" id="build">Build a course</button></section>
       <footer class="foot"><button type="button" class="link" onclick="window.nateHealth&&nateHealth.report()">Something wrong?</button><small>${esc(C.VERSION)}</small></footer>`;
+    $("#round", v).onclick = () => go("round");
     $("#new", v).onclick = () => go("new", { newMode: "now" });
     $("#rally", v).onclick = () => go("new", { newMode: "rally" });
     $("#join", v).onclick = joinSheet;
     $("#demo", v).onclick = openDemo;
     $("#build", v).onclick = () => editCourse(null);
-    $$("[data-open]", v).forEach(b => b.onclick = () => { openEvent(b.dataset.open); go("event", { tab: "board" }); });
+    $$("[data-open]", v).forEach(b => b.onclick = () => { const m = FW.mineGet(b.dataset.open); openEvent(b.dataset.open); go("event", { tab: m && m.round ? "score" : "board" }); });
     $$("[data-course]", v).forEach(b => b.onclick = () => editCourse(b.dataset.course === "sample" ? "sample" : b.dataset.course));
     wireSound();
   }
@@ -304,6 +306,59 @@
   }
 
   /* ======================================================================
+     A ROUND: pick a course and tees, add who you're playing with, keep score. No QR code, no setup.
+     It's a one-round tournament kept on this phone, so the Score screen, Jack, the hole map and the
+     scorecards all work the same. Everyone scores on this one phone.
+     ====================================================================== */
+  const MAX_PARTNERS = 3;
+  function viewRound(v) {
+    const saved = FW.courses(), courses = C.readyCourses().filter(c => !saved.some(x => x.id === c.id)).concat(saved, [C.sampleCourse()]);
+    const pick = S.roundCourse && courses.some(c => c.id === S.roundCourse) ? S.roundCourse : courses[0].id;
+    const course = courses.find(c => c.id === pick), you = S.roundMe || {}, last = you.tee || FW.LS.get("fw:tee", null);
+    const myTee = course.tees.some(t => t.id === last) ? last : course.tees[Math.min(1, course.tees.length - 1)].id;
+    const pals = S.roundPals || (S.roundPals = []);
+    const teeOpts = sel => course.tees.map(t => `<option value="${esc(t.id)}" ${t.id === sel ? "selected" : ""}>${esc(t.name)}</option>`).join("");
+    const hcNow = you.hc != null ? you.hc : FW.LS.get("fw:hc", null);
+    v.innerHTML = `${topbar("Start a round", soundBtn())}<form class="pad" id="rf" autocomplete="off">
+      <fieldset class="fld"><legend>Course</legend><div class="opts">${courses.map(c => `<label class="opt"><input type="radio" name="rcourse" value="${esc(c.id)}" ${c.id === pick ? "checked" : ""}><span><b>${esc(c.name)}</b><small>${c.holes.length} holes · ${C.parText(c)}</small></span></label>`).join("")}</div>
+        <button type="button" class="btn ghost small" id="rb">Build a new course</button></fieldset>
+      <fieldset class="fld"><legend>You</legend>
+        <label class="fld"><span>Your name</span><input id="rme" maxlength="${C.NAME_MAX}" value="${esc(you.n != null ? you.n : FW.LS.get("fw:name", ""))}" placeholder="Your name"></label>
+        <div class="tees">${course.tees.map(t => `<label class="tee"><input type="radio" name="rtee" value="${esc(t.id)}" ${t.id === myTee ? "checked" : ""}><span>${teeLabel(course, t)}</span></label>`).join("")}</div>
+        <label class="fld"><span>Handicap index (optional, for net scores)</span><input id="rhc" inputmode="decimal" maxlength="5" value="${hcNow == null ? "" : esc(typeof hcNow === "string" ? hcNow : hcNow < 0 ? "+" + Math.abs(hcNow) : String(hcNow))}"></label></fieldset>
+      <fieldset class="fld"><legend>Playing with (optional)</legend>
+        <div id="rpals">${pals.map((x, i) => `<div class="palrow" data-i="${i}"><input aria-label="Partner ${i + 1} name" class="pname" maxlength="${C.NAME_MAX}" value="${esc(x.n || "")}" placeholder="Name"><select aria-label="Partner ${i + 1} tees" class="ptee">${teeOpts(x.tee && course.tees.some(t => t.id === x.tee) ? x.tee : myTee)}</select><button type="button" class="x" data-rmpal="${i}" aria-label="Remove partner ${i + 1}">×</button></div>`).join("")}</div>
+        ${pals.length < MAX_PARTNERS ? `<button type="button" class="btn ghost small" id="addpal">Add someone</button>` : ""}
+        <p class="msg small">You keep everyone's score on this phone. For a group on several phones with a QR code, start a tournament instead.</p></fieldset>
+      <button type="submit" class="btn primary block">Tee off</button><p class="err" id="rerr" role="alert"></p></form>`;
+    wireTop(v);
+    const read = () => { S.roundMe = { n: $("#rme", v).value, tee: ($("input[name=rtee]:checked", v) || {}).value, hc: $("#rhc", v).value }; $$(".palrow", v).forEach(r => { const x = pals[+r.dataset.i]; x.n = $(".pname", r).value; x.tee = $(".ptee", r).value; }); };
+    $$("input[name=rcourse]", v).forEach(r => r.onchange = () => { read(); S.roundCourse = r.value; render(); });
+    $("#rb", v).onclick = () => { read(); editCourse(null, "round"); };
+    const add = $("#addpal", v); if (add) add.onclick = () => { read(); pals.push({ n: "", tee: myTee }); render(); const ins = $$(".pname", $("#view") || document); if (ins.length) ins[ins.length - 1].focus(); };
+    $$("[data-rmpal]", v).forEach(b => b.onclick = () => { read(); pals.splice(+b.dataset.rmpal, 1); render(); });
+    $("#rf", v).onsubmit = async e => {
+      e.preventDefault(); read();
+      const btn = $("button[type=submit]", v); btn.disabled = true;
+      const c = courses.find(x => x.id === ($("input[name=rcourse]:checked", v) || {}).value) || courses[0];
+      const name = C.cleanName($("#rme", v).value) || "Me", tee = ($("input[name=rtee]:checked", v) || {}).value, hc = C.cleanHc($("#rhc", v).value);
+      const day = new Date().toLocaleDateString(undefined, { month: "short", day: "numeric" });
+      const ev = C.newEvent({ name: (c.name + " · " + day).slice(0, C.EVENT_MAX), course: c, rounds: 1 });
+      ev.fmt = C.cleanFmt({ kind: "solo", nt: 2 });
+      const now = Date.now(), pid = C.newPid();
+      ev.p[pid] = C.newPlayer(ev, { name, tee, hc, group: 1, start: 1, now });
+      pals.filter(x => C.cleanName(x.n)).forEach((x, i) => { ev.p[C.newPid()] = C.newPlayer(ev, { name: x.n, tee: x.tee, group: 1, start: 1, now: now + i + 1 }); });
+      const code = C.newCode();
+      try { await FW.local.create(code, ev); } catch (err) { btn.disabled = false; $("#rerr", v).textContent = "This phone's storage is full, so the round couldn't be saved."; return; }
+      if ($("#rme", v).value.trim()) FW.LS.set("fw:name", name);
+      FW.LS.set("fw:tee", ev.p[pid].tee); FW.LS.set("fw:hc", hc);
+      FW.mineSet(code, { name: ev.name, local: true, org: true, round: true, me: pid });
+      FW.cacheSet(code, ev); S.roundPals = null; S.roundMe = null;
+      openEvent(code); go("event", { tab: "score" }, true);
+    };
+  }
+
+  /* ======================================================================
      COURSE BUILDER
      ====================================================================== */
   function editCourse(id, from) {
@@ -352,7 +407,7 @@
       const clean = C.cleanCourse(Object.assign({}, c, { id: c.id || "c" + C.newPid() }));
       FW.courseSave(clean); toast("Saved " + clean.name);
       S.newCourse = clean.id; S.draft = null;
-      if (S.draftFrom === "new") { history.back(); } else go("home", {}, true);
+      if (S.draftFrom === "new") { history.back(); } else if (S.draftFrom === "round") { S.roundCourse = clean.id; history.back(); } else go("home", {}, true);
     };
   }
 
@@ -370,7 +425,9 @@
     $("#back", v).onclick = () => go("home", {}, false);
     const body = $("#tab", v);
     const going = !!(ev.rally && ev.rally.on);
-    const list = going ? [["going", "Going"], ["chat", "Chat"], ["more", "Share"]] : [["board", "Board"], ["score", "Score"], ["teams", "Teams"], ["games", "Games"], ["chat", "Chat"], ["more", "Share"]];
+    const quick = !!((FW.mineGet(S.code) || {}).round);
+    const list = quick ? [["score", "Score"], ["board", "Card"], ["games", "Games"]]
+      : going ? [["going", "Going"], ["chat", "Chat"], ["more", "Share"]] : [["board", "Board"], ["score", "Score"], ["teams", "Teams"], ["games", "Games"], ["chat", "Chat"], ["more", "Share"]];
     if (S.tab === "field" || S.tab === "course") { S.boardMode = S.tab; S.tab = "board"; }
     if (!list.some(x => x[0] === S.tab)) S.tab = list[0][0];
     ({ board: tabBoard, score: tabScore, teams: FW.phase1.tabTeams, games: FW.games.tab, chat: FW.phase1.tabChat, going: FW.phase1.tabGoing, more: tabMore }[S.tab] || tabBoard)(body, ev);
@@ -843,7 +900,7 @@
     if (S.view !== "event") $("#tabs").hidden = true;
     document.body.dataset.view = S.view;
     if (FW.sound) FW.sound.scene(S.view === "event" ? (S.tab === "score" && S.ev ? "course" : "quiet") : "menu");
-    ({ home: viewHome, join: viewJoin, new: viewNew, course: viewCourse, event: viewEvent }[S.view] || viewHome)(v);
+    ({ home: viewHome, join: viewJoin, new: viewNew, round: viewRound, course: viewCourse, event: viewEvent }[S.view] || viewHome)(v);
     $$("[data-keep]", v).forEach(el => { const k = keep[el.dataset.keep]; if (k) { el.scrollLeft = k[0]; el.scrollTop = k[1]; } });
   }
   FW.debug = { S, render };
