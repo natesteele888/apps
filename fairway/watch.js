@@ -23,7 +23,7 @@
     const r = Math.min(ev.cur || 1, ev.rounds || 1), c = ev.course, ck = ckOf(c), tee = C.teeOf(ev, mine);
     const notes = (FW.LS.get(NK, {}) || {})[ck] || {};
     const h = c.holes.map((x, i) => {
-      const n = i + 1, m = FW.LS.get(mapKey(ck, n), null) || {}, o = { p: x.par, y: C.yards(c, n, tee.id) || 0 };
+      const n = i + 1, m = FW.LS.get(mapKey(ck, n), null) || {}, o = { p: C.parOf(c, n, tee.id), y: C.yards(c, n, tee.id) || 0 };
       [["f", "gf"], ["c", "gc"], ["b", "gb"]].forEach(([k, g]) => { const s = pt(m[g]); if (s) o[k] = s; });
       const nl = (Array.isArray(notes[n]) ? notes[n] : []).filter(t => typeof t === "string" && t).slice(0, 5);
       if (nl.length) o.n = nl;

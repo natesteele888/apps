@@ -85,7 +85,7 @@
         <div class="pick">${tees.map(t => pickRow(`data-tee="${esc(t.id)}"`, `${u.teeDot(t)}${esc(t.name)}`, C.teeYards(course, t.id) ? C.teeYards(course, t.id).toLocaleString() + " yds" : "", false, "")).join("")}</div>
         <button type="button" class="btn ghost block" id="jback">Not ${esc(j.name.split(" ")[0])}? Go back</button>`;
     }
-    v.innerHTML = `${u.topbar("Join")}<section class="pad"><div class="evhead"><h1>${esc(ev.name)}</h1><p>${esc(course.name)} · par ${C.coursePar(course)}${ev.tt && ev.tt.date ? " · " + esc(C.fmtDate(ev.tt.date)) : ""}</p></div>${body}</section>`;
+    v.innerHTML = `${u.topbar("Join")}<section class="pad"><div class="evhead"><h1>${esc(ev.name)}</h1><p>${esc(course.name)} · ${C.parText(course)}${ev.tt && ev.tt.date ? " · " + esc(C.fmtDate(ev.tt.date)) : ""}</p></div>${body}</section>`;
     u.wireTop(v);
     const step2 = o => { u.S.joinStep = Object.assign({ step: 2 }, o); u.render(); };
     $$("[data-pid]", v).forEach(b => b.onclick = () => step2({ pid: b.dataset.pid, name: ev.p[b.dataset.pid].n }));

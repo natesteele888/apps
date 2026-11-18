@@ -44,6 +44,40 @@ const pl = (ev, id) => Object.assign({ id }, ev.p[id]);
     deq(ev.ctph, []); deq(ev.ctp, {});
   });
 
+  await test('core: Monoosnock matches the club scorecard (nine played twice, ladies par 72)', () => {
+    const c = C.monoosnockCourse();
+    eq(c.holes.length, 18); deq(c.tees.map(t => t.name), ['White/Blue', 'Green', 'Ladies']);
+    eq(C.coursePar(c), 70); eq(C.coursePar(c, 'whiteblue'), 70); eq(C.coursePar(c, 'green'), 70); eq(C.coursePar(c, 'ladies'), 72);
+    eq(C.parText(c), 'par 70 (Ladies 72)');
+    // hole 2 is the par 5 the mockup drew: 491 White/Blue, 435 Green and Ladies
+    eq(c.holes[1].par, 5); eq(C.yards(c, 2, 'whiteblue'), 491); eq(C.yards(c, 2, 'green'), 435); eq(C.yards(c, 2, 'ladies'), 435);
+    eq(C.parOf(c, 5, 'green'), 3); eq(C.parOf(c, 5, 'ladies'), 4); eq(C.yards(c, 5, 'ladies'), 211); eq(C.parOf(c, 14, 'ladies'), 4);
+    // the card's own holes add up to 2950 a nine from White/Blue (it prints 2941), 2680 Green, 2714 Ladies
+    eq(C.teeYards(c, 'whiteblue'), 5900); eq(C.teeYards(c, 'green'), 5360); eq(C.teeYards(c, 'ladies'), 5428);
+    deq(c.holes.map(h => h.hcp).slice().sort((a, b) => a - b), Array.from({ length: 18 }, (_, i) => i + 1), 'handicaps 1 to 18 once each');
+    deq(c.holes.slice(0, 9).map(h => h.hcp), [9, 5, 3, 15, 17, 1, 7, 13, 11]);
+    deq(c.holes.slice(9).map(h => h.hcp), [10, 6, 4, 16, 18, 2, 8, 14, 12]);
+    for (let i = 0; i < 9; i++) { eq(c.holes[i + 9].par, c.holes[i].par); deq(c.holes[i + 9].y, c.holes[i].y); }
+    ok(C.readyCourses().some(x => x.id === 'monoosnock'), 'it comes with the app');
+  });
+
+  await test('core: a tee with its own par (Monoosnock ladies) scores against that par, and the course survives the trip', () => {
+    const ev = C.newEvent({ name: 'Mono', course: C.monoosnockCourse(), now: NOW });
+    eq(ev.course.ready, undefined, 'no ready flag in a tournament'); deq(Object.keys(ev.course).sort(), ['holes', 'id', 'name', 'tees']);
+    ev.p.aaaaaa1 = C.newPlayer(ev, { name: 'Gold Tees', tee: 'green', group: 1, now: NOW });
+    ev.p.bbbbbb1 = C.newPlayer(ev, { name: 'Red Tees', tee: 'ladies', group: 1, now: NOW });
+    [4, 5, 4, 3, 4].forEach((v, i) => { ev.p.aaaaaa1.s['1_' + (i + 1)] = v; ev.p.bbbbbb1.s['1_' + (i + 1)] = v; });
+    const g = C.round(ev, pl(ev, 'aaaaaa1'), 1), l = C.round(ev, pl(ev, 'bbbbbb1'), 1);
+    eq(g.toPar, 1, 'a 4 on the par 3 fifth is a bogey from the Green tees'); eq(l.toPar, 0, 'and a par from the Ladies tees');
+    eq(l.pars[4], 4); eq(g.pars[4], 3);
+    eq(C.shout(ev, 'bbbbbb1', 1, 5, 3), 'Birdie! Red Tees on 5.'); eq(C.shout(ev, 'aaaaaa1', 1, 5, 3), null);
+    eq(C.nextHole(ev, pl(ev, 'bbbbbb1'), 1, 4).par, 4); eq(C.nextHole(ev, pl(ev, 'aaaaaa1'), 1, 4).par, 3);
+    // through the database and back: cleanEvent keeps the ladies' par, and cleanCourse drops a par that matches the hole's
+    const back = C.cleanEvent(JSON.parse(JSON.stringify(ev)));
+    deq(back.course.holes[4].tp, { ladies: 4 }); eq(back.course.holes[0].tp, undefined);
+    eq(C.cleanCourse({ tees: [{ id: 'w' }], holes: [{ par: 4, tp: { w: 4, zz: 5 } }] }).holes[0].tp, undefined);
+  });
+
   await test('core: to-par words and colors match the Masters board (red under, green over)', () => {
     eq(C.fmtPar(0), 'E'); eq(C.fmtPar(-3), '-3'); eq(C.fmtPar(2), '+2');
     eq(C.tone(-1), 'under'); eq(C.tone(1), 'over'); eq(C.tone(0), 'even');
