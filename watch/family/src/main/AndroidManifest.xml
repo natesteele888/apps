@@ -3,11 +3,14 @@
     <uses-feature android:name="android.hardware.type.watch" />
     <uses-permission android:name="android.permission.VIBRATE" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <!-- Practice Clock buzzes at every block change with the screen off: an exact alarm for each change -->
+    <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" android:maxSdkVersion="32" />
     <!-- everything goes through the watch link on the internet (through the phone on watches without Wi-Fi or LTE) -->
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 
-    <!-- One install, five apps in the watch's app list. Each works without the others; one link to the phone covers them all. -->
+    <!-- One install, several apps in the watch's app list. Each works without the others; one link to the phone covers them all. -->
     <application
         android:allowBackup="false"
         android:icon="@mipmap/ic_getready"
@@ -37,6 +40,12 @@
             android:label="@string/read_name" android:launchMode="singleTask" android:taskAffinity="com.steele.family.read">
             <intent-filter><action android:name="android.intent.action.MAIN" /><category android:name="android.intent.category.LAUNCHER" /></intent-filter>
         </activity>
+        <activity android:name=".PracticeActivity" android:exported="true" android:icon="@mipmap/ic_practice" android:roundIcon="@mipmap/ic_practice"
+            android:label="@string/practice_name" android:launchMode="singleTask" android:taskAffinity="com.steele.family.practice">
+            <intent-filter><action android:name="android.intent.action.MAIN" /><category android:name="android.intent.category.LAUNCHER" /></intent-filter>
+        </activity>
+        <!-- wakes at each block change of a running practice to buzz (only this app's own alarms reach it) -->
+        <receiver android:name=".PracticeBuzzReceiver" android:exported="false" />
         <activity android:name=".ScheduleActivity" android:exported="true" android:icon="@mipmap/ic_schedule" android:roundIcon="@mipmap/ic_schedule"
             android:label="@string/schedule_name" android:launchMode="singleTask" android:taskAffinity="com.steele.family.schedule">
             <intent-filter><action android:name="android.intent.action.MAIN" /><category android:name="android.intent.category.LAUNCHER" /></intent-filter>
