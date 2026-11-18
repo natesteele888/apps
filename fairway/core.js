@@ -792,6 +792,77 @@
     return s;
   }
 
+  /* ---------- round recap: made from the cards once every card in a round is in ---------- */
+  const ordinal = n => n + (n % 100 >= 11 && n % 100 <= 13 ? "th" : ["th", "st", "nd", "rd"][n % 10] || "th");
+  function roundDone(ev, r) { const ps = players(ev); return ps.length >= 2 && ps.every(p => round(ev, p, r).done); }
+  function recap(ev, r) {
+    if (!roundDone(ev, r)) return null;
+    const ps = players(ev), rs = ps.map(p => ({ p, x: round(ev, p, r) })), items = [], holes = ev.course.holes;
+    const last = r === ev.rounds;
+    // champions: the winning team, or the leader (overall on the last day, else the day's low round)
+    let champ = null;
+    const tb = teamBoard(ev).filter(t => t.holes);
+    if (tb.length >= 2 && last) champ = { name: tb[0].pos.charAt(0) === "T" ? "A tie at the top" : tb[0].name, line: tb[0].pos.charAt(0) === "T" ? tb.filter(t => t.toPar === tb[0].toPar).map(t => t.name).join(" and ") : `${fmtPar(tb[0].toPar)} as a team${tb[1] ? `, won by ${tb[1].toPar - tb[0].toPar}` : ""}` };
+    else {
+      const st = last ? standings(ev).filter(x => x.holes) : rs.slice().sort((a, b) => a.x.toPar - b.x.toPar).map(o => ({ name: o.p.n, toPar: o.x.toPar }));
+      const tied = st.filter(x => x.toPar === st[0].toPar);
+      champ = tied.length > 1 ? { name: "A tie at the top", line: tied.map(x => x.name).join(" and ") + " at " + fmtPar(st[0].toPar) } : { name: st[0].name, line: `${fmtPar(st[0].toPar)}${st[1] ? `, ${last ? "won by" : "by"} ${st[1].toPar - st[0].toPar}` : ""}` };
+    }
+    champ.label = champ.name === "A tie at the top" ? "Tied at the top" : last ? "Champion" : "Leading the day";
+    const low = rs.slice().sort((a, b) => a.x.strokes - b.x.strokes)[0];
+    items.push({ k: "Low round", t: `${low.p.n}, ${low.x.strokes} (${fmtPar(low.x.toPar)})` });
+    const birdies = rs.map(o => ({ o, n: o.x.scores.filter((v, i) => v != null && v < holes[i].par).length })).sort((a, b) => b.n - a.n);
+    if (birdies[0].n) items.push({ k: "Most birdies", t: `${birdies[0].o.p.n}, ${birdies[0].n}` });
+    let worst = null;
+    rs.forEach(o => o.x.scores.forEach((v, i) => { if (v != null && (!worst || v - holes[i].par > worst.d)) worst = { p: o.p, v, h: i + 1, d: v - holes[i].par }; }));
+    if (worst && worst.d >= 2) items.push({ k: "Worst hole", t: `${worst.p.n}'s ${worst.v} on the par ${holes[worst.h - 1].par} ${ordinal(worst.h)}` });
+    // on the move: biggest climb from halfway (in each golfer's own order) to the finish
+    const n = holeCount(ev);
+    if (n === 18 && ps.length >= 3) {
+      const half = rs.map(o => ({ id: o.p.id, v: o.x.order.slice(0, 9).reduce((a, h) => a + o.x.scores[h - 1] - holes[h - 1].par, 0) }));
+      const place = (list, id) => { const me = list.find(x => x.id === id).v; return list.filter(x => x.v < me).length + 1; };
+      const fin = rs.map(o => ({ id: o.p.id, v: o.x.toPar }));
+      const moves = rs.map(o => ({ p: o.p, up: place(half, o.p.id) - place(fin, o.p.id) })).sort((a, b) => b.up - a.up);
+      if (moves[0].up >= 2) items.push({ k: "On the move", t: `${moves[0].p.n}, up ${moves[0].up} spots on the back nine` });
+    }
+    // side games and the rest of the fun
+    const sg = [];
+    if (ev.bets) {
+      const t = betTally(ev, r), top = Object.keys(t.bal).sort((a, b) => t.bal[b] - t.bal[a])[0];
+      if (top && t.bal[top] > 0) sg.push(`${ev.p[top].n} up ${money(t.bal[top])}`);
+    }
+    ctpBoard(ev, r).forEach(x => { if (x.best) sg.push(`CTP ${x.h}: ${x.best.name}, ${fmtFeet(x.best.d)}`); });
+    const bingo = ps.filter(p => bingoState(ev, p.id, r).line).map(p => p.n);
+    if (bingo.length) sg.push("Bingo: " + bingo.join(", "));
+    if (sg.length) items.push({ k: "Side games", t: sg.join(". ") });
+    const title = (ev.rounds > 1 ? `Round ${r} recap` : "Round recap");
+    let text = `${title}, ${ev.name}. ${champ.name === "A tie at the top" ? "A tie at the top: " + champ.line : champ.label + ": " + champ.name + ", " + champ.line}. ` + items.map(i => `${i.k}: ${i.t}.`).join(" ");
+    if (text.length > 480) text = text.slice(0, 477) + "...";
+    return { title, champ, items, text };
+  }
+
+  /* ---------- season race: points from every finished tournament this phone has followed this year ---------- */
+  const SEASON_PTS = [500, 300, 190, 135, 110, 100, 90, 85, 80, 75, 70, 65, 60, 55, 50];
+  function seasonRace(hist, year) {
+    const rows = (Array.isArray(hist) ? hist : []).filter(h => h && typeof h.name === "string" && typeof h.code === "string" && Number.isFinite(h.toPar) && new Date(h.date || 0).getUTCFullYear() === year);
+    const events = {}; rows.forEach(h => { (events[h.code] = events[h.code] || []).push(h); });
+    const table = {};
+    Object.keys(events).forEach(code => {
+      const by = {}; events[code].forEach(h => { const k = cleanName(h.name).toLowerCase(); const o = by[k] = by[k] || { name: cleanName(h.name), toPar: 0, rounds: 0, tw: false, bonus: 0 }; o.toPar += h.toPar; o.rounds++; if (h.tw) o.tw = true; o.bonus += (h.sg ? 50 : 0) + (h.bg ? 25 : 0); });
+      const list = Object.keys(by).map(k => Object.assign({ k }, by[k])), most = Math.max.apply(null, list.map(x => x.rounds));
+      const full = list.filter(x => x.rounds === most).sort((a, b) => a.toPar - b.toPar);
+      list.forEach(x => {
+        const place = x.rounds === most ? full.filter(y => y.toPar < x.toPar).length + 1 : null;
+        const pts = (place ? SEASON_PTS[place - 1] || 40 : 25) + (x.tw ? 100 : 0) + x.bonus;
+        const t = table[x.k] = table[x.k] || { name: x.name, pts: 0, events: 0, wins: 0 };
+        t.pts += pts; t.events++; if (place === 1) t.wins++;
+      });
+    });
+    const out = Object.keys(table).map(k => table[k]).sort((a, b) => b.pts - a.pts || b.wins - a.wins || a.name.localeCompare(b.name));
+    out.forEach((x, i) => { x.place = out.findIndex(y => y.pts === x.pts) + 1; });
+    return { year, events: Object.keys(events).length, list: out };
+  }
+
   /* ---------- changes: the same dotted paths the shared database takes ---------- */
   // patch keys look like "p.abc123.s.1_7" or "name"; a value of DELETE removes the field.
   const DELETE = { __delete: true };
@@ -866,10 +937,20 @@
     return ev;
   }
   // What one finished round looks like in this phone's history (for "previous rounds" on a player card).
+  // tw: on the winning team once it's over; sg: the round's biggest side-game winner; bg: got a bingo. The season race counts them.
   function historyRows(ev, code) {
+    const tb = ev.done ? teamBoard(ev).filter(t => t.holes) : [], winTeam = tb.length >= 2 && tb[0].toPar < tb[1].toPar ? tb[0] : null, topSg = {};
+    for (let r = 1; r <= ev.rounds; r++) if (ev.bets) { const t = betTally(ev, r), top = Object.keys(t.bal).sort((a, b) => t.bal[b] - t.bal[a])[0]; if (top && t.bal[top] > 0) topSg[r] = top; }
     return players(ev).map(pl => {
       const out = [];
-      for (let r = 1; r <= ev.rounds; r++) { const x = round(ev, pl, r); if (x.done) out.push({ code, event: ev.name, course: ev.course.name, date: ev.created, r, strokes: x.strokes, toPar: x.toPar, name: pl.n }); }
+      for (let r = 1; r <= ev.rounds; r++) {
+        const x = round(ev, pl, r); if (!x.done) continue;
+        const row = { code, event: ev.name, course: ev.course.name, date: ev.created, r, strokes: x.strokes, toPar: x.toPar, name: pl.n };
+        if (winTeam && winTeam.members.some(m => m.id === pl.id)) row.tw = true;
+        if (topSg[r] === pl.id) row.sg = true;
+        if (bingoState(ev, pl.id, r).line) row.bg = true;
+        out.push(row);
+      }
       return out;
     }).reduce((a, b) => a.concat(b), []);
   }
@@ -894,5 +975,6 @@
     reminders, icsFor, directions, cleanMsg, shout, BINGO, BINGO_AUTO, bingoCard, bingoState, cleanBingo,
     BETS, BET_AMTS, cleanBets, cleanBetMarks, betOn, betAmt, betPlayers, wolfOrder, wolfOf, betTally, money,
     TEE_SHOTS, cleanHoleNote, cleanHoleNotes, holeLine, nextHole, jackNoticed,
-    JACK_LANGS, cleanJack, jackLevel, speakable, courseKey, cleanCourseNotes, holeTalk };
+    JACK_LANGS, cleanJack, jackLevel, speakable, courseKey, cleanCourseNotes, holeTalk,
+    roundDone, recap, seasonRace, SEASON_PTS };
 });

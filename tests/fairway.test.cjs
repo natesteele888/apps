@@ -237,6 +237,24 @@ const pl = (ev, id) => Object.assign({ id }, ev.p[id]);
     eq(C.courseKey({ name: 'Sample Pines' }), 'n:sample pines');
   });
 
+  await test('core recap and season race: made once every card is in, champion, low round, worst hole, then points across the year', () => {
+    const ev = twoPlayers(), pars = ev.course.holes.map(h => h.par);
+    ev.p.cccccc1 = C.newPlayer(ev, { name: 'Charlie Test', tee: 'blue', g: 1, st: 1 });
+    eq(C.recap(ev, 1), null, 'nothing until the cards are in');
+    ['aaaaaa1', 'bbbbbb1', 'cccccc1'].forEach((id, i) => pars.forEach((par, j) => { ev.p[id].s['1_' + (j + 1)] = par + (i === 1 ? 1 : 0); }));
+    ev.p.aaaaaa1.s['1_2'] -= 1; ev.p.cccccc1.s['1_6'] += 3;
+    const rc = C.recap(ev, 1);
+    eq(rc.champ.name, 'Alpha Test'); eq(rc.champ.label, 'Champion'); ok(/^-1, won by/.test(rc.champ.line), rc.champ.line);
+    eq(rc.items.find(i => i.k === 'Low round').t, 'Alpha Test, ' + (pars.reduce((a, b) => a + b, 0) - 1) + ' (-1)');
+    eq(rc.items.find(i => i.k === 'Worst hole').t, "Charlie Test's " + (pars[5] + 3) + ' on the par ' + pars[5] + ' 6th');
+    ok(rc.text.length <= 500, 'fits in one chat message'); ok(/^Round recap, Test Cup\. Champion: Alpha Test/.test(rc.text), rc.text);
+    const y = new Date(NOW).getUTCFullYear(), hist = C.historyRows(ev, 'aaaaaaaaaaaaaaaaaaaa');
+    const two = hist.concat(hist.map(h => Object.assign({}, h, { code: 'bbbbbbbbbbbbbbbbbbbb', toPar: h.name === 'Bravo Test' ? -9 : h.toPar })));
+    const sr = C.seasonRace(two, y);
+    eq(sr.events, 2); eq(sr.list[0].pts, 800, 'a win (500) and a second (300)'); eq(sr.list[0].wins, 1);
+    eq(C.seasonRace(two, y - 1).list.length, 0, 'only this year counts');
+  });
+
   /* ===================== PART 2: the page ===================== */
   let server, browser;
   try { server = await startServer('fairway'); browser = await launch(); }
@@ -387,6 +405,24 @@ const pl = (ev, id) => Object.assign({ id }, ev.p[id]);
     await page.check('#jkid'); ok(await page.locator('[data-js=lang][data-v=lot]').isDisabled(), 'a kid profile locks the other levels');
     await page.click('#jdone');
     eq(await page.evaluate(() => JSON.parse(localStorage.getItem('fw:jack')).lang), 'clean');
+    const wide = await page.evaluate(() => document.documentElement.scrollWidth); assert.ok(wide <= 390, 'no sideways scroll at 390 px, got ' + wide);
+    deq(errors, []); await ctx.close();
+  });
+
+  if (browser) await test('page: the round recap tops the board once every card is in, and the season race shows on Games', async () => {
+    const { page, errors, ctx } = await open();
+    await page.click('#new'); await page.fill('#nn', 'Recap Day'); await page.fill('#nme', 'Alpha Test');
+    await page.locator('#nf [type=submit]').click(); await page.waitForFunction(() => window.FW.debug.S.ev);
+    await page.evaluate(() => { const S = window.FW.debug.S, C = window.FairwayCore, me = window.FW.ui.me(), id = C.newPid(), patch = {};
+      patch['p.' + id] = C.newPlayer(S.ev, { name: 'Bravo Test', tee: S.ev.course.tees[0].id, g: 1, st: 1 });
+      S.ev.course.holes.forEach((h, i) => { patch['p.' + me.id + '.s.1_' + (i + 1)] = h.par; });
+      window.FW.ui.write(patch);
+      const p2 = {}; window.FW.debug.S.ev.course.holes.forEach((h, i) => { p2['p.' + id + '.s.1_' + (i + 1)] = h.par + 1; }); window.FW.ui.write(p2); });
+    await page.click('[data-tab=board]'); await page.waitForSelector('.recap');
+    ok(/Alpha Test/.test(await page.textContent('.recap .rc-champ')));
+    await page.click('#rcshare'); await page.waitForFunction(() => /Shared in the chat/.test(document.querySelector('#rcshare').textContent));
+    await page.click('[data-tab=games]'); await page.waitForSelector('.season li');
+    ok(/Alpha Test · you/.test(await page.textContent('.season')), 'you are marked in the race');
     const wide = await page.evaluate(() => document.documentElement.scrollWidth); assert.ok(wide <= 390, 'no sideways scroll at 390 px, got ' + wide);
     deq(errors, []); await ctx.close();
   });
