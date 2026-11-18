@@ -54,11 +54,11 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import java.util.Locale
 
-private val Genie = Color(0xFF6366F1)
+private val SalBlue = Color(0xFF6366F1)
 private val Tile = Color(0xFF312E81)
 
 /**
- * Spelling Genie: say "spell sorcerer" (or "hey spelling genie, how do you spell sorcerer") and the word comes up big,
+ * Sal, the spelling assistant: say "spell sorcerer" (or "hey Sal, how do you spell sorcerer") and the word comes up big,
  * one letter per tile, with "did you mean" choices when the voice may have heard it wrong. It opens straight into
  * listening, so a watch button set to open it (Galaxy Watch: double press) is the hot button.
  *
@@ -67,7 +67,7 @@ private val Tile = Color(0xFF312E81)
  * sent anywhere else, and the recent words stay on the watch.
  */
 class SpellActivity : ComponentActivity() {
-    /** goes up each time the app is opened (from the app list, a watch button or "Hey Google, open Spelling Genie") */
+    /** goes up each time the app is opened (from the app list, a watch button or "Hey Google, open Sal") */
     private val opened = mutableIntStateOf(0)
     private var voice: Voice? = null
 
@@ -195,14 +195,15 @@ fun SpellApp(opened: Int, voice: Voice) {
     if (a != null) BackScreen(onBack = { answer = null }) {
         AnswerScreen(a, voice, onPick = { w -> show(listOf(w)) }, onAgain = ::startListening, canListen = canListen, onBack = { answer = null })
     } else ScalingLazyColumn(Modifier.fillMaxWidth()) {
-        item { Text("Spelling Genie", fontSize = 15.sp, fontWeight = FontWeight.Bold, color = Genie) }
+        item { Text("Sal", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = SalBlue) }
+        item { Text("Spelling Assistant Legend", fontSize = 10.sp, color = Muted) }
         item {
             Text(if (canListen) "Say: spell sorcerer" else "This watch has no voice typing. Type the word instead.",
                 fontSize = 12.sp, color = Muted, textAlign = TextAlign.Center)
         }
         if (canListen) item {
             Chip(onClick = ::startListening, label = { Text("🎤  Spell a word", fontWeight = FontWeight.Bold) },
-                colors = ChipDefaults.primaryChipColors(backgroundColor = Genie), modifier = Modifier.fillMaxWidth())
+                colors = ChipDefaults.primaryChipColors(backgroundColor = SalBlue), modifier = Modifier.fillMaxWidth())
         }
         if (canType) item {
             CompactChip(onClick = ::startTyping, label = { Text("⌨  Type it") }, colors = ChipDefaults.secondaryChipColors())
@@ -250,7 +251,7 @@ private fun AnswerScreen(a: SpellCore.Answer, voice: Voice, onPick: (String) -> 
                         val at = row * 5 + i
                         if (ch == " ") Box(Modifier.width(14.dp))
                         else Box(
-                            Modifier.size(30.dp).clip(RoundedCornerShape(7.dp)).background(if (at == lit) Genie else Tile)
+                            Modifier.size(30.dp).clip(RoundedCornerShape(7.dp)).background(if (at == lit) SalBlue else Tile)
                                 .clickable { lit = at; voice.say(SpellCore.spoken(ch).let { it[1] }) },
                             contentAlignment = Alignment.Center,
                         ) { Text(ch, fontSize = 19.sp, fontWeight = FontWeight.Bold, color = Color.White) }
@@ -266,7 +267,7 @@ private fun AnswerScreen(a: SpellCore.Answer, voice: Voice, onPick: (String) -> 
         item {
             Row(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.padding(top = 4.dp)) {
                 if (voice.ready) CompactChip(onClick = { voice.spell(a.word) }, label = { Text("🔊 Say it") }, colors = ChipDefaults.secondaryChipColors())
-                if (canListen) CompactChip(onClick = onAgain, label = { Text("🎤 Next") }, colors = ChipDefaults.primaryChipColors(backgroundColor = Genie))
+                if (canListen) CompactChip(onClick = onAgain, label = { Text("🎤 Next") }, colors = ChipDefaults.primaryChipColors(backgroundColor = SalBlue))
             }
         }
         if (a.others.isNotEmpty()) {

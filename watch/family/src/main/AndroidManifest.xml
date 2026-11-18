@@ -13,7 +13,7 @@
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <uses-feature android:name="android.hardware.location.gps" android:required="false" />
-    <!-- Fairway's Jack and Spelling Genie listen with the watch's speech input and talk with its voice; Spelling Genie also
+    <!-- Fairway's Jack and Sal listen with the watch's speech input and talk with its voice; Sal also
          uses the watch's keyboard (Android 11+ needs to see them) -->
     <queries>
         <intent><action android:name="android.speech.action.RECOGNIZE_SPEECH" /></intent>
@@ -57,7 +57,7 @@
         </activity>
         <!-- wakes at each block change of a running practice to buzz (only this app's own alarms reach it) -->
         <receiver android:name=".PracticeBuzzReceiver" android:exported="false" />
-        <!-- Spelling Genie needs no link to the phone. It opens straight into listening, so a watch button set to open it is the hot button. -->
+        <!-- Sal needs no link to the phone. It opens straight into listening, so a watch button set to open it is the hot button. -->
         <activity android:name=".SpellActivity" android:exported="true" android:icon="@mipmap/ic_spell" android:roundIcon="@mipmap/ic_spell"
             android:label="@string/spell_name" android:launchMode="singleTask" android:taskAffinity="com.steele.family.spell">
             <intent-filter><action android:name="android.intent.action.MAIN" /><category android:name="android.intent.category.LAUNCHER" /></intent-filter>

@@ -1,7 +1,7 @@
 package com.steele.family.core
 
 /**
- * Spelling Genie: turns what was said ("hey spelling genie, how do you spell sorcerer") into the word, checks it against a
+ * Sal, the spelling assistant: turns what was said ("hey Sal, how do you spell sorcerer") into the word, checks it against a
  * real word list (SCOWL, see tools/spell-words.py), and offers choices when the voice may have heard it wrong:
  * the voice's other guesses, words that sound the same (their, there, they're) and, for a word that isn't in the list,
  * the closest real words. Nothing here touches the network or keeps anything: the screen on the watch does the keeping.
@@ -19,6 +19,9 @@ object SpellCore {
     )
 
     private val wake = listOf(
+        // "Hey Sal", and the ways the watch's voice typing tends to write it down
+        "hey sal", "hi sal", "ok sal", "okay sal", "hey saul", "hi saul", "hey sol", "hey sall", "hey sally", "sal", "saul",
+        // the name it had first
         "hey spelling genie", "hi spelling genie", "ok spelling genie", "okay spelling genie", "spelling genie",
         "hey genie", "hi genie", "ok genie", "okay genie", "hey jeannie", "hey jeanie", "hey jenny", "hey spelling", "genie",
     )
@@ -26,7 +29,7 @@ object SpellCore {
     private val leadFill = listOf(
         "the word", "a word", "the name", "word", "out", "please", "for me", "of", "is", "as", "like",
     )
-    private val tailFill = listOf("please", "for me", "thanks", "thank you", "genie", "spelling genie", "again")
+    private val tailFill = listOf("please", "for me", "thanks", "thank you", "sal", "saul", "genie", "spelling genie", "again")
     private val politeStart = listOf(
         "can you help me", "could you help me", "help me", "can you", "could you", "would you", "will you", "please",
         "how do you", "how do i", "how to", "i need to", "i want to", "what's the", "whats the", "tell me how to", "show me how to",
