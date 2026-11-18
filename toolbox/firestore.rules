@@ -222,7 +222,8 @@ service cloud.firestore {
         && d.cur is int && d.cur >= 1 && d.cur <= d.rounds
         && d.done is bool
         && (!('fam' in d) || d.fam is bool)
-        && d.course is map && d.course.keys().hasOnly(['id', 'name', 'tees', 'holes'])
+        && d.course is map && d.course.keys().hasOnly(['id', 'name', 'tees', 'holes', 'h0'])
+        && (!('h0' in d.course) || (d.course.h0 == 9 && d.course.holes.size() == 9))
         && d.course.name is string && d.course.name.size() > 0 && d.course.name.size() <= 60
         && d.course.tees is list && d.course.tees.size() >= 1 && d.course.tees.size() <= 6
         && d.course.holes is list && (d.course.holes.size() == 9 || d.course.holes.size() == 18)

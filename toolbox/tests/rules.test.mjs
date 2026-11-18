@@ -422,6 +422,10 @@ test('fairway: the shape is checked, and the course and start time cannot change
   await assertFails(setDoc(doc(anon(), 'golf_events/' + FW_CODE), fwEvent({ course: { name: 'X', tees: [{ id: 'a' }], holes: fwHoles(12) } })));
   await assertFails(setDoc(doc(anon(), 'golf_events/' + FW_CODE), fwEvent({ course: { name: 'X', tees: [{ id: 'a' }], holes: fwHoles(18), sample: true } })));
   await assertSucceeds(setDoc(doc(anon(), 'golf_events/' + FW_CODE), fwEvent({ course: { name: 'Nine', tees: [{ id: 'a' }], holes: fwHoles(9) } })));
+  // a back nine (holes 10 to 18) is nine holes with h0: 9, so the signs read 10 to 18
+  await assertSucceeds(setDoc(doc(anon(), 'golf_events/' + FW_CODE), fwEvent({ course: { name: 'Back', tees: [{ id: 'a' }], holes: fwHoles(9), h0: 9 } })));
+  await assertFails(setDoc(doc(anon(), 'golf_events/' + FW_CODE), fwEvent({ course: { name: 'Back', tees: [{ id: 'a' }], holes: fwHoles(18), h0: 9 } })));
+  await assertFails(setDoc(doc(anon(), 'golf_events/' + FW_CODE), fwEvent({ course: { name: 'Back', tees: [{ id: 'a' }], holes: fwHoles(9), h0: 3 } })));
   await assertFails(updateDoc(doc(anon(), 'golf_events/' + FW_CODE), { 'course.name': 'Changed', updated: 2 }));
   await assertFails(updateDoc(doc(anon(), 'golf_events/' + FW_CODE), { created: 99 }));
   await assertFails(updateDoc(doc(anon(), 'golf_events/' + FW_CODE), { secret: 'x' }));
