@@ -921,11 +921,32 @@
     return s.charAt(0).toUpperCase() + s.slice(1);
   }
   // The next hole in this golfer's own order, with the yards from their tees.
+  // A golfer's round by the numbers, from their scores and the hole reviews kept on this phone (notes by "r_h"):
+  // fairways hit of the par 4s and 5s they marked, putts and three-putts on the holes they counted, penalties, sand,
+  // and their best and worst holes against par. A count is null when they marked nothing for it.
+  function roundNumbers(ev, pl, r, notes) {
+    const n = holeCount(ev), pars = parsFor(ev.course, pl.tee), nt = notes || {};
+    let fwHit = 0, fwOf = 0, putts = 0, pHoles = 0, three = 0, pen = 0, sand = 0, marked = 0, best = null, worst = null, holes = 0;
+    for (let h = 1; h <= n; h++) {
+      const v = strokes(pl, r, h); if (v == null) continue;
+      holes++;
+      const d = v - pars[h - 1], x = nt[key(r, h)] || {};
+      if (best == null || d < best.d) best = { h, n: holeNo(ev.course, h), d, v };
+      if (worst == null || d > worst.d) worst = { h, n: holeNo(ev.course, h), d, v };
+      if (Object.keys(x).length) marked++;
+      if (pars[h - 1] > 3 && x.t) { fwOf++; if (x.t === "fairway") fwHit++; }
+      if (Number.isInteger(x.p)) { putts += x.p; pHoles++; if (x.p >= 3) three++; }
+      if (Number.isInteger(x.x)) pen += x.x;
+      if (x.b) sand++;
+    }
+    return { holes, marked, fw: fwOf ? [fwHit, fwOf] : null, putts: pHoles ? putts : null, pHoles, three, pen: marked ? pen : null, sand: marked ? sand : null,
+      best: best && worst && best.d < worst.d ? best : null, worst: best && worst && best.d < worst.d ? worst : null };
+  }
   function nextHole(ev, pl, r, h) {
     const order = playOrder(holeCount(ev), pl.st), i = order.indexOf(h);
     if (i < 0 || i >= order.length - 1) return null;
     const nh = order[i + 1], hole = ev.course.holes[nh - 1], tee = teeOf(ev, pl);
-    return { h: nh, par: parOf(ev.course, nh, pl.tee), hcp: hole.hcp, yds: yards(ev.course, nh, tee.id) || null, tee: tee.name };
+    return { h: nh, n: holeNo(ev.course, nh), par: parOf(ev.course, nh, pl.tee), hcp: hole.hcp, yds: yards(ev.course, nh, tee.id) || null, tee: tee.name };
   }
   // Plain, clean words about a pattern in the last few holes. No AI here, just counting.
   function jackNoticed(ev, pl, r, notes) {
@@ -1311,7 +1332,7 @@
   }
 
   return { VERSION, MAX_PLAYERS, MAX_ROUNDS, MAX_TEES, NAME_MAX, EVENT_MAX, TEE_COLORS, DEMO_NAMES, DELETE,
-    courseHc, strokesBy, stableford, nineOf, holeNo, HOLE_ART, holeArt, sampleCourse, monoosnockCourse, readyCourses, parOf, parsFor, parText, newCode, isCode, newPid, isPid, cleanCourse, cleanName, newEvent, newPlayer, cleanEvent,
+    courseHc, strokesBy, stableford, roundNumbers, nineOf, holeNo, HOLE_ART, holeArt, sampleCourse, monoosnockCourse, readyCourses, parOf, parsFor, parText, newCode, isCode, newPid, isPid, cleanCourse, cleanName, newEvent, newPlayer, cleanEvent,
     key, holeCount, coursePar, players, teeOf, yards, teeYards, playOrder, strokes, round, standings, groups,
     fmtPar, tone, scoreName, mark, stats, demoEvent, applyPatch, historyRows, myRounds, sameName, boardNames,
     cleanCtpHoles, cleanCtpEntry, ctpBoard, metres, averageFix, ctpMeasure, fmtFeet,
