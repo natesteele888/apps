@@ -1052,6 +1052,7 @@
     const bg = cleanBingo(d.bg, ev); if (Object.keys(bg).length) ev.bg = bg;
     const bets = cleanBets(d.bets, ev); if (bets && bets.on.length) ev.bets = bets;
     const bmk = cleanBetMarks(d.bm, ev); if (Object.keys(bmk).length) ev.bm = bmk;
+    if (d.fam === true) ev.fam = true; // family event: Jack the caddie stays clean on every phone
     return ev;
   }
   // What one finished round looks like in this phone's history (for "previous rounds" on a player card).

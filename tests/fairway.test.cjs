@@ -6,9 +6,14 @@
 // course and player card, starting a tournament, closest to the pin with the browser's own made-up GPS, the sound
 // switch, names shown as text, a tournament got going on one phone (official, chat, tee time, calendar file), and a
 // linked watch (watchlink.js with Firestore REST stubbed): the round it gets and the scores, marks and notes it gives back.
+// Part 1 also checks the hole sketches (holemap.js) and Jack the caddie's lines (caddie.js); Part 2 checks them on the
+// Score screen: the sketch and its big sheet, Jack's tip and his word on a score at the level his settings pick, the kid
+// lock and the family-event switch keeping him clean, and the course sounds following the Score screen.
 // Live sharing between phones needs the shared database and is not tested here.
 const assert = require('assert');
 const C = require('../apps/fairway/core.js');
+const Map = require('../apps/fairway/holemap.js');
+const Jack = require('../apps/fairway/caddie.js');
 const { launch, startServer, newPage } = require('./lib.cjs');
 
 const results = [];
@@ -156,6 +161,40 @@ const pl = (ev, id) => Object.assign({ id }, ev.p[id]);
     eq(C.cleanMsg({ k: 'p', n: 'Al', t: 'Who?', o: ['A'], at: 1 }), null, 'a poll needs two options');
     const ev = twoPlayers(); eq(C.shout(ev, 'aaaaaa1', 1, 1, 3), 'Birdie! Alpha Test on 1.'); eq(C.shout(ev, 'aaaaaa1', 1, 1, 4), null);
     eq(C.cleanHc('+2.1'), -2.1); eq(C.cleanHc('abc'), null);
+  });
+
+  await test('hole map: the same hole always gets the same sketch, sized by par and yards, with yardage marks', () => {
+    const a = Map.plan({ seed: 'Test Course 4', par: 4, yards: 410 }), b = Map.plan({ seed: 'Test Course 4', par: 4, yards: 410 });
+    deq(a, b, 'same hole, same sketch');
+    const p3 = Map.plan({ seed: 'Test Course 2', par: 3, yards: 160 }), p5 = Map.plan({ seed: 'Test Course 9', par: 5, yards: 560 });
+    eq(p3.fairway, null, 'a par 3 has no fairway');
+    assert.ok(p5.green.y < a.green.y && a.green.y < p3.green.y, 'longer holes reach further up the page');
+    deq(a.marks.map(m => m.d), [100, 150, 200, 250]); deq(p3.marks.map(m => m.d), [100]);
+    eq(Map.plan({ seed: 'x', par: 4, yards: 0 }).marks.length, 0, 'no marks when the card has no yards');
+    // every point stays on the paper
+    for (let i = 1; i <= 18; i++) [3, 4, 5].forEach(par => {
+      const q = Map.plan({ seed: 'Range ' + i, par, yards: par * 120 + i * 7 });
+      q.path.concat(q.bunkers, q.trees, [q.green]).forEach(pt => assert.ok(pt.x >= 0 && pt.x <= 100 && pt.y >= 0 && pt.y <= 200, 'hole ' + i + ' par ' + par + ' off the page: ' + JSON.stringify(pt)));
+    });
+    const svg = Map.svg(a, { id: 't<x>', title: 'Hole <4>' });
+    assert.match(svg, /^<svg class="holemap" viewBox="0 \d+ 100 \d+"/); assert.ok(!/<x>|<4>/.test(svg), 'no raw text from outside in the drawing');
+  });
+
+  await test('Jack: clean lines never swear (by his own list and by core.js), and each kind of moment has a line at every level', () => {
+    Object.keys(Jack.LINES).forEach(k => {
+      eq(Jack.LINES[k].length, 4, k + ' has four levels');
+      Jack.LINES[k].forEach((set, lv) => assert.ok(set.length >= 2, k + ' level ' + lv + ' has lines'));
+      Jack.LINES[k][0].forEach(t => { assert.ok(!Jack.SWEARS.test(t), 'clean line swears: ' + t); eq(C.speakable(t, 'clean'), t, 'core finds a swear in a clean line'); });
+      Jack.LINES[k][1].forEach(t => assert.ok(!/fuck|shit/i.test(t), 'a little salty is only a little: ' + t));
+    });
+    const tee = Jack.lineFor({ kind: 'tee', par: 3, y: 150, hcp: 9, n: 'Alpha Test' }, 0, 0.1);
+    eq(tee.kind, 'tee3'); assert.ok(!/\{|\}/.test(tee.text), 'every blank filled: ' + tee.text);
+    eq(Jack.lineFor({ kind: 'score', par: 4, diff: -1, tp: -1, thru: 2, n: 'Alpha Test' }, 0, 0.9).kind, 'birdie');
+    eq(Jack.lineFor({ kind: 'score', par: 4, diff: 3, tp: 5, thru: 6, n: 'Alpha Test' }, 0, 0.9).kind, 'worse');
+    eq(Jack.lineFor({ kind: 'tee', par: 4, y: 420, hcp: 1, n: 'A' }, 0, 0.5).kind, 'hard');
+    assert.match(Jack.lineFor({ kind: 'score', par: 4, diff: -1, tp: -1, thru: 2, n: 'Alpha Test' }, 0, 0.0).text, /Alpha/, 'first name only');
+    eq(Jack.club(150), 'A 7-iron'); eq(Jack.club(0), 'The club you trust');
+    const ev = C.newEvent({ name: 'X', now: NOW }); ev.fam = true; eq(C.cleanEvent(ev).fam, true); ev.fam = 'yes'; eq(C.cleanEvent(ev).fam, undefined);
   });
 
   await test('core games: a 3 by 3 bingo card per golfer, scores mark birdies, three in a row wins', () => {
@@ -382,6 +421,28 @@ const pl = (ev, id) => Object.assign({ id }, ev.p[id]);
     deq(errors, []); await ctx.close();
   });
 
+  if (browser) await test('page: the hole sketch, Jack on the Score screen, his word on a score, and the course sounds', async () => {
+    const { page, errors, ctx } = await open();
+    await page.click('#demo'); await page.waitForSelector('.lb tbody tr');
+    eq(await page.evaluate(() => window.FW.sound.where), 'quiet', 'the board is quiet');
+    await page.click('[data-tab=score]'); await page.waitForSelector('.hplus #hsketch svg.holemap');
+    eq(await page.evaluate(() => window.FW.sound.where), 'course', 'the Score screen gets the birds');
+    const first = await page.locator('#jline').textContent(); assert.ok(first.length > 10, 'Jack has a tip: ' + first);
+    assert.ok(!Jack.SWEARS.test(first), 'clean by default: ' + first);
+    await page.click('#hsketch'); await page.waitForSelector('.mapbig svg'); assert.match(await page.locator('.sheet').textContent(), /not the real layout/);
+    await page.click('.sheet [data-close]');
+    // a score entered from this phone gets Jack's word on it
+    await page.locator('.scorer li').first().locator('.minus').click();
+    await page.waitForFunction(t => document.querySelector('#jline').textContent !== t, first);
+    assert.ok(!/^tee|hard|easy/.test(await page.evaluate(() => window.FW.debug.S.jack.kind)), 'a word on the score, not a tee tip');
+    // another hole, a new tip
+    await page.locator('.strip [aria-pressed=false]').first().click();
+    await page.waitForFunction(() => /^(tee|hard|easy)/.test(window.FW.debug.S.jack.kind));
+    await page.click('[data-tab=board]'); eq(await page.evaluate(() => window.FW.sound.where), 'quiet');
+    const wide = await page.evaluate(() => document.documentElement.scrollWidth); assert.ok(wide <= 390, 'no sideways scroll at 390 px, got ' + wide);
+    deq(errors, []); await ctx.close();
+  });
+
   if (browser) await test('page: the Games tab bingo card, tap three in a row', async () => {
     const { page, errors, ctx } = await open();
     await page.click('#new'); await page.fill('#nn', 'Bingo Day'); await page.fill('#nme', 'Alpha Test');
@@ -393,6 +454,31 @@ const pl = (ev, id) => Object.assign({ id }, ev.p[id]);
     for (const q of sqs) await page.click(`.bgo [data-sq="${q}"]`);
     await page.waitForSelector('.bgo.won');
     const wide = await page.evaluate(() => document.documentElement.scrollWidth); assert.ok(wide <= 390, 'no sideways scroll at 390 px, got ' + wide);
+    deq(errors, []); await ctx.close();
+  });
+
+  if (browser) await test("page: Jack talks at the level his settings pick, a kid's profile stays clean, and a family event locks every phone", async () => {
+    const { page, errors, ctx } = await open();
+    await page.click('#new'); await page.fill('#nn', 'Test Classic'); await page.fill('#nme', 'Alpha Test');
+    await page.locator('#nf [type=submit]').click(); await page.waitForFunction(() => window.FW.debug.S.view === 'event' && window.FW.debug.S.ev);
+    await page.click('[data-tab=score]'); await page.waitForSelector('#jkset');
+    assert.match(await page.locator('.jhead small').textContent(), /Clean/, 'clean by default');
+    await page.click('#jkset'); await page.click('.sheet [data-js=lang][data-v=lot]'); await page.click('#jdone');
+    await page.waitForFunction(() => /A lot/.test(document.querySelector('.jhead small').textContent));
+    eq(await page.evaluate(() => window.FW.debug.S.jack.key.split(':').pop()), '2', 'Jack talks at A lot');
+    // the kid profile keeps him clean
+    await page.click('#jkset'); await page.click('label:has(#jkid)'); await page.click('#jdone');
+    await page.waitForFunction(() => /Kid's profile/.test(document.querySelector('.jhead small').textContent));
+    for (let i = 0; i < 6; i++) { await page.click('#jask'); assert.ok(!Jack.SWEARS.test(await page.locator('#jline').textContent()), 'kid profile swore'); }
+    await page.evaluate(() => localStorage.setItem('fw:jack', JSON.stringify({ lang: 'lot' })));
+    // the organizer's family-event switch
+    await page.click('[data-tab=more]'); await page.click('label:has(#mfam) span');
+    const code = await page.evaluate(() => window.FW.debug.S.code);
+    await page.waitForFunction(c => JSON.parse(localStorage.getItem('fw:ev:' + c)).fam === true, code);
+    await page.click('[data-tab=score]'); assert.match(await page.locator('.jhead small').textContent(), /Family event/);
+    for (let i = 0; i < 6; i++) { await page.click('#jask'); assert.ok(!Jack.SWEARS.test(await page.locator('#jline').textContent()), 'family event swore'); }
+    await page.click('[data-tab=more]'); await page.click('label:has(#mfam) span');
+    await page.waitForFunction(c => !('fam' in JSON.parse(localStorage.getItem('fw:ev:' + c))), code);
     deq(errors, []); await ctx.close();
   });
 

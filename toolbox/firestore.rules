@@ -215,12 +215,13 @@ service cloud.firestore {
     // the app's own birdie shouts are the only things that can change after posting, and nothing can be deleted.
     function fwOk(d) {
       return d.keys().hasOnly(['v', 'name', 'created', 'updated', 'rounds', 'cur', 'done', 'course', 'p', 'ctph', 'ctp',
-          'rally', 'fmt', 'teams', 'dr', 'm', 'pk', 'tt', 'bg', 'bets', 'bm'])
+          'rally', 'fmt', 'teams', 'dr', 'm', 'pk', 'tt', 'bg', 'bets', 'bm', 'fam'])
         && d.v == 1 && d.name is string && d.name.size() > 0 && d.name.size() <= 60
         && d.created is number && d.updated is number
         && d.rounds is int && d.rounds >= 1 && d.rounds <= 4
         && d.cur is int && d.cur >= 1 && d.cur <= d.rounds
         && d.done is bool
+        && (!('fam' in d) || d.fam is bool)
         && d.course is map && d.course.keys().hasOnly(['id', 'name', 'tees', 'holes'])
         && d.course.name is string && d.course.name.size() > 0 && d.course.name.size() <= 60
         && d.course.tees is list && d.course.tees.size() >= 1 && d.course.tees.size() <= 6

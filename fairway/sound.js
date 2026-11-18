@@ -1,9 +1,13 @@
 /* Copyright (c) 2026 Nate Steele. All rights reserved. Not licensed for copying, hosting or resale. See LICENSE. */
-/* Fairway's menu ambience: birdsong, a little breeze and a calm piano over a soft pad, the way a tournament
-   broadcast opens. It is all made right here in the phone with the Web Audio API, so there are no sound files.
+/* Fairway's sounds: birdsong, a little breeze and a calm piano over a soft pad, the way a tournament broadcast
+   opens. It is all made right here in the phone with the Web Audio API, so there are no sound files.
    (The music is an original slow progression, not any broadcast's theme.)
    - Phones only allow sound after a tap, so nothing starts until the first tap on the page.
-   - Plays on the menu screens only, and fades out when a tournament opens, so scoring stays quiet.
+   - Three scenes: "menu" (piano, birds and breeze), "course" (the Score screen: birds and breeze only, quieter, so it
+     feels like being out on the course) and "quiet" (the board, chat and everything else).
+   - It never stops music someone is playing. Everything goes through Web Audio, which Android mixes in with other
+     apps instead of pausing them, and on iPhone the page asks for the "ambient" kind of sound, which plays along with
+     music and stays silent when the ringer switch is off. (An <audio> tag would pause a Bluetooth speaker's music.)
    - Low volume by default. The speaker button turns it off or on, and this phone remembers.
    - Your own recordings can replace either made-up layer: put audio/menu-birds.mp3 or audio/menu-music.mp3
      in the audio folder (see audio/README.md) and that file loops instead. */
@@ -11,7 +15,8 @@
   "use strict";
   const FW = window.FW = window.FW || {};
   const KEY = "fw:sound";
-  const VOLUME = 0.5;           // the whole mix; each layer below is quieter still
+  const VOLUME = 0.5;           // the whole mix on the menu; each layer below is quieter still
+  const COURSE_VOLUME = 0.32;   // the Score screen: birds and breeze only, softer
   const BIRDS = 0.16, BREEZE = 0.035, PIANO = 0.11, PAD = 0.045, FILE_BIRDS = 0.22, FILE_MUSIC = 0.14;
   const FADE = 1.4;              // seconds
   const FILES = { birds: "audio/menu-birds.mp3", music: "audio/menu-music.mp3" };
@@ -22,6 +27,8 @@
     if (ac) return true;
     const A = window.AudioContext || window.webkitAudioContext;
     if (!A) return false;
+    // iPhone (Safari 16.4 and later): play along with other apps' music, and respect the ringer switch.
+    try { if (navigator.audioSession) navigator.audioSession.type = "ambient"; } catch (e) { /* older phone: its default */ }
     try { ac = new A(); } catch (e) { return false; }
     master = ac.createGain(); master.gain.value = 0; master.connect(ac.destination);
     // a soft room: a filtered feedback delay the piano and birds both send into
@@ -29,22 +36,27 @@
     delay.delayTime.value = 0.42; fb.gain.value = 0.32; tone.type = "lowpass"; tone.frequency.value = 2400; wet.gain.value = 0.35;
     delay.connect(tone); tone.connect(fb); fb.connect(delay); tone.connect(wet); wet.connect(master);
     bus.verb = delay;
-    ["birds", "music"].forEach(k => { const g = ac.createGain(); g.connect(master); bus[k] = g; });
+    // Each layer has a scene gain (the music fades out on the Score screen) and, under it, the made-up sound.
+    ["birds", "music"].forEach(k => { const lay = ac.createGain(); lay.connect(master); bus["lay" + k] = lay; const g = ac.createGain(); g.connect(lay); bus[k] = g; });
     breeze();
-    // a recording, if one is in the audio folder, takes over its layer
+    // A recording, if one is in the audio folder, takes over its layer. It's decoded into Web Audio rather than played
+    // in an <audio> tag, because an <audio> tag takes over the phone's sound and pauses a speaker's music.
     Object.keys(FILES).forEach(k => {
-      fetch(FILES[k], { method: "HEAD", cache: "no-store" }).then(r => {
-        if (!r.ok || !/audio|mpeg|octet/.test(r.headers.get("content-type") || "audio")) return;
-        const a = new Audio(FILES[k]); a.loop = true; a.crossOrigin = "anonymous";
-        const src = ac.createMediaElementSource(a), g = ac.createGain();
-        g.gain.value = k === "birds" ? FILE_BIRDS : FILE_MUSIC; src.connect(g); g.connect(master);
-        files[k] = a; bus[k].gain.value = 0; // silence the made-up layer
-        if (playing()) a.play().catch(() => {});
-      }).catch(() => {});
+      fetch(FILES[k], { cache: "no-cache" }).then(r => {
+        if (!r.ok || !/audio|mpeg|octet/.test(r.headers.get("content-type") || "audio")) return null;
+        return r.arrayBuffer();
+      }).then(buf => buf && new Promise((res, rej) => { const p = ac.decodeAudioData(buf, res, rej); if (p && p.then) p.then(res, rej); }))
+        .then(audio => {
+          if (!audio) return;
+          const src = ac.createBufferSource(), g = ac.createGain();
+          src.buffer = audio; src.loop = true; g.gain.value = k === "birds" ? FILE_BIRDS : FILE_MUSIC;
+          src.connect(g); g.connect(bus["lay" + k]); src.start();
+          files[k] = src; bus[k].gain.value = 0; // silence the made-up layer
+        }).catch(() => {});
     });
     return true;
   }
-  const playing = () => on && unlocked && scene === "menu";
+  const playing = () => on && unlocked && (scene === "menu" || scene === "course");
 
   /* ---------- the breeze: quiet filtered noise that swells now and then ---------- */
   function breeze() {
@@ -136,22 +148,23 @@
     if (!ac) return;
     const now = ac.currentTime, ahead = now + 0.6;
     if (!files.birds) while (nextBird < ahead) { const len = phrase(Math.max(nextBird, now + 0.05)); nextBird = Math.max(nextBird, now) + len + 1.2 + Math.random() * 4.5; }
-    if (!files.music) while (nextBar < ahead) { playBar(Math.max(nextBar, now + 0.05)); nextBar = Math.max(nextBar, now) + BAR; }
+    if (!files.music && scene === "menu") while (nextBar < ahead) { playBar(Math.max(nextBar, now + 0.05)); nextBar = Math.max(nextBar, now) + BAR; }
   }
   function apply() {
     if (!unlocked || !setup()) return;
     const want = playing(), t = ac.currentTime;
     master.gain.cancelScheduledValues(t);
     master.gain.setValueAtTime(master.gain.value, t);
-    master.gain.linearRampToValueAtTime(want ? VOLUME : 0, t + FADE);
-    Object.keys(files).forEach(k => { if (want) files[k].play().catch(() => {}); });
+    master.gain.linearRampToValueAtTime(want ? (scene === "course" ? COURSE_VOLUME : VOLUME) : 0, t + FADE);
+    const mus = bus.laymusic.gain, keep = scene === "menu" ? 1 : 0;
+    mus.cancelScheduledValues(t); mus.setValueAtTime(mus.value, t); mus.linearRampToValueAtTime(keep, t + FADE);
     if (want) {
       if (ac.state === "suspended") ac.resume().catch(() => {});
       if (!loop) { nextBird = t + 0.8; nextBar = Math.max(nextBar, t + 0.3); loop = setInterval(tick, 200); tick(); }
     } else {
       clearInterval(loop); loop = null;
       // after the fade, rest the audio engine (and any recordings) so the phone isn't working for nothing
-      setTimeout(() => { if (!playing() && ac) { Object.keys(files).forEach(k => files[k].pause()); ac.suspend().catch(() => {}); } }, FADE * 1000 + 300);
+      setTimeout(() => { if (!playing() && ac) ac.suspend().catch(() => {}); }, FADE * 1000 + 300);
     }
   }
   function unlock() {
@@ -161,12 +174,13 @@
   }
   document.addEventListener("pointerdown", unlock, true);
   document.addEventListener("keydown", unlock, true);
-  document.addEventListener("visibilitychange", () => { if (!ac) return; if (document.hidden) { clearInterval(loop); loop = null; Object.keys(files).forEach(k => files[k].pause()); ac.suspend().catch(() => {}); } else apply(); });
+  document.addEventListener("visibilitychange", () => { if (!ac) return; if (document.hidden) { clearInterval(loop); loop = null; ac.suspend().catch(() => {}); } else apply(); });
 
   FW.sound = {
     get on() { return on; },
     get supported() { return !!(window.AudioContext || window.webkitAudioContext); },
     get running() { return !!loop; },
+    get where() { return scene; },
     scene(s) { if (s === scene) return; scene = s; apply(); },
     toggle() {
       on = !on;
