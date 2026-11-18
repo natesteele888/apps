@@ -503,6 +503,15 @@
   function track(ev, x) {
     return `<span class="track" aria-hidden="true">${x.order.map(h => { const v = x.scores[h - 1]; const d = v == null ? null : v - x.pars[h - 1]; return `<i class="${d == null ? "" : C.tone(d)}${x.next === h ? " at" : ""}"></i>`; }).join("")}</span>`;
   }
+  // A group's pace in a few words: minutes a hole, and how far behind a 15-minute hole when it's slipping.
+  function paceText(p) {
+    if (!p) return "";
+    if (p.total) return " · about " + Math.floor(p.total / 60) + ":" + String(p.total % 60).padStart(2, "0") + " on the course";
+    let s = " · " + p.per + " min a hole";
+    if (p.behind >= 10) s += ", " + p.behind + " min behind";
+    if (p.since >= 25) s += " · no score for " + p.since + " min";
+    return s;
+  }
   function tabField(el, ev) {
     const rows = C.standings(ev);
     if (!rows.length) { el.innerHTML = emptyField(); wireBoard(el); return; }
@@ -512,7 +521,8 @@
     let list;
     if (S.fieldMode === "group") {
       const byId = {}; rows.forEach(r => byId[r.id] = r);
-      list = C.groups(ev).map(g => `<li class="ghead"><b>Group ${g.g}</b><small>${g.done ? "Finished" : g.thru ? "On hole " + g.on : "Starts on " + g.start}</small></li>${g.players.map(p => rowHtml(byId[p.id])).join("")}`).join("");
+      const rr = Math.min(ev.cur, ev.rounds);
+      list = C.groups(ev).map(g => `<li class="ghead"><b>Group ${g.g}</b><small>${g.done ? "Finished" : g.thru ? "On hole " + C.holeNo(ev.course, g.on) : "Starts on " + C.holeNo(ev.course, g.start)}${paceText(C.groupPace(ev, g, rr))}</small></li>${g.players.map(p => rowHtml(byId[p.id])).join("")}`).join("");
     } else list = rows.map(rowHtml).join("");
     el.innerHTML = `<button type="button" class="leader" data-player="${esc(lead.id)}"><small>${co > 1 ? "Tied for the lead" : "Leader"}</small><b>${esc(lead.name)}</b><span class="lscore">${lead.holes ? parText(lead.toPar) : ""}</span><span class="lwhere">${esc(lead.holes ? where(lx) + (lx.thru && !lx.done ? " · thru " + lx.thru : "") : "Hasn't teed off")}</span>${track(ev, lx)}</button>
       <div class="pills" role="group" aria-label="Order"><button type="button" class="pill" data-fm="place" aria-pressed="${S.fieldMode === "place"}">By place</button><button type="button" class="pill" data-fm="group" aria-pressed="${S.fieldMode === "group"}">By group</button></div>
@@ -575,7 +585,8 @@
       const pid = li.dataset.pid, cur = C.strokes(ev.p[pid], r, h);
       const set = val => {
         if (val != null) jackReact(ev, pid, r, h, cur, val);
-        write({ ["p." + pid + ".s." + C.key(r, h)]: val == null ? C.DELETE : val });
+        // the time goes with the score, in the same write, for pace of play
+        write({ ["p." + pid + ".s." + C.key(r, h)]: val == null ? C.DELETE : val, ["p." + pid + ".tm." + C.key(r, h)]: val == null ? C.DELETE : Math.round(Date.now() / 60000) });
         const sh = val != null && !S.ev.demo && C.shout(S.ev, pid, r, h, val); if (sh) FW.phase1.autoPost(sh, "a" + pid + "r" + r + "h" + h);
       };
       const par = C.parOf(ev.course, h, (ev.p[pid] || {}).tee);
