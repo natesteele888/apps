@@ -508,3 +508,15 @@ a.btn { text-decoration: none; }
 .filebtn { position: relative; overflow: hidden; }
 .filebtn input { position: absolute; left: 0; top: 0; right: 0; bottom: 0; opacity: 0; width: 100%; height: 100%; min-height: 0; cursor: pointer; }
 .mapbar { border-color: var(--gold); background: #fffaf0; }
+/* who's where */
+.where { background: #e8efe6; border: 1px solid var(--line); border-radius: 14px; padding: 6px; }
+.where svg { display: block; width: 100%; height: auto; }
+.where .wh line { stroke: #9cc58a; stroke-width: 3.2; stroke-linecap: round; }
+.where .wh .wgr { fill: #6fa955; }
+.where .wh text { font: 700 3.6px var(--sans); fill: var(--muted); text-anchor: middle; }
+.where .wdot circle { fill: var(--green); stroke: #fff; stroke-width: .8; }
+.where .wdot text { font: 800 4px var(--sans); fill: #fff; text-anchor: middle; }
+.where .wdot.mine circle { fill: var(--gold); }
+.where .wdot.mine text { fill: #1b1b1b; }
+.wlist { list-style: none; margin: 8px 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 14px; }
+.wlist li.mine { color: var(--green); font-weight: 700; }

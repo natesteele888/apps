@@ -941,6 +941,46 @@
     return out[0] >= -0.05 && out[0] <= 1.05 && out[1] >= -0.05 && out[1] <= 1.05 ? [Math.max(0, Math.min(1, out[0])), Math.max(0, Math.min(1, out[1]))] : null;
   }
 
+  /* ---------- who's where: every group as a dot on a course overview, placed by the hole they're on ---------- */
+  // Each hole as a line from tee to green in a 100 by 100 box. With GPS tee and green marks for every hole it's the
+  // real layout; otherwise each nine goes up and back in three rows, like a routing card. No one's location is used.
+  function whereLayout(ev, maps) {
+    const n = holeCount(ev), ms = [];
+    for (let h = 1; h <= n; h++) { const m = maps && maps[h]; if (!m || !m.gt || !m.gc) { ms.length = 0; break; } ms.push(m); }
+    if (ms.length === n) {
+      const lat0 = ms[0].gt.lat * Math.PI / 180, pts = [];
+      ms.forEach(m => { pts.push(m.gt, m.gc); });
+      const xy = g => [g.lon * Math.cos(lat0), -g.lat];
+      const all = pts.map(xy), minX = Math.min.apply(null, all.map(p => p[0])), maxX = Math.max.apply(null, all.map(p => p[0]));
+      const minY = Math.min.apply(null, all.map(p => p[1])), maxY = Math.max.apply(null, all.map(p => p[1])), span = Math.max(maxX - minX, maxY - minY) || 1;
+      const ox = (100 - (maxX - minX) / span * 88) / 2, oy = (100 - (maxY - minY) / span * 88) / 2;
+      const f = g => { const p = xy(g); return [Math.round((ox + (p[0] - minX) / span * 88) * 10) / 10, Math.round((oy + (p[1] - minY) / span * 88) * 10) / 10]; };
+      return { real: true, holes: ms.map((m, i) => ({ h: i + 1, a: f(m.gt), b: f(m.gc) })) };
+    }
+    const holes = [], nines = Math.max(1, Math.ceil(n / 9)), colW = 100 / nines;
+    for (let k = 0; k < nines; k++) {
+      for (let i = 0; i < 9 && k * 9 + i < n; i++) {
+        const row = Math.floor(i / 3), back = row % 2 === 1, col = back ? 2 - (i % 3) : i % 3, cw = colW / 3, left = k * colW + col * cw, y = 80 - row * 30;
+        const l = Math.round((left + cw * 0.15) * 10) / 10, r = Math.round((left + cw * 0.85) * 10) / 10;
+        holes.push({ h: k * 9 + i + 1, a: [back ? r : l, y + 8], b: [back ? l : r, y - 8] });
+      }
+    }
+    return { real: false, holes };
+  }
+  // A dot for each group still out there, partway along the hole it's on; groups on the same hole spread out.
+  function groupSpots(ev, layout) {
+    const gs = groups(ev), byHole = {}, out = [];
+    gs.forEach(g => { if (!g.done && g.on) (byHole[g.on] = byHole[g.on] || []).push(g); });
+    Object.keys(byHole).forEach(h => {
+      const hole = layout.holes.find(x => x.h === +h); if (!hole) return;
+      byHole[h].forEach((g, i, l) => {
+        const t = l.length === 1 ? 0.55 : 0.25 + 0.6 * i / (l.length - 1);
+        out.push({ g: g.g, h: +h, x: Math.round((hole.a[0] + (hole.b[0] - hole.a[0]) * t) * 10) / 10, y: Math.round((hole.a[1] + (hole.b[1] - hole.a[1]) * t) * 10) / 10, n: g.players.length, started: g.thru > 0 });
+      });
+    });
+    return { spots: out.sort((a, b) => a.g - b.g), done: gs.filter(g => g.done).map(g => g.g) };
+  }
+
   /* ---------- changes: the same dotted paths the shared database takes ---------- */
   // patch keys look like "p.abc123.s.1_7" or "name"; a value of DELETE removes the field.
   const DELETE = { __delete: true };
@@ -1056,5 +1096,5 @@
     JACK_LANGS, cleanJack, jackLevel, speakable, courseKey, cleanCourseNotes, holeTalk,
     roundDone, recap, seasonRace, SEASON_PTS,
     CLUBS, cleanBag, bagList, clubFor, clubWords,
-    cleanHoleMap, yardsBetween, greenYards, picScale, tapMeasure, gpsToPic };
+    cleanHoleMap, yardsBetween, greenYards, picScale, tapMeasure, gpsToPic, whereLayout, groupSpots };
 });

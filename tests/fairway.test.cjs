@@ -282,6 +282,22 @@ const pl = (ev, id) => Object.assign({ id }, ev.p[id]);
     eq(C.gpsToPic({ tee: [0.5, 0.9], green: [0.5, 0.1] }, mid), null, 'needs the GPS marks too');
   });
 
+  await test("core who's where: a routing card until every hole is marked, then the real layout, and each group on its hole", () => {
+    const ev = C.demoEvent(NOW), n = C.holeCount(ev);
+    const lay = C.whereLayout(ev, {}); eq(lay.real, false); eq(lay.holes.length, n);
+    ok(lay.holes.every(x => [x.a[0], x.a[1], x.b[0], x.b[1]].every(v => v >= 0 && v <= 100)), 'inside the box');
+    eq(lay.holes[0].a[0] < lay.holes[0].b[0], true, 'hole 1 plays left to right'); eq(lay.holes[3].a[0] > lay.holes[3].b[0], true, 'hole 4 comes back');
+    const nine = { course: { holes: ev.course.holes.slice(0, 9) } }; eq(C.whereLayout(nine, {}).holes.length, 9, 'a nine-hole course');
+    const N = 111320, maps = {};
+    for (let h = 1; h <= n; h++) maps[h] = { gt: { lat: 40 + h * 300 / N, lon: -75 }, gc: { lat: 40 + (h * 300 + 250) / N, lon: -75 } };
+    eq(C.whereLayout(ev, maps).real, true, 'every tee and green marked');
+    const part = Object.assign({}, maps); delete part[7]; eq(C.whereLayout(ev, part).real, false, 'one hole missing keeps the routing card');
+    const at = C.groupSpots(ev, lay), gs = C.groups(ev).filter(g => !g.done);
+    eq(at.spots.length, gs.length, 'a dot for each group still out');
+    at.spots.forEach(s => { const g = gs.find(x => x.g === s.g); eq(s.h, g.on, 'group ' + s.g + ' sits on its hole'); });
+    ok(!JSON.stringify(at).match(/lat|lon/), 'no locations in the dots');
+  });
+
   /* ===================== PART 2: the page ===================== */
   let server, browser;
   try { server = await startServer('fairway'); browser = await launch(); }
@@ -492,6 +508,17 @@ const pl = (ev, id) => Object.assign({ id }, ev.p[id]);
     const saved = await page.evaluate(() => Object.keys(localStorage).filter(k => k.indexOf('fw:map:') === 0).length); eq(saved, 1, 'the map is kept on this phone');
     const shared = await page.evaluate(() => JSON.stringify(window.FW.debug.S.ev)); ok(!/40\.003|"gc"|base64/.test(shared), 'no location or picture in the shared tournament');
     await page.click('.sheet-h .x');
+    const wide = await page.evaluate(() => document.documentElement.scrollWidth); assert.ok(wide <= 390, 'no sideways scroll at 390 px, got ' + wide);
+    deq(errors, []); await ctx.close();
+  });
+
+  if (browser) await test("page: who's where shows each group as a dot on the Course view, yours in gold", async () => {
+    const { page, errors, ctx } = await open();
+    await page.click('#demo'); await page.waitForSelector('.lb tbody tr');
+    await page.click('[data-bm=course]'); await page.waitForSelector('.where svg');
+    const dots = await page.locator('.where .wdot').count(), out = await page.evaluate(() => window.FairwayCore.groups(window.FW.debug.S.ev).filter(g => !g.done).length);
+    eq(dots, out, 'one dot per group still out'); ok(/Group \d+ (on|starting on) hole \d+/.test(await page.textContent('.wlist')));
+    ok(/never by anyone's location/.test(await page.textContent('#bsub')));
     const wide = await page.evaluate(() => document.documentElement.scrollWidth); assert.ok(wide <= 390, 'no sideways scroll at 390 px, got ' + wide);
     deq(errors, []); await ctx.close();
   });
