@@ -8,7 +8,7 @@ dead buttons, sideways scrolling, tap targets under 36 px, unnamed buttons, clip
 Safety: every request that isn't to the test's own local server is blocked, so the testers never reach Firebase,
 ESPN or any live data. Each app gets fresh, empty browser storage. Nothing real is typed anywhere.
 
-Runs in `.github/workflows/nate-crew.yml` every night and on demand. The findings feed the Nate crew review
+Runs in `.github/workflows/nate-crew.yml` on demand only (the nightly Claude run starts it; nothing is scheduled). The findings feed the Nate crew review
 (the persona charters live with the reports, outside this public repo).
 
     NODE_PATH=/path/to/node_modules node tests/crew/testers.cjs <folder holding apps/ (and asl-bengals/, lybs-ballclub/)> <out folder>

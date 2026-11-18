@@ -2,15 +2,13 @@ name: Nate crew testers
 # Virtual testers for all of Nathan's public apps (tests/crew/), game day apps first. They open each app on a new phone and an old small phone,
 # tap every button once, and log crashes, dead buttons, sideways scrolling and tiny tap targets, plus a check for code
 # older phones can't run. Every outside request is blocked, so nothing touches Firebase or any live data.
-# One small job. Runs nightly at 3:17 AM Eastern and on demand; results are printed in the log between
+# One small job, on demand only; results are printed in the log between
 # CREW-JSON-BEGIN / CREW-JSON-END and kept as a run artifact (screenshots of empty demo screens only).
+# Nothing runs on its own: no schedule, no push or PR trigger (Nathan, Nov 18: no automated checks).
+# The nightly Claude crew run starts it with `gh workflow run nate-crew.yml` because its own session has no browser,
+# and never waits on it: if it hasn't finished in time, that night's report uses the in-session code checks only.
 on:
-  schedule:
-    - cron: "17 8 * * *"
   workflow_dispatch: {}
-  push:
-    branches:
-      - "claude/crew-**"
 permissions:
   contents: read
 concurrency:
