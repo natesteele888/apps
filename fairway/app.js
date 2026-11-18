@@ -586,7 +586,9 @@
       const set = val => {
         if (val != null) jackReact(ev, pid, r, h, cur, val);
         // the time goes with the score, in the same write, for pace of play
-        write({ ["p." + pid + ".s." + C.key(r, h)]: val == null ? C.DELETE : val, ["p." + pid + ".tm." + C.key(r, h)]: val == null ? C.DELETE : Math.round(Date.now() / 60000) });
+        // (a fixed score keeps the time the hole was first scored, so a correction later doesn't skew the pace)
+        const had = ((ev.p[pid] || {}).tm || {})[C.key(r, h)];
+        write({ ["p." + pid + ".s." + C.key(r, h)]: val == null ? C.DELETE : val, ["p." + pid + ".tm." + C.key(r, h)]: val == null ? C.DELETE : (cur != null && had) || Math.round(Date.now() / 60000) });
         const sh = val != null && !S.ev.demo && C.shout(S.ev, pid, r, h, val); if (sh) FW.phase1.autoPost(sh, "a" + pid + "r" + r + "h" + h);
       };
       const par = C.parOf(ev.course, h, (ev.p[pid] || {}).tee);
@@ -596,7 +598,7 @@
       // Pick up: a beginner who's had enough on a hole takes double par, the usual limit, instead of counting every swing
       const pku = $(".pku", li); if (pku) pku.onclick = () => { set(par * 2); toast("Picked up: " + par * 2 + ", double par", "", { label: "Undo", fn: () => { if (S.ev && S.ev.p[pid] && C.strokes(S.ev.p[pid], r, h) === par * 2) write({ ["p." + pid + ".s." + C.key(r, h)]: C.DELETE }); } }); };
       // a clear is one tap from the stepper on a small screen, so it can be taken back
-      const clr = $(".clr", li); if (clr) clr.onclick = () => { const was = cur, nm = (ev.p[pid] || {}).n || ""; set(null); toast("Cleared " + nm.split(" ")[0] + "'s " + was, "", { label: "Undo", fn: () => { if (S.ev && S.ev.p[pid] && C.strokes(S.ev.p[pid], r, h) == null) write({ ["p." + pid + ".s." + C.key(r, h)]: was }); } }); };
+      const clr = $(".clr", li); if (clr) clr.onclick = () => { const was = cur, wasTm = ((ev.p[pid] || {}).tm || {})[C.key(r, h)], nm = (ev.p[pid] || {}).n || ""; set(null); toast("Cleared " + nm.split(" ")[0] + "'s " + was, "", { label: "Undo", fn: () => { if (S.ev && S.ev.p[pid] && C.strokes(S.ev.p[pid], r, h) == null) write(Object.assign({ ["p." + pid + ".s." + C.key(r, h)]: was }, wasTm ? { ["p." + pid + ".tm." + C.key(r, h)]: wasTm } : {})); } }); };
     });
   }
   // Your round by the numbers, under the Round done card: from your scores and the hole reviews on this phone.
