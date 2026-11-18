@@ -565,6 +565,7 @@
       Object.keys(d.pk).filter(id => isPid(id) && ev.p[id]).forEach(id => { if (isTid(d.pk[id]) && ev.teams && ev.teams[d.pk[id]]) ev.pk[id] = d.pk[id]; });
     }
     const tt = cleanTt(d.tt, n); if (tt) ev.tt = tt;
+    if (d.fam === true) ev.fam = true; // family event: Jack the caddie stays clean on every phone
     return ev;
   }
   // What one finished round looks like in this phone's history (for "previous rounds" on a player card).

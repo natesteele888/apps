@@ -5,9 +5,14 @@
 // Part 2 drives the real page with Firebase blocked (so tournaments run on the phone): the demo board, field, score,
 // course and player card, starting a tournament, closest to the pin with the browser's own made-up GPS, the sound
 // switch, names shown as text, and a tournament got going on one phone (official, chat, tee time, calendar file).
+// Part 1 also checks the hole sketches (holemap.js) and Jack the caddie's lines and locks (caddie.js); Part 2 checks them
+// on the Score screen: the sketch and its big sheet, Jack's tip and his word on a score, the grown-up box, the kid's
+// phone lock and its grown-up unlock, the family-event switch, and the course sounds following the Score screen.
 // Live sharing between phones needs the shared database and is not tested here.
 const assert = require('assert');
 const C = require('../apps/fairway/core.js');
+const Map = require('../apps/fairway/holemap.js');
+const Jack = require('../apps/fairway/caddie.js');
 const { launch, startServer, newPage } = require('./lib.cjs');
 
 const results = [];
@@ -152,6 +157,47 @@ const pl = (ev, id) => Object.assign({ id }, ev.p[id]);
     eq(C.cleanHc('+2.1'), -2.1); eq(C.cleanHc('abc'), null);
   });
 
+  await test('hole map: the same hole always gets the same sketch, sized by par and yards, with yardage marks', () => {
+    const a = Map.plan({ seed: 'Test Course 4', par: 4, yards: 410 }), b = Map.plan({ seed: 'Test Course 4', par: 4, yards: 410 });
+    deq(a, b, 'same hole, same sketch');
+    const p3 = Map.plan({ seed: 'Test Course 2', par: 3, yards: 160 }), p5 = Map.plan({ seed: 'Test Course 9', par: 5, yards: 560 });
+    eq(p3.fairway, null, 'a par 3 has no fairway');
+    assert.ok(p5.green.y < a.green.y && a.green.y < p3.green.y, 'longer holes reach further up the page');
+    deq(a.marks.map(m => m.d), [100, 150, 200, 250]); deq(p3.marks.map(m => m.d), [100]);
+    eq(Map.plan({ seed: 'x', par: 4, yards: 0 }).marks.length, 0, 'no marks when the card has no yards');
+    // every point stays on the paper
+    for (let i = 1; i <= 18; i++) [3, 4, 5].forEach(par => {
+      const q = Map.plan({ seed: 'Range ' + i, par, yards: par * 120 + i * 7 });
+      q.path.concat(q.bunkers, q.trees, [q.green]).forEach(pt => assert.ok(pt.x >= 0 && pt.x <= 100 && pt.y >= 0 && pt.y <= 200, 'hole ' + i + ' par ' + par + ' off the page: ' + JSON.stringify(pt)));
+    });
+    const svg = Map.svg(a, { id: 't<x>', title: 'Hole <4>' });
+    assert.match(svg, /^<svg class="holemap" viewBox="0 \d+ 100 \d+"/); assert.ok(!/<x>|<4>/.test(svg), 'no raw text from outside in the drawing');
+  });
+
+  await test('Jack: clean lines never swear, the locks win, and each kind of moment has a line at every level', () => {
+    Object.keys(Jack.LINES).forEach(k => {
+      eq(Jack.LINES[k].length, 4, k + ' has four levels');
+      Jack.LINES[k].forEach((set, lv) => assert.ok(set.length >= 2, k + ' level ' + lv + ' has lines'));
+      Jack.LINES[k][0].forEach(t => assert.ok(!Jack.SWEARS.test(t), 'clean line swears: ' + t));
+      Jack.LINES[k][1].forEach(t => assert.ok(!/fuck|shit/i.test(t), 'a little salty is only a little: ' + t));
+    });
+    eq(Jack.level({ lvl: 2 }), 0, 'salty needs the grown-up box');
+    eq(Jack.level({ lvl: 2, adult: true }), 2);
+    eq(Jack.level({ lvl: 3, adult: true }), 2, 'super crude needs its own yes');
+    eq(Jack.level({ lvl: 3, adult: true, crude: true }), 3);
+    eq(Jack.level({ lvl: 3, adult: true, crude: true, kid: true }), 0, "a kid's phone is always clean");
+    eq(Jack.level({ lvl: 3, adult: true, crude: true, fam: true }), 0, 'a family event is always clean');
+    const tee = Jack.lineFor({ kind: 'tee', par: 3, y: 150, hcp: 9, n: 'Alpha Test' }, 0, 0.1);
+    eq(tee.kind, 'tee3'); assert.ok(!/\{|\}/.test(tee.text), 'every blank filled: ' + tee.text);
+    eq(Jack.lineFor({ kind: 'score', par: 4, diff: -1, tp: -1, thru: 2, n: 'Alpha Test' }, 0, 0.9).kind, 'birdie');
+    eq(Jack.lineFor({ kind: 'score', par: 4, diff: 3, tp: 5, thru: 6, n: 'Alpha Test' }, 0, 0.9).kind, 'worse');
+    eq(Jack.lineFor({ kind: 'tee', par: 4, y: 420, hcp: 1, n: 'A' }, 0, 0.5).kind, 'hard');
+    assert.match(Jack.lineFor({ kind: 'score', par: 4, diff: -1, tp: -1, thru: 2, n: 'Alpha Test' }, 0, 0.0).text, /Alpha/, 'first name only');
+    eq(Jack.club(150), 'A 7-iron'); eq(Jack.club(0), 'The club you trust');
+    const g = Jack.gate(0.5); assert.match(g.q, /^\d+ × \d+$/); eq(g.a, g.q.split(' × ').reduce((x, y) => x * +y, 1));
+    const ev = C.newEvent({ name: 'X', now: NOW }); ev.fam = true; eq(C.cleanEvent(ev).fam, true); ev.fam = 'yes'; eq(C.cleanEvent(ev).fam, undefined);
+  });
+
   /* ===================== PART 2: the page ===================== */
   let server, browser;
   try { server = await startServer('fairway'); browser = await launch(); }
@@ -232,6 +278,64 @@ const pl = (ev, id) => Object.assign({ id }, ev.p[id]);
     const [dl] = await Promise.all([page.waitForEvent('download'), page.click('#addcal')]);
     assert.match(dl.suggestedFilename(), /\.ics$/);
     const wide = await page.evaluate(() => document.documentElement.scrollWidth); assert.ok(wide <= 390, 'no sideways scroll at 390 px, got ' + wide);
+    deq(errors, []); await ctx.close();
+  });
+
+  if (browser) await test('page: the hole sketch, Jack on the Score screen, his word on a score, and the course sounds', async () => {
+    const { page, errors, ctx } = await open();
+    await page.click('#demo'); await page.waitForSelector('.lb tbody tr');
+    eq(await page.evaluate(() => window.FW.sound.where), 'quiet', 'the board is quiet');
+    await page.click('[data-tab=score]'); await page.waitForSelector('.hplus #hmap svg.holemap');
+    eq(await page.evaluate(() => window.FW.sound.where), 'course', 'the Score screen gets the birds');
+    const first = await page.locator('#jline').textContent(); assert.ok(first.length > 10, 'Jack has a tip: ' + first);
+    assert.ok(!Jack.SWEARS.test(first), 'clean by default: ' + first);
+    await page.click('#hmap'); await page.waitForSelector('.mapbig svg'); assert.match(await page.locator('.sheet').textContent(), /not the real layout/);
+    await page.click('.sheet [data-close]');
+    // a score entered from this phone gets Jack's word on it
+    await page.locator('.scorer li').first().locator('.minus').click();
+    await page.waitForFunction(t => document.querySelector('#jline').textContent !== t, first);
+    assert.ok(!/^tee|hard|easy/.test(await page.evaluate(() => window.FW.debug.S.jack.kind)), 'a word on the score, not a tee tip');
+    // another hole, a new tip
+    await page.locator('.strip [aria-pressed=false]').first().click();
+    await page.waitForFunction(() => /^(tee|hard|easy)/.test(window.FW.debug.S.jack.kind));
+    await page.click('[data-tab=board]'); eq(await page.evaluate(() => window.FW.sound.where), 'quiet');
+    const wide = await page.evaluate(() => document.documentElement.scrollWidth); assert.ok(wide <= 390, 'no sideways scroll at 390 px, got ' + wide);
+    deq(errors, []); await ctx.close();
+  });
+
+  if (browser) await test("page: Jack's levels need a grown-up, a kid's phone stays clean, and a family event locks every phone", async () => {
+    const { page, errors, ctx } = await open();
+    await page.click('#new'); await page.fill('#nn', 'Test Classic'); await page.fill('#nme', 'Alpha Test');
+    await page.locator('#nf [type=submit]').click(); await page.waitForFunction(() => window.FW.debug.S.view === 'event' && window.FW.debug.S.ev);
+    await page.click('[data-tab=score]'); await page.waitForSelector('#jset');
+    await page.click('#jset'); await page.waitForSelector('input[name=jlv]');
+    await page.click('label:has(input[name=jlv][value="2"]) span');
+    assert.match(await page.locator('#jerr').textContent(), /grown-up box/); eq(await page.evaluate(() => JSON.parse(localStorage.getItem('fw:jack') || '{}').lvl || 0), 0);
+    await page.click('label:has(#jgrown) span'); await page.click('label:has(input[name=jlv][value="2"]) span');
+    eq(await page.evaluate(() => JSON.parse(localStorage.getItem('fw:jack')).lvl), 2);
+    // super crude asks a second time; saying no keeps it where it was
+    page.once('dialog', d => d.dismiss()); await page.click('label:has(input[name=jlv][value="3"]) span');
+    eq(await page.evaluate(() => JSON.parse(localStorage.getItem('fw:jack')).lvl), 2);
+    page.once('dialog', d => d.accept()); await page.click('label:has(input[name=jlv][value="3"]) span');
+    eq(await page.evaluate(() => JSON.parse(localStorage.getItem('fw:jack')).lvl), 3);
+    // lock for a kid: clean, the level picker gone
+    await page.click('#jlock'); await page.waitForFunction(() => !document.querySelector('#sheets').innerHTML);
+    assert.match(await page.locator('.jhead small').textContent(), /Kid's phone/);
+    for (let i = 0; i < 6; i++) { await page.click('#jask'); assert.ok(!Jack.SWEARS.test(await page.locator('#jline').textContent()), 'kid phone swore'); }
+    await page.click('#jset'); eq(await page.locator('input[name=jlv]').count(), 0, 'no level picker on a kid phone');
+    // a wrong answer keeps it locked; the right one unlocks
+    page.once('dialog', d => d.accept('1')); await page.click('#junlock');
+    eq(await page.evaluate(() => JSON.parse(localStorage.getItem('fw:jack')).kid), true);
+    page.once('dialog', d => { const m = /(\d+) × (\d+)/.exec(d.message()); d.accept(String(+m[1] * +m[2])); }); await page.click('#junlock');
+    await page.waitForFunction(() => JSON.parse(localStorage.getItem('fw:jack')).kid === false);
+    await page.click('.sheet [data-close]');
+    // the organizer's family-event switch
+    await page.click('[data-tab=more]'); await page.click('label:has(#mfam) span');
+    const code = await page.evaluate(() => window.FW.debug.S.code);
+    await page.waitForFunction(c => JSON.parse(localStorage.getItem('fw:ev:' + c)).fam === true, code);
+    await page.click('[data-tab=score]'); assert.match(await page.locator('.jhead small').textContent(), /Family event/);
+    await page.click('[data-tab=more]'); await page.click('label:has(#mfam) span');
+    await page.waitForFunction(c => !('fam' in JSON.parse(localStorage.getItem('fw:ev:' + c))), code);
     deq(errors, []); await ctx.close();
   });
 

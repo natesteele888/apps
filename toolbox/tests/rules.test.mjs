@@ -398,6 +398,9 @@ test('fairway: anyone with the code can start, read and score a tournament, sign
   await assertSucceeds(updateDoc(doc(anon(), 'golf_events/' + FW_CODE), { 'p.pl0000001.s.1_1': 4, updated: 2 }));
   await assertSucceeds(updateDoc(doc(stranger(), 'golf_events/' + FW_CODE), { 'p.pl0000002': { n: 'Second Golfer', tee: 'blue', g: 1, st: 1, at: 2, s: {} }, updated: 3 }));
   await assertSucceeds(updateDoc(doc(anon(), 'golf_events/' + FW_CODE), { cur: 2, done: true, name: 'Test Cup Final', updated: 4 }));
+  // the family-event switch (Jack the caddie stays clean on every phone) is a plain true or false
+  await assertSucceeds(updateDoc(doc(anon(), 'golf_events/' + FW_CODE), { fam: true, updated: 5 }));
+  await assertFails(updateDoc(doc(anon(), 'golf_events/' + FW_CODE), { fam: 'yes', updated: 6 }));
 });
 
 test('fairway: no listing, no deleting, and the code must be 20 letters and digits 2-7', async () => {

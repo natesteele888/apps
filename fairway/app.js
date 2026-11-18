@@ -443,6 +443,7 @@
       <div class="strip" data-keep="strip" role="group" aria-label="Hole">${order.map(k => { const done = rs.every(x => x.scores[k - 1] != null), some = rs.some(x => x.scores[k - 1] != null); return `<button type="button" data-h="${k}" aria-pressed="${k === h}" class="${done ? "done" : some ? "part" : ""}">${k}</button>`; }).join("")}</div>
       <div class="holecard"><div class="hn"><small>Hole</small><b>${h}</b></div><div class="hinfo"><b>Par ${hole.par}</b><small>Handicap ${hole.hcp}</small></div>
         <div class="hy">${ev.course.tees.filter(t => g.players.some(p => p.tee === t.id)).map(t => `<span>${teeDot(t)}${C.yards(ev.course, h, t.id) || "–"} yds</span>`).join("")}</div></div>
+      ${caddieRow(ev, g, r, h, mine)}
       ${(ev.ctph || []).indexOf(h) >= 0 ? (() => { const x = C.ctpBoard(ev, r).find(y => y.h === h); return `<button type="button" class="ctpbar" id="ctpopen"><span><b>Closest to the pin</b><small>${x.best ? esc(x.best.name) + ", " + esc(C.fmtFeet(x.best.d)) : "Nobody measured yet"}</small></span><span class="chev">Measure</span></button>`; })() : ""}
       <ul class="scorer">${g.players.map((p, i) => { const v = rs[i].scores[h - 1], d = v == null ? null : v - hole.par, t = C.teeOf(ev, p);
         return `<li data-pid="${esc(p.id)}"><button type="button" class="sname" data-player="${esc(p.id)}">${teeDot(t)}<span><b>${esc(p.n)}</b><small>${rs[i].thru ? parText(rs[i].toPar) + " thru " + rs[i].thru : "No scores yet"}${mine && mine.id === p.id ? " · you" : ""}</small></span></button>
@@ -452,6 +453,7 @@
       <h2 class="sec">Group ${g.g} card</h2>${groupCard(ev, g.players, r, order, h)}
       ${!mine && !isOrg() ? `<p class="msg">You're watching. To keep score for this group, tap Join on the Share tab.</p>` : ""}`;
     const co = $("#ctpopen", el); if (co) co.onclick = () => ctpList(h, r);
+    wireCaddie(el, ev, g, r, h, mine);
     $$("[data-g]", el).forEach(b => b.onclick = () => { S.group = +b.dataset.g; S.hole = null; render(); });
     $$("[data-sr]", el).forEach(b => b.onclick = () => { S.scoreRound = +b.dataset.sr; S.hole = null; render(); });
     $$(".strip [data-h]", el).forEach(b => b.onclick = () => { S.hole = +b.dataset.h; render(); });
@@ -461,6 +463,7 @@
     $$(".scorer li", el).forEach(li => {
       const pid = li.dataset.pid, cur = C.strokes(ev.p[pid], r, h);
       const set = val => {
+        if (val != null) jackReact(ev, pid, r, h, cur, val);
         write({ ["p." + pid + ".s." + C.key(r, h)]: val == null ? C.DELETE : val });
         const sh = val != null && !S.ev.demo && C.shout(S.ev, pid, r, h, val); if (sh) FW.phase1.autoPost(sh, "a" + pid + "r" + r + "h" + h);
       };
@@ -540,6 +543,7 @@
       <div class="card"><label class="fld"><span>Name</span><input id="mname" maxlength="${C.EVENT_MAX}" value="${esc(ev.name)}"></label>
         ${R > 1 ? `<div class="fld"><span>Round being played</span><div class="seg">${Array.from({ length: R }, (_, i) => `<label><input type="radio" name="cur" value="${i + 1}" ${ev.cur === i + 1 ? "checked" : ""}><span>${i + 1}</span></label>`).join("")}</div></div>` : ""}
         <label class="check"><input type="checkbox" id="mdone" ${ev.done ? "checked" : ""}><span>Final results (the board says Final)</span></label>
+        <label class="check"><input type="checkbox" id="mfam" ${ev.fam ? "checked" : ""}><span>Family event: Jack the caddie stays clean on every phone</span></label>
         <div class="fld"><span>Closest-to-the-pin holes</span><div class="ctph">${ev.course.holes.map((h, i) => `<label class="${h.par === 3 ? "p3" : ""}"><input type="checkbox" data-ctph="${i + 1}" ${(ev.ctph || []).indexOf(i + 1) >= 0 ? "checked" : ""}><span>${i + 1}<small>par ${h.par}</small></span></label>`).join("")}</div></div></div>
       <h2 class="sec">Players <small>${list.length}</small></h2>
       <ul class="list plist">${gs.map(g => g.players.map(p => `<li><button type="button" class="row" data-edit="${esc(p.id)}"><span><b>${esc(p.n)}</b><small>Group ${p.g} · ${esc(C.teeOf(ev, p).name)} tees · starts ${p.st}</small></span><span class="chev">Edit</span></button></li>`).join("")).join("")}</ul>
@@ -549,6 +553,7 @@
     const nm = $("#mname", el); nm.onchange = () => { const v = (nm.value || "").trim().slice(0, C.EVENT_MAX); if (v && v !== ev.name) write({ name: v }); };
     $$("input[name=cur]", el).forEach(r => r.onchange = () => { write({ cur: +r.value }); S.scoreRound = null; S.boardRound = null; S.hole = null; });
     $("#mdone", el).onchange = e => write({ done: e.target.checked });
+    $("#mfam", el).onchange = e => write({ fam: e.target.checked ? true : C.DELETE });
     $$("[data-ctph]", el).forEach(c => c.onchange = () => write({ ctph: $$("[data-ctph]", el).filter(x => x.checked).map(x => +x.dataset.ctph) }));
     $("#addp", el).onclick = () => playerSheet(null);
     $$("[data-edit]", el).forEach(b => b.onclick = () => playerSheet(b.dataset.edit));
@@ -579,6 +584,102 @@
     });
   }
 
+
+  /* ======================================================================
+     THE HOLE MAP AND JACK THE CADDIE (holemap.js draws, caddie.js talks)
+     ====================================================================== */
+  const M = window.FairwayMap, J = window.FairwayJack;
+  const JKEY = "fw:jack";
+  const jackSet = () => Object.assign({ on: true, lvl: 0, adult: false, crude: false, kid: false, voice: false }, FW.LS.get(JKEY, {}) || {});
+  const jackSave = o => { FW.LS.set(JKEY, Object.assign(jackSet(), o)); };
+  const jackLevel = () => { const j = jackSet(); return J.level({ lvl: j.lvl, adult: j.adult, crude: j.crude, kid: j.kid, fam: !!(S.ev && S.ev.fam) }); };
+  // Whose hole it is on this screen: you, if you're in this group, or the group's first player.
+  const subjectOf = (g, mine) => (mine && g.players.find(p => p.id === mine.id)) || g.players[0];
+  function holeSketch(ev, h, teeId, big) {
+    const hole = ev.course.holes[h - 1];
+    const p = M.plan({ seed: ev.course.name + " " + h, par: hole.par, yards: C.yards(ev.course, h, teeId), hcp: hole.hcp });
+    return M.svg(p, { id: (big ? "hb" : "hs") + h, big, title: "Sketch of hole " + h + ", par " + hole.par });
+  }
+  function teeLine(ev, g, r, h, mine) {
+    const sub = subjectOf(g, mine), hole = ev.course.holes[h - 1];
+    return J.lineFor({ kind: "tee", par: hole.par, y: C.yards(ev.course, h, sub.tee), hcp: hole.hcp, n: sub.n, h }, jackLevel());
+  }
+  function caddieRow(ev, g, r, h, mine) {
+    if (!M || !J) return "";
+    const sub = subjectOf(g, mine), j = jackSet(), key = [S.code, r, g.g, h].join(":");
+    if (!S.jack || S.jack.key !== key) S.jack = Object.assign({ key }, teeLine(ev, g, r, h, mine));
+    const lv = jackLevel(), lock = j.kid ? "Kid's phone: clean" : ev.fam ? "Family event: clean" : J.LEVELS[lv].name;
+    return `<div class="hplus">
+      <button type="button" class="hmap" id="hmap" aria-label="Hole ${h} map, a sketch. Tap to make it bigger">${holeSketch(ev, h, sub.tee, false)}</button>
+      ${j.on ? `<div class="jack" aria-live="polite"><div class="jhead"><span class="jface" aria-hidden="true">J</span><span><b>Jack</b><small>${esc(lock)}</small></span><button type="button" class="link" id="jset">Settings</button></div>
+        <p class="jline" id="jline">${esc(S.jack.text)}</p>
+        <div class="jbtns"><button type="button" class="btn small" id="jask">Ask Jack</button>${j.voice && "speechSynthesis" in window ? `<button type="button" class="btn small ghost" id="jsay">Say it again</button>` : ""}</div></div>`
+      : `<div class="jack off"><p class="msg small">Jack the caddie is off on this phone.</p><button type="button" class="btn small" id="jset">Turn Jack on</button></div>`}
+    </div>`;
+  }
+  function wireCaddie(el, ev, g, r, h, mine) {
+    const mp = $("#hmap", el); if (mp) mp.onclick = () => mapSheet(ev, g, h, mine);
+    const st = $("#jset", el); if (st) st.onclick = jackSheet;
+    const ask = $("#jask", el); if (ask) ask.onclick = () => { const k = S.jack && S.jack.key; S.jack = Object.assign({ key: k }, teeLine(ev, g, r, h, mine)); const ln = $("#jline", el); if (ln) ln.textContent = S.jack.text; say(S.jack.text); };
+    const ag = $("#jsay", el); if (ag) ag.onclick = () => say(S.jack && S.jack.text);
+  }
+  // Jack's word on a score just entered on this phone (the screen redraws right after, with it in place).
+  function jackReact(ev, pid, r, h, cur, val) {
+    const j = jackSet(); if (!J || !j.on) return;
+    const p = ev.p[pid], par = ev.course.holes[h - 1].par, x = C.round(ev, Object.assign({ id: pid }, p), r);
+    const tp = x.toPar - (cur == null ? 0 : cur - par) + (val - par), thru = x.thru + (cur == null ? 1 : 0);
+    const rows = C.standings(ev), lead = rows.length > 1 && rows[0].id === pid;
+    const line = J.lineFor({ kind: "score", par, diff: val - par, tp, thru, n: p.n, h, lead }, jackLevel());
+    S.jack = Object.assign({ key: [S.code, r, S.group, h].join(":") }, line);
+    say(line.text);
+  }
+  // Out loud, when this phone has it on. Phones send speech to whatever plays sound right now: earbuds when they're in.
+  function say(text) {
+    const j = jackSet(); if (!text || !j.on || !j.voice || !("speechSynthesis" in window)) return;
+    try { speechSynthesis.cancel(); const u = new SpeechSynthesisUtterance(text); u.rate = 1.02; u.pitch = 0.9; u.lang = "en-US"; speechSynthesis.speak(u); } catch (e) { /* no voice on this phone */ }
+  }
+  function mapSheet(ev, g, h, mine) {
+    const sub = subjectOf(g, mine), hole = ev.course.holes[h - 1], y = C.yards(ev.course, h, sub.tee);
+    sheet("Hole " + h, `<div class="mapbig">${holeSketch(ev, h, sub.tee, true)}</div>
+      <p class="maplegend"><b>Par ${hole.par}</b>${y ? ` · ${y} yds from the ${esc(C.teeOf(ev, sub).name)} tees` : ""} · Handicap ${hole.hcp}</p>
+      <p class="msg small">A pencil sketch drawn from the hole's par and yardage, not the real layout. Numbers on the fairway are yards to the middle of the green.</p>`);
+  }
+  function jackSheet() {
+    const j = jackSet(), fam = !!(S.ev && S.ev.fam), lv = jackLevel();
+    const levels = j.kid || fam ? `<p class="lockmsg">${j.kid ? "This is a kid's phone, so Jack stays clean." : "The organizer made this a family event, so Jack stays clean on every phone."}</p>`
+      : `<fieldset class="fld"><legend>How Jack talks</legend><div class="opts">${J.LEVELS.map(l => `<label class="opt"><input type="radio" name="jlv" value="${l.id}" ${lv === l.id ? "checked" : ""}><span><b>${esc(l.name)}</b><small>${esc(l.sub)}</small></span></label>`).join("")}</div></fieldset>
+        <div id="jadult" ${lv > 0 || j.lvl > 0 ? "" : "hidden"}><label class="check"><input type="checkbox" id="jgrown" ${j.adult ? "checked" : ""}><span>I'm an adult and this isn't a kid's phone</span></label></div>`;
+    sheet("Jack the caddie", `<label class="check"><input type="checkbox" id="jon" ${j.on ? "checked" : ""}><span>Show Jack on the Score screen</span></label>
+      <label class="check"><input type="checkbox" id="jvoice" ${j.voice ? "checked" : ""} ${"speechSynthesis" in window ? "" : "disabled"}><span>Jack talks out loud</span></label>
+      <p class="msg small">${"speechSynthesis" in window ? "He talks through whatever your phone is playing sound on, so your earbuds when they're in. Music on a speaker may dip for a second while he talks." : "This phone has no voice for Jack, so he'll stay on the screen."}</p>
+      ${levels}<p class="err" id="jerr"></p>
+      <h3 class="sub">Kid's phone</h3>
+      ${j.kid ? `<p class="msg small">Locked: Jack stays clean here. A grown-up can unlock it.</p><button type="button" class="btn block" id="junlock">Unlock (grown-ups)</button>`
+        : `<p class="msg small">Lock this phone so Jack is always clean, whatever anyone picks. Unlocking takes a grown-up.</p><button type="button" class="btn block" id="jlock">Lock this phone for a kid</button>`}`, box => {
+      $("#jon", box).onchange = e => { jackSave({ on: e.target.checked }); render(); };
+      $("#jvoice", box).onchange = e => { jackSave({ voice: e.target.checked }); render(); if (e.target.checked) say("Jack here. Let's go play some golf."); };
+      const grown = $("#jgrown", box);
+      if (grown) grown.onchange = () => { jackSave({ adult: grown.checked }); if (!grown.checked) jackSave({ crude: false }); render(); };
+      $$("input[name=jlv]", box).forEach(rb => rb.onchange = () => {
+        const v = +rb.value; $("#jerr", box).textContent = "";
+        $("#jadult", box).hidden = v === 0;
+        if (v > 0 && !jackSet().adult) { $("#jerr", box).textContent = "Tick the grown-up box first, then pick it again."; $("input[name=jlv][value='" + jackLevel() + "']", box).checked = true; return; }
+        if (v === 3 && !jackSet().crude) {
+          if (!confirm("Super crude Jack swears nonstop and roasts every bad shot. Grown-ups only. Turn it on?")) { $("input[name=jlv][value='" + jackLevel() + "']", box).checked = true; return; }
+          jackSave({ crude: true });
+        }
+        jackSave({ lvl: v }); S.jack = null; render(); toast("Jack: " + J.LEVELS[v].name);
+      });
+      const lk = $("#jlock", box); if (lk) lk.onclick = () => { jackSave({ kid: true, lvl: 0, crude: false, adult: false }); S.jack = null; closeSheet(); render(); toast("Locked for a kid: Jack stays clean"); };
+      const un = $("#junlock", box); if (un) un.onclick = () => {
+        const q = J.gate();
+        const ans = prompt("Grown-ups: what is " + q.q + "?");
+        if (ans == null) return;
+        if (parseInt(String(ans).replace(/[^0-9]/g, ""), 10) === q.a) { jackSave({ kid: false }); closeSheet(); jackSheet(); toast("Unlocked"); }
+        else toast("That's not it, so it stays locked.", "error");
+      };
+    });
+  }
 
   /* ======================================================================
      CLOSEST TO THE PIN: stand at the hole, mark it, walk to the ball, mark it
@@ -760,7 +861,7 @@
     const keep = {}; $$("[data-keep]", v).forEach(el => keep[el.dataset.keep] = [el.scrollLeft, el.scrollTop]);
     if (S.view !== "event") $("#tabs").hidden = true;
     document.body.dataset.view = S.view;
-    if (FW.sound) FW.sound.scene(S.view === "event" ? "quiet" : "menu");
+    if (FW.sound) FW.sound.scene(S.view === "event" ? (S.tab === "score" && S.ev ? "course" : "quiet") : "menu");
     ({ home: viewHome, join: viewJoin, new: viewNew, course: viewCourse, event: viewEvent }[S.view] || viewHome)(v);
     $$("[data-keep]", v).forEach(el => { const k = keep[el.dataset.keep]; if (k) { el.scrollLeft = k[0]; el.scrollTop = k[1]; } });
   }
