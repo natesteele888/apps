@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<!-- Copyright (c) 2026 Nate Steele. All rights reserved. Not licensed for copying, hosting or resale. See LICENSE. -->
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Snack Shack Screen: League Info on a Loop</title>
+<meta name="description" content="Turn a TV at the field into a screen that plays the latest league info on a loop, straight from a Google Drive folder. Set it up once and it runs itself.">
+<meta name="theme-color" content="#0c2a1b">
+<meta name="color-scheme" content="dark">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Snack Shack">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" type="image/png" sizes="192x192" href="/apps/icons/snackshack-192.png">
+<link rel="apple-touch-icon" href="/apps/icons/snackshack-192.png">
+<script src="https://natesteele888.github.io/apps/install.js" defer></script><script src="https://natesteele888.github.io/apps/health.js" defer></script>
+<link rel="stylesheet" href="setup.css">
+</head>
+<body>
+<main>
+  <header>
+    <img src="/apps/icons/snackshack-192.png" alt="" width="56" height="56">
+    <div><h1>Snack Shack Screen</h1><p class="sub">League info on a loop, fed from Google Drive</p></div>
+  </header>
+
+  <p class="lead">Drop pictures, short videos or a Google Slides deck in a Drive folder. The TV picks them up on its own, plays what fits the day and time, and keeps playing if the internet drops.</p>
+  <p><a class="btn ghost" id="preview" href="screen.html" target="_blank" rel="noopener">See it play</a></p>
+
+
+  <section>
+    <h2><span class="n">1</span>Make the Drive feed <small>one time, on a computer, about 3 minutes</small></h2>
+    <ol>
+      <li>Go to <b>script.google.com</b> and click <b>New project</b>.</li>
+      <li>Delete what's there and paste the feed script. <button type="button" class="btn small" id="copyScript">Copy the script</button></li>
+      <li>Pick <b>setup</b> at the top and click <b>Run</b>. Allow it. It makes a <b>Snack Shack Screen</b> folder in your Drive with starter folders inside.</li>
+      <li>Click <b>Deploy</b>, <b>New deployment</b>, the gear, <b>Web app</b>. Execute as <b>Me</b>, who has access <b>Anyone</b>. Deploy, then copy the Web app URL.</li>
+    </ol>
+    <p class="note">Nothing in your Drive gets shared. The feed only hands out files inside that one folder, so keep it to things you'd show on a public screen.</p>
+  </section>
+
+  <section>
+    <h2><span class="n">2</span>Connect it</h2>
+    <label for="feed">Web app URL</label>
+    <div class="row"><input id="feed" type="url" inputmode="url" autocomplete="off" spellcheck="false" placeholder="https://script.google.com/macros/s/…/exec"><button type="button" class="btn" id="check">Connect</button></div>
+    <p id="feedMsg" class="msg" role="status"></p>
+    <div id="tvBox" class="tv" hidden>
+      <label for="tvLink">The screen's link</label>
+      <div class="row"><input id="tvLink" type="text" readonly><button type="button" class="btn" id="copyTv">Copy</button></div>
+      <p><a class="btn ghost" id="openTv" href="screen.html" target="_blank" rel="noopener">Open the screen</a></p>
+    </div>
+  </section>
+
+  <section>
+    <h2><span class="n">3</span>Put it on the TV</h2>
+    <ol>
+      <li>Plug a <b>Google TV stick</b> into the TV, and plug the stick's power into the <b>wall</b> (not the TV's USB), so it stays awake when the TV is off.</li>
+      <li>On the stick, install <b>Fully Kiosk Browser</b> from the Play Store.</li>
+      <li>In Fully's settings, set <b>Start URL</b> to the screen's link (the Google TV app on your phone has a keyboard you can paste into), then turn on <b>Keep screen on</b> and <b>Launch on boot</b>.</li>
+    </ol>
+    <p class="note">From then on, turn the TV on and it's already playing. Quick test with no stick: open the screen's link in Chrome on your phone and cast the tab.</p>
+  </section>
+
+  <section>
+    <h2>What plays when</h2>
+    <p>Only the folder names decide. Folders inside folders have to all match.</p>
+    <table class="rules">
+      <tr><th>Always</th><td>All the time (any folder with no rule word does too)</td></tr>
+      <tr><th>Morning, Afternoon, Evening</th><td>Before noon, noon to 5 PM, after 5 PM</td></tr>
+      <tr><th>5pm-8pm</th><td>Only between those times</td></tr>
+      <tr><th>Saturday, Weekends, Weekdays</th><td>Only on those days</td></tr>
+      <tr><th>Spring, Summer, Fall</th><td>Only in that season</td></tr>
+      <tr><th>Opening Day 2027-04-17</th><td>Only that day. A range: 2027-06-04 to 2027-06-06</td></tr>
+      <tr><th>Sign up until 2027-03-20</th><td>Up to that day, then it stops on its own</td></tr>
+      <tr><th>Game Day</th><td>Only on days with games (needs the league calendar in the script)</td></tr>
+      <tr><th>Sponsors</th><td>One sponsor after every 3 slides, taking turns</td></tr>
+      <tr><th>Menu</th><td>The menu comes back after every 5 slides</td></tr>
+      <tr><th>_Drafts, Off</th><td>Never plays: a parking spot</td></tr>
+    </table>
+    <p class="note">Pictures stay up 10 seconds. Add <b>[15s]</b> to a file name for 15. Videos play to the end (keep them under about a minute). Number file names to set the order: 01, 02, 03.</p>
+    <p class="note">On the TV remote: right and left skip, OK shows what's saved and when it last heard from Drive.</p>
+  </section>
+
+  <section>
+    <h2>Something wrong?</h2>
+    <button type="button" class="btn ghost" onclick="window.nateHealth&&nateHealth.report()">Send a problem report</button>
+  </section>
+</main>
+<div id="toast" class="toast" role="status" hidden></div>
+<script src="core.js"></script>
+<script src="setup.js"></script>
+</body>
+</html>

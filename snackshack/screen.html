@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<!-- Copyright (c) 2026 Nate Steele. All rights reserved. Not licensed for copying, hosting or resale. See LICENSE. -->
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Snack Shack Screen</title>
+<meta name="theme-color" content="#000000">
+<meta name="color-scheme" content="dark">
+<meta name="application-name" content="Snack Shack Screen">
+<meta name="mobile-web-app-capable" content="yes">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" type="image/png" sizes="192x192" href="/apps/icons/snackshack-192.png">
+<!-- The TV page: no install bar (it would sit on the screen). health.js only shows a bar if saving fails. -->
+<script src="https://natesteele888.github.io/apps/health.js" defer></script>
+<link rel="stylesheet" href="screen.css">
+</head>
+<body>
+<div id="stage" aria-live="off"></div>
+<div id="chip" class="chip"><span id="clock"></span><i id="dot" class="dot" title="Offline"></i></div>
+<div id="hint" class="hint" hidden></div>
+<div id="info" class="info" hidden></div>
+<noscript><p style="padding:40px;font:28px sans-serif;color:#fff">This screen needs JavaScript turned on.</p></noscript>
+<script src="core.js"></script>
+<script src="player.js"></script>
+</body>
+</html>
