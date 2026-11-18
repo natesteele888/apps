@@ -18,10 +18,70 @@
       <small class="rc-eye">${esc(rc.title)} · ${esc(rc.champ.label)}</small>
       <b class="rc-champ">${esc(rc.champ.name)}</b><span class="rc-line">${esc(rc.champ.line)}</span>
       <ul>${rc.items.map(i => `<li><i class="chip">${esc(i.k)}</i><span>${esc(i.t)}</span></li>`).join("")}</ul>
+      <button type="button" class="btn block" id="rcpic">Save as a picture</button>
       ${can ? `<button type="button" class="btn block" id="rcshare" ${shared[U().S.code + ":" + r] ? "disabled" : ""}>${shared[U().S.code + ":" + r] ? "Shared in the chat" : "Share in the chat"}</button><p class="msg small">Goes to this tournament's chat only.</p>` : ""}
     </section>`;
   };
+  /* ---------- the recap as a picture, to save or send from the phone's own share menu ---------- */
+  const PIC = { w: 1080, h: 1350, green: "#0d4a30", green2: "#145c3d", cream: "#f6f3e8", gold: "#d8b54a", ink: "#13201a", muted: "#5d6b62", under: "#c8102e", over: "#0a6b3d" };
+  const FONT = "system-ui, -apple-system, 'Segoe UI', Roboto, Arial, sans-serif";
+  // Text at the biggest size up to px that fits in max pixels.
+  function fit(x, t, px, max, weight) { let s = px; do { x.font = `${weight || 700} ${s}px ${FONT}`; s -= 2; } while (s > 14 && x.measureText(t).width > max); return t; }
+  // Draws the recap on a 1080 by 1350 canvas: the champion, the day's notes and the top of the board.
+  R.draw = function (x, ev, r) {
+    const rc = C.recap(ev, r); if (!rc) return false;
+    const P = PIC, W = P.w, pad = 72;
+    x.fillStyle = P.green; x.fillRect(0, 0, W, P.h);
+    x.strokeStyle = P.gold; x.lineWidth = 6; x.strokeRect(28, 28, W - 56, P.h - 56);
+    x.textBaseline = "alphabetic"; x.textAlign = "center";
+    x.fillStyle = P.gold; fit(x, "FAIRWAY", 30, W, 800); x.fillText("F A I R W A Y", W / 2, 112);
+    x.fillStyle = "#fff"; fit(x, ev.name, 64, W - pad * 2, 800); x.fillText(ev.name, W / 2, 196);
+    const sub = ev.course.name + (ev.rounds > 1 ? " · Round " + r + " of " + ev.rounds : "");
+    x.fillStyle = P.cream; fit(x, sub, 34, W - pad * 2, 500); x.fillText(sub, W / 2, 248);
+    // the champion, on a cream card
+    x.fillStyle = P.cream; x.fillRect(pad, 296, W - pad * 2, 250);
+    const eye = (rc.champ.name === "A tie at the top" ? (r === ev.rounds ? "Final" : "After round " + r) : rc.champ.label).toUpperCase();
+    x.fillStyle = P.green2; fit(x, eye, 30, W - pad * 3, 800); x.fillText(eye, W / 2, 356);
+    x.fillStyle = P.ink; fit(x, rc.champ.name, 84, W - pad * 3, 800); x.fillText(rc.champ.name, W / 2, 450);
+    x.fillStyle = P.muted; fit(x, rc.champ.line, 36, W - pad * 3, 600); x.fillText(rc.champ.line, W / 2, 508);
+    // the day's notes
+    x.textAlign = "left"; let y = 618;
+    rc.items.slice(0, 4).forEach(i => {
+      x.fillStyle = P.gold; fit(x, i.k.toUpperCase(), 26, 300, 800); x.fillText(i.k.toUpperCase(), pad, y);
+      x.fillStyle = "#fff"; fit(x, i.t, 36, W - pad * 2 - 300, 600); x.fillText(i.t, pad + 300, y);
+      y += 64;
+    });
+    // the top of the board
+    y = Math.max(y + 20, 900);
+    const rows = C.standings(ev).filter(s => s.holes).slice(0, 5), names = C.boardNames(rows);
+    x.fillStyle = P.cream; x.fillRect(pad, y - 54, W - pad * 2, 84 + rows.length * 62);
+    x.fillStyle = P.green; fit(x, "LEADERS", 28, 400, 800); x.fillText("LEADERS", pad + 28, y);
+    rows.forEach((s, i) => {
+      const yy = y + 62 * (i + 1);
+      x.textAlign = "left"; x.fillStyle = P.muted; fit(x, String(s.pos), 34, 90, 700); x.fillText(String(s.pos), pad + 28, yy);
+      x.fillStyle = P.ink; fit(x, names[s.id], 38, W - pad * 2 - 360, 700); x.fillText(names[s.id], pad + 130, yy);
+      x.textAlign = "right"; x.fillStyle = s.toPar < 0 ? P.under : s.toPar > 0 ? P.over : P.ink;
+      const tp = C.fmtPar(s.toPar); fit(x, tp, 40, 160, 800); x.fillText(tp, W - pad - 28, yy);
+    });
+    x.textAlign = "center"; x.fillStyle = P.cream; fit(x, "Scored with Fairway", 26, W, 500); x.fillText("Scored with Fairway", W / 2, P.h - 64);
+    return true;
+  };
+  // Makes the picture and hands it to the phone's share menu (Save image, Messages, and so on), or saves the file.
+  R.picture = function (ev, r) {
+    const u = U(), cv = document.createElement("canvas"); cv.width = PIC.w; cv.height = PIC.h;
+    const x = cv.getContext && cv.getContext("2d");
+    if (!x || !R.draw(x, ev, r) || !cv.toBlob) { u.toast("This phone can't make the picture.", "error"); return; }
+    cv.toBlob(blob => {
+      if (!blob) { u.toast("This phone can't make the picture.", "error"); return; }
+      const name = ("fairway-" + ev.name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") + "-r" + r).slice(0, 60) + ".png";
+      let file = null; try { file = new File([blob], name, { type: "image/png" }); } catch (e) { /* older phones */ }
+      if (file && navigator.canShare && navigator.canShare({ files: [file] })) { navigator.share({ files: [file], title: ev.name }).catch(() => {}); return; }
+      const a = document.createElement("a"), url = URL.createObjectURL(blob); a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 4000); u.toast("Picture saved");
+    }, "image/png");
+  };
   R.wire = function (el, ev, r) {
+    const pic = $("#rcpic", el); if (pic) pic.onclick = () => R.picture(ev, r);
     const b = $("#rcshare", el); if (!b) return;
     b.onclick = () => {
       const rc = C.recap(ev, r); if (!rc) return;
