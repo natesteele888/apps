@@ -518,6 +518,7 @@
         : `<div class="share"><h2>${m.demo ? "This is the demo" : "On this phone only"}</h2><p class="msg">${m.demo ? "Made-up players on a made-up course, so you can try every screen. Score a few holes, tap players, flip their cards." : "This tournament runs on this phone, so there's no QR code to share. Pass the phone around to score, or put the board up on it."}</p>${m.demo ? `<button type="button" class="btn block" id="resetdemo">Start the demo over</button>` : ""}</div>`}
       ${!mine && canShare ? `<button type="button" class="btn primary block" id="joinme">Join and keep score</button>` : ""}
       ${mine ? `<p class="msg">You're <b>${esc(mine.n)}</b>, group ${mine.g}. <button type="button" class="link" id="notme">Not you?</button></p>` : ""}
+      ${mine && FW.watch ? FW.watch.panelHtml() : ""}
       ${ev.rally && ev.rally.on ? "" : FW.phase1.teeHtml(ev, org)}
       ${org ? `<button type="button" class="btn block" id="setup">Set it up</button>` + manageHtml(ev, list) : `<p class="msg">Changing rounds and players is on the phone that started this tournament.</p>`}
       <button type="button" class="btn ghost danger block" id="forget">Remove from this phone</button></div>`;
@@ -526,6 +527,7 @@
     const bq = $("#bigqr", el); if (bq) bq.onclick = () => { const o = document.createElement("div"); o.className = "bigqr"; o.innerHTML = `<h2>${esc(ev.name)}</h2>${qrSvg(link)}<p>Scan to join · tap to close</p>`; o.onclick = () => o.remove(); document.body.appendChild(o); };
     const jm = $("#joinme", el); if (jm) jm.onclick = () => { S.ev = ev; S.evCode = S.code; stopLive(); go("join"); };
     const nm = $("#notme", el); if (nm) nm.onclick = () => { FW.mineSet(S.code, { me: null }); render(); };
+    if (mine && FW.watch) FW.watch.wire(el);
     const rd = $("#resetdemo", el); if (rd) rd.onclick = () => { FW.local.create(S.code, C.demoEvent()); toast("Demo reset"); };
     $("#forget", el).onclick = () => {
       if (!confirm(local ? "Remove this tournament from this phone? It only lives here, so its scores go too." : "Remove this tournament from this phone? Its scores stay on the shared board, and the link still opens it.")) return;

@@ -6,8 +6,17 @@
     <!-- everything goes through the watch link on the internet (through the phone on watches without Wi-Fi or LTE) -->
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <!-- Fairway's yards to the green, from the watch's own GPS, only while Fairway is on screen; asked for the first time it's needed -->
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-feature android:name="android.hardware.location.gps" android:required="false" />
+    <!-- Fairway's Jack listens with the watch's speech input and talks with its voice -->
+    <queries>
+        <intent><action android:name="android.speech.action.RECOGNIZE_SPEECH" /></intent>
+        <intent><action android:name="android.intent.action.TTS_SERVICE" /></intent>
+    </queries>
 
-    <!-- One install, five apps in the watch's app list. Each works without the others; one link to the phone covers them all. -->
+    <!-- One install, the apps each in the watch's app list. Each works without the others; one link to the phone covers them all. -->
     <application
         android:allowBackup="false"
         android:icon="@mipmap/ic_getready"
@@ -39,6 +48,10 @@
         </activity>
         <activity android:name=".ScheduleActivity" android:exported="true" android:icon="@mipmap/ic_schedule" android:roundIcon="@mipmap/ic_schedule"
             android:label="@string/schedule_name" android:launchMode="singleTask" android:taskAffinity="com.steele.family.schedule">
+            <intent-filter><action android:name="android.intent.action.MAIN" /><category android:name="android.intent.category.LAUNCHER" /></intent-filter>
+        </activity>
+        <activity android:name=".FairwayActivity" android:exported="true" android:icon="@mipmap/ic_fairway" android:roundIcon="@mipmap/ic_fairway"
+            android:label="@string/fairway_name" android:launchMode="singleTask" android:taskAffinity="com.steele.family.fairway">
             <intent-filter><action android:name="android.intent.action.MAIN" /><category android:name="android.intent.category.LAUNCHER" /></intent-filter>
         </activity>
     </application>

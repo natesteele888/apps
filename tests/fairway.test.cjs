@@ -4,7 +4,8 @@
 // and Phase 1: who's in, making it official, the draft, team board, match play, tee times, the calendar file, chat.
 // Part 2 drives the real page with Firebase blocked (so tournaments run on the phone): the demo board, field, score,
 // course and player card, starting a tournament, closest to the pin with the browser's own made-up GPS, the sound
-// switch, names shown as text, and a tournament got going on one phone (official, chat, tee time, calendar file).
+// switch, names shown as text, a tournament got going on one phone (official, chat, tee time, calendar file), and a
+// linked watch (watchlink.js with Firestore REST stubbed): the round it gets and the scores, marks and notes it gives back.
 // Live sharing between phones needs the shared database and is not tested here.
 const assert = require('assert');
 const C = require('../apps/fairway/core.js');
@@ -263,6 +264,50 @@ const pl = (ev, id) => Object.assign({ id }, ev.p[id]);
       const l = [[3, 4, 5], [1, 4, 7], [0, 4, 8], [2, 4, 6]].find(x => x.every(i => c[i] < 0 || c[i] >= C.BINGO_AUTO)); return l.filter(i => i !== 4).map(i => c[i]); });
     for (const q of sqs) await page.click(`.bgo [data-sq="${q}"]`);
     await page.waitForSelector('.bgo.won');
+    const wide = await page.evaluate(() => document.documentElement.scrollWidth); assert.ok(wide <= 390, 'no sideways scroll at 390 px, got ' + wide);
+    deq(errors, []); await ctx.close();
+  });
+
+  if (browser) await test('page: a linked watch gets your round and gives back its scores, green marks and notes', async () => {
+    const { page, errors, ctx } = await open();
+    const db = { w: null }, calls = [], patches = [];
+    const H = { 'access-control-allow-origin': '*', 'access-control-allow-methods': 'GET, POST, PATCH', 'access-control-allow-headers': 'content-type' };
+    await page.route(/firestore\.googleapis\.com/, r => {
+      const q = r.request(), url = q.url(), m = q.method(); if (m === 'OPTIONS') return r.fulfill({ status: 204, headers: H });
+      calls.push(m + ' ' + url.replace(/^.*\/documents\//, ''));
+      if (m === 'POST' && /\/fw_pair\?documentId=[a-z2-7]{8}$/.test(url)) return r.fulfill({ status: 200, headers: H, contentType: 'application/json', body: '{}' });
+      if (m === 'GET' && /\/fw_links\/[a-z2-7]{26}$/.test(url)) return db.w ? r.fulfill({ status: 200, headers: H, contentType: 'application/json', body: JSON.stringify({ fields: { w: { stringValue: JSON.stringify(db.w) } } }) }) : r.fulfill({ status: 404, headers: H, contentType: 'application/json', body: '{}' });
+      if (m === 'PATCH') { patches.push({ url, body: JSON.parse(q.postData()) }); return r.fulfill({ status: 200, headers: H, contentType: 'application/json', body: '{}' }); }
+      return r.fulfill({ status: 400, headers: H, body: '' });
+    });
+    const until = async (f, ms = 8000) => { const t0 = Date.now(); while (!f()) { if (Date.now() - t0 > ms) throw new Error('timed out waiting'); await new Promise(r => setTimeout(r, 40)); } };
+    const lastFg = () => { const p = patches.filter(x => x.body.fields.fg).pop(); return p && JSON.parse(p.body.fields.fg.stringValue); };
+    await page.click('#new'); await page.fill('#nn', 'Watch Day'); await page.fill('#nme', 'Alpha Test');
+    await page.locator('#nf [type=submit]').click(); await page.waitForFunction(() => window.FW.debug.S.ev);
+    await page.evaluate(() => window.FW.watch.tick()); eq(calls.length, 0, 'no watch linked, nothing sent: ' + calls.join());
+    await page.click('[data-tab=more]'); await page.locator('#fwwl .wl-code').fill('abcd 2345'); await page.locator('#fwwl [data-wl="on"]').click();
+    await page.locator('#fwwl [data-wl="off"]').waitFor();
+    await until(() => lastFg());
+    const fg = lastFg(), me = await page.evaluate(() => ({ code: window.FW.debug.S.code, pid: window.FW.ui.me().id }));
+    eq(fg.v, 1); eq(fg.sh, false, 'kept on this phone'); eq(fg.e, me.code); eq(fg.p, me.pid); eq(fg.pn, 'Alpha Test');
+    eq(fg.h.length, 18); assert.ok(fg.h[0].y > 0 && fg.h[0].p >= 3, 'par and yards from their tees'); deq(fg.s, {}); assert.ok(fg.ck);
+    // what the watch did: a score here, a green mark and a note, and a score for another tournament (waits)
+    db.w = { v: 1, e: [
+      { id: 'fw1', a: 'fg', at: 1, k: 's', e: me.code, p: me.pid, r: 1, h: 1, s: 5 },
+      { id: 'fw2', a: 'fg', at: 2, k: 'g', c: fg.ck, h: 1, m: 'c', lat: 42.5, lon: -71.7, acc: 4 },
+      { id: 'fw3', a: 'fg', at: 3, k: 'n', c: fg.ck, h: 1, t: 'Brook right' },
+      { id: 'fw4', a: 'fg', at: 4, k: 's', e: 'abcdefghijklmnopqrst', p: me.pid, r: 1, h: 2, s: 4 },
+      { id: 'cc1', a: 'cc', at: 5, puz: '333', t: 41000 }] };
+    patches.length = 0; await page.evaluate(() => window.FW.watch.tick());
+    await page.waitForFunction(() => window.FairwayCore.strokes(window.FW.debug.S.ev.p[window.FW.ui.me().id], 1, 1) === 5);
+    eq(await page.evaluate(k => JSON.parse(localStorage.getItem('fw:map:' + k + ':1')).gc.lat, fg.ck), 42.5);
+    deq(await page.evaluate(k => JSON.parse(localStorage.getItem('fw:cnotes'))[k]['1'], fg.ck), ['Brook right']);
+    await until(() => lastFg());
+    const fg2 = lastFg(); eq(fg2.s['1'], 5); deq(fg2.h[0].c, [42.5, -71.7]); deq(fg2.h[0].n, ['Brook right']);
+    eq(await page.evaluate(() => JSON.parse(localStorage.getItem('steele.watchlink.seen.fg')).length), 3, 'taken once; the other tournament\'s score waits');
+    // nothing changed: the next look sends nothing new
+    patches.length = 0; await page.evaluate(() => window.FW.watch.tick()); eq(patches.length, 0);
+    eq(await page.evaluate(() => window.FairwayCore.strokes(window.FW.debug.S.ev.p[window.FW.ui.me().id], 1, 1)), 5);
     const wide = await page.evaluate(() => document.documentElement.scrollWidth); assert.ok(wide <= 390, 'no sideways scroll at 390 px, got ' + wide);
     deq(errors, []); await ctx.close();
   });

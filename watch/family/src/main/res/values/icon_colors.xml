@@ -6,4 +6,5 @@
     <color name="picks_bg">#FF166534</color>
     <color name="read_bg">#FF7C3AED</color>
     <color name="schedule_bg">#FF0EA5E9</color>
+    <color name="fairway_bg">#FF1F6B47</color>
 </resources>

@@ -538,6 +538,8 @@ test('watch link: no listing, no deleting, the code must be 26 letters and digit
   await assertFails(setDoc(doc(anon(), 'fw_links/' + WL_KEY), { lk: '{}' }), 'Locker is not on the watch');
   await assertSucceeds(setDoc(doc(anon(), 'fw_links/' + WL_KEY), { pp: 'x'.repeat(30000) }));
   await assertFails(setDoc(doc(anon(), 'fw_links/' + WL_KEY), { pp: 'x'.repeat(40001) }));
+  await assertSucceeds(updateDoc(doc(anon(), 'fw_links/' + WL_KEY), { fg: 'x'.repeat(50000) }), "Fairway's round on the watch");
+  await assertFails(updateDoc(doc(anon(), 'fw_links/' + WL_KEY), { fg: 'x'.repeat(60001) }));
   await assertFails(setDoc(doc(anon(), 'fw_links/' + WL_KEY), { gr: '{}', updated: 'yesterday' }));
 });
 

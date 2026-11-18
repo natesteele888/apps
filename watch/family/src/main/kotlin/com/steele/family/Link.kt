@@ -27,7 +27,7 @@ object Link {
     private const val BASE = "https://firestore.googleapis.com/v1/projects/nates-toolbox/databases/(default)/documents/"
     /** the nates-toolbox web app id, the same public one in getready/cloud.js (not a secret); only used for the Picks sign-in */
     const val API_KEY = "AIzaSyDT_wGN93U4oM70orIU8flSAnvXHApqW2A"
-    private val FIELDS = listOf("gr", "cc", "pp", "r20", "gp", "sc")
+    private val FIELDS = listOf("gr", "cc", "pp", "r20", "gp", "sc", "fg")
     private const val CODE_LIFE = 10 * 60_000L
 
     data class State(
