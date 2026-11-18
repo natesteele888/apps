@@ -69,6 +69,9 @@ nav.views button[aria-current="page"]{color:var(--ink);border-bottom-color:var(-
 .wp-wait .wp-bar{animation:wpw 1.2s ease-in-out infinite alternate}
 @keyframes wpw{to{opacity:.45}}
 @media(prefers-reduced-motion:reduce){.wp-wait .wp-bar{animation:none}}
+.lockbar{display:flex;align-items:center;justify-content:space-between;gap:10px;background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:8px 10px 8px 12px;margin:0 0 10px;font-size:13px;color:var(--ink-dim)}
+.lockbar.done{border-color:var(--win);color:var(--ink)}
+.lockbar .btn{flex:none;min-height:40px}
 .who{font-size:11.5px;color:var(--ink-dim);text-align:center;min-height:16px}
 .who b{color:var(--ink)}
 .mid{width:46px;flex:none;display:flex;flex-direction:column;align-items:center;justify-content:center;border-left:1px solid var(--line-soft);border-right:1px solid var(--line-soft);font-size:10.5px;color:var(--ink-dim);gap:2px}
@@ -217,7 +220,7 @@ let toastT;function toast(m){const t=$("#toast");t.textContent=m;t.classList.add
 function contrast(hex){hex=String(hex||"").replace("#","");if(hex.length!==6)return"#fff";const r=parseInt(hex.slice(0,2),16),g=parseInt(hex.slice(2,4),16),b=parseInt(hex.slice(4,6),16);return(.299*r+.587*g+.114*b)/255>.6?"#151515":"#fff"}
 function store(k,v){try{if(v===undefined)return localStorage.getItem(k);localStorage.setItem(k,v)}catch(_){return null}}
 
-const S={user:null,me:null,isOwner:false,players:{},weeks:{},picks:{},view:"picks",sel:null,selBy:{},sport:C.SPORTS[store("gp.sport")]?store("gp.sport"):"nfl",season:null,codes:[],loading:false,
+const S={user:null,me:null,isOwner:false,players:{},weeks:{},picks:{},locked:{},view:"picks",sel:null,selBy:{},sport:C.SPORTS[store("gp.sport")]?store("gp.sport"):"nfl",season:null,codes:[],loading:false,
   extra:{},wp:{},team:null,lsub:store("gp.lsub")||"standings"}; // extra: the scoreboard's team ids, records and top players; wp: ESPN's win chances per game; both in memory only
 let db,unsubs=[];
 
@@ -348,7 +351,7 @@ function subscribeAll(){
   const fail=()=>toast("Couldn't load part of the picks. Reload to try again.");
   unsubs.push(db.collection("gp_players").onSnapshot(s=>{S.players={};s.docs.forEach(d=>S.players[d.id]=d.data());rerender()},fail));
   unsubs.push(db.collection("gp_weeks").onSnapshot(s=>{S.weeks={};s.docs.forEach(d=>S.weeks[d.id]=d.data());rerender()},fail));
-  unsubs.push(db.collection("gp_picks").onSnapshot(s=>{S.picks={};s.docs.forEach(d=>{const x=d.data();(S.picks[x.week]=S.picks[x.week]||{})[x.uid]=x.picks||{}});rerender()},fail));
+  unsubs.push(db.collection("gp_picks").onSnapshot(s=>{S.picks={};S.locked={};s.docs.forEach(d=>{const x=d.data();(S.picks[x.week]=S.picks[x.week]||{})[x.uid]=x.picks||{};if(x.locked)(S.locked[x.week]=S.locked[x.week]||{})[x.uid]=x.locked});rerender()},fail));
   if(S.isOwner)unsubs.push(db.collection("gp_codes").onSnapshot(s=>{S.codes=s.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>String(b.createdAt).localeCompare(String(a.createdAt)));if(S.view==="admin")rerender()},()=>{}));
   ensureSel();
   setTimeout(watchSync,4000); // once the players and picks have loaded
@@ -422,34 +425,55 @@ function renderPicks(){
   const open=games.filter(([,g])=>!started(g));const pickedOpen=open.filter(([id])=>mine[id]).length;
   v.innerHTML=`<div class="pills" role="group" aria-label="${sp.weekly?"Week":"Day"}">${keys.map(k=>`<button class="pill" data-wk="${k}" aria-pressed="${k===S.sel}">${C.label(k,today())}</button>`).join("")}</div>
     <div class="status"><span>${S.loading&&!games.length?"Loading games…":games.length?`${open.length?`${pickedOpen} of ${open.length} open games picked`:"All games have started"}`:`No ${sp.name} games ${sp.weekly?"this week":"on this day"}.`}</span><button class="btn small" id="refresh">Refresh scores</button></div>
+    ${lockBar(open,pickedOpen,sp)}
     <div class="games">${games.map(([id,g])=>gameCard(id,g,mine)).join("")||`<p class="empty">${S.loading?"":`Pick another ${sp.noun} above.`}</p>`}</div>`;
   v.querySelectorAll("[data-wk]").forEach(b=>b.onclick=()=>{S.sel=b.dataset.wk;S.selBy[S.sport]=S.sel;render();loadSlate(S.sel)});
   $("#refresh").onclick=()=>loadSlate(S.sel);
+  if($("#lockin"))$("#lockin").onclick=lockIn;
   v.querySelectorAll(".side[data-g]").forEach(b=>b.onclick=()=>{if(b.dataset.held){delete b.dataset.held;return}pick(b.dataset.g,b.dataset.t)});
   xHold(v);
   // centre the selected slate by sliding the pill row only; scrollIntoView would also pull the whole page up to it
   const row=v.querySelector(".pills"),cur=row.querySelector('[aria-pressed="true"]');
   if(cur)row.scrollLeft=cur.offsetLeft-row.offsetLeft-(row.clientWidth-cur.offsetWidth)/2;
 }
+/* Lock to reveal: nobody sees anyone else's picks for a game until they've locked in their own picks for that week (NFL)
+   or day, or the game has started. Locking in is for good: picks for that slate can't change after. */
+const iLocked=key=>!!((S.locked[key]||{})[S.user.uid]);
+function lockBar(open,picked,sp){
+  if(iLocked(S.sel))return`<div class="lockbar done" role="status">🔒 You're locked in. Everyone's picks show now.</div>`;
+  if(!open.length)return"";
+  return`<div class="lockbar"><span>Lock in your picks to see everyone else's.</span><button class="btn gold small" id="lockin" ${picked?"":"disabled"}>Lock in</button></div>`;
+}
+let lockArm=0;
+async function lockIn(){
+  const b=$("#lockin");if(!b||iLocked(S.sel))return;
+  const wk=S.weeks[S.sel],mine=(S.picks[S.sel]||{})[S.user.uid]||{};
+  const left=wk?Object.entries(wk.games).filter(([id,g])=>!started(g)&&!mine[id]).length:0;
+  if(Date.now()-lockArm>4000){lockArm=Date.now();b.textContent="Tap again to lock";toast(left?`${left} game${left>1?"s":""} not picked yet. Locked picks can't change.`:"Locked picks can't change.");
+    setTimeout(()=>{const x=$("#lockin");if(x&&Date.now()-lockArm>=4000)x.textContent="Lock in"},4100);return}
+  lockArm=0;const at=new Date().toISOString();(S.locked[S.sel]=S.locked[S.sel]||{})[S.user.uid]=at;render();
+  try{await db.doc(`gp_picks/${S.user.uid}_${S.sel}`).set({uid:S.user.uid,week:S.sel,picks:mine,locked:at,updatedAt:at});toast("Locked in")}
+  catch(_){delete S.locked[S.sel][S.user.uid];render();toast("Couldn't lock in. Check your connection.")}
+}
 function gameCard(id,g,mine){
-  const lock=started(g);const all=S.picks[S.sel]||{};
+  const lock=started(g);const all=S.picks[S.sel]||{};const seen=lock||iLocked(S.sel);
   const ex=S.extra[S.sel]&&S.extra[S.sel][id];
   const side=(t,cls)=>{const rec=ex&&ex[cls==="hm"?"home":"away"];const r=rec&&rec.records&&rec.records.total||"";const isMine=mine[id]===t.abbr;const res=g.done&&isMine?(g.winner===t.abbr?" right":" wrong"):"";
-    const who=lock?Object.entries(all).filter(([u,p])=>p[id]===t.abbr).map(([u])=>S.players[u]?S.players[u].name:"?"):[];
-    const n=Object.values(all).filter(p=>p[id]===t.abbr).length;
-    return `<button class="side ${cls}${isMine?" mine":""}${res}" data-g="${id}" data-t="${esc(t.abbr)}" ${lock?"disabled":""} aria-pressed="${isMine}" aria-label="${esc(t.city+" "+t.name)}${r?", "+esc(r):""}${isMine?", your pick":""}">
+    const who=seen?Object.entries(all).filter(([u,p])=>p[id]===t.abbr).map(([u])=>S.players[u]?S.players[u].name:"?"):[];
+    return `<button class="side ${cls}${isMine?" mine":""}${res}" data-g="${id}" data-t="${esc(t.abbr)}" ${seen?"disabled":""} aria-pressed="${isMine}" aria-label="${esc(t.city+" "+t.name)}${r?", "+esc(r):""}${isMine?", your pick":""}">
       <span class="badge" style="background:${esc(t.color)};color:${contrast(t.color)}">${esc(t.abbr)}</span>
       <span class="tname">${esc(t.name)}<small>${esc(t.city)}</small></span>
       ${r?`<span class="trec">${esc(r)}</span>`:""}
-      <span class="who">${lock?(who.length?who.map(w=>`<b>${esc(w)}</b>`).join(", "):"&nbsp;"):(n?`${n} pick${n>1?"s":""}`:"&nbsp;")}</span></button>`};
+      <span class="who">${seen&&who.length?who.map(w=>`<b>${esc(w)}</b>`).join(", "):"&nbsp;"}</span></button>`};
   let date="";try{date=new Date(g.date).toLocaleString(undefined,{weekday:"short",month:"short",day:"numeric",hour:"numeric",minute:"2-digit"})}catch(_){}
   const sc=g.away.score!=null&&g.state!=="pre"?`<div class="score"><span class="${g.done?"f":""}">${esc(g.away.score)}</span><span>–</span><span class="${g.done?"f":""}">${esc(g.home.score)}</span></div>`:"";
-  return `<div class="game"><div class="gtop"><span>${esc(date)}</span><span>${g.done?"Final":lock?"Locked · in progress":mine[id]?"Picked":"Open"}</span></div>
+  return `<div class="game"><div class="gtop"><span>${esc(date)}</span><span>${g.done?"Final":lock?"Locked · in progress":iLocked(S.sel)?"Locked in":mine[id]?"Picked":"Open"}</span></div>
     <div class="matchup">${side(g.away,"aw")}<div class="mid"><span>${C.sport(S.sport).emoji}</span><span>at</span></div>${side(g.home,"hm")}</div>${lock?"":gauge(g,chanceOf(id))}${sc}
     ${xWhere(id)}<button class="x-scoutbtn" type="button" data-scout="${esc(id)}">📊 Scout this matchup</button></div>`;
 }
 async function pick(gid,abbr){
   const g=S.weeks[S.sel]&&S.weeks[S.sel].games[gid];if(!g||started(g)){toast("That game has started. Picks are locked.");return}
+  if(iLocked(S.sel)){toast("You locked in these picks. They can't change.");return}
   const mine={...((S.picks[S.sel]||{})[S.user.uid]||{})};if(mine[gid]===abbr)delete mine[gid];else mine[gid]=abbr;
   (S.picks[S.sel]=S.picks[S.sel]||{})[S.user.uid]=mine;render();
   try{await db.doc(`gp_picks/${S.user.uid}_${S.sel}`).set({uid:S.user.uid,week:S.sel,picks:mine,updatedAt:new Date().toISOString()})}
@@ -525,7 +549,7 @@ async function share(code){const url=inviteLink(code);const text=`Join my NFL, M
   if("serviceWorker" in navigator)addEventListener("load",()=>navigator.serviceWorker.register("sw.js").catch(()=>{}));
   if(!window.firebase){$("#app").innerHTML=`<div class="gate"><div class="box"><h1>Gameday Picks</h1><p>Couldn't load. Check your connection and reopen the app.</p></div></div>`;return}
   firebase.initializeApp(FIREBASE_CONFIG);db=firebase.firestore();try{db.enablePersistence({synchronizeTabs:true}).catch(()=>{})}catch(_){}
-  firebase.auth().onAuthStateChanged(u=>{unsubs.forEach(f=>f());unsubs=[];S.user=u;S.me=null;S.players={};S.picks={};S.weeks={};if(u)startData();render()});
+  firebase.auth().onAuthStateChanged(u=>{unsubs.forEach(f=>f());unsubs=[];S.user=u;S.me=null;S.players={};S.picks={};S.locked={};S.weeks={};if(u)startData();render()});
 })();
 </script>
 </body>
