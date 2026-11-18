@@ -445,3 +445,19 @@ a.btn { text-decoration: none; }
 .betrow select { width: auto; min-width: 116px; min-height: 40px; padding: 6px 8px; }
 .betck { display: flex; align-items: center; gap: 10px; font-weight: 700; flex: 1; min-height: 40px; cursor: pointer; }
 .betck input { width: 22px; height: 22px; min-height: 0; padding: 0; flex: none; accent-color: var(--green); }
+/* hole review under the scorer */
+.hreview { background: var(--paper); border: 1px solid var(--line); border-radius: 14px; padding: 12px 14px; margin: 0 0 12px; display: grid; gap: 8px; }
+.hr-h { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.hr-h b { font-size: 17px; color: var(--green); }
+.hreview .msg { margin: 0; }
+.hrrow { display: grid; grid-template-columns: 76px 1fr; align-items: center; gap: 8px; }
+.hrrow > span { font-weight: 700; font-size: 14px; }
+.hrseg { display: flex; gap: 4px; flex-wrap: wrap; }
+.hrseg button { flex: 1; min-width: 40px; min-height: 40px; padding: 4px 6px; border: 1.5px solid var(--line); border-radius: 10px; background: #fff; font: inherit; font-weight: 700; font-size: 14px; cursor: pointer; }
+.hrseg button[aria-pressed="true"] { background: var(--green); border-color: var(--green); color: #fff; }
+.hrnext { border-top: 1px solid var(--line); padding-top: 8px; }
+.hrnext span { display: grid; }
+.hrnext small { color: var(--muted); }
+.hrjack { border: 2px solid var(--gold); background: #fffaf0; border-radius: 12px; padding: 8px 12px; }
+.hrjack small { font-weight: 700; color: #7a5c00; text-transform: uppercase; letter-spacing: .08em; font-size: 11.5px; }
+.hrjack p { margin: 2px 0 0; }
