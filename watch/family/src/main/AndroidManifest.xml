@@ -9,7 +9,12 @@
     <!-- everything goes through the watch link on the internet (through the phone on watches without Wi-Fi or LTE) -->
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
-    <!-- Spelling Genie asks the watch's own voice typing, keyboard and voice for help, so it needs to see them (Android 11+) -->
+    <!-- Fairway's yards to the green, from the watch's own GPS, only while Fairway is on screen; asked for the first time it's needed -->
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-feature android:name="android.hardware.location.gps" android:required="false" />
+    <!-- Fairway's Jack and Spelling Genie listen with the watch's speech input and talk with its voice; Spelling Genie also
+         uses the watch's keyboard (Android 11+ needs to see them) -->
     <queries>
         <intent><action android:name="android.speech.action.RECOGNIZE_SPEECH" /></intent>
         <intent><action android:name="android.support.wearable.input.action.REMOTE_INPUT" /></intent>
@@ -59,6 +64,10 @@
         </activity>
         <activity android:name=".ScheduleActivity" android:exported="true" android:icon="@mipmap/ic_schedule" android:roundIcon="@mipmap/ic_schedule"
             android:label="@string/schedule_name" android:launchMode="singleTask" android:taskAffinity="com.steele.family.schedule">
+            <intent-filter><action android:name="android.intent.action.MAIN" /><category android:name="android.intent.category.LAUNCHER" /></intent-filter>
+        </activity>
+        <activity android:name=".FairwayActivity" android:exported="true" android:icon="@mipmap/ic_fairway" android:roundIcon="@mipmap/ic_fairway"
+            android:label="@string/fairway_name" android:launchMode="singleTask" android:taskAffinity="com.steele.family.fairway">
             <intent-filter><action android:name="android.intent.action.MAIN" /><category android:name="android.intent.category.LAUNCHER" /></intent-filter>
         </activity>
     </application>

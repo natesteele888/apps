@@ -3,8 +3,8 @@
 // (shared sheets lose the name and exact pin), published 2026-11-16. app_me added 2026-11-16 ("this is me" for app numbers),
 // published 2026-11-16. Fairway (golf_events), the watch link (fw_links, fw_pair) and the watch's Gameday Picks access
 // (gp_watch, plus the watch lines in gp_picks) added 2026-11-17; this file as it stood on main was published 2026-11-18
-// around 01:00 UTC. The watch link's Schedule (sc) and Practice Clock (pk) fields were added after that and are not yet
-// published; everything else in the live console rules matches this file.
+// around 01:00 UTC. The watch link's Schedule (sc) and Practice Clock (pk) fields, and Fairway's
+// watch field (fg), were added after that and are not yet published; everything else in the live console rules matches this file.
 // OWNER_EMAIL stands in for Nate's sign-in email (this repo is public, so the
 // real address is not committed). Put the real address back before pasting
 // this into the console. Test: cd toolbox && npm install && npm test
@@ -294,12 +294,12 @@ service cloud.firestore {
       allow get: if key.matches('[a-z2-7]{26}');
       allow list, delete: if false;
       allow create, update: if key.matches('[a-z2-7]{26}')
-        && request.resource.data.keys().hasOnly(['gr', 'cc', 'r20', 'pp', 'gp', 'sc', 'pk', 'w', 'updated'])
+        && request.resource.data.keys().hasOnly(['gr', 'cc', 'r20', 'pp', 'gp', 'sc', 'pk', 'fg', 'w', 'updated'])
         && fwText(request.resource.data, 'gr', 400000) && fwText(request.resource.data, 'w', 200000)
         && fwText(request.resource.data, 'cc', 20000) && fwText(request.resource.data, 'r20', 20000)
         && fwText(request.resource.data, 'pp', 40000) && fwText(request.resource.data, 'gp', 20000)
         && fwText(request.resource.data, 'sc', 40000)
-        && fwText(request.resource.data, 'pk', 40000)
+        && fwText(request.resource.data, 'pk', 40000) && fwText(request.resource.data, 'fg', 60000)
         && (!('updated' in request.resource.data) || request.resource.data.updated is timestamp);
     }
     // Linking: the watch shows an 8-letter code; the phone leaves its link code under it for a minute or two, the watch
