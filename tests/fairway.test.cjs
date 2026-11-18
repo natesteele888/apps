@@ -358,6 +358,8 @@ const pl = (ev, id) => Object.assign({ id }, ev.p[id]);
     await page.click('[data-bm=field]'); await page.waitForSelector('.frow'); eq(await page.locator('.frow').count(), 12);
     await page.click('[data-bm=course]'); await page.waitForSelector('table.course');
     await page.click('[data-tab=score]'); await page.waitForSelector('.scorer li');
+    // the demo plays this phone as a golfer in group 1, so the hole map, Jack's notes and the sketch all show
+    await page.waitForSelector('#mapopen'); await page.waitForSelector('#jackopen'); await page.waitForSelector('#hsketch svg');
     await page.click('[data-tab=board]'); await page.click('[data-bm=leaders]'); await page.locator('[data-player]').first().click();
     await page.waitForSelector('.flipper.flipped', { timeout: 3000 });
     await page.click('[data-ct=stats]'); assert.match(await page.locator('.cbody').textContent(), /Birdies|birdies/);

@@ -173,13 +173,16 @@
     $$("[data-course]", v).forEach(b => b.onclick = () => editCourse(b.dataset.course === "sample" ? "sample" : b.dataset.course));
     wireSound();
   }
+  const DEMO_ME = "demo01";
   function openDemo() {
     let m = FW.mine().find(x => x.demo);
     if (!m) {
       const code = C.newCode();
       FW.local.create(code, C.demoEvent());
-      m = FW.mineSet(code, { name: "Demo", local: true, demo: true, org: true, me: null });
-    }
+      m = FW.mineSet(code, { name: "Demo", local: true, demo: true, org: true, me: DEMO_ME });
+    } else if (!m.me) m = FW.mineSet(m.code, { me: DEMO_ME }) || m;
+    // In the demo this phone plays as the first golfer in group 1, so the Score tab shows everything a player gets:
+    // the hole map, Jack's notes and the hole review, as well as the sketch and Jack's word on each score.
     openEvent(m.code); go("event", { tab: "board" });
   }
 
