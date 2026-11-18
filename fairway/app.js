@@ -36,9 +36,12 @@
   };
 
   /* ---------- toasts and sheets ---------- */
-  function toast(msg, kind) {
+  // act: { label, fn } adds a button (like Undo) and keeps the toast up a little longer
+  function toast(msg, kind, act) {
     const t = document.createElement("div"); t.className = "toast " + (kind || ""); t.textContent = msg;
-    $("#toasts").appendChild(t); setTimeout(() => t.classList.add("out"), 3200); setTimeout(() => t.remove(), 3700);
+    if (act) { const b = document.createElement("button"); b.type = "button"; b.className = "tact"; b.textContent = act.label; b.onclick = () => { t.remove(); act.fn(); }; t.appendChild(b); }
+    const ms = act ? 6000 : 3200;
+    $("#toasts").appendChild(t); setTimeout(() => t.classList.add("out"), ms); setTimeout(() => t.remove(), ms + 500);
   }
   function sheet(title, html, onOpen) {
     const box = $("#sheets");
@@ -569,7 +572,8 @@
       $(".val", li).onclick = () => { if (cur == null) set(par); };
       $(".minus", li).onclick = () => set(cur == null ? par - 1 : Math.max(1, cur - 1));
       $(".plus", li).onclick = () => set(cur == null ? par + 1 : Math.min(20, cur + 1));
-      const clr = $(".clr", li); if (clr) clr.onclick = () => set(null);
+      // a clear is one tap from the stepper on a small screen, so it can be taken back
+      const clr = $(".clr", li); if (clr) clr.onclick = () => { const was = cur, nm = (ev.p[pid] || {}).n || ""; set(null); toast("Cleared " + nm.split(" ")[0] + "'s " + was, "", { label: "Undo", fn: () => { if (S.ev && S.ev.p[pid] && C.strokes(S.ev.p[pid], r, h) == null) write({ ["p." + pid + ".s." + C.key(r, h)]: was }); } }); };
     });
   }
   function groupCard(ev, list, r, order, hl) {
