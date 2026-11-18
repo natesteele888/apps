@@ -747,6 +747,51 @@
     return null;
   }
 
+  /* ---------- Jack's settings and each golfer's own caddie notes (both kept on the golfer's phone) ---------- */
+  const JACK_LANGS = [["clean", "Clean"], ["little", "A little"], ["lot", "A lot"], ["crude", "Super crude"]], JACK_LISTEN = ["hey", "always", "off"];
+  // Kid and beginner profiles are locked to Clean; Super crude needs the adult check and only plays through earbuds.
+  function cleanJack(x) {
+    x = x && typeof x === "object" ? x : {};
+    const o = { lang: JACK_LANGS.some(l => l[0] === x.lang) ? x.lang : "clean", kid: x.kid === true, adult: x.adult === true, buds: x.buds === true, listen: JACK_LISTEN.indexOf(x.listen) >= 0 ? x.listen : "hey" };
+    if (o.kid) o.lang = "clean";
+    if (o.lang === "crude" && !o.adult) o.lang = "lot";
+    return o;
+  }
+  // The level Jack actually speaks at right now: Super crude drops to A lot whenever the earbuds aren't in.
+  function jackLevel(j) { j = cleanJack(j); return j.lang === "crude" && !j.buds ? "lot" : j.lang; }
+  // Swearing only, never anything sexual. At Clean the swears simply drop out of what Jack reads aloud.
+  const SWEARS = /\b(f+u+c+k\w*|motherf\w*|sh[i1]t\w*|bullsh\w*|ass(hole)?s?|bastards?|bitch\w*|crap\w*|piss\w*|god ?dam\w*|dam(n|mit)\w*(?: it)?|hell)\b/gi;
+  function speakable(text, level) {
+    const t = clip(text, 400);
+    if (level !== "clean") return t;
+    return t.replace(SWEARS, "").replace(/\s{2,}/g, " ").replace(/\s+([,.!?])/g, "$1").replace(/([.!?])[,\s]*,\s*/g, "$1 ").replace(/^[,\s]+/, "").trim();
+  }
+  // Notes are filed by course (its id, or its name) and hole: up to 5 short notes a hole.
+  const NOTE_MAX = 200, NOTES_PER_HOLE = 5;
+  function courseKey(course) { return course && course.id ? "id:" + clip(course.id, 40) : "n:" + clip(course && course.name, 60).toLowerCase(); }
+  function cleanCourseNotes(x) {
+    const out = {}; if (!x || typeof x !== "object") return out;
+    Object.keys(x).slice(0, 50).forEach(ck => {
+      const holes = x[ck]; if (!/^(id|n):/.test(ck) || !holes || typeof holes !== "object") return;
+      const o = {};
+      Object.keys(holes).forEach(h => {
+        if (!/^([1-9]|1[0-8])$/.test(h)) return;
+        const l = (Array.isArray(holes[h]) ? holes[h] : []).map(t => clip(t, NOTE_MAX)).filter(Boolean).slice(0, NOTES_PER_HOLE);
+        if (l.length) o[h] = l;
+      });
+      if (Object.keys(o).length) out[ck] = o;
+    });
+    return out;
+  }
+  // What Jack says walking up to a hole: par and yards, then the golfer's own notes in their own words.
+  function holeTalk(ev, pl, h, notes, level) {
+    const hole = ev.course.holes[h - 1], tee = teeOf(ev, pl), y = yards(ev.course, h, tee.id);
+    const mine = ((notes || {})[courseKey(ev.course)] || {})[h] || [];
+    let s = `Hole ${h}, par ${hole.par}${y ? `, ${y} yards` : ""}.`;
+    if (mine.length) s += " Your notes: " + mine.map(t => speakable(t, level)).filter(Boolean).map(t => (/[.!?]$/.test(t) ? t : t + ".")).join(" ");
+    return s;
+  }
+
   /* ---------- changes: the same dotted paths the shared database takes ---------- */
   // patch keys look like "p.abc123.s.1_7" or "name"; a value of DELETE removes the field.
   const DELETE = { __delete: true };
@@ -848,5 +893,6 @@
     draftStartPatch, pickCaptains, teamBoard, matchStatus, matchIds, autoMatches, picksLocked, pickCounts, cleanTt, teeTime, fmtTime, fmtDate,
     reminders, icsFor, directions, cleanMsg, shout, BINGO, BINGO_AUTO, bingoCard, bingoState, cleanBingo,
     BETS, BET_AMTS, cleanBets, cleanBetMarks, betOn, betAmt, betPlayers, wolfOrder, wolfOf, betTally, money,
-    TEE_SHOTS, cleanHoleNote, cleanHoleNotes, holeLine, nextHole, jackNoticed };
+    TEE_SHOTS, cleanHoleNote, cleanHoleNotes, holeLine, nextHole, jackNoticed,
+    JACK_LANGS, cleanJack, jackLevel, speakable, courseKey, cleanCourseNotes, holeTalk };
 });

@@ -220,6 +220,23 @@ const pl = (ev, id) => Object.assign({ id }, ev.p[id]);
     for (const w of ['damn', 'hell']) ok(!/\b(damn|hell)\b/i.test(C.jackNoticed(ev, b, 1, bn) + (C.jackNoticed(ev, a, 1, notes) || '')), 'clean words only: ' + w);
   });
 
+  await test('core Jack: Clean by default, kids locked to Clean, Super crude needs the adult check and earbuds, notes per course and hole', () => {
+    eq(C.cleanJack({}).lang, 'clean', 'Clean is the default');
+    eq(C.cleanJack({ lang: 'lot', kid: true }).lang, 'clean', 'a kid or beginner profile is always Clean');
+    eq(C.cleanJack({ lang: 'crude' }).lang, 'lot', 'no Super crude without the adult check');
+    eq(C.jackLevel({ lang: 'crude', adult: true }), 'lot', 'Super crude drops to A lot without earbuds');
+    eq(C.jackLevel({ lang: 'crude', adult: true, buds: true }), 'crude');
+    eq(C.speakable('I really fucking hate this hole. Stay up on the right', 'clean'), 'I really hate this hole. Stay up on the right');
+    eq(C.speakable('pass the shell, hello', 'clean'), 'pass the shell, hello', 'only whole swear words drop out');
+    eq(C.speakable('I really fucking hate this hole', 'lot'), 'I really fucking hate this hole', 'their own words at the higher levels');
+    const ev = twoPlayers(), ck = C.courseKey(ev.course);
+    const notes = C.cleanCourseNotes({ [ck]: { 3: ['Hate this hole', 'Stay up on the right', '', 'x'.repeat(300)], 19: ['no such hole'] }, bad: { 1: ['x'] } });
+    eq(notes[ck][3].length, 3); eq(notes[ck][3][2].length, 200, 'notes are capped'); eq(notes[ck][19], undefined); eq(notes.bad, undefined);
+    const talk = C.holeTalk(ev, ev.p.aaaaaa1, 3, notes, 'clean');
+    ok(/^Hole 3, par \d, \d+ yards\. Your notes: Hate this hole\. Stay up on the right\./.test(talk), talk);
+    eq(C.courseKey({ name: 'Sample Pines' }), 'n:sample pines');
+  });
+
   /* ===================== PART 2: the page ===================== */
   let server, browser;
   try { server = await startServer('fairway'); browser = await launch(); }
@@ -352,6 +369,24 @@ const pl = (ev, id) => Object.assign({ id }, ev.p[id]);
     await page.waitForFunction(() => /2 putts/.test(document.querySelector('.hreview').textContent));
     const saved = await page.evaluate(() => JSON.stringify(localStorage)); ok(/fw:hn:/.test(saved), 'kept on this phone');
     const shared = await page.evaluate(() => JSON.stringify(window.FW.debug.S.ev)); ok(!/"putts"|"hn"/.test(shared), 'never in the shared tournament');
+    const wide = await page.evaluate(() => document.documentElement.scrollWidth); assert.ok(wide <= 390, 'no sideways scroll at 390 px, got ' + wide);
+    deq(errors, []); await ctx.close();
+  });
+
+  if (browser) await test('page: Jack keeps a caddie note for the hole on this phone, and it shows on the Score tab', async () => {
+    const { page, errors, ctx } = await open();
+    await page.click('#new'); await page.fill('#nn', 'Notes Day'); await page.fill('#nme', 'Alpha Test');
+    await page.locator('#nf [type=submit]').click(); await page.waitForFunction(() => window.FW.debug.S.ev);
+    await page.click('[data-tab=score]'); await page.waitForSelector('#jackopen');
+    await page.click('#jackopen'); await page.fill('#jn', 'Stay up on the right'); await page.click('#jsave');
+    await page.waitForFunction(() => /Stay up on the right/.test(document.querySelector('#jackopen').textContent));
+    const saved = await page.evaluate(() => localStorage.getItem('fw:cnotes')); ok(/Stay up on the right/.test(saved), 'kept on this phone');
+    const shared = await page.evaluate(() => JSON.stringify(window.FW.debug.S.ev)); ok(!/Stay up on the right/.test(shared), 'never in the shared tournament');
+    await page.click('#jset'); await page.click('[data-js=lang][data-v=crude]'); await page.waitForSelector('#jadult');
+    await page.click('#jno'); eq(await page.locator('[data-js=lang][data-v=clean]').getAttribute('aria-pressed'), 'true', 'still Clean after saying no');
+    await page.check('#jkid'); ok(await page.locator('[data-js=lang][data-v=lot]').isDisabled(), 'a kid profile locks the other levels');
+    await page.click('#jdone');
+    eq(await page.evaluate(() => JSON.parse(localStorage.getItem('fw:jack')).lang), 'clean');
     const wide = await page.evaluate(() => document.documentElement.scrollWidth); assert.ok(wide <= 390, 'no sideways scroll at 390 px, got ' + wide);
     deq(errors, []); await ctx.close();
   });
