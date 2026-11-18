@@ -81,6 +81,87 @@ object SpellCore {
         return parts
     }
 
+    // ---- practice: Sal says a word, the kid spells it back ----
+
+    /** letter names the watch's voice typing may write instead of the letter: "see" for C, "are" for R */
+    private val letterNames: Map<String, Char> = buildMap {
+        val names = mapOf(
+            'a' to "ay", 'b' to "be bee", 'c' to "see sea cee", 'd' to "dee", 'e' to "ee", 'f' to "ef eff", 'g' to "gee",
+            'h' to "aitch", 'i' to "eye aye", 'j' to "jay", 'k' to "kay", 'l' to "el ell", 'm' to "em", 'n' to "en",
+            'o' to "oh owe", 'p' to "pee pea", 'q' to "queue cue", 'r' to "are ar", 's' to "es ess", 't' to "tee tea",
+            'u' to "you yew", 'v' to "vee", 'w' to "doubleyou double-u", 'x' to "ex", 'y' to "why wye", 'z' to "zee zed",
+        )
+        for ((c, ns) in names) { put(c.toString(), c); for (n in ns.split(' ')) put(n, c) }
+    }
+
+    /**
+     * the word spelled by letters said one at a time ("s o r c e r e r", "see a tea", "S-O-R"), or null when what was heard
+     * isn't letters (a kid who said the word instead of spelling it). "capital T", "double L", "apostrophe" and "space" work.
+     */
+    fun lettersSaid(heard: String?): String? {
+        if (heard.isNullOrBlank()) return null
+        val tokens = heard.lowercase().replace('’', '\'').replace(Regex("[.,!?;:]"), " ")
+            .replace("double you", "doubleyou").replace("double u ", "doubleyou ").replace(Regex("double u$"), "doubleyou")
+            .split(Regex("[\\s-]+")).filter { it.isNotEmpty() }
+        val out = StringBuilder()
+        var capital = false
+        var double = false
+        for (t in tokens) {
+            when (t) {
+                "capital", "big", "uppercase", "upper" -> { capital = true; continue }
+                "case", "letter", "lowercase", "small", "then" -> continue
+                "double" -> { double = true; continue }
+                "apostrophe" -> { out.append('\''); continue }
+                "space" -> { out.append(' '); continue }
+                "dash", "hyphen" -> { out.append('-'); continue }
+            }
+            // "s'" or a single letter with an apostrophe the voice glued on
+            val c = letterNames[t] ?: letterNames[t.trimEnd('\'', 's').ifEmpty { t }]?.takeIf { t.length <= 2 } ?: return null
+            val ch = if (capital) c.uppercaseChar() else c
+            out.append(ch); if (double) out.append(ch)
+            capital = false; double = false
+        }
+        return if (out.any { it.isLetter() }) out.toString() else null
+    }
+
+    /** the first of the voice's guesses that is letters, spelled out */
+    fun lettersSaid(heard: List<String>): String? = heard.firstNotNullOfOrNull { lettersSaid(it) }
+
+    /** whether [attempt] spells [word]; capitals don't count, apostrophes and spaces do */
+    fun isRight(word: String, attempt: String) = attempt.trim().equals(word.trim(), ignoreCase = true)
+
+    /**
+     * for each letter of [word], whether the kid got it: the letters that line up with [attempt] in order (the longest run in
+     * common), so one missed letter doesn't mark everything after it wrong
+     */
+    fun marks(word: String, attempt: String): BooleanArray {
+        val a = word.lowercase(); val b = attempt.trim().lowercase()
+        val n = a.length; val m = b.length
+        val dp = Array(n + 1) { IntArray(m + 1) }
+        for (i in n - 1 downTo 0) for (j in m - 1 downTo 0)
+            dp[i][j] = if (a[i] == b[j]) dp[i + 1][j + 1] + 1 else maxOf(dp[i + 1][j], dp[i][j + 1])
+        val ok = BooleanArray(n)
+        var i = 0; var j = 0
+        while (i < n && j < m) {
+            when {
+                a[i] == b[j] -> { ok[i] = true; i++; j++ }
+                dp[i + 1][j] >= dp[i][j + 1] -> i++
+                else -> j++
+            }
+        }
+        return ok
+    }
+
+    /** the order to practice in: the recent words shuffled, each once, at most [max] */
+    fun practiceWords(recent: List<String>, max: Int = 10, random: kotlin.random.Random = kotlin.random.Random.Default): List<String> =
+        recent.distinctBy { it.lowercase() }.shuffled(random).take(max)
+
+    /** what Sal says to give a word: "Spell there. As in, over there." */
+    fun ask(word: String): String {
+        val h = Homophones.hint(word)
+        return if (h != null) "Spell $word. As in, $h." else "Spell $word."
+    }
+
     /**
      * what the watch says to spell a word in parts: the word, then each part followed by its letters, then the word again
      * ("sorcerer", "sor", S O R, "cer", C E R, "er", E R, "sorcerer"). [parts] are the pieces of [word] from [Syllables.split].

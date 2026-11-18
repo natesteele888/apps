@@ -46,6 +46,7 @@ import androidx.wear.compose.material.ChipDefaults
 import androidx.wear.compose.material.CompactChip
 import androidx.wear.compose.material.MaterialTheme
 import androidx.wear.compose.material.Text
+import com.steele.family.core.Homophones
 import com.steele.family.core.SpellCore
 import com.steele.family.core.Syllables
 import com.steele.family.core.WordList
@@ -165,10 +166,10 @@ private class Recent(ctx: Context) {
 private const val REMOTE_INPUT = "android.support.wearable.input.action.REMOTE_INPUT"
 private const val REMOTE_INPUTS = "android.support.wearable.input.extra.REMOTE_INPUTS"
 
-private fun listenIntent() = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
+private fun listenIntent(prompt: String = "Say: spell sorcerer") = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
     .putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
     .putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 5)
-    .putExtra(RecognizerIntent.EXTRA_PROMPT, "Say: spell sorcerer")
+    .putExtra(RecognizerIntent.EXTRA_PROMPT, prompt)
 
 /** the watch's keyboard (or handwriting) for one word */
 private fun typeIntent() = Intent(REMOTE_INPUT)
@@ -181,6 +182,7 @@ fun SpellApp(opened: Int, voice: Voice) {
     val recent = remember { Recent(ctx) }
     var recents by remember { mutableStateOf(recent.get()) }
     var answer by remember { mutableStateOf<SpellCore.Answer?>(null) }
+    var practice by remember { mutableStateOf<List<String>?>(null) }
     var note by remember { mutableStateOf("") }
     val canListen = remember { listenIntent().resolveActivity(ctx.packageManager) != null }
     val canType = remember { typeIntent().resolveActivity(ctx.packageManager) != null }
@@ -216,7 +218,10 @@ fun SpellApp(opened: Int, voice: Voice) {
     LaunchedEffect(opened) { if (opened > 0 && canListen) startListening() }
 
     val a = answer
-    if (a != null) BackScreen(onBack = { answer = null }) {
+    val p = practice
+    if (p != null) BackScreen(onBack = { practice = null }) {
+        PracticeScreen(p, voice, canListen, canType, onAgain = { practice = SpellCore.practiceWords(recent.get()) }, onDone = { practice = null })
+    } else if (a != null) BackScreen(onBack = { answer = null }) {
         AnswerScreen(a, voice, onPick = { w -> show(listOf(w)) }, onAgain = ::startListening, canListen = canListen, onBack = { answer = null })
     } else ScalingLazyColumn(Modifier.fillMaxWidth()) {
         item { Text("Sal", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = SalBlue) }
@@ -231,6 +236,11 @@ fun SpellApp(opened: Int, voice: Voice) {
         }
         if (canType) item {
             CompactChip(onClick = ::startTyping, label = { Text("⌨  Type it") }, colors = ChipDefaults.secondaryChipColors())
+        }
+        // Sal says the recent words back, one at a time, to spell
+        if (recents.isNotEmpty() && (canType || canListen)) item {
+            CompactChip(onClick = { practice = SpellCore.practiceWords(recents) }, label = { Text("🎯  Practice") },
+                colors = ChipDefaults.secondaryChipColors())
         }
         if (note.isNotBlank()) item { Text(note, fontSize = 11.sp, color = Yellow, textAlign = TextAlign.Center) }
         if (recents.isNotEmpty()) {
@@ -317,5 +327,118 @@ private fun AnswerScreen(a: SpellCore.Answer, voice: Voice, onPick: (String) -> 
             }
         }
         item { BackChip(onClick = onBack) }
+    }
+}
+
+/**
+ * Practice: Sal says each of the recent words ("Spell there. As in, over there."), and the kid spells it back by typing it
+ * or saying the letters. Only a right first try counts toward the score. Nothing is kept: the score is gone when it closes.
+ */
+@Composable
+private fun PracticeScreen(words: List<String>, voice: Voice, canListen: Boolean, canType: Boolean, onAgain: () -> Unit, onDone: () -> Unit) {
+    val ctx = LocalContext.current
+    var at by remember(words) { mutableIntStateOf(0) }
+    var score by remember(words) { mutableIntStateOf(0) }
+    var tried by remember(words, at) { mutableStateOf<String?>(null) }
+    var missed by remember(words, at) { mutableStateOf(false) }
+    var note by remember(words, at) { mutableStateOf("") }
+    val word = words.getOrNull(at)
+
+    LaunchedEffect(words, at, voice.ready) {
+        if (voice.ready) voice.say(if (word != null) SpellCore.ask(word) else "You got $score out of ${words.size}.")
+    }
+
+    fun check(attempt: String) {
+        val w = word ?: return
+        tried = attempt; note = ""
+        if (SpellCore.isRight(w, attempt)) {
+            if (!missed) score++
+            Buzz.tick(ctx)
+            voice.say(if (missed) "That's it." else "Yes!")
+        } else {
+            missed = true
+            Buzz.pattern(ctx, 60, 80, 60)
+            voice.spell(w)
+        }
+    }
+    val listen = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { r ->
+        val heard = r.data?.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS)
+        if (r.resultCode == Activity.RESULT_OK && !heard.isNullOrEmpty()) {
+            val letters = SpellCore.lettersSaid(heard)
+            if (letters != null) check(letters) else note = "Say each letter, like S, O, R."
+        }
+    }
+    val type = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { r ->
+        val typed = r.data?.let { RemoteInput.getResultsFromIntent(it) }?.getCharSequence("word")?.toString()
+        if (r.resultCode == Activity.RESULT_OK && !typed.isNullOrBlank()) check(typed)
+    }
+    fun sayLetters() {
+        try { listen.launch(listenIntent("Say each letter")) } catch (e: Exception) { note = "Voice typing didn't open." }
+    }
+    fun typeIt() {
+        try { type.launch(typeIntent()) } catch (e: Exception) { note = "The keyboard didn't open." }
+    }
+
+    ScalingLazyColumn(Modifier.fillMaxWidth()) {
+        if (word == null) {
+            item { Text("$score of ${words.size}", fontSize = 30.sp, fontWeight = FontWeight.Bold, color = if (score == words.size) Green else SalBlue) }
+            item {
+                Text(when {
+                    score == words.size -> "Every one. Legend!"
+                    score * 2 >= words.size -> "Nice work."
+                    else -> "Keep at it. Practice again?"
+                }, fontSize = 13.sp, color = Muted, textAlign = TextAlign.Center)
+            }
+            item { Chip(onClick = onAgain, label = { Text("🎯  Practice again", fontWeight = FontWeight.Bold) },
+                colors = ChipDefaults.primaryChipColors(backgroundColor = SalBlue), modifier = Modifier.fillMaxWidth()) }
+            item { BackChip(onClick = onDone) }
+            return@ScalingLazyColumn
+        }
+        item { Text("Word ${at + 1} of ${words.size}", fontSize = 12.sp, color = Muted) }
+        val t = tried
+        if (t == null) {
+            item { Text("Listen, then spell it", fontSize = 15.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center) }
+            Homophones.hint(word)?.let { h -> item { Text("as in: $h", fontSize = 12.sp, color = SalBlue, textAlign = TextAlign.Center) } }
+            if (voice.ready) item {
+                CompactChip(onClick = { voice.say(SpellCore.ask(word)) }, label = { Text("🔊 Hear it") }, colors = ChipDefaults.secondaryChipColors())
+            }
+            if (canType) item {
+                Chip(onClick = ::typeIt, label = { Text("⌨  Type it", fontWeight = FontWeight.Bold) },
+                    colors = ChipDefaults.primaryChipColors(backgroundColor = SalBlue), modifier = Modifier.fillMaxWidth())
+            }
+            if (canListen) item {
+                Chip(onClick = ::sayLetters, label = { Text("🎤  Say the letters") }, secondaryLabel = { Text("like S, O, R", maxLines = 1) },
+                    colors = ChipDefaults.secondaryChipColors(), modifier = Modifier.fillMaxWidth())
+            }
+            if (note.isNotBlank()) item { Text(note, fontSize = 11.sp, color = Yellow, textAlign = TextAlign.Center) }
+        } else {
+            val ok = SpellCore.isRight(word, t)
+            item { Text(if (ok) "✓ Right!" else "Not quite", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = if (ok) Green else Yellow) }
+            if (!ok) item { Text("You spelled: $t", fontSize = 12.sp, color = Muted, textAlign = TextAlign.Center) }
+            // the right spelling, each letter green where they had it and red where they didn't
+            val marks = SpellCore.marks(word, t)
+            SpellCore.letters(word).chunked(5).forEachIndexed { row, chunk ->
+                item {
+                    Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                        chunk.forEachIndexed { i, ch ->
+                            val n = row * 5 + i
+                            if (ch == " ") Box(Modifier.width(14.dp))
+                            else Box(
+                                Modifier.size(30.dp).clip(RoundedCornerShape(7.dp)).background(if (ok || marks.getOrElse(n) { false }) Green else Red),
+                                contentAlignment = Alignment.Center,
+                            ) { Text(ch, fontSize = 19.sp, fontWeight = FontWeight.Bold, color = Color.White) }
+                        }
+                    }
+                }
+            }
+            item {
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.padding(top = 4.dp)) {
+                    if (!ok) CompactChip(onClick = { tried = null }, label = { Text("↺ Try again") }, colors = ChipDefaults.secondaryChipColors())
+                    CompactChip(onClick = { at++ }, label = { Text(if (at + 1 < words.size) "Next ›" else "Score ›") },
+                        colors = ChipDefaults.primaryChipColors(backgroundColor = SalBlue))
+                }
+            }
+        }
+        item { BackChip(label = "Stop", onClick = onDone) }
     }
 }
