@@ -1,5 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+    <!-- The tile libraries ask for Android 8 (Wear OS 2). The app still installs on Android Wear 2.0 (Android 7.1):
+         there the two tile services stay off (res/values/bools.xml) and nothing calls the tile code. -->
+    <uses-sdk tools:overrideLibrary="androidx.wear.tiles, androidx.wear.protolayout, androidx.wear.protolayout.expression, androidx.wear.protolayout.expression.pipeline, androidx.wear.protolayout.proto" />
     <uses-feature android:name="android.hardware.type.watch" />
     <uses-permission android:name="android.permission.VIBRATE" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
@@ -69,5 +73,41 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <!-- Tiles (swipe from the watch face): Pitch Count with +1 and Undo on the tile, and today's league Scores -->
+        <service
+            android:name=".PitchTileService"
+            android:exported="true"
+            android:enabled="@bool/tiles_on"
+            android:icon="@mipmap/ic_pitch"
+            android:label="@string/pitch_name"
+            android:description="@string/pitch_tile_about"
+            android:permission="com.google.android.wearable.permission.BIND_TILE_PROVIDER">
+            <intent-filter>
+                <action android:name="androidx.wear.tiles.action.BIND_TILE_PROVIDER" />
+            </intent-filter>
+            <meta-data android:name="androidx.wear.tiles.PREVIEW" android:resource="@drawable/tile_pitch_preview" />
+        </service>
+        <service
+            android:name=".ScoresTileService"
+            android:exported="true"
+            android:enabled="@bool/tiles_on"
+            android:icon="@mipmap/ic_scores"
+            android:label="@string/scores_name"
+            android:description="@string/scores_tile_about"
+            android:permission="com.google.android.wearable.permission.BIND_TILE_PROVIDER">
+            <intent-filter>
+                <action android:name="androidx.wear.tiles.action.BIND_TILE_PROVIDER" />
+            </intent-filter>
+            <meta-data android:name="androidx.wear.tiles.PREVIEW" android:resource="@drawable/tile_scores_preview" />
+        </service>
+
+        <!-- the phone's pitch log, taken even with Pitch Count closed, so the tile matches the phone -->
+        <service android:name=".PitchSyncService" android:exported="true">
+            <intent-filter>
+                <action android:name="com.google.android.gms.wearable.DATA_CHANGED" />
+                <data android:scheme="wear" android:host="*" android:path="/pitch/log" />
+            </intent-filter>
+        </service>
     </application>
 </manifest>
