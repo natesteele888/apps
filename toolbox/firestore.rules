@@ -1,10 +1,10 @@
 // Firestore rules for the nates-toolbox Firebase project (Toolbox, Gameday Picks, Read 20, Photo Blueprint, Get Ready, Catch Log).
 // Copy of the live rules from the Firebase console, saved 2026-11-06. Photo Blueprint section changed 2026-11-15
 // (shared sheets lose the name and exact pin), published 2026-11-16. app_me added 2026-11-16 ("this is me" for app numbers),
-// published 2026-11-16. Fairway (golf_events) added 2026-11-17 and not yet published; the watch link (fw_links,
-// fw_pair) and the watch's Gameday Picks access (gp_watch, plus the watch lines in gp_picks) added 2026-11-17 and not yet
-// published; the watch link's Practice Clock field (pk) added 2026-11-18 and not yet published; everything else in the live
-// console rules matches this file.
+// published 2026-11-16. Fairway (golf_events), the watch link (fw_links, fw_pair) and the watch's Gameday Picks access
+// (gp_watch, plus the watch lines in gp_picks) added 2026-11-17; this file as it stood on main was published 2026-11-18
+// around 01:00 UTC. The watch link's Schedule (sc) and Practice Clock (pk) fields were added after that and are not yet
+// published; everything else in the live console rules matches this file.
 // OWNER_EMAIL stands in for Nate's sign-in email (this repo is public, so the
 // real address is not committed). Put the real address back before pasting
 // this into the console. Test: cd toolbox && npm install && npm test
@@ -215,7 +215,7 @@ service cloud.firestore {
     // the app's own birdie shouts are the only things that can change after posting, and nothing can be deleted.
     function fwOk(d) {
       return d.keys().hasOnly(['v', 'name', 'created', 'updated', 'rounds', 'cur', 'done', 'course', 'p', 'ctph', 'ctp',
-          'rally', 'fmt', 'teams', 'dr', 'm', 'pk', 'tt'])
+          'rally', 'fmt', 'teams', 'dr', 'm', 'pk', 'tt', 'bg'])
         && d.v == 1 && d.name is string && d.name.size() > 0 && d.name.size() <= 60
         && d.created is number && d.updated is number
         && d.rounds is int && d.rounds >= 1 && d.rounds <= 4
@@ -238,7 +238,8 @@ service cloud.firestore {
         && (!('m' in d) || (d.m is map && d.m.size() <= 60))
         && (!('pk' in d) || (d.pk is map && d.pk.size() <= 120))
         && (!('tt' in d) || (d.tt is map && d.tt.keys().hasOnly(['date', 'where', 'g'])
-            && (!('g' in d.tt) || (d.tt.g is map && d.tt.g.size() <= 60))));
+            && (!('g' in d.tt) || (d.tt.g is map && d.tt.g.size() <= 60))))
+        && (!('bg' in d) || (d.bg is map && d.bg.size() <= 120));
     }
     function fwMsg(d) {
       return d.keys().hasOnly(['k', 'n', 't', 'at', 'by', 'o', 'v'])
@@ -288,10 +289,11 @@ service cloud.firestore {
       allow get: if key.matches('[a-z2-7]{26}');
       allow list, delete: if false;
       allow create, update: if key.matches('[a-z2-7]{26}')
-        && request.resource.data.keys().hasOnly(['gr', 'cc', 'r20', 'pp', 'gp', 'pk', 'w', 'updated'])
+        && request.resource.data.keys().hasOnly(['gr', 'cc', 'r20', 'pp', 'gp', 'sc', 'pk', 'w', 'updated'])
         && fwText(request.resource.data, 'gr', 400000) && fwText(request.resource.data, 'w', 200000)
         && fwText(request.resource.data, 'cc', 20000) && fwText(request.resource.data, 'r20', 20000)
         && fwText(request.resource.data, 'pp', 40000) && fwText(request.resource.data, 'gp', 20000)
+        && fwText(request.resource.data, 'sc', 40000)
         && fwText(request.resource.data, 'pk', 40000)
         && (!('updated' in request.resource.data) || request.resource.data.updated is timestamp);
     }

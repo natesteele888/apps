@@ -497,6 +497,44 @@
     return scoreName(d, v) + "! " + pl.n + " on " + h + (ev.rounds > 1 ? " (round " + r + ")" : "") + ".";
   }
 
+  /* ---------- round bingo: a 3 by 3 card of things that happen in every round ---------- */
+  // The first three mark themselves from the scorecard; the rest are tapped when they happen.
+  const BINGO = ["Birdie", "Par on a par 5", "Par on a par 3", "Three-putt", "Ball in the water", "Lost ball", "Sand save", "Chip-in", "Hit a tree", "One-putt", "Mulligan", "Gimme putt"];
+  const BINGO_AUTO = 3, BINGO_LINES = [[0, 1, 2], [3, 4, 5], [6, 7, 8], [0, 3, 6], [1, 4, 7], [2, 5, 8], [0, 4, 8], [2, 4, 6]];
+  function hashStr(t) { let h = 2166136261; for (let i = 0; i < t.length; i++) { h ^= t.charCodeAt(i); h = Math.imul(h, 16777619); } return h | 0; }
+  // Each golfer's own shuffle, the same on every phone: 8 squares around a free middle (cell 4 holds -1).
+  function bingoCard(ev, pid) {
+    const rnd = seeded(hashStr(pid + ":" + (ev.created || 0))), idx = BINGO.map((_, i) => i);
+    for (let i = idx.length - 1; i > 0; i--) { const j = Math.floor(rnd() * (i + 1)); const t = idx[i]; idx[i] = idx[j]; idx[j] = t; }
+    const cells = idx.slice(0, 8); cells.splice(4, 0, -1); return cells;
+  }
+  // Which squares the scorecard has already earned this round.
+  function bingoAuto(ev, pid, r) {
+    const pl = ev.p[pid], got = {}; if (!pl) return got;
+    ev.course.holes.forEach((hole, i) => {
+      const v = strokes(pl, r, i + 1); if (v == null) return;
+      if (v < hole.par) got[0] = true;
+      if (v === hole.par && hole.par === 5) got[1] = true;
+      if (v === hole.par && hole.par === 3) got[2] = true;
+    });
+    return got;
+  }
+  function bingoState(ev, pid, r) {
+    const cells = bingoCard(ev, pid), auto = bingoAuto(ev, pid, r), tapped = (ev.bg && ev.bg[pid]) || [];
+    const hit = cells.map(sq => sq < 0 || !!auto[sq] || tapped.indexOf(sq) >= 0);
+    const line = BINGO_LINES.find(l => l.every(i => hit[i])) || null;
+    const need = Math.min.apply(null, BINGO_LINES.map(l => l.filter(i => !hit[i]).length));
+    return { cells: cells.map((sq, i) => ({ sq, t: sq < 0 ? "Free" : BINGO[sq], auto: sq >= 0 && sq < BINGO_AUTO, hit: hit[i] })), line, need };
+  }
+  function cleanBingo(x, ev) {
+    const out = {}; if (!x || typeof x !== "object") return out;
+    Object.keys(x).filter(pid => isPid(pid) && ev.p[pid]).forEach(pid => {
+      const l = []; (Array.isArray(x[pid]) ? x[pid] : []).forEach(v => { if (Number.isInteger(v) && v >= BINGO_AUTO && v < BINGO.length && l.indexOf(v) < 0) l.push(v); });
+      if (l.length) out[pid] = l;
+    });
+    return out;
+  }
+
   /* ---------- changes: the same dotted paths the shared database takes ---------- */
   // patch keys look like "p.abc123.s.1_7" or "name"; a value of DELETE removes the field.
   const DELETE = { __delete: true };
@@ -565,6 +603,7 @@
       Object.keys(d.pk).filter(id => isPid(id) && ev.p[id]).forEach(id => { if (isTid(d.pk[id]) && ev.teams && ev.teams[d.pk[id]]) ev.pk[id] = d.pk[id]; });
     }
     const tt = cleanTt(d.tt, n); if (tt) ev.tt = tt;
+    const bg = cleanBingo(d.bg, ev); if (Object.keys(bg).length) ev.bg = bg;
     return ev;
   }
   // What one finished round looks like in this phone's history (for "previous rounds" on a player card).
@@ -576,13 +615,22 @@
     }).reduce((a, b) => a.concat(b), []);
   }
   const sameName = (a, b) => cleanName(a).toLowerCase() === cleanName(b).toLowerCase();
+  // Board names the way a TV leaderboard shows them: the last name, with a first initial only when two share it.
+  function boardNames(list) {
+    const parts = list.map(x => cleanName(x.name || x.n).split(/\s+/).filter(Boolean));
+    const last = parts.map(w => (w.length ? w[w.length - 1] : "Player").toUpperCase());
+    const count = {}; last.forEach(l => { count[l] = (count[l] || 0) + 1; });
+    const out = {};
+    list.forEach((x, i) => { const w = parts[i]; out[x.id] = count[last[i]] > 1 && w.length > 1 ? w[0].charAt(0).toUpperCase() + ". " + last[i] : last[i]; });
+    return out;
+  }
 
   return { VERSION, MAX_PLAYERS, MAX_ROUNDS, MAX_TEES, NAME_MAX, EVENT_MAX, TEE_COLORS, DEMO_NAMES, DELETE,
     sampleCourse, newCode, isCode, newPid, isPid, cleanCourse, cleanName, newEvent, newPlayer, cleanEvent,
     key, holeCount, coursePar, players, teeOf, yards, teeYards, playOrder, strokes, round, standings, groups,
-    fmtPar, tone, scoreName, mark, stats, demoEvent, applyPatch, historyRows, sameName,
+    fmtPar, tone, scoreName, mark, stats, demoEvent, applyPatch, historyRows, sameName, boardNames,
     cleanCtpHoles, cleanCtpEntry, ctpBoard, metres, averageFix, ctpMeasure, fmtFeet,
     cleanHc, isDate, isTime, isTid, cleanRally, cleanFmt, rallyList, officialPatch, openGroup, teamIds, pickSlots, teamOf, draftState, pickPatch,
     draftStartPatch, pickCaptains, teamBoard, matchStatus, matchIds, autoMatches, picksLocked, pickCounts, cleanTt, teeTime, fmtTime, fmtDate,
-    reminders, icsFor, directions, cleanMsg, shout };
+    reminders, icsFor, directions, cleanMsg, shout, BINGO, BINGO_AUTO, bingoCard, bingoState, cleanBingo };
 });

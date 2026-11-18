@@ -427,3 +427,12 @@ input:focus, select:focus, textarea:focus { outline: 0; border-color: var(--gree
 .teecard small { color: #cfe0d2; display: block; }
 .teecard b { display: block; font: 700 44px var(--cond); line-height: 1.1; }
 a.btn { text-decoration: none; }
+
+/* round bingo: a 3 by 3 card, big enough to read at a glance */
+.bgo { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 4px 0 10px; }
+.bgo button { min-height: 86px; border-radius: 12px; border: 2px solid var(--line); background: #fff; color: var(--ink); font: 700 16px/1.15 var(--cond); text-transform: uppercase; padding: 8px 6px; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
+.bgo button small { display: block; font: 600 10px/1.2 var(--sans); text-transform: none; margin-top: 4px; opacity: .8; }
+.bgo button.hit { background: var(--green); border-color: var(--green); color: #fff; }
+.bgo button.free { background: #c9a227; border-color: #c9a227; color: #3a2c06; }
+.bgo button.win { background: var(--under); border-color: var(--under); color: #fff; }
+.bgo button:disabled { cursor: default; }

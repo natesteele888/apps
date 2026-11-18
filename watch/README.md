@@ -146,10 +146,11 @@ Both apps must be signed with the same key, because the watch only talks to a ph
 - **Gameday Picks**: this week's NFL games. Tap the left half for the away team, the right half for home. Tap the same side again to take the pick back. Locked games show the score, and the standings are at the bottom.
 - **Read 20**: a reading timer that fills a ring to the goal and buzzes when it's reached. Finish saves the minutes to that reader's log on the phone.
 - **Practice Clock**: the block or station that's on in the practice running on the coach's phone, with its countdown, a ring and what's next. It buzzes at every block and station change (a longer buzz at the end of practice), even with the watch screen off, and says when the phone is paused or waiting for the coach. The controls stay on the phone.
+- **Schedule**: games and practices for the next two weeks, next one up top, with the live score during a game when the team has a GameChanger link. LYBS Ballclub › Calendar › On a watch sends them, for the teams ticked there, each time the app opens.
 
 **Install:** the same steps as above, with `adb install steele-family-watch.apk`. It runs on Wear OS 2 through Wear OS 5, round or square, and needs no phone app: it talks to the web apps over the internet (through the phone's connection when the watch has no Wi-Fi).
 
-**Link it once:** open any of the apps in the watch's list. It shows an 8-letter code. On the phone open Get Ready › More › Watch (or Cube Clock › Statistics › Your watch, Read 20 › Settings › Watch, Power Program › Program › Watch, Practice Clock › Settings › Watch, or Gameday Picks › watch under your name) and type the code. One link covers them all, because the web apps share it.
+**Link it once:** open any of the apps in the watch's list. It shows an 8-letter code. On the phone open Get Ready › More › Watch (or Cube Clock › Statistics › Your watch, Read 20 › Settings › Watch, Power Program › Program › Watch, Practice Clock › Settings › Watch, LYBS Ballclub › Calendar › On a watch, or Gameday Picks › watch under your name) and type the code. One link covers them all, because the web apps share it.
 
 **Where the data goes:** one private document in the nates-toolbox Firestore, named by a 26-character random key that only that phone and that watch know (see `../watchlink.js`). Nothing is in GitHub. Gameday Picks is the one exception: picks are saved in Gameday Picks itself, so the watch signs in on its own and the player's phone okays that watch (the `gp_watch` rules in `toolbox/firestore.rules`).
 

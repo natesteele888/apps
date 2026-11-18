@@ -46,5 +46,9 @@
         </activity>
         <!-- wakes at each block change of a running practice to buzz (only this app's own alarms reach it) -->
         <receiver android:name=".PracticeBuzzReceiver" android:exported="false" />
+        <activity android:name=".ScheduleActivity" android:exported="true" android:icon="@mipmap/ic_schedule" android:roundIcon="@mipmap/ic_schedule"
+            android:label="@string/schedule_name" android:launchMode="singleTask" android:taskAffinity="com.steele.family.schedule">
+            <intent-filter><action android:name="android.intent.action.MAIN" /><category android:name="android.intent.category.LAUNCHER" /></intent-filter>
+        </activity>
     </application>
 </manifest>

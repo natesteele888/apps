@@ -17,7 +17,7 @@ import java.net.URLEncoder
 
 /**
  * The watch link: one private document joining this watch to the family apps on one phone (see watchlink.js at the
- * top of the apps repo). The phone writes each app's part ("gr", "cc", "pp", "r20", "gp", "pk"); the watch writes only its
+ * top of the apps repo). The phone writes each app's part ("gr", "cc", "pp", "r20", "gp", "sc", "pk"); the watch writes only its
  * log ("w"). No sign-in: the 26-letter key is the only way in, and nobody can list the links.
  *
  * Linking: the watch makes an 8-letter code and shows it; the phone, where the code is typed, leaves its key in
@@ -27,7 +27,7 @@ object Link {
     private const val BASE = "https://firestore.googleapis.com/v1/projects/nates-toolbox/databases/(default)/documents/"
     /** the nates-toolbox web app id, the same public one in getready/cloud.js (not a secret); only used for the Picks sign-in */
     const val API_KEY = "AIzaSyDT_wGN93U4oM70orIU8flSAnvXHApqW2A"
-    private val FIELDS = listOf("gr", "cc", "pp", "r20", "gp", "pk")
+    private val FIELDS = listOf("gr", "cc", "pp", "r20", "gp", "sc", "pk")
     private const val CODE_LIFE = 10 * 60_000L
 
     data class State(

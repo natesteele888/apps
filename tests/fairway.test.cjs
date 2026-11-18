@@ -59,6 +59,10 @@ const pl = (ev, id) => Object.assign({ id }, ev.p[id]);
     deq(C.playOrder(9, 1), [1, 2, 3, 4, 5, 6, 7, 8, 9]);
   });
 
+  await test('core: board names are last names, with an initial only when two share one', () => {
+    const n = C.boardNames([{ id: 'a', name: 'Cal Ortega' }, { id: 'b', name: 'Jo Tamsin' }, { id: 'c', name: 'Bea Tamsin' }, { id: 'd', name: 'Hank' }]);
+    eq(n.a, 'ORTEGA'); eq(n.b, 'J. TAMSIN'); eq(n.c, 'B. TAMSIN'); eq(n.d, 'HANK');
+  });
   await test('core: the demo is twelve made-up golfers in three groups', () => {
     const ev = C.demoEvent(NOW); eq(C.players(ev).length, 12); eq(C.groups(ev).length, 3);
     eq(C.groups(ev)[2].start, 10); eq(ev.cur, 2);
@@ -152,6 +156,20 @@ const pl = (ev, id) => Object.assign({ id }, ev.p[id]);
     eq(C.cleanHc('+2.1'), -2.1); eq(C.cleanHc('abc'), null);
   });
 
+  await test('core games: a 3 by 3 bingo card per golfer, scores mark birdies, three in a row wins', () => {
+    const ev = twoPlayers(), c1 = C.bingoCard(ev, 'aaaaaa1');
+    eq(c1.length, 9); eq(c1[4], -1); deq(C.bingoCard(ev, 'aaaaaa1'), c1, 'the same card on every phone');
+    eq(new Set(c1).size, 9, 'no square twice');
+    let st = C.bingoState(ev, 'aaaaaa1', 1); eq(st.line, null); eq(st.cells[4].hit, true);
+    const at = c1.indexOf(0); // the Birdie square, if this card has it
+    ev.p.aaaaaa1.s['1_1'] = 3; // birdie on a par 4
+    st = C.bingoState(ev, 'aaaaaa1', 1); if (at >= 0) eq(st.cells[at].hit, true, 'a birdie marks itself');
+    const line = [[3, 4, 5], [1, 4, 7], [0, 4, 8], [2, 4, 6]].find(l => l.every(i => c1[i] < 0 || c1[i] >= C.BINGO_AUTO));
+    ev.bg = { aaaaaa1: line.filter(i => i !== 4).map(i => c1[i]) };
+    st = C.bingoState(ev, 'aaaaaa1', 1); deq(st.line && st.line.slice().sort(), line.slice().sort());
+    deq(C.cleanBingo({ aaaaaa1: [0, 3, 3, 99, 'x'], zzzzzz9: [4] }, ev), { aaaaaa1: [3] }, 'auto squares, repeats and unknown golfers dropped');
+  });
+
   /* ===================== PART 2: the page ===================== */
   let server, browser;
   try { server = await startServer('fairway'); browser = await launch(); }
@@ -231,6 +249,20 @@ const pl = (ev, id) => Object.assign({ id }, ev.p[id]);
     await page.waitForSelector('.teecard'); assert.match(await page.locator('.teecard').textContent(), /8:10 AM/);
     const [dl] = await Promise.all([page.waitForEvent('download'), page.click('#addcal')]);
     assert.match(dl.suggestedFilename(), /\.ics$/);
+    const wide = await page.evaluate(() => document.documentElement.scrollWidth); assert.ok(wide <= 390, 'no sideways scroll at 390 px, got ' + wide);
+    deq(errors, []); await ctx.close();
+  });
+
+  if (browser) await test('page: the Games tab bingo card, tap three in a row', async () => {
+    const { page, errors, ctx } = await open();
+    await page.click('#new'); await page.fill('#nn', 'Bingo Day'); await page.fill('#nme', 'Alpha Test');
+    await page.locator('#nf [type=submit]').click(); await page.waitForFunction(() => window.FW.debug.S.ev);
+    await page.click('[data-tab=games]'); await page.waitForSelector('.bgo button');
+    eq(await page.locator('.bgo button').count(), 9);
+    const sqs = await page.evaluate(() => { const S = window.FW.debug.S, C = window.FairwayCore, me = window.FW.ui.me(), c = C.bingoCard(S.ev, me.id);
+      const l = [[3, 4, 5], [1, 4, 7], [0, 4, 8], [2, 4, 6]].find(x => x.every(i => c[i] < 0 || c[i] >= C.BINGO_AUTO)); return l.filter(i => i !== 4).map(i => c[i]); });
+    for (const q of sqs) await page.click(`.bgo [data-sq="${q}"]`);
+    await page.waitForSelector('.bgo.won');
     const wide = await page.evaluate(() => document.documentElement.scrollWidth); assert.ok(wide <= 390, 'no sideways scroll at 390 px, got ' + wide);
     deq(errors, []); await ctx.close();
   });
