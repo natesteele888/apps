@@ -17,7 +17,8 @@ object Paths {
     fun safeId(id: String?): Boolean = id != null && ID.matches(id)
 }
 
-data class Batter(val id: String, val name: String, val num: String, val pos: String, val ready: Boolean, val code: String)
+/** [inn]: where the batter plays in each inning ("P", "SS", [Lineup.BENCH] or "" when not set), from Walk-Up's Positions by inning; empty when none */
+data class Batter(val id: String, val name: String, val num: String, val pos: String, val ready: Boolean, val code: String, val inn: List<String> = emptyList())
 
 /**
  * [id]: the batter whose walk-up is playing, or null; [board]: the game sound that is playing instead, or null.
@@ -47,6 +48,9 @@ data class BatState(
     /** the game sound buttons, in the coach's order, and what waits in Up next (it plays by itself when the sound before it ends) */
     val board: List<Sound> = emptyList(),
     val queue: List<Sound> = emptyList(),
+    /** innings in the game when Walk-Up has positions by inning (the Lineup card), else 0; [inning]: the inning being played, 0 if unknown */
+    val innings: Int = 0,
+    val inning: Int = 0,
 ) {
     val busy: Boolean get() = playing != null || loading != null
 }
@@ -88,6 +92,8 @@ object Proto {
             delay = delay(o),
             board = sounds(o, "board"),
             queue = sounds(o, "queue"),
+            innings = o.optInt("innings", 0).coerceIn(0, Lineup.MAX_INNINGS),
+            inning = o.optInt("inning", 0).coerceIn(0, Lineup.MAX_INNINGS),
         )
     } catch (e: Exception) { null }
 
@@ -98,7 +104,7 @@ object Proto {
             val b = arr.optJSONObject(i) ?: continue
             val id = b.str("id")
             if (!Paths.safeId(id) || out.any { it.id == id }) continue
-            out.add(Batter(id, b.str("name").take(60), b.str("num").take(4), b.str("pos").take(6), b.optBoolean("ready"), b.str("code")))
+            out.add(Batter(id, b.str("name").take(60), b.str("num").take(4), b.str("pos").take(12), b.optBoolean("ready"), b.str("code"), Lineup.row(b.optJSONArray("inn"))))
         }
         return out
     }
