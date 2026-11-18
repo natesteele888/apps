@@ -255,6 +255,18 @@ const pl = (ev, id) => Object.assign({ id }, ev.p[id]);
     eq(C.seasonRace(two, y - 1).list.length, 0, 'only this year counts');
   });
 
+  await test('core My bag: typical yards until you set yours, the shortest club that gets there, and Jack names it on a par 3', () => {
+    const b = C.cleanBag(null);
+    eq(C.bagList(b)[0].id, 'dr', 'longest first'); eq(C.bagList(b)[0].set, false);
+    eq(C.clubFor(b, 150).n, '6 iron'); eq(C.clubWords(C.clubFor(b, 300)), "Driver, and it won't get there"); eq(C.clubWords(C.clubFor(b, 40)), 'A soft sand wedge');
+    const mine = C.cleanBag({ on: ['dr', '7i', 'zz'], y: { '7i': 160, dr: '250', zz: 3, pw: 5 } });
+    deq(mine, { on: ['dr', '7i'], y: { '7i': 160, dr: 250 } }, 'unknown clubs and silly yards dropped');
+    eq(C.clubFor(mine, 150).n, '7 iron', 'your own yards win');
+    const ev = twoPlayers(), h = ev.course.holes.findIndex(x => x.par === 3) + 1;
+    ok(/par 3, \d+ yards\. [A-Z]/.test(C.holeTalk(ev, ev.p.aaaaaa1, h, {}, 'clean', mine)), 'a club is named on a par 3');
+    ok(!/iron|wood|Driver|wedge|Hybrid/.test(C.holeTalk(ev, ev.p.aaaaaa1, 1, {}, 'clean', mine)), 'not on a par 4');
+  });
+
   /* ===================== PART 2: the page ===================== */
   let server, browser;
   try { server = await startServer('fairway'); browser = await launch(); }
@@ -423,6 +435,23 @@ const pl = (ev, id) => Object.assign({ id }, ev.p[id]);
     await page.click('#rcshare'); await page.waitForFunction(() => /Shared in the chat/.test(document.querySelector('#rcshare').textContent));
     await page.click('[data-tab=games]'); await page.waitForSelector('.season li');
     ok(/Alpha Test · you/.test(await page.textContent('.season')), 'you are marked in the race');
+    const wide = await page.evaluate(() => document.documentElement.scrollWidth); assert.ok(wide <= 390, 'no sideways scroll at 390 px, got ' + wide);
+    deq(errors, []); await ctx.close();
+  });
+
+  if (browser) await test('page: My bag saves on this phone and the next par 3 names a club from it', async () => {
+    const { page, errors, ctx } = await open();
+    await page.click('#new'); await page.fill('#nn', 'Bag Day'); await page.fill('#nme', 'Alpha Test');
+    await page.locator('#nf [type=submit]').click(); await page.waitForFunction(() => window.FW.debug.S.ev);
+    await page.click('[data-tab=score]'); await page.waitForSelector('#jackopen');
+    await page.click('#jackopen'); await page.click('#jbag'); await page.fill('[data-yds="7i"]', '172'); await page.click('#bagsave');
+    eq(await page.evaluate(() => JSON.parse(localStorage.getItem('fw:bag')).y['7i']), 172);
+    await page.waitForSelector('#jn'); await page.click('.sheet-h .x');
+    const before = await page.evaluate(() => { const ev = window.FW.debug.S.ev; return ev.course.holes.findIndex(x => x.par === 3); });
+    await page.evaluate(h => { window.FW.debug.S.hole = h; window.FW.debug.render(); }, before);
+    await page.locator('.scorer li').first().locator('.val').click();
+    await page.waitForSelector('.hreview');
+    ok(/From your bag:/.test(await page.textContent('.hreview')), 'the par 3 coming up names a club');
     const wide = await page.evaluate(() => document.documentElement.scrollWidth); assert.ok(wide <= 390, 'no sideways scroll at 390 px, got ' + wide);
     deq(errors, []); await ctx.close();
   });

@@ -784,10 +784,11 @@
     return out;
   }
   // What Jack says walking up to a hole: par and yards, then the golfer's own notes in their own words.
-  function holeTalk(ev, pl, h, notes, level) {
+  function holeTalk(ev, pl, h, notes, level, bag) {
     const hole = ev.course.holes[h - 1], tee = teeOf(ev, pl), y = yards(ev.course, h, tee.id);
     const mine = ((notes || {})[courseKey(ev.course)] || {})[h] || [];
     let s = `Hole ${h}, par ${hole.par}${y ? `, ${y} yards` : ""}.`;
+    if (bag && hole.par === 3 && y) { const c = clubFor(bag, y); if (c) s += " " + clubWords(c) + "."; }
     if (mine.length) s += " Your notes: " + mine.map(t => speakable(t, level)).filter(Boolean).map(t => (/[.!?]$/.test(t) ? t : t + ".")).join(" ");
     return s;
   }
@@ -862,6 +863,32 @@
     out.forEach((x, i) => { x.place = out.findIndex(y => y.pts === x.pts) + 1; });
     return { year, events: Object.keys(events).length, list: out };
   }
+
+  /* ---------- My bag: which clubs you carry and how far each goes (kept on the golfer's phone) ---------- */
+  // Typical carry yards stand in until the golfer sets their own.
+  const CLUBS = [["dr", "Driver", 230], ["3w", "3 wood", 210], ["5w", "5 wood", 195], ["hy", "Hybrid", 185], ["4i", "4 iron", 175], ["5i", "5 iron", 165], ["6i", "6 iron", 155],
+    ["7i", "7 iron", 145], ["8i", "8 iron", 135], ["9i", "9 iron", 125], ["pw", "Pitching wedge", 115], ["gw", "Gap wedge", 100], ["sw", "Sand wedge", 85], ["lw", "Lob wedge", 65]];
+  const CLUB_IDS = CLUBS.map(c => c[0]), BAG_DEFAULT = ["dr", "3w", "5w", "hy", "5i", "6i", "7i", "8i", "9i", "pw", "gw", "sw"];
+  function cleanBag(x) {
+    x = x && typeof x === "object" ? x : {};
+    const on = []; (Array.isArray(x.on) ? x.on : BAG_DEFAULT).forEach(c => { if (CLUB_IDS.indexOf(c) >= 0 && on.indexOf(c) < 0) on.push(c); });
+    const y = {}; Object.keys(x.y && typeof x.y === "object" ? x.y : {}).forEach(c => { const v = Math.round(Number(x.y[c])); if (CLUB_IDS.indexOf(c) >= 0 && v >= 10 && v <= 400) y[c] = v; });
+    return { on: on.length ? on : BAG_DEFAULT.slice(), y };
+  }
+  // The clubs in the bag, longest first, each with its yards and whether the golfer set them.
+  function bagList(bag) {
+    bag = cleanBag(bag);
+    return CLUBS.filter(c => bag.on.indexOf(c[0]) >= 0).map(c => ({ id: c[0], n: c[1], y: bag.y[c[0]] || c[2], set: !!bag.y[c[0]] })).sort((a, b) => b.y - a.y);
+  }
+  // The shortest club that still gets there; past the longest club it's the longest club, inside the shortest it's a touch shot.
+  function clubFor(bag, yds) {
+    const l = bagList(bag); if (!l.length || !(yds > 0)) return null;
+    if (yds > l[0].y) return Object.assign({ long: true }, l[0]);
+    const last = l[l.length - 1];
+    if (yds < last.y - 20) return Object.assign({ touch: true }, last);
+    return l.filter(c => c.y >= yds).pop();
+  }
+  function clubWords(c) { return !c ? "" : c.long ? `${c.n}, and it won't get there` : c.touch ? `A soft ${c.n.toLowerCase()}` : c.n; }
 
   /* ---------- changes: the same dotted paths the shared database takes ---------- */
   // patch keys look like "p.abc123.s.1_7" or "name"; a value of DELETE removes the field.
@@ -976,5 +1003,6 @@
     BETS, BET_AMTS, cleanBets, cleanBetMarks, betOn, betAmt, betPlayers, wolfOrder, wolfOf, betTally, money,
     TEE_SHOTS, cleanHoleNote, cleanHoleNotes, holeLine, nextHole, jackNoticed,
     JACK_LANGS, cleanJack, jackLevel, speakable, courseKey, cleanCourseNotes, holeTalk,
-    roundDone, recap, seasonRace, SEASON_PTS };
+    roundDone, recap, seasonRace, SEASON_PTS,
+    CLUBS, cleanBag, bagList, clubFor, clubWords };
 });
