@@ -188,7 +188,7 @@ private fun rememberGps(on: Boolean, allowed: Boolean): Pair<Spot?, Float?> {
 }
 
 /** Jack's voice on the watch (its speaker, or earbuds paired to the watch) */
-private class Voice(ctx: Context) {
+private class JackVoice(ctx: Context) {
     private var ready = false
     private val tts = TextToSpeech(ctx.applicationContext) { ready = it == TextToSpeech.SUCCESS }
     fun say(t: String) { if (ready) try { tts.language = Locale.US; tts.speak(t, TextToSpeech.QUEUE_FLUSH, null, "jack") } catch (e: Exception) { } }
@@ -221,7 +221,7 @@ fun FairwayApp(onChange: () -> Unit) {
     val (here, acc) = rememberGps(on = pager.currentPage != 1, allowed = allowed)
     val gy = FairwayCore.greenYards(h, here)
 
-    val voice = remember { Voice(ctx) }
+    val voice = remember { JackVoice(ctx) }
     DisposableEffect(Unit) { onDispose { voice.close() } }
     var said by rememberSaveable { mutableStateOf("") }
     fun move(d: Int) { val o = r.order; val i = o.indexOf(hole); hole = o[((i + d) % o.size + o.size) % o.size]; Buzz.tick(ctx) }
