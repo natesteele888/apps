@@ -430,7 +430,7 @@ function drawChart(d, p, plan) {
     const yp = grid(per, max); svg += '<line x1="' + L + '" x2="' + (W - R) + '" y1="' + yp + '" y2="' + yp + '" stroke="#717C94" stroke-dasharray="2 3"/>';
     $('chartLbl').innerHTML = '<b>Per day</b><span class="key"><i></i>Minutes</span><span class="key"><i class="dot2"></i>~' + fmt(per) + ' a day keeps you under</span>';
   }
-  [1, 8, 15, 22, p.days].forEach(dd => { svg += '<text x="' + x(dd).toFixed(1) + '" y="' + (H - 4) + '" fill="#717C94" font-size="9" text-anchor="middle">' + MON[p.m] + ' ' + dd + '</text>'; });
+  [1, 8, 15, 22, p.days].forEach(dd => { svg += '<text x="' + x(dd).toFixed(1) + '" y="' + (H - 4) + '" fill="#717C94" font-size="9" text-anchor="' + (dd === p.days ? 'end' : 'middle') + '">' + MON[p.m] + ' ' + dd + '</text>'; });
   if (!pts.length) svg += '<text x="' + (L + iw / 2) + '" y="' + (T + ih / 2) + '" fill="#717C94" font-size="11" text-anchor="middle">The line builds as the app checks in</text>';
   $('chart').innerHTML = svg + '</svg>';
 }
