@@ -46,6 +46,8 @@ dependencies {
     implementation("com.google.android.gms:play-services-wearable:19.0.0")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.9.0")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.9.0")
+    // Installs the watch app on the watch over Wi-Fi, the way `adb install` does from a computer (WatchInstaller.kt)
+    implementation("dev.mobile:dadb:2.0.0")
     // On-screen checks run on an Android emulator by .github/workflows/dugout-screen.yml
     androidTestImplementation("androidx.test:core:1.6.1")
     androidTestImplementation("androidx.test:runner:1.6.2")
