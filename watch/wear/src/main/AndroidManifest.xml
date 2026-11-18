@@ -3,9 +3,11 @@
     xmlns:tools="http://schemas.android.com/tools">
     <!-- The tile libraries ask for Android 8 (Wear OS 2). The app still installs on Android Wear 2.0 (Android 7.1):
          there the tile services and Live score stay off (res/values/bools.xml) and nothing calls their code. -->
-    <uses-sdk tools:overrideLibrary="androidx.wear.tiles, androidx.wear.protolayout, androidx.wear.protolayout.expression, androidx.wear.protolayout.expression.pipeline, androidx.wear.protolayout.proto, androidx.wear.watchface.complications.datasource, androidx.wear.watchface.complications.datasource.ktx, androidx.wear.watchface.complications.data, androidx.wear.watchface.complications, androidx.wear.watchface.data, androidx.wear.watchface.utility, androidx.wear.protolayout.renderer, androidx.wear.watchface.style, androidx.wear.watchface.client, androidx.wear.watchface" />
+    <uses-sdk tools:overrideLibrary="androidx.wear.tiles, androidx.wear.protolayout, androidx.wear.protolayout.expression, androidx.wear.protolayout.expression.pipeline, androidx.wear.protolayout.proto, androidx.wear.watchface.complications.datasource, androidx.wear.watchface.complications.datasource.ktx, androidx.wear.watchface.complications.data, androidx.wear.watchface.complications, androidx.wear.watchface.data, androidx.wear.watchface.utility, androidx.wear.protolayout.renderer, androidx.wear.watchface.style, androidx.wear.watchface.client, androidx.wear.watchface, androidx.wear.ongoing" />
     <uses-feature android:name="android.hardware.type.watch" />
     <uses-permission android:name="android.permission.VIBRATE" />
+    <!-- Wear OS 4 and up: the icon on the watch face that leads back to Walk-Up or Pitch Count (Ongoing.kt) -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
     <!-- GC Scores and Scores read scores over the internet (through the phone on watches without Wi-Fi or LTE) -->
     <uses-permission android:name="android.permission.INTERNET" />
