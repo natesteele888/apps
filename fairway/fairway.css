@@ -484,3 +484,7 @@ a.btn { text-decoration: none; }
 .season .pos { font-weight: 800; color: var(--green); text-align: center; }
 .season .nm small { display: block; color: var(--muted); }
 .season .pts { font-variant-numeric: tabular-nums; }
+/* my bag */
+.bag .ritem { gap: 8px; }
+.bag input[type=number] { width: 76px; min-height: 40px; padding: 6px 8px; text-align: right; flex: none; }
+.bag small { color: var(--muted); flex: none; }

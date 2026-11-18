@@ -31,7 +31,7 @@
       <div class="hrrow"><span>Putts</span>${seg("p", n.p, [[0, "0"], [1, "1"], [2, "2"], [3, "3"], [4, "4+"]])}</div>
       <div class="hrrow"><span>Penalties</span>${seg("x", n.x || 0, [[0, "None"], [1, "1"], [2, "2+"]])}</div>
       <div class="hrrow"><span>Sand</span>${seg("b", n.b ? 1 : 0, [[0, "No"], [1, "Yes"]])}</div>
-      ${nx ? `<div class="hrnext"><span><small>Up next</small><b>Hole ${nx.h} · par ${nx.par}</b><small>${nx.yds ? nx.yds + " yds from the " + esc(nx.tee) + " tees · " : ""}handicap ${nx.hcp}</small>${FW.jack && FW.jack.notesFor(ev.course, nx.h).length ? `<small class="hrnote">Your note: ${esc(FW.jack.notesFor(ev.course, nx.h)[0])}</small>` : ""}</span></div>` : ""}
+      ${nx ? `<div class="hrnext"><span><small>Up next</small><b>Hole ${nx.h} · par ${nx.par}</b><small>${nx.yds ? nx.yds + " yds from the " + esc(nx.tee) + " tees · " : ""}handicap ${nx.hcp}</small>${nx.par === 3 && nx.yds && FW.bag ? `<small class="hrnote">From your bag: ${esc(C.clubWords(FW.bag.club(nx.yds)))}</small>` : ""}${FW.jack && FW.jack.notesFor(ev.course, nx.h).length ? `<small class="hrnote">Your note: ${esc(FW.jack.notesFor(ev.course, nx.h)[0])}</small>` : ""}</span></div>` : ""}
       ${tip ? `<div class="hrjack"><small>Jack noticed</small><p>${esc(tip)}</p></div>` : ""}
     </section>`;
   };
