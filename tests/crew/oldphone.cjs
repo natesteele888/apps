@@ -9,7 +9,7 @@ const API = [
   [/AbortSignal\.timeout/, 'AbortSignal.timeout', 'A'], [/\.toSorted\(|\.toReversed\(|\.toSpliced\(/, 'toSorted/toReversed', 'A'],
   [/crypto\.randomUUID/, 'crypto.randomUUID', 'A'], [/\bArray\.prototype\.group|Object\.groupBy|Map\.groupBy/, 'groupBy', 'A'],
 ];
-const CSS = [[/:has\(/, ':has()', 'A'], [/\b\d+(\.\d+)?[sld]vh\b/, 'svh/dvh/lvh units', 'A'], [/@container/, '@container', 'A'],
+const CSS = [[/:has\(/, ':has()', 'A'], [/\d+cq(w|h|i|b|min|max)\b/, 'container units cqw/cqh (need an @supports guard)', 'A'], [/\b\d+(\.\d+)?[sld]vh\b/, 'svh/dvh/lvh units', 'A'], [/@container/, '@container', 'A'],
   [/\binset\s*:/, 'inset:', 'B'], [/aspect-ratio\s*:/, 'aspect-ratio', 'B'], [/color-mix\(/, 'color-mix()', 'A'], [/:is\(|:where\(/, ':is()/:where()', 'B'],
   [/\b(oklch|oklab)\(/, 'oklch()', 'A'], [/text-wrap\s*:\s*balance/, 'text-wrap:balance (harmless)', '-']];
 function scripts(file) {
