@@ -224,6 +224,24 @@ const pl = (ev, id) => Object.assign({ id }, ev.p[id]);
     const sp = C.standings(ev, { pts: true }); eq(sp[0].id, 'aaaaaa1'); eq(sp[0].pts, 3); eq(sp[1].pts, 2); eq(sp[0].rounds[0].pts, 3);
   });
 
+  await test('core: your round by the numbers, from the scores and the hole reviews', () => {
+    const ev = C.newEvent({ name: 'N', course: C.sampleCourse(), now: NOW });
+    ev.p.aaaaaa1 = C.newPlayer(ev, { name: 'Al Ace', tee: ev.course.tees[0].id, now: NOW });
+    const pl = ev.p.aaaaaa1, par = h => C.parOf(ev.course, h, pl.tee);
+    let x = C.roundNumbers(ev, pl, 1, {}); eq(x.holes, 0); eq(x.best, null); eq(x.fw, null); eq(x.putts, null);
+    const h3 = [1, 2, 3, 4, 5, 6].find(h => par(h) === 3), h4 = [1, 2, 3, 4, 5, 6].filter(h => par(h) > 3);
+    [1, 2, 3, 4, 5, 6].forEach(h => { pl.s['1_' + h] = par(h); });
+    pl.s['1_' + h4[0]] = par(h4[0]) - 1; pl.s['1_' + h4[1]] = par(h4[1]) + 2;
+    const notes = { ['1_' + h4[0]]: { t: 'fairway', p: 1 }, ['1_' + h4[1]]: { t: 'left', p: 3, x: 1, b: true }, ['1_' + h3]: { p: 2 } };
+    x = C.roundNumbers(ev, pl, 1, notes);
+    eq(x.holes, 6); eq(x.marked, 3); deq(x.fw, [1, 2]); eq(x.putts, 6); eq(x.pHoles, 3); eq(x.three, 1); eq(x.pen, 1); eq(x.sand, 1);
+    eq(x.best.h, h4[0]); eq(x.best.d, -1); eq(x.worst.h, h4[1]); eq(x.worst.d, 2);
+    const b9 = C.newEvent({ name: 'B', course: C.nineOf(C.monoosnockCourse(), 'back'), now: NOW });
+    b9.p.aaaaaa1 = C.newPlayer(b9, { name: 'Al Ace', tee: b9.course.tees[0].id, now: NOW }); b9.p.aaaaaa1.s['1_1'] = 3; b9.p.aaaaaa1.s['1_2'] = 9;
+    eq(C.roundNumbers(b9, b9.p.aaaaaa1, 1, {}).best.n, 10, 'a back nine names the 10th');
+    eq(C.nextHole(b9, b9.p.aaaaaa1, 1, 1).n, 11);
+  });
+
   await test('core: hole art that comes with the app, by course, and the same pictures for a front or back nine', () => {
     const c = C.monoosnockCourse();
     eq(C.holeArt(c, 1), null, 'no pictures listed yet');

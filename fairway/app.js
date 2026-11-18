@@ -537,6 +537,7 @@
     const finHtml = fin ? `<div class="rdone" role="status"><b>${quick ? "Round done" : "Your group is done"}</b>
         <small>${g.players.map((p, i) => esc(tname(p) || p.n) + " " + rs[i].strokes + " (" + esc(C.fmtPar(rs[i].toPar)) + ")").join(" · ")}</small>
         <small>${quick ? "Saved to Your rounds on the home screen. You can still fix a score below." : "Check the card below. Final standings are on the Board."}</small>
+        ${mine && g.players.some(p => p.id === mine.id) ? numbersHtml(ev, mine, r) : ""}
         <button type="button" class="btn small" id="rdgo">${quick ? "Back to home" : "See the board"}</button></div>` : "";
     el.innerHTML = `${finHtml}${gs.length > 1 ? `<div class="pills small" role="group" aria-label="Group">${gs.map(x => `<button type="button" class="pill" data-g="${x.g}" aria-pressed="${x.g === g.g}">Group ${x.g}</button>`).join("")}</div>` : ""}
       ${ev.rounds > 1 ? `<div class="pills small" role="group" aria-label="Round">${Array.from({ length: ev.rounds }, (_, i) => `<button type="button" class="pill" data-sr="${i + 1}" aria-pressed="${r === i + 1}">Round ${i + 1}${i + 1 === ev.cur ? " (now)" : ""}</button>`).join("")}</div>` : ""}
@@ -580,6 +581,19 @@
       // a clear is one tap from the stepper on a small screen, so it can be taken back
       const clr = $(".clr", li); if (clr) clr.onclick = () => { const was = cur, nm = (ev.p[pid] || {}).n || ""; set(null); toast("Cleared " + nm.split(" ")[0] + "'s " + was, "", { label: "Undo", fn: () => { if (S.ev && S.ev.p[pid] && C.strokes(S.ev.p[pid], r, h) == null) write({ ["p." + pid + ".s." + C.key(r, h)]: was }); } }); };
     });
+  }
+  // Your round by the numbers, under the Round done card: from your scores and the hole reviews on this phone.
+  function numbersHtml(ev, pl, r) {
+    const x = C.roundNumbers(ev, pl, r, FW.review ? FW.review.notes(S.code) : {}), out = [];
+    const word = (d, v) => esc(C.scoreName(d, v));
+    if (x.fw) out.push(["Fairways", x.fw[0] + " of " + x.fw[1]]);
+    if (x.putts != null) out.push(["Putts", x.putts + (x.pHoles < x.holes ? " on " + x.pHoles + " holes" : "") + (x.three ? " · " + x.three + " three-putt" + (x.three > 1 ? "s" : "") : "")]);
+    if (x.pen) out.push(["Penalties", String(x.pen)]);
+    if (x.sand) out.push(["Sand", x.sand + (x.sand > 1 ? " holes" : " hole")]);
+    if (x.best) out.push(["Best", "Hole " + x.best.n + ", " + word(x.best.d, x.best.v)]);
+    if (x.worst) out.push(["Toughest", "Hole " + x.worst.n + ", " + word(x.worst.d, x.worst.v)]);
+    if (!out.length) return "";
+    return `<dl class="rnum">${out.map(([k, v]) => `<div><dt>${esc(k)}</dt><dd>${v}</dd></div>`).join("")}</dl>${x.marked ? "" : `<small>Tap tee shot, putts and penalties under each score next time, and they add up here.</small>`}`;
   }
   function groupCard(ev, list, r, order, hl) {
     const n = C.holeCount(ev), halves = n === 18 ? [[1, 9, "Out"], [10, 18, "In"]] : [[1, 9, "Tot"]];

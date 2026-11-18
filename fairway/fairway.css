@@ -335,6 +335,9 @@ input:focus, select:focus, textarea:focus { outline: 0; border-color: var(--gree
 .rdone b { font: 700 19px var(--serif); color: var(--green); }
 .rdone small { font-size: 14px; }
 .rdone .btn { justify-self: start; margin-top: 6px; }
+.rnum { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 6px 12px; margin: 8px 0 2px; }
+.rnum dt { font-size: 12px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); font-weight: 700; }
+.rnum dd { margin: 0; font-weight: 700; font-size: 15px; }
 .ctplist { margin: 0 0 10px; padding-left: 22px; }
 .ctplist li { padding: 8px 0; border-bottom: 1px solid var(--line); }
 .ctplist li { display: list-item; }
