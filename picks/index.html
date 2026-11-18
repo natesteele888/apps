@@ -250,7 +250,15 @@ function renderSignIn(){
   $("#app").innerHTML=`<div class="gate"><div class="box"><img src="/apps/icons/picks-192.png" alt=""><h1>Gameday Picks</h1>
     <p style="color:var(--ink-dim)">NFL, MLB, NBA and NHL picks with your crew. Sign in to play.</p>
     <button class="btn gold" id="si">Sign in with Google</button><p class="err" id="siErr"></p>
-    <p class="or">No Google account? Use any email instead.</p>
+    <p class="or">No Google account? Pick a player name and a 4-digit PIN.</p>
+    <form class="card" id="pf" novalidate>
+      <label class="field">Player name<input id="pn" maxlength="20" autocomplete="username" autocapitalize="words" spellcheck="false" required></label>
+      <label class="field">4-digit PIN<input id="pp" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="4" autocomplete="new-password" required></label>
+      <p class="err" id="pErr" role="alert"></p>
+      <button class="btn gold" id="pGo" style="width:100%"></button>
+      <div class="row"><button type="button" class="linkbtn tall" id="pMode"></button></div>
+    </form>
+    <p class="or">Or use any email.</p>
     <form class="card" id="ef" novalidate>
       <label class="field">Email<input id="em" type="email" autocomplete="email" inputmode="email" autocapitalize="off" spellcheck="false" required></label>
       <label class="field">Password<input id="pw" type="password" minlength="6" required></label>
@@ -259,6 +267,7 @@ function renderSignIn(){
       <div class="row"><button type="button" class="linkbtn tall" id="eMode"></button><button type="button" class="linkbtn tall" id="eReset">Forgot password?</button></div>
     </form></div></div>`;
   $("#si").onclick=signIn;
+  pinForm(invited?"new":"old");
   const paint=()=>{const n=mode==="new";$("#eGo").textContent=n?"Create account":"Sign in";$("#eMode").textContent=n?"Have an account? Sign in":"New here? Create an account";
     $("#pw").autocomplete=n?"new-password":"current-password";$("#pw").placeholder=n?"At least 6 characters":"";$("#eReset").hidden=n;$("#eErr").textContent=""};
   paint();
@@ -271,6 +280,28 @@ function renderSignIn(){
     const b=$("#eGo");b.disabled=true;b.textContent=mode==="new"?"Creating…":"Signing in…";$("#eErr").textContent="";
     try{const a=firebase.auth();await(mode==="new"?a.createUserWithEmailAndPassword(em,pw):a.signInWithEmailAndPassword(em,pw))}
     catch(err){if(!$("#ef"))return;b.disabled=false;paint();$("#eErr").textContent=authMsg(err,mode)}};
+}
+/* ---------- no Google account: a player name and a 4-digit PIN ----------
+   Under the hood it's Firebase's email sign-in with a made-up address built from the name (never a real inbox, never
+   shown, nothing is ever mailed to it) and the PIN as the password, so the player can sign back in on any phone. */
+const PIN_DOMAIN="players.natesteele888.github.io";
+const pinSlug=n=>String(n||"").toLowerCase().normalize("NFKD").replace(/[^a-z0-9]/g,"");
+const pinEmail=n=>pinSlug(n)+"@"+PIN_DOMAIN,pinPass=p=>"gp-pin-"+p;
+const isPinUser=u=>!!(u&&u.email&&u.email.endsWith("@"+PIN_DOMAIN));
+function pinForm(start){
+  let mode=start;
+  const paint=()=>{const n=mode==="new";$("#pGo").textContent=n?"Start playing":"Sign in";$("#pMode").textContent=n?"Already playing? Sign in with your name and PIN":"New here? Make a player name";
+    $("#pp").autocomplete=n?"new-password":"current-password";$("#pErr").textContent=""};
+  paint();$("#pMode").onclick=()=>{mode=mode==="new"?"old":"new";paint()};
+  $("#pf").onsubmit=async e=>{e.preventDefault();const name=$("#pn").value.trim().replace(/\s+/g," "),pin=$("#pp").value.trim(),err=$("#pErr");
+    if(pinSlug(name).length<2){err.textContent="Use at least 2 letters or numbers for the name.";$("#pn").focus();return}
+    if(!/^\d{4}$/.test(pin)){err.textContent="The PIN is 4 numbers.";$("#pp").focus();return}
+    const b=$("#pGo");b.disabled=true;b.textContent=mode==="new"?"Setting up…":"Signing in…";err.textContent="";
+    if(mode==="new")store("gp.pname",name.slice(0,24));
+    try{const a=firebase.auth();await(mode==="new"?a.createUserWithEmailAndPassword(pinEmail(name),pinPass(pin)):a.signInWithEmailAndPassword(pinEmail(name),pinPass(pin)))}
+    catch(x){if(!$("#pf"))return;b.disabled=false;paint();const c=(x&&x.code)||"";
+      err.textContent=c==="auth/email-already-in-use"?`That name is taken. Try ${name.replace(/\d+$/,"")}${(+(/\d+$/.exec(name)||[1])[0])+1}, or tap \u201cAlready playing?\u201d if it's you.`
+        :/auth\/(wrong-password|user-not-found|invalid-credential|invalid-login-credentials)/.test(c)?"That name and PIN don't match. New here? Tap \u201cNew here?\u201d":authMsg(x,mode)}};
 }
 function authMsg(e,mode){const c=(e&&e.code)||"";
   if(c==="auth/email-already-in-use")return"That email already has an account. Tap \u201cHave an account? Sign in\u201d.";
@@ -286,7 +317,7 @@ function renderJoin(){
   $("#app").innerHTML=`<div class="gate"><div class="box" style="text-align:left"><img src="/apps/icons/picks-192.png" alt=""><h1 style="text-align:center">Join the picks</h1>
     <form class="card" id="join"><p>Enter the invite code you were given and the name to show on the leaderboard.</p>
     <label class="field">Invite code<input id="jcode" value="${esc(code)}" autocomplete="off" autocapitalize="characters" required></label>
-    <label class="field">Your name<input id="jname" maxlength="24" value="${esc((S.user.displayName||"").split(" ")[0])}" required></label>
+    <label class="field">Your name<input id="jname" maxlength="24" value="${esc((S.user.displayName||"").split(" ")[0]||(isPinUser(S.user)&&store("gp.pname"))||"")}" required></label>
     <p class="err" id="jerr"></p><button class="btn gold">Join</button></form>
     <p style="text-align:center"><button class="linkbtn tall" id="out">Use a different account</button></p></div></div>`;
   $("#out").onclick=()=>firebase.auth().signOut();
@@ -483,7 +514,7 @@ function renderAdmin(){
   document.querySelectorAll("[data-rm]").forEach(b=>{let armed=false;b.onclick=async()=>{if(!armed){armed=true;b.textContent="Tap again to remove";setTimeout(()=>{armed=false;b.textContent="Remove"},3000);return}
     try{await db.doc("gp_players/"+b.dataset.rm).delete();toast("Removed. Their old picks stay hidden from the board.")}catch(_){toast("Couldn't remove")}}});
 }
-async function share(code){const url=inviteLink(code);const text=`Join my NFL, MLB, NBA and NHL picks on Gameday Picks. Sign in with Google or any email. Code: ${code}`;
+async function share(code){const url=inviteLink(code);const text=`Join my NFL, MLB, NBA and NHL picks on Gameday Picks. Sign in with Google, or just pick a player name and a PIN. Code: ${code}`;
   try{if(navigator.share){await navigator.share({title:"Gameday Picks",text,url});return}}catch(e){if(e&&e.name==="AbortError")return}
   try{await navigator.clipboard.writeText(text+"\n"+url);toast("Invite link copied")}catch(_){prompt("Copy this invite link",url)}}
 
