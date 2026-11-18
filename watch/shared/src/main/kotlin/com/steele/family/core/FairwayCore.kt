@@ -171,7 +171,11 @@ object FairwayCore {
             // a much better fix than any so far (the GPS just locked on) wins outright
             if (fixes.isNotEmpty() && f.acc < 0.6 * fixes.minOf { it.acc }) { fixes.clear(); far = null }
             val now = mean()
-            if (now != null && metres(now, Spot(f.lat, f.lon)) > maxOf(moved, minOf(f.acc, 25.0))) {
+            // with nothing but rough fixes so far, rough ones average together rather than the first one sticking
+            val roughOnly = fixes.isNotEmpty() && fixes.minOf { it.acc } >= 25.0
+            if (now != null && metres(now, Spot(f.lat, f.lon)) > maxOf(moved, minOf(f.acc, 25.0), if (roughOnly) 1.5 * f.acc else 0.0)) {
+                // a rough fix (the phone network's, say) far from a good GPS lock is the rough one, never a move
+                if (f.acc > 2 * fixes.minOf { it.acc }) return now
                 val before = far
                 // two wild fixes in a row aren't a move either if getting there would take faster than a cart (8 m/s)
                 val tooFast = fixes.isNotEmpty() && metres(now, Spot(f.lat, f.lon)) / maxOf(1.0, (f.at - fixes.last().at) / 1000.0) > 8.0
@@ -236,7 +240,7 @@ object FairwayCore {
      * round and the hole's notes). [said] is what the speech recognizer heard.
      */
     fun jack(said: String, r: Round, h: Hole, here: GreenYards?, scores: Map<Int, Int>): Answer {
-        val body = said.trim().replace(Regex("^(hey|hi|ok|okay)?\\s*jack[,.!]?\\s*", RegexOption.IGNORE_CASE), "").trim()
+        val body = said.trim().replace(Regex("^(hey|hi|ok|okay|a)?\\s*jacks?[,.!]?\\s*", RegexOption.IGNORE_CASE), "").trim()
         val t = body.lowercase()
         val mid = here?.mid
         val toGo = mid ?: if (scores[h.n] == null && h.yards > 0) h.yards else null
@@ -271,7 +275,7 @@ object FairwayCore {
                 else Answer("You're ${spokenPar(s.toPar)} through ${s.thru}, ${s.strokes} strokes.")
             }
             has(t, "par", "what hole", "which hole", "this hole") -> Answer("Hole ${h.n}, par ${h.par}" + (if (h.yards > 0) ", ${h.yards} yards." else "."))
-            else -> Answer("I can give you yards, a club, your score and your notes for this hole. Ask me one of those.")
+            else -> Answer("I do yards, a club, your score and notes. Ask me one of those.")
         }
     }
     fun spokenPar(n: Int) = when { n == 0 -> "even"; n > 0 -> "$n over"; else -> "${-n} under" }

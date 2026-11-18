@@ -55,6 +55,7 @@ class FairwayCrewTest {
         val name: String, val holes: Int = 18, val start: Int = 1, val shared: Boolean = true, val marked: Boolean = true,
         val sigma: Double = 3.0, val acc: Double = 5.0, val spikes: Double = 0.0, val dead: Set<Int> = emptySet(),
         val refused: Boolean = false, val fatFinger: Boolean = false, val talker: Boolean = false, val seed: Long = 1,
+        val networkFixes: Double = 0.0, val misheard: Boolean = false,
     )
 
     private val crew = listOf(
@@ -68,6 +69,11 @@ class FairwayCrewTest {
         Golfer("Rules not switched on for the tournament", refused = true, seed = 18),
         Golfer("Kept on the phone only, no signal back nine", shared = false, dead = (10..18).toSet(), seed = 19),
         Golfer("New course, no greens marked", marked = false, talker = true, seed = 20),
+        // round two
+        Golfer("Signal comes and goes every hole", dead = (1..18).filter { it % 2 == 1 }.toSet(), fatFinger = true, seed = 21),
+        Golfer("Rough network fixes mixed into the GPS", networkFixes = 0.35, seed = 22),
+        Golfer("Talks to Jack, the watch mishears", talker = true, misheard = true, seed = 23),
+        Golfer("Rules refused, dead zone too", refused = true, dead = (4..8).toSet(), fatFinger = true, seed = 24),
     )
 
     // what golfers really say (the speech recognizer's words, not the chips)
@@ -82,7 +88,7 @@ class FairwayCrewTest {
 
     class Report(val golfer: String) {
         var screenS = 0; var gpsS = 0; var linkChecks = 0; var writes = 0; var taps = 0; var speechS = 0.0
-        var rawJitter = ArrayList<Int>(); var steadyJitter = ArrayList<Int>(); var steadyErr = ArrayList<Int>(); var rawErr = ArrayList<Int>()
+        var rawJitter = ArrayList<Int>(); var steadyJitter = ArrayList<Int>(); var steadyErr = ArrayList<Int>(); var rawErr = ArrayList<Int>(); var calmErr = ArrayList<Int>(); var warned = 0; var fixes = 0
         var asked = 0; var missed = ArrayList<String>(); var longest = ""; var notes = 0
         var lost = 0; var toPhone = 0; var mismatch = ArrayList<String>()
         fun json() = JSONObject().put("golfer", golfer).put("screenMin", screenS / 60.0).put("gpsMin", gpsS / 60.0)
@@ -90,6 +96,7 @@ class FairwayCrewTest {
             .put("rawJitterMax", rawJitter.maxOrNull() ?: 0).put("steadyJitterMax", steadyJitter.maxOrNull() ?: 0)
             .put("rawJitterMedian", med(rawJitter)).put("steadyJitterMedian", med(steadyJitter))
             .put("rawErrMax", rawErr.maxOrNull() ?: 0).put("steadyErrMax", steadyErr.maxOrNull() ?: 0)
+            .put("errMaxWhenNoWarning", calmErr.maxOrNull() ?: 0).put("fixesWithGpsWarning", if (fixes == 0) 0.0 else warned.toDouble() / fixes)
             .put("jackAsked", asked).put("jackMissed", JSONArray(missed.distinct())).put("jackLongest", longest)
             .put("lostScores", lost).put("scoresSentToPhone", toPhone).put("mismatch", JSONArray(mismatch))
         private fun med(l: List<Int>) = if (l.isEmpty()) 0 else l.sorted()[l.size / 2]
@@ -136,15 +143,22 @@ class FairwayCrewTest {
             steady.reset()
             val hole = round.hole(h)!!
             val truth = FairwayCore.greenYards(hole, at)?.mid
-            val raw = ArrayList<Int>(); val st = ArrayList<Int>()
+            val raw = ArrayList<Int>(); val st = ArrayList<Int>(); var best = 999.0
             for (i in 0 until secs / 2) {
                 val spike = rnd.nextDouble() < g.spikes
+                val net = rnd.nextDouble() < g.networkFixes // the phone-network fix: rough, and it says so
                 val e = if (spike) 40.0 else 0.0
-                val fixAt = north(at, rnd.nextGaussian() * g.sigma + e, rnd.nextGaussian() * g.sigma)
-                val acc = if (spike) 30.0 else g.acc
+                val sd = if (net) 25.0 else g.sigma
+                val fixAt = north(at, rnd.nextGaussian() * sd + e, rnd.nextGaussian() * sd)
+                val acc = if (spike) 30.0 else if (net) 40.0 else g.acc
                 val sm = steady.add(Fix(fixAt.lat, fixAt.lon, acc, clock + i * 2000L))
                 FairwayCore.greenYards(hole, fixAt)?.mid?.let { raw += it }
-                FairwayCore.greenYards(hole, sm)?.mid?.let { st += it }
+                FairwayCore.greenYards(hole, sm)?.mid?.let { y ->
+                    st += y
+                    // the yards page shows "GPS ±n yds" while its best fix is worse than 15 m: judge what it shows without that
+                    best = minOf(best, acc); rep.fixes++
+                    if (best > 15) rep.warned++ else if (i > 0 && truth != null) rep.calmErr += abs(y - truth)
+                }
             }
             if (truth != null && raw.size > 1) {
                 // the first fix of a look has nothing to average with; judge what the golfer reads once it's up
@@ -161,12 +175,15 @@ class FairwayCrewTest {
                 look(h, at, 0, if (i == 0) 8 else 12)
                 if (g.talker) repeat(2) {
                     look(h, at, 2, 6)
-                    val q = said[rnd.nextInt(said.size)]
+                    val q0 = said[rnd.nextInt(said.size)]
+                    // what a recognizer does on a windy tee: drops the "hey", hears "jack" as "jacks", swaps a word
+                    val q = if (!g.misheard) q0 else q0.replace("hey jack", "a jack").replace("yards", "yard").replace("how far", "how far is")
+                        .replace("what club", "what clubs").replace("score", "scores").let { if (rnd.nextBoolean()) "jacks $it" else it }
                     val r2 = round.copy(holes = round.holes.map { x -> x.copy(notes = notes[x.n] ?: x.notes) })
                     val hh = r2.hole(h)!!
                     val a = FairwayCore.jack(q, r2, hh, FairwayCore.greenYards(hh, at), FairwayCore.merged(r2, mine))
                     rep.asked++
-                    if (a.text.startsWith("I can give you")) rep.missed += q
+                    if (a.text.startsWith("I do yards")) rep.missed += q
                     a.note?.let { notes.getOrPut(h) { mutableListOf() } += it; rep.notes++ }
                     if (a.text.length > rep.longest.length) rep.longest = a.text
                     rep.speechS += a.text.split(" ").size / 2.6
@@ -220,8 +237,12 @@ class FairwayCrewTest {
         assertTrue(trees.json().getInt("steadyJitterMedian") * 3 <= trees.json().getInt("rawJitterMedian"), "under trees, a third of the jumping or less")
         assertTrue((trees.steadyErr.maxOrNull() ?: 0) < (trees.rawErr.maxOrNull() ?: 0), "under trees, the steadied yards are closer than raw")
         reports.forEach { assertTrue(it.writes <= it.taps && it.writes <= 2 * 18, "${it.golfer}: about one write a hole, not one a tap (${it.writes} for ${it.taps} taps)") }
-        val talker = reports.first { it.golfer.startsWith("Talks") }
-        assertTrue(talker.missed.isEmpty(), "Jack understood everything (missed: ${talker.missed.distinct()})")
+        reports.filter { it.golfer.startsWith("Talks") }.forEach { t ->
+            assertTrue(t.missed.isEmpty(), "${t.golfer}: Jack understood everything (missed: ${t.missed.distinct()})")
+        }
+        val net = reports.first { it.golfer.startsWith("Rough network") }
+        assertTrue((net.calmErr.maxOrNull() ?: 0) <= 10, "rough network fixes don't drag the yards off once there's no warning (worst ${net.calmErr.maxOrNull()})")
+        assertTrue((calm.calmErr.maxOrNull() ?: 0) <= 10, "in the open, the yards you read are within 10")
         reports.forEach { assertTrue(it.longest.split(" ").size <= 16, "${it.golfer}: Jack's longest answer is short enough to hear in one go: ${it.longest}") }
         val dead = reports[2]
         assertTrue(dead.writes <= dead.taps, "taps out of signal collapse into fewer writes")
