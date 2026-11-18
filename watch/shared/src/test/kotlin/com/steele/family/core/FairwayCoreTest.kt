@@ -97,7 +97,7 @@ class FairwayCoreTest {
         // no GPS marks on hole 4 and no score there yet: the club comes from the scorecard yards off the tee
         val h4 = r.hole(4)!!
         assertEquals("360 to go from the tee. Driver, and it won't get there.", FairwayCore.jack("what should I hit", r, h4, null, s).text)
-        assertTrue(FairwayCore.jack("how far", r, h4, null, s).text.startsWith("Hole 4 is 360 from your tees."))
+        assertEquals("360 from your tees. No green marked here yet.", FairwayCore.jack("how far", r, h4, null, s).text)
         assertNull(FairwayCore.jack("tell me a joke", r, h4, null, s).note)
     }
 }
