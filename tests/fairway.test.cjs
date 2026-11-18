@@ -59,6 +59,10 @@ const pl = (ev, id) => Object.assign({ id }, ev.p[id]);
     deq(C.playOrder(9, 1), [1, 2, 3, 4, 5, 6, 7, 8, 9]);
   });
 
+  await test('core: board names are last names, with an initial only when two share one', () => {
+    const n = C.boardNames([{ id: 'a', name: 'Cal Ortega' }, { id: 'b', name: 'Jo Tamsin' }, { id: 'c', name: 'Bea Tamsin' }, { id: 'd', name: 'Hank' }]);
+    eq(n.a, 'ORTEGA'); eq(n.b, 'J. TAMSIN'); eq(n.c, 'B. TAMSIN'); eq(n.d, 'HANK');
+  });
   await test('core: the demo is twelve made-up golfers in three groups', () => {
     const ev = C.demoEvent(NOW); eq(C.players(ev).length, 12); eq(C.groups(ev).length, 3);
     eq(C.groups(ev)[2].start, 10); eq(ev.cur, 2);
