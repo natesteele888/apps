@@ -562,6 +562,7 @@ const F = { state: window.SteeleApp ? 'loading' : 'web', d: null, at: 0 };
 window.steeleFirebase = function (x) {
   F.state = (x && x.state) || 'error';
   if (F.state === 'ok') { F.d = x; F.at = +now(); }
+  F.x = x || {};
   drawFirebase();
 };
 const kfmt = n => n >= 1e4 ? (n / 1e3).toFixed(n >= 1e5 ? 0 : 1).replace(/\.0$/, '') + 'k' : fmt(n);
@@ -594,9 +595,25 @@ function drawFirebase() {
   }
   card.className = 'card meter';
   if (F.state === 'signedout') { body.innerHTML = '<div class="cmsg">Connect your Google account once (read-only) to see today\u2019s Firestore reads, writes and deletes for each project.</div><button class="cbtn fbtn" id="fIn" type="button">Connect Google</button>'; $('fIn').onclick = () => { F.state = 'loading'; drawFirebase(); fapp('connectFirebase'); }; }
-  else if (F.state === 'setup') body.innerHTML = '<div class="cmsg">Google doesn\u2019t know this app yet. It needs a one-time setup in your Firebase console first.</div>';
-  else if (F.state === 'error') { body.innerHTML = '<div class="cmsg">Couldn\u2019t read your Firebase usage just now.</div><button class="cbtn fbtn" id="fTry" type="button">Try again</button>'; $('fTry').onclick = () => { F.state = 'loading'; drawFirebase(); fapp('refreshFirebase'); }; }
+  else if (F.state !== 'loading') { body.innerHTML = fbWhy(F.state, F.x || {}); const b = $('fGo'); if (b) b.onclick = () => { F.state = 'loading'; drawFirebase(); fapp(b.dataset.fn); }; }
   else body.innerHTML = '<div class="cmsg">Reading your Firebase usage\u2026</div>';
+}
+/* Why Connect Google didn't work, in plain words, with the one thing to do next. */
+const FAPI = { 'monitoring.googleapis.com': 'Cloud Monitoring API', 'firebase.googleapis.com': 'Firebase Management API' };
+function fbWhy(st, x) {
+  const go = (label, fn) => '<button class="cbtn fbtn" id="fGo" data-fn="' + fn + '" type="button">' + label + '</button>';
+  const ids = '<div class="cmsg"><small>Package <b>' + esc(x.pkg || 'com.steele.usage') + '</b>' + (x.sha1 ? '<br>SHA-1 <b>' + esc(x.sha1) + '</b>' : '') + '</small></div>';
+  const svc = /^[a-z]+\.googleapis\.com$/.test(x.service || '') ? x.service : '';
+  const msg = t => '<div class="cmsg">' + t + '</div>';
+  if (st === 'setup') return msg('Google doesn\u2019t recognize this app yet. Add it as an Android app in your Firebase console with these two values. If you just did, give Google a few minutes.') + ids + go('Try again', 'connectFirebase');
+  if (st === 'cancelled') return msg('Google closed without connecting. Tap Connect Google and pick your account. If it closes right away, the app isn\u2019t added in your Firebase console yet.') + ids + go('Connect Google', 'connectFirebase');
+  if (st === 'offline') return msg('No internet connection right now.') + go('Try again', 'refreshFirebase');
+  if (st === 'noplay') return msg('Google Play services on this phone needs an update before it can connect Google.') + go('Try again', 'connectFirebase');
+  if (x.reason === 'SERVICE_DISABLED' && svc) return msg('Google says the ' + esc(FAPI[svc] || svc) + ' is turned off in the Firebase project this app is added to. <a class="clink" href="https://console.cloud.google.com/apis/library/' + svc + '">Turn it on</a>, wait a minute, then try again.') + go('Try again', 'refreshFirebase');
+  if (x.reason === 'ACCESS_TOKEN_SCOPE_INSUFFICIENT' || x.reason === 'USER_PROJECT_DENIED' || x.code === 403) return msg('Google didn\u2019t allow the read. Tap Connect Google and allow read-only access to Firebase and Monitoring.') + go('Connect Google', 'connectFirebase');
+  if (x.reason === 'TIMEOUT') return msg('Google didn\u2019t answer in time.') + go('Try again', 'connectFirebase');
+  const why = [x.code ? 'code ' + (+x.code || 0) : '', /^[A-Z_]{1,40}$/.test(x.reason || '') ? x.reason : ''].filter(Boolean).join(', ');
+  return msg('Couldn\u2019t read your Firebase usage just now' + (why ? ' (Google said ' + esc(why) + ')' : '') + '.') + go('Try again', x.reason === 'SIGN_IN' ? 'connectFirebase' : 'refreshFirebase');
 }
 const fapp = (fn) => { try { window.SteeleApp && window.SteeleApp[fn] && window.SteeleApp[fn](); } catch (e) {} };
 /* ---------- wire up ---------- */
