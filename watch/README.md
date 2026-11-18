@@ -150,7 +150,7 @@ Both apps must be signed with the same key, because the watch only talks to a ph
 
 ## The Steele Family watch app (for a kid's watch)
 
-`steele-family-watch.apk` (from the same release) is a second, separate watch app with several apps in the watch's list. Each one follows its web app on the phone:
+`steele-family-watch.apk` (from the same release) is a second, separate watch app with several apps in the watch's list. Each one follows its web app on the phone, except Spelling Genie, which works on the watch alone:
 
 - **Get Ready**: today's checklist. Tap an item to tick it; an item with a timer starts it first, buzzes at the end and ticks itself. Finishing the list throws a small party on the watch and the full one on the phone.
 - **Cube Clock**: tap, 3-2-1, solve, tap to stop. +2 or DNF right after. Every solve lands in Cube Clock's history on the phone, and the watch shows the PB and average of 5.
@@ -159,10 +159,16 @@ Both apps must be signed with the same key, because the watch only talks to a ph
 - **Read 20**: a reading timer that fills a ring to the goal and buzzes when it's reached. Finish saves the minutes to that reader's log on the phone.
 - **Practice Clock**: the block or station that's on in the practice running on the coach's phone, with its countdown, a ring and what's next. It buzzes at every block and station change (a longer buzz at the end of practice), even with the watch screen off, and says when the phone is paused or waiting for the coach. The controls stay on the phone.
 - **Schedule**: games and practices for the next two weeks, next one up top, with the live score during a game when the team has a GameChanger link. LYBS Ballclub › Calendar › On a watch sends them, for the teams ticked there, each time the app opens.
+- **Spelling Genie**: say "spell sorcerer" (or "hey spelling genie, how do you spell sorcerer") and the word comes up big, one letter per tile, and the watch reads it out: the word, each letter, the word again. Tap a tile to hear just that letter. When the voice may have heard it wrong, **Did you mean** lists its other guesses, words that sound the same with a few words on which is which (their: belongs to them, there: over there, they're: they are), and, for a word that isn't in the word list, the closest real words. **Type it** opens the watch's keyboard or handwriting instead. The last 12 words sit under **Recent** on the watch, with **Clear recent**.
+  - It opens straight into listening, so a watch button set to open it is the hot button. On a Galaxy Watch: **Settings › Advanced features › Customize keys › Double press** and pick **Spelling Genie**. Then double press, talk, read.
+  - With the watch's assistant: "Hey Google, open Spelling Genie" (or "Hi Bixby, open Spelling Genie") opens it the same way, already listening.
+  - It needs no link to the phone. The word list (about 77,000 words from SCOWL, the lists behind most spell checkers, plus days, months, states, planets and contractions) is inside the app; `tools/spell-words.py` rebuilds it. The voice clip goes to the watch's own voice typing, the same as any voice reply on the watch, and needs a connection; nothing else leaves the watch, and there's no account.
+  - Names mostly aren't in the word list, so a name shows the way the voice wrote it, with a note saying so.
+  - Why there's no always-listening "Hey Spelling Genie": Wear OS doesn't let an app keep the microphone open in the background, and keeping it open would drain the watch in hours. The button and the assistant are the ways in.
 
 **Install:** the same steps as above, with `adb install steele-family-watch.apk`. It runs on Wear OS 2 through Wear OS 5, round or square, and needs no phone app: it talks to the web apps over the internet (through the phone's connection when the watch has no Wi-Fi).
 
-**Link it once:** open any of the apps in the watch's list. It shows an 8-letter code. On the phone open Get Ready › More › Watch (or Cube Clock › Statistics › Your watch, Read 20 › Settings › Watch, Power Program › Program › Watch, Practice Clock › Settings › Watch, LYBS Ballclub › Calendar › On a watch, or Gameday Picks › watch under your name) and type the code. One link covers them all, because the web apps share it.
+**Link it once:** open any of the apps in the watch's list (Spelling Genie needs no link). It shows an 8-letter code. On the phone open Get Ready › More › Watch (or Cube Clock › Statistics › Your watch, Read 20 › Settings › Watch, Power Program › Program › Watch, Practice Clock › Settings › Watch, LYBS Ballclub › Calendar › On a watch, or Gameday Picks › watch under your name) and type the code. One link covers them all, because the web apps share it.
 
 **Where the data goes:** one private document in the nates-toolbox Firestore, named by a 26-character random key that only that phone and that watch know (see `../watchlink.js`). Nothing is in GitHub. Gameday Picks is the one exception: picks are saved in Gameday Picks itself, so the watch signs in on its own and the player's phone okays that watch (the `gp_watch` rules in `toolbox/firestore.rules`).
 
