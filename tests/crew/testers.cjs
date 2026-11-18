@@ -7,14 +7,32 @@ const { chromium } = require('playwright');
 const http = require('http'), fs = require('fs'), path = require('path');
 const ROOT = path.resolve(process.argv[2] || '.'); const OUT = path.resolve(process.argv[3] || 'crew-out');
 fs.mkdirSync(path.join(OUT, 'shots'), { recursive: true });
-const PAGES = [
+// Pages to test. The game day apps and the Bengals pages are listed by hand (they come first); every other app is found
+// on its own: each repo checked out under serveRoot, its index.html and each folder's index.html, one level down.
+const LISTED = [
   ['Fairway', 'apps/fairway/index.html'], ['Dugout / Walk-Up', 'apps/walkup/index.html'], ['Walk-Up field', 'apps/walkup/field.html'],
   ['Walk-Up parent page', 'apps/walkup/send.html'], ['Tournament Pack', 'apps/tournamentpack/index.html'], ['Scoreboard', 'apps/scoreboard/index.html'],
   ['Practice Clock', 'apps/practiceclock/index.html'], ['Play Board', 'apps/playboard/index.html'], ['Film Lite', 'apps/filmlite/index.html'],
   ['Locker', 'apps/locker/index.html'], ['Eight Count', 'apps/eightcount/index.html'], ['Where Do I Go?', 'apps/situations/index.html'],
   ['Bengals coaching app', 'asl-bengals/dev2/index.html'], ['Bengals Play Builder', 'asl-bengals/dev2/playbuilder.html'],
   ['Bengals Stat Keeper', 'asl-bengals/dev2/stat-keeper.html'], ['Bengals Game Wizard', 'asl-bengals/dev2/game-wizard.html'],
-].filter(([, p]) => fs.existsSync(path.join(ROOT, p)) || (console.log('skip (not checked out):', p), false));
+];
+const NOT_APPS = /^(tests?|archive|old|node_modules|icons?|assets|audio|img|images|css|js|fonts|vendor|tools|docs|_.*|\..*|gradle|watch|dev|dev2-preview|shots)$/i;
+function discover() {
+  const seen = new Set(LISTED.map(x => x[1])); const out = [];
+  let names = {}; try { for (const a of JSON.parse(fs.readFileSync(path.join(ROOT, 'apps/registry.json'), 'utf8')).apps) if (a.path) names['apps/' + a.path.replace(/\/$/, '')] = a.name; } catch (e) {}
+  for (const repo of fs.readdirSync(ROOT).sort()) {
+    const rd = path.join(ROOT, repo); if (!fs.statSync(rd).isDirectory()) continue;
+    const cands = [path.join(repo, 'index.html')];
+    for (const sub of fs.readdirSync(rd).sort()) { const sd = path.join(rd, sub); if (!NOT_APPS.test(sub) && fs.statSync(sd).isDirectory()) cands.push(path.join(repo, sub, 'index.html')); }
+    for (const c of cands) if (!seen.has(c) && fs.existsSync(path.join(ROOT, c))) { seen.add(c); const dir = path.dirname(c); out.push([names[dir] || dir, c]); }
+  }
+  return out;
+}
+const ONLY = process.env.CREW_ONLY ? new RegExp(process.env.CREW_ONLY, 'i') : null;
+const PAGES = [...LISTED.filter(([, p]) => fs.existsSync(path.join(ROOT, p))), ...(process.env.CREW_LISTED_ONLY ? [] : discover())]
+  .filter(([n, p]) => !ONLY || ONLY.test(n + ' ' + p)).slice(0, +(process.env.CREW_MAX || 80));
+console.log('pages:', PAGES.length);
 const PHONES = {
   phone: { viewport: { width: 360, height: 780 }, deviceScaleFactor: 3, isMobile: true, hasTouch: true,
     userAgent: 'Mozilla/5.0 (Linux; Android 14; SM-S911U) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0 Mobile Safari/537.36' },

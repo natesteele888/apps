@@ -1,5 +1,5 @@
 name: Nate crew testers
-# Virtual testers for the game day apps (tests/crew/). They open each app on a new phone and an old small phone,
+# Virtual testers for all of Nathan's public apps (tests/crew/), game day apps first. They open each app on a new phone and an old small phone,
 # tap every button once, and log crashes, dead buttons, sideways scrolling and tiny tap targets, plus a check for code
 # older phones can't run. Every outside request is blocked, so nothing touches Firebase or any live data.
 # One small job. Runs nightly at 3:17 AM Eastern and on demand; results are printed in the log between
@@ -19,7 +19,7 @@ concurrency:
 jobs:
   testers:
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 40
     steps:
       - uses: actions/checkout@v4
         with:
@@ -34,6 +34,14 @@ jobs:
         with:
           repository: natesteele888/lybs-ballclub
           path: serve/lybs-ballclub
+      - name: Every other public app repo beside it
+        # Public repos only. Private repos are never checked out here (their code would show in a public log);
+        # the nightly Claude run checks those in its own session.
+        run: |
+          cd serve
+          for r in lybs-cards events cube-clock fitness-hub planner Fishing-Club portfolio sponsor-banner-inventory; do
+            git clone -q --depth 1 "https://github.com/natesteele888/$r" "$(echo $r | tr 'A-Z' 'a-z')" || echo "skip $r"
+          done
       - uses: actions/setup-node@v4
         with:
           node-version: "20"
