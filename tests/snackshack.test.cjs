@@ -150,12 +150,12 @@ const PNG = {
     // the today card lists both games, earliest first
     await page.evaluate(() => { window.__snack.S.queue = []; window.__snack.next(); });
     await page.waitForSelector('.slide.on[data-type="today"]');
-    const today = await page.textContent('.slide.on');
+    const today = await page.textContent('.slide.on[data-type="today"]');
     assert.ok(/2 games/.test(today) && today.indexOf('9:00 AM') < today.indexOf('5:30 PM'), today);
     await page.screenshot({ path: path.join(SHOTS, 'snackshack-today.png') });
     await page.evaluate(() => window.__snack.next());
     await page.waitForSelector('.slide.on[data-name="01 Welcome.png"] img');
-    assert.ok(/^blob:/.test(await page.getAttribute('.slide.on img', 'src')), 'the picture plays from the saved copy');
+    assert.ok(/^blob:/.test(await page.getAttribute('.slide.on[data-name="01 Welcome.png"] img', 'src')), 'the picture plays from the saved copy');
     // Enter shows what's saved
     await page.keyboard.press('Enter');
     assert.ok(/Files saved on this screen: 7 of 9/.test(await page.textContent('#info')), await page.textContent('#info'));
