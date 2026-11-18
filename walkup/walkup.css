@@ -454,3 +454,25 @@ input[type="range"].rng.rel { width: calc(80% + 30px); margin: 0 calc(10% - 15px
 .badge { display: inline-block; min-width: 1.4em; padding: 0 .4em; margin-left: .3em; border-radius: 999px; background: #d93b30; color: #fff; font-size: .8em; line-height: 1.4em; text-align: center; }
 .clrow { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: space-between; padding: 10px 0; border-top: 1px solid var(--line, rgba(127,127,127,.25)); }
 .clrow > div:first-child { flex: 1 1 180px; min-width: 0; overflow-wrap: anywhere; }
+
+/* ---------- positions by inning (def.js): one row per player, one box per inning ---------- */
+.sheet.def .defchecks { display: flex; flex-wrap: wrap; gap: 6px; margin: 12px 0 8px; }
+.sheet.def .defchecks .chip { white-space: normal; text-align: left; }
+.defwrap { overflow-x: auto; -webkit-overflow-scrolling: touch; margin: 0 -4px; padding-bottom: 4px; }
+.defgrid { border-collapse: separate; border-spacing: 4px; }
+.defgrid thead th { font-size: 12px; font-weight: 700; color: var(--mute); text-align: center; }
+.defgrid th.pl { position: sticky; left: 0; z-index: 1; background: var(--panel); text-align: left; font-size: 14px; font-weight: 600; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 104px; max-width: 128px; padding-right: 4px; }
+.defgrid thead th.pl { color: var(--mute); font-size: 12px; }
+.defgrid th.pl .ord { display: inline-block; min-width: 18px; color: var(--mute); font-variant-numeric: tabular-nums; }
+.defgrid tr.sep th.pl { color: var(--mute); font-size: 12px; font-weight: 700; padding-top: 8px; }
+.dcell { min-width: 44px; height: 44px; padding: 0 4px; border-radius: 10px; border: 1px solid var(--line2); background: var(--panel2); color: var(--text); font: 700 17px/1 "Barlow Condensed", "Barlow", system-ui, sans-serif; letter-spacing: 0.02em; cursor: pointer; }
+.dcell.blank { color: var(--line2); }
+.dcell.bench { color: var(--mute); font-size: 14px; font-weight: 600; }
+.dcell.dup { border: 2px solid var(--bad); color: var(--bad); }
+.defpick { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 10px; }
+.defpick .dp { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; min-height: 60px; min-width: 0; padding: 6px 4px; border-radius: 12px; border: 1px solid var(--line2); background: var(--panel2); color: var(--text); cursor: pointer; }
+.defpick .dp b { font: 700 22px/1 "Barlow Condensed", "Barlow", system-ui, sans-serif; letter-spacing: 0.02em; }
+.defpick .dp small { max-width: 100%; font-size: 11px; color: var(--mute); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.defpick .dp.taken b { color: var(--warn); }
+.defpick .dp.on { background: var(--accent); border-color: var(--accent); color: var(--ink); }
+.defpick .dp.on b, .defpick .dp.on small { color: var(--ink); }
