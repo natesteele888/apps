@@ -2,7 +2,7 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
     <!-- Google's watch-face library (Live score) needs Android 8; Live score is switched on only there (@bool/face_on) -->
-    <uses-sdk tools:overrideLibrary="androidx.wear.watchface.complications.data, androidx.wear.watchface.complications.datasource, androidx.wear.watchface.complications.datasource.ktx, androidx.wear.watchface.complications, androidx.wear.watchface.data, androidx.wear.watchface.utility, androidx.wear.protolayout.expression, androidx.wear.protolayout.proto, androidx.wear.protolayout" />
+    <uses-sdk tools:overrideLibrary="androidx.wear.watchface.complications.data, androidx.wear.watchface.complications.datasource, androidx.wear.watchface.complications.datasource.ktx, androidx.wear.watchface.complications, androidx.wear.watchface.data, androidx.wear.watchface.utility, androidx.wear.protolayout.expression, androidx.wear.protolayout.proto, androidx.wear.protolayout, androidx.wear.protolayout.expression.pipeline, androidx.wear.protolayout.renderer, androidx.wear.watchface.style, androidx.wear.watchface.client, androidx.wear.watchface" />
     <uses-feature android:name="android.hardware.type.watch" />
     <uses-permission android:name="android.permission.VIBRATE" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
