@@ -152,6 +152,7 @@
     if (org) parts.push(`<button type="button" class="btn ghost block" id="setup">Set it up: ${esc((KIND.find(k => k[0] === f.kind) || KIND[1])[1])}</button>`);
     el.innerHTML = parts.join("");
     wireTeams(el, ev, f, org, me);
+    $$("[data-tsc]", el).forEach(b => b.onclick = () => { u.S.tsc = b.dataset.tsc; u.render(); });
   };
   function captainsHtml(ev, f, org, me) {
     const u = U(), esc = u.esc, list = C.players(ev).sort((a, b) => a.n.localeCompare(b.n)), sel = u.S.caps || [];
@@ -175,10 +176,15 @@
       <h2 class="sec">Available <small>${st.avail.length} · best handicap first</small></h2>
       <div class="pick" id="pool">${st.avail.map(p => pickRow(`data-draft="${esc(p.id)}" ${can ? "" : "disabled"}`, esc(p.n), p.hc != null ? "Index " + esc(hcText(p)) : "", false, can ? `<span class="go">Draft</span>` : "")).join("")}</div>`;
   }
+  // How the team board counts, picked on this phone (nothing is saved to the tournament).
+  const TS_LABEL = { total: "All count", best1: "Best ball", best2: "Best 2" };
+  const TS_LEGEND = { total: "Each team's score is every player's to par added up.", best1: "Best ball: each hole counts the team's low score, against that golfer's par.", best2: "Best 2: each hole counts the team's two low scores added up." };
   function boardHtml(ev) {
-    const u = U(), esc = u.esc, tb = C.teamBoard(ev);
-    return `<h2 class="sec">Team board</h2><div class="tboard">${tb.map(t => `<div class="trow"><span class="pos">${esc(t.pos)}</span><span class="tn"><b>${esc(t.name)}</b><small>${t.members.map(p => esc(p.n.split(" ")[0])).join(", ")}${t.avg != null ? " · avg " + t.avg : ""}</small></span><span class="score">${t.holes ? u.parText(t.toPar) : "<span class='tp'>–</span>"}</span></div>`).join("")}</div>
-      <p class="legend">Each team's score is every player's to par added up.</p>
+    const u = U(), esc = u.esc, base = C.teamBoard(ev), small = Math.min.apply(null, base.map(t => t.members.length).concat([9]));
+    const opts = C.TEAM_SCORING.filter(k => k === "total" || (k === "best1" ? small >= 2 : small >= 3));
+    const how = opts.indexOf(u.S.tsc) >= 0 ? u.S.tsc : "total", tb = how === "total" ? base : C.teamBoard(ev, how);
+    return `<h2 class="sec">Team board</h2>${opts.length > 1 ? `<div class="pills small" role="group" aria-label="How teams score">${opts.map(k => `<button type="button" class="pill" data-tsc="${k}" aria-pressed="${how === k}">${TS_LABEL[k]}</button>`).join("")}</div>` : ""}<div class="tboard">${tb.map(t => `<div class="trow"><span class="pos">${esc(t.pos)}</span><span class="tn"><b>${esc(t.name)}</b><small>${t.members.map(p => esc(p.n.split(" ")[0])).join(", ")}${t.avg != null ? " · avg " + t.avg : ""}</small></span><span class="score">${t.holes ? u.parText(t.toPar) : "<span class='tp'>–</span>"}</span></div>`).join("")}</div>
+      <p class="legend">${TS_LEGEND[how]}</p>
       <div class="rosters">${tb.map(t => `<div class="roster"><h3>${esc(t.name)}</h3><ol>${t.members.map(p => `<li><button type="button" data-player="${esc(p.id)}">${esc(p.n)}${p.id === t.cap ? " <i class='chip'>C</i>" : ""}</button></li>`).join("")}</ol></div>`).join("")}</div>`;
   }
   function picksHtml(ev, me) {
