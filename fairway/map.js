@@ -17,8 +17,10 @@
   let watch = null, here = null;
   function startGps(onFix) {
     if (!navigator.geolocation || watch != null) return !!navigator.geolocation;
+    // Only a "no" from the phone stops the GPS. A slow or lost fix (under trees, a weak signal) keeps watching and
+    // keeps the last spot, so the yards and the mark buttons don't vanish mid-hole.
     watch = navigator.geolocation.watchPosition(p => { here = { lat: p.coords.latitude, lon: p.coords.longitude, acc: p.coords.accuracy }; onFix(); },
-      () => { stopGps(); onFix(true); }, { enableHighAccuracy: true, maximumAge: 2000, timeout: 15000 });
+      e => { if (e && e.code === 1) { stopGps(); onFix("denied"); } }, { enableHighAccuracy: true, maximumAge: 2000, timeout: 15000 });
     return true;
   }
   function stopGps() { if (watch != null && navigator.geolocation) navigator.geolocation.clearWatch(watch); watch = null; here = null; }
@@ -63,7 +65,7 @@
           </svg></div>` : `<div class="hmap none"><p>No picture of hole ${h} yet. A hand sketch or a screenshot works.</p></div>`;
       const yards = gy ? `<div class="gyds" role="status"><div><small>Front</small><b>${gy.f != null ? gy.f : "–"}</b></div><div class="mid"><small>Middle</small><b>${gy.c != null ? gy.c : "–"}</b></div><div><small>Back</small><b>${gy.b != null ? gy.b : "–"}</b></div></div>
           ${gy.c != null && club(gy.c) ? `<p class="msg small">From your bag: <b>${esc(club(gy.c))}</b>${here && here.acc > 15 ? ` · GPS is rough right now (±${Math.round(here.acc * 1.09)} yds)` : ""}</p>` : ""}`
-        : `<p class="msg small">${watch == null ? "" : gpsErr ? "This phone won't share its location with Fairway right now." : here ? "Mark the green below to get yards to it." : "Finding you…"}</p>`;
+        : `<p class="msg small">${gpsErr ? "This phone won't share its location with Fairway right now." : watch == null ? "" : here ? "Mark the green below to get yards to it." : "Finding you…"}</p>`;
       const hint = mode === "tee" ? "Tap the tee on the picture." : mode === "green" ? "Now tap the middle of the green." : meas ? `${meas.fromYou ? "From you" : "From the tee"}: <b>${meas.from}</b> yds · to the green: <b>${meas.to}</b> yds${club(meas.to) ? ` · ${esc(club(meas.to))} in` : ""}` : m.img && scale ? "Tap anywhere on the picture to measure it." : m.img ? "Set the tee and green on the picture to measure." : "";
       $(".sheet-b", box).innerHTML = `<p class="msg small">Hole ${h} · par ${par}${card ? ` · ${card} yds from the ${esc(tee.name)} tees` : ""}</p>
         ${pic}<p class="msg small" id="maphint">${hint}</p>
@@ -77,6 +79,7 @@
       // a fresh fix redraws at most every few seconds, so taps on the map aren't lost mid-redraw
       const on = $("#gpson", box); if (on) on.onclick = () => {
         let last = 0;
+        gpsErr = false;
         const ok = startGps(bad => { if (bad) gpsErr = true; const now = Date.now(); if (bad || now - last > 3000) { last = now; draw(box); } });
         if (!ok) { err("This phone has no GPS for the browser."); return; }
         draw(box);
