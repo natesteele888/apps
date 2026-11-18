@@ -445,7 +445,7 @@
       <div class="holecard"><div class="hn"><small>Hole</small><b>${h}</b></div><div class="hinfo"><b>Par ${hole.par}</b><small>Handicap ${hole.hcp}</small></div>
         <div class="hy">${ev.course.tees.filter(t => g.players.some(p => p.tee === t.id)).map(t => `<span>${teeDot(t)}${C.yards(ev.course, h, t.id) || "–"} yds</span>`).join("")}</div></div>
       ${(ev.ctph || []).indexOf(h) >= 0 ? (() => { const x = C.ctpBoard(ev, r).find(y => y.h === h); return `<button type="button" class="ctpbar" id="ctpopen"><span><b>Closest to the pin</b><small>${x.best ? esc(x.best.name) + ", " + esc(C.fmtFeet(x.best.d)) : "Nobody measured yet"}</small></span><span class="chev">Measure</span></button>`; })() : ""}
-      ${mine && mine.g === g.g ? FW.jack.holeHtml(ev, h) : ""}
+      ${mine && mine.g === g.g ? FW.map.holeHtml(ev, h) + FW.jack.holeHtml(ev, h) : ""}
       <ul class="scorer">${g.players.map((p, i) => { const v = rs[i].scores[h - 1], d = v == null ? null : v - hole.par, t = C.teeOf(ev, p);
         return `<li data-pid="${esc(p.id)}"><button type="button" class="sname" data-player="${esc(p.id)}">${teeDot(t)}<span><b>${esc(p.n)}</b><small>${rs[i].thru ? parText(rs[i].toPar) + " thru " + rs[i].thru : "No scores yet"}${mine && mine.id === p.id ? " · you" : ""}</small></span></button>
           <div class="stepper"><button type="button" class="minus" aria-label="One less for ${esc(p.n)}">−</button><button type="button" class="val ${v == null ? "empty" : C.mark(d)}" aria-label="${v == null ? "Set par for " + esc(p.n) : esc(p.n) + ": " + v}">${v == null ? "Par?" : v}</button><button type="button" class="plus" aria-label="One more for ${esc(p.n)}">+</button></div>
@@ -461,7 +461,7 @@
     const strip = $(".strip", el), on = strip && $("[aria-pressed=true]", strip); if (on && strip.scrollTo) strip.scrollLeft = Math.max(0, on.offsetLeft - strip.clientWidth / 2 + on.clientWidth / 2);
     $("#prev", el).onclick = () => { S.hole = order[idx - 1]; render(); };
     $("#next", el).onclick = () => { S.hole = order[idx + 1]; render(); };
-    if (mine && mine.g === g.g) { FW.review.wire(el, ev, mine, r, h); FW.jack.wire(el, ev, mine, h); }
+    if (mine && mine.g === g.g) { FW.review.wire(el, ev, mine, r, h); FW.jack.wire(el, ev, mine, h); FW.map.wire(el, ev, mine, h); }
     $$(".scorer li", el).forEach(li => {
       const pid = li.dataset.pid, cur = C.strokes(ev.p[pid], r, h);
       const set = val => {
