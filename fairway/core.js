@@ -462,6 +462,20 @@
     if (on && f.clk) left = Math.max(-3600, Math.round(f.clk - ((now || Date.now()) - (dr.at || 0)) / 1000));
     return { started: !!dr.on, done, on, cap: on ? ev.teams[on].cap : null, pick: n + 1, total: pool.length, avail, next: slots.slice(n + 1, n + 6), left, clk: f.clk };
   }
+  // A scramble team plays one ball, so it has to play in one group. Is any team spread over more than one group?
+  function teamsSplit(ev) {
+    if (!isScramble(ev)) return false;
+    return teamIds(ev).some(t => new Set(players(ev).filter(p => teamOf(ev, p.id) === t).map(p => p.g)).size > 1);
+  }
+  // The changes that put each team in a group of its own (group 1 for the first team, and so on). A group keeps the
+  // starting hole it had; a new group starts on the 1st. Golfers on no team go in the group after the last team.
+  function teamGroupsPatch(ev) {
+    const ids = teamIds(ev), starts = {}, patch = {};
+    groups(ev).forEach(x => { starts[x.g] = x.start || 1; });
+    const put = (p, g) => { if (p.g !== g) patch["p." + p.id + ".g"] = g; const s = starts[g] || 1; if ((p.st || 1) !== s) patch["p." + p.id + ".st"] = s; };
+    players(ev).forEach(p => { const t = teamOf(ev, p.id), i = t ? ids.indexOf(t) : -1; put(p, i >= 0 ? i + 1 : ids.length + 1); });
+    return patch;
+  }
   // The changes for one pick.
   function pickPatch(ev, pid, now) {
     const st = draftState(ev, now);
@@ -1294,7 +1308,7 @@
     fmtPar, tone, scoreName, mark, stats, demoEvent, applyPatch, historyRows, myRounds, sameName, boardNames,
     cleanCtpHoles, cleanCtpEntry, ctpBoard, metres, averageFix, ctpMeasure, fmtFeet,
     cleanHc, isDate, isTime, isTid, cleanRally, cleanFmt, rallyList, officialPatch, openGroup, teamIds, pickSlots, teamOf, draftState, pickPatch,
-    draftStartPatch, pickCaptains, teamBoard, TEAM_SCORING, teamKind, isScramble, cardKeeper, keepsCard, matchStatus, matchIds, autoMatches, picksLocked, pickCounts, PRED_PTS, cleanPred, predictions, cleanTt, teeTime, fmtTime, fmtDate,
+    draftStartPatch, pickCaptains, teamBoard, TEAM_SCORING, teamKind, isScramble, cardKeeper, keepsCard, teamsSplit, teamGroupsPatch, matchStatus, matchIds, autoMatches, picksLocked, pickCounts, PRED_PTS, cleanPred, predictions, cleanTt, teeTime, fmtTime, fmtDate,
     reminders, icsFor, directions, cleanMsg, shout, BINGO, BINGO_AUTO, bingoCard, bingoState, cleanBingo,
     BETS, BET_AMTS, cleanBets, cleanBetMarks, betOn, betAmt, betPlayers, wolfOrder, wolfOf, betTally, money,
     TEE_SHOTS, cleanHoleNote, cleanHoleNotes, holeLine, nextHole, jackNoticed,

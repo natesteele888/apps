@@ -144,6 +144,9 @@
       const st = C.draftState(ev);
       if (!st.started) parts.push(captainsHtml(ev, f, org, me));
       else if (!st.done) parts.push(draftHtml(ev, st, org, me));
+      if (st.done && C.teamsSplit(ev)) parts.push(`<div class="card splitbox"><p><b>Teams are spread over different groups</b></p>
+        <p class="msg small">In a scramble each team plays one ball, so it plays together in one group.${org ? "" : " Your organizer can fix the groups."}</p>
+        ${org ? `<button type="button" class="btn primary block" id="tgroups">Put each team in its own group</button>` : ""}</div>`);
       if (st.started) parts.push(boardHtml(ev), picksHtml(ev, me));
     }
     const ms = C.matchIds(ev);
@@ -210,6 +213,7 @@
   function wireTeams(el, ev, f, org, me) {
     const u = U();
     const st = $("#setup", el); if (st) st.onclick = P.setupSheet;
+    const tg = $("#tgroups", el); if (tg) tg.onclick = () => { const p = C.teamGroupsPatch(ev); if (Object.keys(p).length) u.write(p); u.toast("Each team has its own group"); };
     const hc = $("#myhc", el); if (hc) hc.onchange = () => { const v = C.cleanHc(hc.value); u.write({ ["p." + me.id + ".hc"]: v == null ? C.DELETE : v }); };
     $$("[data-cap]", el).forEach(b => b.onclick = () => { const s = u.S.caps = (u.S.caps || []).slice(), i = s.indexOf(b.dataset.cap); if (i >= 0) s.splice(i, 1); else if (s.length < f.nt) s.push(b.dataset.cap); u.render(); });
     const cl = $("#caplow", el); if (cl) cl.onclick = () => { u.S.caps = C.pickCaptains(ev, f.nt, "low"); u.render(); };

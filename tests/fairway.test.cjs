@@ -196,6 +196,20 @@ const pl = (ev, id) => Object.assign({ id }, ev.p[id]);
     ok(/^Hole 10, par/.test(talk), talk); ok(/Aim at the barn/.test(talk)); ok(!/Front nine/.test(talk));
   });
 
+  await test('core: a 12-golfer scramble: teams spread over groups get a group each', () => {
+    const ev = C.newEvent({ name: 'S12', course: C.sampleCourse(), now: NOW }); ev.fmt = C.cleanFmt({ kind: 'scramble', nt: 3 });
+    const ids = Array.from({ length: 12 }, (_, i) => 'p' + String(i).padStart(5, '0') + 'x');
+    ids.forEach((id, i) => { ev.p[id] = C.newPlayer(ev, { name: 'Golfer ' + (i + 1), tee: ev.course.tees[0].id, group: Math.floor(i / 4) + 1, start: Math.floor(i / 4) * 2 + 1, now: NOW + i }); ev.p[id].t = 't' + ((i % 3) + 1); });
+    ev.teams = { t1: { n: 'One', cap: ids[0] }, t2: { n: 'Two', cap: ids[1] }, t3: { n: 'Three', cap: ids[2] } };
+    eq(C.teamsSplit(ev), true);
+    const x = C.applyPatch(JSON.parse(JSON.stringify(ev)), C.teamGroupsPatch(ev));
+    eq(C.teamsSplit(x), false);
+    const gs = C.groups(x); eq(gs.length, 3); gs.forEach(g => { eq(g.players.length, 4); eq(new Set(g.players.map(p => p.t)).size, 1); });
+    deq(gs.map(g => g.start), [1, 3, 5], 'each group keeps its starting hole');
+    eq(Object.keys(C.teamGroupsPatch(x)).length, 0, 'nothing left to change');
+    ev.fmt.kind = 'teams'; eq(C.teamsSplit(ev), false, 'only a scramble needs it');
+  });
+
   await test('core: hole art that comes with the app, by course, and the same pictures for a front or back nine', () => {
     const c = C.monoosnockCourse();
     eq(C.holeArt(c, 1), null, 'no pictures listed yet');
