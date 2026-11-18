@@ -3,7 +3,7 @@
     xmlns:tools="http://schemas.android.com/tools">
     <!-- The tile libraries ask for Android 8 (Wear OS 2). The app still installs on Android Wear 2.0 (Android 7.1):
          there the two tile services stay off (res/values/bools.xml) and nothing calls the tile code. -->
-    <uses-sdk tools:overrideLibrary="androidx.wear.tiles, androidx.wear.protolayout, androidx.wear.protolayout.expression, androidx.wear.protolayout.expression.pipeline, androidx.wear.protolayout.proto" />
+    <uses-sdk tools:overrideLibrary="androidx.wear.tiles, androidx.wear.protolayout, androidx.wear.protolayout.expression, androidx.wear.protolayout.expression.pipeline, androidx.wear.protolayout.proto, androidx.wear.watchface.complications.datasource, androidx.wear.watchface.complications.datasource.ktx, androidx.wear.watchface.complications.data, androidx.wear.watchface.complications, androidx.wear.watchface.data, androidx.wear.watchface.utility" />
     <uses-feature android:name="android.hardware.type.watch" />
     <uses-permission android:name="android.permission.VIBRATE" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
@@ -100,6 +100,22 @@
                 <action android:name="androidx.wear.tiles.action.BIND_TILE_PROVIDER" />
             </intent-filter>
             <meta-data android:name="androidx.wear.tiles.PREVIEW" android:resource="@drawable/tile_scores_preview" />
+        </service>
+
+        <!-- the pitch count on the watch face: pick Pitch Count for a slot on any watch face that has them -->
+        <service
+            android:name=".PitchComplicationService"
+            android:exported="true"
+            android:enabled="@bool/tiles_on"
+            android:icon="@drawable/ic_pitch_fg"
+            android:label="@string/pitch_name"
+            android:permission="com.google.android.wearable.permission.BIND_COMPLICATION_PROVIDER">
+            <intent-filter>
+                <action android:name="android.support.wearable.complications.ACTION_COMPLICATION_UPDATE_REQUEST" />
+            </intent-filter>
+            <meta-data android:name="android.support.wearable.complications.SUPPORTED_TYPES" android:value="SHORT_TEXT,RANGED_VALUE,LONG_TEXT" />
+            <!-- every pitch asks the face to update at once; the half-hourly look only starts a new day at 0 -->
+            <meta-data android:name="android.support.wearable.complications.UPDATE_PERIOD_SECONDS" android:value="1800" />
         </service>
 
         <!-- the phone's pitch log, taken even with Pitch Count closed, so the tile matches the phone -->

@@ -65,4 +65,6 @@ dependencies {
     implementation("androidx.wear.protolayout:protolayout-expression:1.2.1")
     implementation("androidx.concurrent:concurrent-futures:1.2.0")
     implementation("com.google.guava:listenablefuture:1.0")
+    // the pitch count on the watch face (a complication); see Complication.kt
+    implementation("androidx.wear.watchface:watchface-complications-data-source-ktx:1.2.1")
 }
