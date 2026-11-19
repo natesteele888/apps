@@ -1,8 +1,8 @@
 // Lets Gameday Picks open with a weak or no signal. Pages always load fresh when online.
 // Caches the app shell plus the Firebase code and fonts it needs to start; picks data stays
 // in Firestore's own private cache on the phone, behind sign-in. The NFL schedule is never cached here.
-const CACHE = "picks-v16";
-const SHELL = ["./", "core.js", "stats.js", "league.js", "../watchlink.js", "manifest.json", "../icons/picks-192.png", "../install.js", "../health.js"];
+const CACHE = "picks-v17";
+const SHELL = ["./", "core.js", "stats.js", "league.js", "remind.js", "../watchlink.js", "manifest.json", "../icons/picks-192.png", "../install.js", "../health.js"];
 // Same version as the <script> tags in index.html: change them together.
 const FIREBASE = ["app", "auth", "firestore"].map(n => `https://www.gstatic.com/firebasejs/11.6.0/firebase-${n}-compat.js`);
 // Save the app at install: the first visit happens before this worker exists, so nothing else would be saved.
@@ -26,4 +26,21 @@ self.addEventListener("fetch", e => {
     if (res.ok || res.type === "opaque") { const c = res.clone(); caches.open(CACHE).then(x => x.put(r, c)); }
     return res;
   }).catch(() => caches.open(CACHE).then(x => x.match(r, {ignoreSearch: true}).then(m => m || x.match("./")))));
+});
+// Pick reminders (picks/reminders/ sends them through Firebase Cloud Messaging): show the notification, and open the app when
+// it's tapped. The message carries a title and body both as a web notification and as data, so either shape works here.
+self.addEventListener("push", e => {
+  let j = {}; try { j = e.data ? e.data.json() : {}; } catch (_) {}
+  const n = j.notification || {}, d = j.data || {};
+  const title = n.title || d.title || "🏈 Make your picks";
+  e.waitUntil(self.registration.showNotification(title, { body: n.body || d.body || "You have games to pick in Gameday Picks.",
+    icon: n.icon || "../icons/picks-192.png", badge: "../icons/picks-192.png", tag: "gp-remind", renotify: true, data: { link: d.link || "./" } }));
+});
+self.addEventListener("notificationclick", e => {
+  e.notification.close();
+  const url = new URL((e.notification.data && e.notification.data.link) || "./", self.registration.scope).href;
+  e.waitUntil(clients.matchAll({ type: "window", includeUncontrolled: true }).then(ws => {
+    const w = ws.find(x => x.url.startsWith(self.registration.scope));
+    return w ? w.focus() : clients.openWindow(url);
+  }));
 });

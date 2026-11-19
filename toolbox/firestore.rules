@@ -5,6 +5,7 @@
 // (gp_watch, plus the watch lines in gp_picks) added 2026-11-17; this file as it stood on main was published 2026-11-18
 // around 01:00 UTC, and again 2026-11-18 04:16 UTC with the watch link's Schedule (sc) and Practice Clock (pk) fields.
 // Fairway's watch field (fg), its back-nine and fam fields, and My Stats (ps) on the watch link were published 2026-11-18 around 17:45 UTC.
+// gp_remind (Gameday Picks pick reminders) added 2026-11-19; not published yet.
 // OWNER_EMAIL stands in for Nate's sign-in email (this repo is public, so the
 // real address is not committed). Put the real address back before pasting
 // this into the console. Test: cd toolbox && npm install && npm test
@@ -286,6 +287,15 @@ service cloud.firestore {
     }
     match /gp_weeks/{key} {
       allow read, write: if gpPlayer();
+    }
+    // Pick reminders: a player's own on/off switch and the Cloud Messaging tokens of the phones that get them (up to 5).
+    // Only that player reads or writes it; the hourly sender (picks/reminders/) reads it with the owner's own access.
+    match /gp_remind/{uid} {
+      allow read, delete: if request.auth != null && request.auth.uid == uid;
+      allow create, update: if gpPlayer() && request.auth.uid == uid
+        && request.resource.data.keys().hasOnly(['on', 'tok', 'updatedAt'])
+        && request.resource.data.on is bool && request.resource.data.tok is map && request.resource.data.tok.size() <= 5
+        && request.resource.data.updatedAt is string && request.resource.data.updatedAt.size() <= 40;
     }
     // ---------- Watch link (watchlink.js, watch/family): one phone's family apps and its Wear OS watch ----------
     // One document per linked phone and watch. The id is a 26-character random code only that phone and watch know: no
