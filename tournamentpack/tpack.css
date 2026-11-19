@@ -93,7 +93,7 @@ body:not([data-view="list"]):not([data-view="settings"]) main#view { padding-bot
 .actions { margin: 10px 0 12px; }
 .stack > * + * { margin-top: 10px; }
 .pills { display: flex; flex-wrap: wrap; gap: 8px; }
-.pill { min-height: 46px; padding: 0 16px; border-radius: var(--r-pill); border: 2px solid var(--line2); color: var(--text); font-weight: 700; font-size: 15px; background: transparent; display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
+.pill { min-height: 46px; min-width: 46px; padding: 0 16px; border-radius: var(--r-pill); border: 2px solid var(--line2); color: var(--text); font-weight: 700; font-size: 15px; background: transparent; display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
 .pill[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
 .field { display: block; margin-bottom: 14px; }
 .field > .label { margin-bottom: 6px; }
