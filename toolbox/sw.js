@@ -1,7 +1,7 @@
 // App shell only: the page, icons, fonts and the Firebase code it needs to open with no
 // signal. Never caches your data: that stays in Firestore's own private cache on this
 // phone, behind your sign-in (Firestore calls go to googleapis.com, which this skips).
-const CACHE = "toolbox-v16";
+const CACHE = "toolbox-v17";
 const SHELL = ["./", "app.webmanifest", "icons/icon-192.png", "../install.js", "../health.js"];
 // Same version as the <script> tags in index.html: change them together.
 const FIREBASE = ["app", "auth", "firestore"].map(n => `https://www.gstatic.com/firebasejs/11.6.0/firebase-${n}-compat.js`);
@@ -20,9 +20,22 @@ self.addEventListener("fetch", e => {
   const u = new URL(e.request.url);
   const shell = e.request.method === "GET" && (u.origin === location.origin || u.host === "www.gstatic.com" || u.host.startsWith("fonts."));
   if (!shell) return;
-  e.respondWith(fetch(e.request).then(res => {
-    // <script> tags fetch Firebase without CORS, so its response is "opaque" (ok is false); keep those too
-    if (res.ok || res.type === "opaque") { const c = res.clone(); caches.open(CACHE).then(x => x.put(e.request, c)); }
-    return res;
-  }).catch(() => caches.match(e.request, {ignoreSearch: true})));
+  const r = e.request;
+  const saved = () => caches.match(r, {ignoreSearch: true});
+  const savedOr = () => saved().then(m => m || undefined);
+  const net = fetch(r);
+  // Refresh the saved copy from the network's answer. waitUntil is called now, while the event runs: a call made
+  // later, after the saved copy has already gone out, can be refused and the copy would never refresh.
+  e.waitUntil(net.then(res => {
+    if (res.ok || res.type === "opaque") { const copy = res.clone(); return caches.open(CACHE).then(c => c.put(r, copy)); }
+  }, () => {}));
+  // One weak bar of signal: a fetch can hang a long time without failing. After 3 seconds the saved copy
+  // shows instead (if there is one); with nothing saved, keep waiting for the network.
+  e.respondWith(new Promise(resolve => {
+    let done = false;
+    const give = res => { if (!done && res) { done = true; resolve(res); } };
+    const t = setTimeout(() => savedOr().then(give), 3000);
+    net.then(res => { clearTimeout(t); give(res); },
+      () => { clearTimeout(t); savedOr().then(m => { give(m); if (!done) { done = true; resolve(Response.error()); } }); });
+  }));
 });
