@@ -296,6 +296,9 @@ const event = (id, date, away, home, state, done) => ({ id, date, competitions: 
     await page.click('#pMode'); eq(await page.textContent('#pGo'), 'Sign in');
     await page.fill('#pp', '9999'); await page.click('#pGo'); await page.waitForFunction(() => /don't match/.test(document.querySelector('#pErr').textContent));
     await page.fill('#pp', '1234'); await page.click('#pGo'); await page.waitForFunction(() => window.__auth.some(a => a[0] === 'signin' && a[1] === 'timmy@players.natesteele888.github.io'));
+    // Wait for the signed-in screen before signing out, or the old sign-in form (still on screen, in sign-in mode)
+    // is the '#pf' found next, and the screen redrawn under the typing wipes it (CI is slow enough to hit this).
+    await page.waitForSelector('#pf', { state: 'detached' });
     await page.evaluate(() => firebase.auth().signOut()); await page.waitForSelector('#pf');
     await page.fill('#pn', 'Timmy 2'); await page.fill('#pp', '4321'); await page.click('#pGo');
     await page.waitForSelector('#join'); eq(await page.inputValue('#jname'), 'Timmy 2', 'the player name carries over');
