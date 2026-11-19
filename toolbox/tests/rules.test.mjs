@@ -422,6 +422,11 @@ test('fairway: the shape is checked, and the course and start time cannot change
   await assertFails(setDoc(doc(anon(), 'golf_events/' + FW_CODE), fwEvent({ course: { name: 'X', tees: [{ id: 'a' }], holes: fwHoles(12) } })));
   await assertFails(setDoc(doc(anon(), 'golf_events/' + FW_CODE), fwEvent({ course: { name: 'X', tees: [{ id: 'a' }], holes: fwHoles(18), sample: true } })));
   await assertSucceeds(setDoc(doc(anon(), 'golf_events/' + FW_CODE), fwEvent({ course: { name: 'Nine', tees: [{ id: 'a' }], holes: fwHoles(9) } })));
+  // a back nine (holes 10 to 18) is nine holes with h0: 9, so the signs read 10 to 18
+  // (each on a new code, since a tournament's course can't change once it's made)
+  await assertSucceeds(setDoc(doc(anon(), 'golf_events/bcdefghijklmnopqrstu'), fwEvent({ course: { name: 'Back', tees: [{ id: 'a' }], holes: fwHoles(9), h0: 9 } })));
+  await assertFails(setDoc(doc(anon(), 'golf_events/cdefghijklmnopqrstuv'), fwEvent({ course: { name: 'Back', tees: [{ id: 'a' }], holes: fwHoles(18), h0: 9 } })));
+  await assertFails(setDoc(doc(anon(), 'golf_events/defghijklmnopqrstuvw'), fwEvent({ course: { name: 'Back', tees: [{ id: 'a' }], holes: fwHoles(9), h0: 3 } })));
   await assertFails(updateDoc(doc(anon(), 'golf_events/' + FW_CODE), { 'course.name': 'Changed', updated: 2 }));
   await assertFails(updateDoc(doc(anon(), 'golf_events/' + FW_CODE), { created: 99 }));
   await assertFails(updateDoc(doc(anon(), 'golf_events/' + FW_CODE), { secret: 'x' }));
@@ -554,6 +559,9 @@ test('watch link: no listing, no deleting, the code must be 26 letters and digit
   await assertFails(setDoc(doc(anon(), 'fw_links/' + WL_KEY), { pp: 'x'.repeat(40001) }));
   await assertSucceeds(setDoc(doc(anon(), 'fw_links/' + WL_KEY), { pk: 'x'.repeat(40000) }), 'Practice Clock');
   await assertFails(setDoc(doc(anon(), 'fw_links/' + WL_KEY), { pk: 'x'.repeat(40001) }));
+  await assertSucceeds(setDoc(doc(anon(), 'fw_links/' + WL_KEY), { ps: 'x'.repeat(40000) }), 'My Stats');
+  await assertFails(setDoc(doc(anon(), 'fw_links/' + WL_KEY), { ps: 'x'.repeat(40001) }));
+  await assertFails(setDoc(doc(anon(), 'fw_links/' + WL_KEY), { ps: 5 }));
   await assertSucceeds(updateDoc(doc(anon(), 'fw_links/' + WL_KEY), { fg: 'x'.repeat(50000) }), "Fairway's round on the watch");
   await assertFails(updateDoc(doc(anon(), 'fw_links/' + WL_KEY), { fg: 'x'.repeat(60001) }));
   await assertFails(setDoc(doc(anon(), 'fw_links/' + WL_KEY), { gr: '{}', updated: 'yesterday' }));

@@ -1101,8 +1101,8 @@ const strip = p => { const q = JSON.parse(JSON.stringify(p)); delete q.id; q.blo
   await test('Offline: after one visit the app opens and runs with no network, with its own cache only', async () => {
     const { ctx, page, errors } = await fresh({ sw: true, data: dataDoc([BB()]), init: () => { if (!sessionStorage.getItem('__c')) { sessionStorage.setItem('__c', '1'); caches.open('locker-v1').then(c => c.put('/x', new Response('x'))); caches.open('practiceclock-v0').then(c => c.put('/y', new Response('y'))); } } });
     await page.evaluate(() => navigator.serviceWorker.ready.then(() => 1));
-    await page.waitForFunction(async () => { const k = await caches.keys(); return k.includes('practiceclock-v2') && !k.includes('practiceclock-v0') && (await (await caches.open('practiceclock-v2')).keys()).length >= 10; }, null, { timeout: 8000 });
-    const cached = await page.evaluate(async () => (await (await caches.open('practiceclock-v2')).keys()).map(r => new URL(r.url).pathname));
+    await page.waitForFunction(async () => { const k = await caches.keys(); return k.includes('practiceclock-v3') && !k.includes('practiceclock-v0') && (await (await caches.open('practiceclock-v3')).keys()).length >= 10; }, null, { timeout: 8000 });
+    const cached = await page.evaluate(async () => (await (await caches.open('practiceclock-v3')).keys()).map(r => new URL(r.url).pathname));
     for (const f of ['/apps/practiceclock/', '/apps/practiceclock/manifest.json', '/apps/practiceclock/practiceclock.css', '/apps/practiceclock/core.js', '/apps/practiceclock/app.js', '/apps/practiceclock/editor.js', '/apps/practiceclock/runner.js', '/apps/practiceclock/settings.js', '/apps/practiceclock/boot.js', '/apps/watchlink.js', '/apps/icons/practiceclock-192.png', '/apps/icons/practiceclock-512.png']) assert.ok(cached.includes(f), 'cached ' + f + ' in ' + cached.join());
     await page.reload(); await page.waitForTimeout(300); assert.ok(await page.evaluate(() => !!navigator.serviceWorker.controller), 'the page is controlled by the worker before going offline');
     await ctx.setOffline(true);

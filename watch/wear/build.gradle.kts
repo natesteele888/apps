@@ -67,4 +67,6 @@ dependencies {
     implementation("com.google.guava:listenablefuture:1.0")
     // the pitch count on the watch face (a complication); see Complication.kt
     implementation("androidx.wear.watchface:watchface-complications-data-source-ktx:1.2.1")
+    // the way back to Walk-Up or Pitch Count from the watch face (an ongoing activity); see Ongoing.kt
+    implementation("androidx.wear:wear-ongoing:1.0.0")
 }

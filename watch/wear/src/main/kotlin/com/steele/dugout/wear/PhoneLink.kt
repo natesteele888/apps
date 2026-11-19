@@ -76,6 +76,21 @@ object PhoneLink : MessageClient.OnMessageReceivedListener, DataClient.OnDataCha
         } catch (e: Exception) { /* no phone */ }
     }
 
+    /**
+     * One command straight to the phone, with the apps closed (the Walk-Up tile's Stop). True when a phone took it.
+     */
+    suspend fun sendNow(ctx: Context, json: String): Boolean {
+        val c = ctx.applicationContext
+        val bytes = json.toByteArray(Charsets.UTF_8)
+        var ok = false
+        try {
+            for (n in Wearable.getNodeClient(c).connectedNodes.await()) {
+                try { Wearable.getMessageClient(c).sendMessage(n.id, Paths.CMD, bytes).await(); ok = true } catch (e: Exception) { /* not reachable */ }
+            }
+        } catch (e: Exception) { /* no phone */ }
+        return ok
+    }
+
     /** the watch's pitch log to the phone; works with the apps closed too (a press on the Pitch Count tile) */
     fun putPitch(ctx: Context, json: String) {
         val req = PutDataRequest.create(Paths.PITCH).setData(json.toByteArray(Charsets.UTF_8)).setUrgent()

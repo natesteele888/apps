@@ -4,6 +4,7 @@ import android.os.Bundle
 import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
@@ -32,19 +33,34 @@ import androidx.lifecycle.repeatOnLifecycle
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
-/** what both watch apps share: keep the screen on during a game, load the pitch log, and talk to the phone */
+/**
+ * What both watch apps share: keep the screen on during a game, load the pitch log, talk to the phone, and leave the
+ * way back on the watch face while the app is behind it (see Ongoing.kt).
+ */
 abstract class GameActivity : ComponentActivity() {
+    /** this app's icon on the watch face while it's behind it */
+    abstract val ongoingId: Int
+    private val askNotes = registerForActivityResult(ActivityResultContracts.RequestPermission()) { }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         PitchStore.load(this)
+        Ongoing.askOnce(this) { askNotes.launch(it) }
     }
-    override fun onStart() { super.onStart(); PhoneLink.start(this) }
-    override fun onStop() { PhoneLink.stop(); super.onStop() }
+    override fun onStart() { super.onStart(); PhoneLink.start(this); Ongoing.hide(this, ongoingId) }
+    override fun onStop() {
+        PhoneLink.stop()
+        // behind the watch face (home button, palm): leave the way back. Swiped away: done with it.
+        if (isFinishing) Ongoing.hide(this, ongoingId) else if (!isChangingConfigurations) Ongoing.show(this, ongoingId)
+        super.onStop()
+    }
+    override fun onDestroy() { if (isFinishing) Ongoing.hide(this, ongoingId); super.onDestroy() }
 }
 
 /** Walk-Up on the watch: the walk-up song remote. Works without Pitch Count. */
 class WalkUpActivity : GameActivity() {
+    override val ongoingId = Ongoing.WALKUP
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent { MaterialTheme { WalkUpApp() } }
@@ -53,6 +69,7 @@ class WalkUpActivity : GameActivity() {
 
 /** Pitch Count on the watch: counts pitches even with no phone nearby, and works without Walk-Up. */
 class PitchCountActivity : GameActivity() {
+    override val ongoingId = Ongoing.PITCH
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent { MaterialTheme { PitchCountApp() } }

@@ -9,7 +9,8 @@
   const U = () => FW.ui;
   const M = FW.map = {};
   const $ = (s, r) => (r || document).querySelector(s), $$ = (s, r) => Array.from((r || document).querySelectorAll(s));
-  const key = (course, h) => "fw:map:" + C.courseKey(course) + ":" + h;
+  // kept by the number on the hole's sign, shared by the full course and its nines
+  const key = (course, h) => "fw:map:" + C.courseKey(course) + ":" + C.holeNo(course, h);
   M.get = (course, h) => C.cleanHoleMap(FW.LS.get(key(course, h), null));
   function put(course, h, m) { const v = C.cleanHoleMap(m); if (!v) { FW.LS.del(key(course, h)); return true; } return FW.LS.set(key(course, h), v); }
 
@@ -57,17 +58,17 @@
       if (!document.body.contains(box)) { stopGps(); return; }
       const m = M.get(ev.course, h) || {}, gy = C.greenYards(m, here), you = here ? C.gpsToPic(m, here) : null;
       const meas = tap ? C.tapMeasure(m, card, tap, you) : null, scale = !!C.picScale(m, card);
-      const pic = m.img ? `<div class="hmap" style="padding-top:${(100 / (m.ar || 0.75)).toFixed(2)}%"><img src="${m.img}" alt="Your picture of hole ${h}">
+      const pic = m.img ? `<div class="hmap" style="padding-top:${(100 / (m.ar || 0.75)).toFixed(2)}%"><img src="${m.img}" alt="Your picture of hole ${C.holeNo(ev.course, h)}">
           <svg viewBox="0 0 100 ${(100 / (m.ar || 0.75)).toFixed(2)}" preserveAspectRatio="none" id="mapsvg" aria-hidden="true">
             ${m.tee && tap ? `<line x1="${(you || m.tee)[0] * 100}" y1="${(you || m.tee)[1] * 100 / (m.ar || 0.75)}" x2="${tap[0] * 100}" y2="${tap[1] * 100 / (m.ar || 0.75)}" class="mline"/>` : ""}
             ${m.green && tap ? `<line x1="${tap[0] * 100}" y1="${tap[1] * 100 / (m.ar || 0.75)}" x2="${m.green[0] * 100}" y2="${m.green[1] * 100 / (m.ar || 0.75)}" class="mline"/>` : ""}
             ${[[m.tee, "mtee", 2.2], [m.green, "mgreen", 2.6], [tap, "mtap", 2], [you, "myou", 2.4]].map(([p, c, r]) => p ? `<circle class="${c}" cx="${p[0] * 100}" cy="${p[1] * 100 / (m.ar || 0.75)}" r="${r}"/>` : "").join("")}
-          </svg></div>` : `<div class="hmap none"><p>No picture of hole ${h} yet. A hand sketch or a screenshot works.</p></div>`;
+          </svg></div>` : `<div class="hmap none"><p>No picture of hole ${C.holeNo(ev.course, h)} yet. A hand sketch or a screenshot works.</p></div>`;
       const yards = gy ? `<div class="gyds" role="status"><div><small>Front</small><b>${gy.f != null ? gy.f : "–"}</b></div><div class="mid"><small>Middle</small><b>${gy.c != null ? gy.c : "–"}</b></div><div><small>Back</small><b>${gy.b != null ? gy.b : "–"}</b></div></div>
           ${gy.c != null && club(gy.c) ? `<p class="msg small">From your bag: <b>${esc(club(gy.c))}</b>${here && here.acc > 15 ? ` · GPS is rough right now (±${Math.round(here.acc * 1.09)} yds)` : ""}</p>` : ""}`
         : `<p class="msg small">${gpsErr ? "This phone won't share its location with Fairway right now." : watch == null ? "" : here ? "Mark the green below to get yards to it." : "Finding you…"}</p>`;
       const hint = mode === "tee" ? "Tap the tee on the picture." : mode === "green" ? "Now tap the middle of the green." : meas ? `${meas.fromYou ? "From you" : "From the tee"}: <b>${meas.from}</b> yds · to the green: <b>${meas.to}</b> yds${club(meas.to) ? ` · ${esc(club(meas.to))} in` : ""}` : m.img && scale ? "Tap anywhere on the picture to measure it." : m.img ? "Set the tee and green on the picture to measure." : "";
-      $(".sheet-b", box).innerHTML = `<p class="msg small">Hole ${h} · par ${par}${card ? ` · ${card} yds from the ${esc(tee.name)} tees` : ""}</p>
+      $(".sheet-b", box).innerHTML = `<p class="msg small">Hole ${C.holeNo(ev.course, h)} · par ${par}${card ? ` · ${card} yds from the ${esc(tee.name)} tees` : ""}</p>
         ${pic}<p class="msg small" id="maphint">${hint}</p>
         ${watch == null ? `<button type="button" class="btn primary block" id="gpson">Use GPS for yards</button>` : yards}
         <div class="row2">${m.img ? `<button type="button" class="btn small" id="setpts">${m.tee && m.green ? "Move the tee and green" : "Set the tee and green"}</button>` : ""}
@@ -106,7 +107,7 @@
         const cur = M.get(ev.course, h) || {}; put(ev.course, h, Object.assign({}, cur, { [b.dataset.mk]: here })); u.toast("Marked"); draw(box); u.render();
       });
     };
-    u.sheet("Hole " + h + " map", "", box => {
+    u.sheet("Hole " + C.holeNo(ev.course, h) + " map", "", box => {
       draw(box);
       // stop the GPS as soon as the map closes, however it closes
       const host = box.parentNode, mo = window.MutationObserver ? new MutationObserver(() => { if (!document.body.contains(box)) { stopGps(); mo.disconnect(); } }) : null;

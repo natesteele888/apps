@@ -142,6 +142,8 @@ const PNG = {
     await page.addInitScript(n => { window.__now = n; }, NOW);
     await page.goto(server.url + 'screen.html?f=' + FEED_ID + '&sec=60');
     await page.waitForFunction(() => window.__snack && window.__snack.playable().length >= 6, null, { timeout: 15000 });
+    // the last download can still be on its way when six are ready, so give it a moment
+    for (let i = 0; i < 50 && calls.filter(c => /^(file|slide):/.test(c)).length < 7; i++) await page.waitForTimeout(100);
     const files = calls.filter(c => /^(file|slide):/.test(c)).sort();
     eq(files.join(','), 'file:f-blue,file:f-gd,file:f-night,file:f-red,file:f-spon,slide:deck~p1,slide:deck~p2', 'every playable file once; drafts and too-big files skipped');
     // one full pass from a fresh queue

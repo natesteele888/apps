@@ -17,7 +17,7 @@ import java.net.URLEncoder
 
 /**
  * The watch link: one private document joining this watch to the family apps on one phone (see watchlink.js at the
- * top of the apps repo). The phone writes each app's part ("gr", "cc", "pp", "r20", "gp", "sc", "pk"); the watch writes only its
+ * top of the apps repo). The phone writes each app's part ("gr", "cc", "pp", "r20", "gp", "sc", "pk", "fg", "ps"); the watch writes only its
  * log ("w"). No sign-in: the 26-letter key is the only way in, and nobody can list the links.
  *
  * Linking: the watch makes an 8-letter code and shows it; the phone, where the code is typed, leaves its key in
@@ -27,7 +27,7 @@ object Link {
     private const val BASE = "https://firestore.googleapis.com/v1/projects/nates-toolbox/databases/(default)/documents/"
     /** the nates-toolbox web app id, the same public one in getready/cloud.js (not a secret); only used for the Picks sign-in */
     const val API_KEY = "AIzaSyDT_wGN93U4oM70orIU8flSAnvXHApqW2A"
-    private val FIELDS = listOf("gr", "cc", "pp", "r20", "gp", "sc", "pk", "fg")
+    private val FIELDS = listOf("gr", "cc", "pp", "r20", "gp", "sc", "pk", "fg", "ps")
     private const val CODE_LIFE = 10 * 60_000L
 
     data class State(
@@ -44,11 +44,13 @@ object Link {
     private val _state = MutableStateFlow(State())
     val state: StateFlow<State> = _state
     private lateinit var prefs: SharedPreferences
+    private var app: Context? = null
     private val lock = Mutex()
     @Volatile private var dirty = false
 
     fun load(ctx: Context) {
         if (::prefs.isInitialized) return
+        app = ctx.applicationContext
         prefs = ctx.applicationContext.getSharedPreferences("link", Context.MODE_PRIVATE)
         dirty = prefs.getBoolean("dirty", false)
         val f = FIELDS.mapNotNull { n -> prefs.getString("f_$n", null)?.let { n to it } }.toMap()
@@ -135,7 +137,10 @@ object Link {
         val ed = prefs.edit()
         FIELDS.forEach { n -> f.optJSONObject(n)?.optString("stringValue")?.takeIf { it.isNotBlank() }?.let { out[n] = it; ed.putString("f_$n", it) } }
         ed.putLong("checkedAt", now).apply()
+        val schedChanged = out["sc"] != _state.value.fields["sc"]
         _state.value = _state.value.copy(linked = true, fields = out, checkedAt = now, offline = false, noRules = false)
+        // a new schedule from the phone: the watch face's Next up asks for new words
+        if (schedChanged) app?.let { NextUp.update(it) }
     }
 
     // ---------- the Gameday Picks sign-in ----------

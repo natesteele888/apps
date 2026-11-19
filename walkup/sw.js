@@ -1,5 +1,5 @@
 // Network first, so updates show up right away; falls back to the last saved copy when offline.
-const CACHE = "walkup-v9";
+const CACHE = "walkup-v10";
 // Songs shared to Walk-Up from another Android app wait here until the app opens and picks them up. Never deleted by an update.
 const INBOX = "walkup-inbox-v1";
 // Save the page itself at install. Without this, the first visit caches nothing
@@ -38,10 +38,24 @@ self.addEventListener("fetch", e => {
   if (e.request.method !== "GET") return;
   // Field mode's sign-in and LYBS Select's database answer live, never from a saved copy.
   if (url.origin !== self.location.origin && /(^|\.)(firebaseio\.com|googleapis\.com)$/.test(url.hostname) && !/^fonts\./.test(url.hostname)) return;
-  e.respondWith(fetch(e.request).then(res => {
-    if (res.ok || res.type === "opaque") { const copy = res.clone(); caches.open(CACHE).then(c => c.put(e.request, copy)); }
-    return res;
-  }).catch(() => caches.match(e.request, {ignoreSearch: true}).then(r => r || (e.request.mode === "navigate" ? caches.match("./") : undefined))));
+  const r = e.request;
+  const saved = () => caches.match(r, {ignoreSearch: true});
+  const savedOrHome = () => saved().then(m => m || (r.mode === "navigate" ? caches.match("./") : undefined));
+  const net = fetch(r);
+  // Refresh the saved copy from the network's answer. waitUntil is called now, while the event runs: a call made
+  // later, after the saved copy has already gone out, can be refused and the copy would never refresh.
+  e.waitUntil(net.then(res => {
+    if (res.ok || res.type === "opaque") { const copy = res.clone(); return caches.open(CACHE).then(c => c.put(r, copy)); }
+  }, () => {}));
+  // One weak bar of signal at a game: a fetch can hang a long time without failing. After 3 seconds the saved copy
+  // shows instead (if there is one); with nothing saved, keep waiting for the network.
+  e.respondWith(new Promise(resolve => {
+    let done = false;
+    const give = res => { if (!done && res) { done = true; resolve(res); } };
+    const t = setTimeout(() => savedOrHome().then(give), 3000);
+    net.then(res => { clearTimeout(t); give(res); },
+      () => { clearTimeout(t); savedOrHome().then(m => { give(m); if (!done) { done = true; resolve(Response.error()); } }); });
+  }));
 });
 // Field mode (the tablet at the field) is saved at install too, so it opens with no signal.
 const FIELD_SHELL = ["field.html", "field.css", "field-core.js", "field.js", "/lybs-ballclub/js/team-registry.js"];
