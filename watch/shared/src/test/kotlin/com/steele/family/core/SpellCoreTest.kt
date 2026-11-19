@@ -17,7 +17,12 @@ class SpellCoreTest {
 
     @Test fun parsesWhatAKidSays() {
         assertEquals("sorcerer", SpellCore.parse("spell sorcerer"))
-        assertEquals("sorcerer", SpellCore.parse("Hey Spelling Genie, spell sorcerer."))
+        assertEquals("sorcerer", SpellCore.parse("Hey Sal, spell sorcerer."))
+        assertEquals("sorcerer", SpellCore.parse("hey Saul how do you spell sorcerer"), "how the voice often writes Sal")
+        assertEquals("sorcerer", SpellCore.parse("Sal, help me spell sorcerer"))
+        assertEquals("sorcerer", SpellCore.parse("spell sorcerer Sal"))
+        assertEquals("Sal", SpellCore.parse("spell Sal"), "Sal's own name can be asked for")
+        assertEquals("sorcerer", SpellCore.parse("Hey Spelling Genie, spell sorcerer."), "the first name still works")
         assertEquals("sorcerer", SpellCore.parse("hey genie how do you spell sorcerer"))
         assertEquals("sorcerer", SpellCore.parse("Hey spelling, help me spell sorcerer please"))
         assertEquals("sorcerer", SpellCore.parse("how do you spell the word sorcerer"))
@@ -30,6 +35,7 @@ class SpellCoreTest {
         assertEquals("they're", SpellCore.parse("spell they’re"), "a curly apostrophe from the voice")
         assertEquals("spelling", SpellCore.parse("how do you spell spelling"))
         assertNull(SpellCore.parse("hey spelling genie"))
+        assertNull(SpellCore.parse("hey Sal"))
         assertNull(SpellCore.parse("spell"))
         assertNull(SpellCore.parse(""))
         assertNull(SpellCore.parse(null))
