@@ -81,6 +81,101 @@ object SpellCore {
         return parts
     }
 
+    // ---- practice: Sal says a word, the kid spells it back ----
+
+    /** letter names the watch's voice typing may write instead of the letter: "see" for C, "are" for R */
+    private val letterNames: Map<String, Char> = buildMap {
+        val names = mapOf(
+            'a' to "ay", 'b' to "be bee", 'c' to "see sea cee", 'd' to "dee", 'e' to "ee", 'f' to "ef eff", 'g' to "gee",
+            'h' to "aitch", 'i' to "eye aye", 'j' to "jay", 'k' to "kay", 'l' to "el ell", 'm' to "em", 'n' to "en",
+            'o' to "oh owe", 'p' to "pee pea", 'q' to "queue cue", 'r' to "are ar", 's' to "es ess", 't' to "tee tea",
+            'u' to "you yew", 'v' to "vee", 'w' to "doubleyou double-u", 'x' to "ex", 'y' to "why wye", 'z' to "zee zed",
+        )
+        for ((c, ns) in names) { put(c.toString(), c); for (n in ns.split(' ')) put(n, c) }
+    }
+
+    /**
+     * the word spelled by letters said one at a time ("s o r c e r e r", "see a tea", "S-O-R"), or null when what was heard
+     * isn't letters (a kid who said the word instead of spelling it). "capital T", "double L", "apostrophe" and "space" work.
+     */
+    fun lettersSaid(heard: String?): String? {
+        if (heard.isNullOrBlank()) return null
+        val tokens = heard.lowercase().replace('’', '\'').replace(Regex("[.,!?;:]"), " ")
+            .replace("double you", "doubleyou").replace("double u ", "doubleyou ").replace(Regex("double u$"), "doubleyou")
+            .split(Regex("[\\s-]+")).filter { it.isNotEmpty() }
+        val out = StringBuilder()
+        var capital = false
+        var double = false
+        for (t in tokens) {
+            when (t) {
+                "capital", "big", "uppercase", "upper" -> { capital = true; continue }
+                "case", "letter", "lowercase", "small", "then" -> continue
+                "double" -> { double = true; continue }
+                "apostrophe" -> { out.append('\''); continue }
+                "space" -> { out.append(' '); continue }
+                "dash", "hyphen" -> { out.append('-'); continue }
+            }
+            // "s'" or a single letter with an apostrophe the voice glued on
+            val c = letterNames[t] ?: letterNames[t.trimEnd('\'', 's').ifEmpty { t }]?.takeIf { t.length <= 2 } ?: return null
+            val ch = if (capital) c.uppercaseChar() else c
+            out.append(ch); if (double) out.append(ch)
+            capital = false; double = false
+        }
+        return if (out.any { it.isLetter() }) out.toString() else null
+    }
+
+    /** the first of the voice's guesses that is letters, spelled out */
+    fun lettersSaid(heard: List<String>): String? = heard.firstNotNullOfOrNull { lettersSaid(it) }
+
+    /** whether [attempt] spells [word]; capitals don't count, apostrophes and spaces do */
+    fun isRight(word: String, attempt: String) = attempt.trim().equals(word.trim(), ignoreCase = true)
+
+    /**
+     * for each letter of [word], whether the kid got it: the letters that line up with [attempt] in order (the longest run in
+     * common), so one missed letter doesn't mark everything after it wrong
+     */
+    fun marks(word: String, attempt: String): BooleanArray {
+        val a = word.lowercase(); val b = attempt.trim().lowercase()
+        val n = a.length; val m = b.length
+        val dp = Array(n + 1) { IntArray(m + 1) }
+        for (i in n - 1 downTo 0) for (j in m - 1 downTo 0)
+            dp[i][j] = if (a[i] == b[j]) dp[i + 1][j + 1] + 1 else maxOf(dp[i + 1][j], dp[i][j + 1])
+        val ok = BooleanArray(n)
+        var i = 0; var j = 0
+        while (i < n && j < m) {
+            when {
+                a[i] == b[j] -> { ok[i] = true; i++; j++ }
+                dp[i + 1][j] >= dp[i][j + 1] -> i++
+                else -> j++
+            }
+        }
+        return ok
+    }
+
+    /** the order to practice in: the recent words shuffled, each once, at most [max] */
+    fun practiceWords(recent: List<String>, max: Int = 10, random: kotlin.random.Random = kotlin.random.Random.Default): List<String> =
+        recent.distinctBy { it.lowercase() }.shuffled(random).take(max)
+
+    /** what Sal says to give a word: "Spell there. As in, over there." */
+    fun ask(word: String): String {
+        val h = Homophones.hint(word)
+        return if (h != null) "Spell $word. As in, $h." else "Spell $word."
+    }
+
+    /**
+     * what the watch says to spell a word in parts: the word, then each part followed by its letters, then the word again
+     * ("sorcerer", "sor", S O R, "cer", C E R, "er", E R, "sorcerer"). [parts] are the pieces of [word] from [Syllables.split].
+     */
+    fun spokenParts(word: String, parts: List<String>): List<String> {
+        val out = mutableListOf(word)
+        for (p in parts) {
+            out += p.trim()
+            out += spoken(p.trim()).drop(1).dropLast(1)
+        }
+        out += word
+        return out
+    }
+
     /** the newest first, each word once, at most [max] */
     fun remember(recent: List<String>, word: String, max: Int = 12): List<String> =
         (listOf(word) + recent.filter { !it.equals(word, ignoreCase = true) }).take(max)
@@ -229,6 +324,9 @@ class WordList(lines: Sequence<String>) {
 
     fun knows(phrase: String) = phrase.split(' ').all { it.isEmpty() || map.containsKey(it.lowercase()) }
 
+    /** how common the word is (SCOWL's size: 10 is the most common), or null when it isn't in the list */
+    fun sizeOf(word: String): Int? = map[word.lowercase()]?.size
+
     /**
      * the list's spelling of each word (its capitals: "sorcerer", "Tuesday"), or the word as it came in when it isn't in
      * the list (a name the voice wrote with a capital keeps it)
@@ -292,6 +390,153 @@ class WordList(lines: Sequence<String>) {
             val sb = StringBuilder().append(if (first in "aeiou") 'a' else first)
             for (c in rest) if (c != sb.last()) sb.append(c)
             return sb.toString().trimEnd('a').ifEmpty { "a" }
+        }
+    }
+}
+
+/**
+ * Splits a word into the parts you say it in, the way a teacher claps it out: sor-cer-er, but-ter-fly, ta-ble.
+ *
+ * First the American English hyphenation patterns that TeX uses (Liang's method, in assets/spell/parts.txt, built by
+ * tools/spell-parts.py) find the safe breaks. Those are careful and leave some parts whole (ba-nana), so each part is
+ * then split again with the rules kids learn in school: one consonant between two vowels goes with the second (ba-na-na),
+ * two go one each way (hap-py), letters that make one sound stay together (ele-phant keeps "ph"), a consonant plus "le"
+ * at the end is its own part (lit-tle), and a silent "e" makes no part of its own (cho-co-late, jumped). Words made of a
+ * word that ends in a silent "e" and another word split between them (home-work, base-ment). [sizeOf] is the word list's
+ * [WordList.sizeOf], for that last rule.
+ */
+class Syllables(lines: Sequence<String>, private val sizeOf: (String) -> Int? = { null }) {
+    private val patterns = HashMap<String, IntArray>(6000)
+    private val whole = HashMap<String, List<String>>()
+    private var longest = 0
+
+    init {
+        for (raw in lines) {
+            val l = raw.trim()
+            if (l.isEmpty() || l.startsWith("%")) continue
+            if (l.startsWith("=")) {
+                // only the words the patterns get wrong; "=present" (no split at all) is a typesetting choice, and
+                // pres-ent is how a kid says it
+                if ('-' in l) whole[l.drop(1).replace("-", "")] = l.drop(1).split('-')
+                continue
+            }
+            val letters = StringBuilder()
+            val nums = IntArray(l.count { !it.isDigit() } + 1)
+            for (c in l) if (c.isDigit()) nums[letters.length] = c - '0' else letters.append(c)
+            patterns[letters.toString()] = nums
+            longest = maxOf(longest, letters.length)
+        }
+    }
+
+    val size get() = patterns.size
+
+    /** [word] in parts; a word with a space or a dash is split one piece at a time, and each part keeps its letters' capitals */
+    fun split(word: String): List<String> {
+        if (word.isEmpty()) return emptyList()
+        val out = mutableListOf<String>()
+        val piece = StringBuilder()
+        fun flush() { if (piece.isNotEmpty()) { out += splitWord(piece.toString()); piece.clear() } }
+        for (c in word) if (c.isLetter() || c == '\'') piece.append(c) else { flush(); if (out.isNotEmpty()) out[out.size - 1] = out.last() + c else out += c.toString() }
+        flush()
+        return out
+    }
+
+    private fun splitWord(word: String): List<String> {
+        val lw = word.lowercase()
+        whole[lw]?.let { parts -> var at = 0; return parts.map { p -> word.substring(at, at + p.length).also { at += p.length } } }
+        if (lw.length < 4 || lw.any { !it.isLetter() }) return listOf(word)
+        // a word ending in a silent e, then a word or a common ending: home-work, base-ment, brave-ly
+        for (k in 3..lw.length - 2) {
+            val a = lw.substring(0, k); val b = lw.substring(k)
+            if (a.endsWith('e') && !vowels(a).last() && sizeOf(a) != null &&
+                (b in endings || (b.length >= 3 && (sizeOf(b) ?: 99) <= 35))) {
+                return splitWord(word.substring(0, k)) + splitWord(word.substring(k))
+            }
+        }
+        val isV = vowels(lw)
+        val cuts = sortedSetOf<Int>()
+        val breaks = liang(lw)
+        var lo = 0
+        for (hi in breaks + lw.length) {
+            if (lo > 0) cuts += lo
+            cuts += schoolCuts(lw, isV, lo, hi)
+            lo = hi
+        }
+        // join any part that came out with no vowel sound onto the one before it (or after, at the start)
+        val points = listOf(0) + cuts.filter { it in 1 until lw.length } + lw.length
+        val parts = mutableListOf<IntArray>()
+        for (i in 0 until points.size - 1) {
+            val a = points[i]; val b = points[i + 1]
+            val hasV = (a until b).any { isV[it] }
+            val lastHasV = parts.isNotEmpty() && (parts.last()[0] until parts.last()[1]).any { isV[it] }
+            if (parts.isNotEmpty() && (!hasV || !lastHasV)) parts.last()[1] = b else parts += intArrayOf(a, b)
+        }
+        return parts.map { word.substring(it[0], it[1]) }
+    }
+
+    /** where the patterns allow a break, keeping at least two letters on each side */
+    private fun liang(w: String): List<Int> {
+        val s = ".$w."
+        val pts = IntArray(s.length + 1)
+        for (i in s.indices) for (j in i + 1..minOf(s.length, i + longest)) {
+            val p = patterns[s.substring(i, j)] ?: continue
+            for (k in p.indices) if (p[k] > pts[i + k]) pts[i + k] = p[k]
+        }
+        // a break before w[i] sits at pts[i + 1]
+        return (2..w.length - 2).filter { pts[it + 1] % 2 == 1 }
+    }
+
+    private fun schoolCuts(lc: String, isV: BooleanArray, lo: Int, hi: Int): List<Int> {
+        val groups = mutableListOf<IntArray>()
+        var i = lo
+        while (i < hi) {
+            if (isV[i]) { var j = i; while (j + 1 < hi && isV[j + 1]) j++; groups += intArrayOf(i, j); i = j + 1 } else i++
+        }
+        val out = mutableListOf<Int>()
+        for (g in 0 until groups.size - 1) {
+            val b = groups[g][1]; val d = groups[g + 1][0]
+            val cons = lc.substring(b + 1, d)
+            val k = cons.length
+            if (k == 0) continue
+            // a consonant + le at the end is its own part: ta-ble, lit-tle, can-dles, bun-dled
+            if (d >= 2 && lc[d - 1] == 'l' && lc[d - 2] != 'x' &&
+                ((d == lc.length - 1 && lc.last() == 'e') || (d == lc.length - 2 && lc.takeLast(3) in setOf("les", "led")))) {
+                out += d - 2; continue
+            }
+            out += when {
+                k == 1 -> b + 1
+                k == 2 && (cons == "ck" || cons == "ng") -> d
+                cons.takeLast(2) in together && (k > 2 || cons in sounds || cons == "qu") -> d - 2
+                else -> b + 2
+            }
+        }
+        return out.filter { it in lo + 1 until hi }
+    }
+
+    companion object {
+        private const val V = "aeiou"
+        private val sounds = setOf("ch", "sh", "th", "ph", "wh", "gh", "ck", "ng")
+        private val together = sounds + setOf("bl", "br", "cl", "cr", "dr", "fl", "fr", "gl", "gr", "pl", "pr", "sc", "sk", "sl", "sm",
+            "sn", "sp", "st", "tr", "tw", "wr", "qu")
+        private val endings = setOf("ly", "ment", "ments", "ness", "ful", "less")
+
+        /** which letters make a vowel sound: y after a consonant does, u after q doesn't, and a silent e at the end doesn't */
+        fun vowels(c: String): BooleanArray {
+            val n = c.length
+            val v = BooleanArray(n)
+            for (i in 0 until n) {
+                val ch = c[i]
+                v[i] = ch in V || (ch == 'y' && i > 0 && !v[i - 1])
+                if (ch == 'u' && i > 0 && c[i - 1] == 'q') v[i] = false
+            }
+            fun before(k: Int) = (0 until k).any { v[it] }
+            // cake, choco-late (but not ta-ble)
+            if (n >= 3 && c[n - 1] == 'e' && !v[n - 2] && before(n - 2) && !(c[n - 2] == 'l' && !v[n - 3])) v[n - 1] = false
+            // jumped (but not want-ed, bun-dled)
+            if (n >= 4 && c.endsWith("ed") && !v[n - 3] && c[n - 3] !in "tdl" && before(n - 3)) v[n - 2] = false
+            // makes (but not box-es, can-dles, dish-es)
+            if (n >= 4 && c.endsWith("es") && !v[n - 3] && c[n - 3] !in "sxzcgl" && c.substring(n - 4, n - 2) !in setOf("sh", "ch") && before(n - 3)) v[n - 2] = false
+            return v
         }
     }
 }

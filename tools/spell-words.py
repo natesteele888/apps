@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Builds watch/family/src/main/assets/spell/words.txt: the word list Spelling Genie on the watch checks words against and picks
+"""Builds watch/family/src/main/assets/spell/words.txt: the word list Sal on the watch checks words against and picks
 "did you mean" choices from. The words come from SCOWL (Kevin Atkinson's Spell Checker Oriented Word Lists, the lists behind
 aspell/hunspell), through the wordlist-english npm package: everyday English plus American spellings, sizes 10 to 60.
 Each "#NN" line starts a size: the smaller the number, the more common the word (SCOWL's own grouping).
