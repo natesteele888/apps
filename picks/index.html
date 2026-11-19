@@ -214,6 +214,7 @@ body.x-noscroll{overflow:hidden}
 <script src="core.js"></script>
 <script src="stats.js"></script>
 <script src="league.js"></script>
+<script src="remind.js"></script>
 <script src="../watchlink.js"></script>
 <script>
 "use strict";
@@ -230,7 +231,7 @@ function contrast(hex){hex=String(hex||"").replace("#","");if(hex.length!==6)ret
 function store(k,v){try{if(v===undefined)return localStorage.getItem(k);localStorage.setItem(k,v)}catch(_){return null}}
 
 const S={user:null,me:null,isOwner:false,players:{},weeks:{},picks:{},locked:{},ch:{},view:"picks",sel:null,selBy:{},sport:C.SPORTS[store("gp.sport")]?store("gp.sport"):"nfl",season:null,codes:[],loading:false,
-  extra:{},wp:{},team:null,lsub:store("gp.lsub")||"standings"}; // extra: the scoreboard's team ids, records and top players; wp: ESPN's win chances per game; both in memory only
+  extra:{},wp:{},team:null,remind:null,lsub:store("gp.lsub")||"standings"}; // extra: the scoreboard's team ids, records and top players; wp: ESPN's win chances per game; both in memory only
 let db,unsubs=[];
 
 /* ---------- routing between screens ---------- */
@@ -242,7 +243,7 @@ function render(){
   // keep the page position and the focused pick button through a redraw
   const y=window.scrollY,fb=document.activeElement,fg=fb&&fb.dataset&&fb.dataset.g,ft=fb&&fb.dataset&&fb.dataset.t;
   $("#app").innerHTML=`<header><div><h1>Gameday Picks</h1><p>Pick a side, every game day, all season.</p></div>
-    <div class="me"><b>${esc(S.me.name)}</b>${rec.total?`${rec.w}-${rec.l} · ${Math.round(rec.w/rec.total*100)}%`:"No results yet"}<br>${S.isOwner?"":`<button class="linkbtn" id="inv">invite friends</button> · `}<button class="linkbtn" id="rename">rename</button> · ${WL?`<button class="linkbtn" id="wat">watch</button> · `:""}<button class="linkbtn" id="out">sign out</button> · <button class="linkbtn" type="button" onclick="window.nateHealth&&nateHealth.report()">something wrong?</button></div></header>
+    <div class="me"><b>${esc(S.me.name)}</b>${rec.total?`${rec.w}-${rec.l} · ${Math.round(rec.w/rec.total*100)}%`:"No results yet"}<br>${S.isOwner?"":`<button class="linkbtn" id="inv">invite friends</button> · `}<button class="linkbtn" id="rename">rename</button> · <button class="linkbtn" id="bell">${S.remind&&S.remind.on?"🔔 reminders on":"🔔 reminders"}</button> · ${WL?`<button class="linkbtn" id="wat">watch</button> · `:""}<button class="linkbtn" id="out">sign out</button> · <button class="linkbtn" type="button" onclick="window.nateHealth&&nateHealth.report()">something wrong?</button></div></header>
     <div class="sports" role="group" aria-label="League">${C.ORDER.map(id=>`<button type="button" data-sport="${id}" aria-pressed="${S.sport===id}">${C.SPORTS[id].emoji} ${C.SPORTS[id].name}</button>`).join("")}</div>
     <nav class="views">${views.map(([k,n])=>`<button data-view="${k}" ${S.view===k?'aria-current="page"':""}>${n}</button>`).join("")}</nav>
     <section id="view"></section>`;
@@ -250,9 +251,10 @@ function render(){
   $("#rename").onclick=rename;
   if($("#inv"))$("#inv").onclick=()=>share(S.me.code);
   if($("#wat"))$("#wat").onclick=()=>{S.view="watch";S.team=null;render();window.scrollTo(0,0)};
+  $("#bell").onclick=()=>{S.view="remind";S.team=null;render();window.scrollTo(0,0)};
   document.querySelectorAll("[data-view]").forEach(b=>b.onclick=()=>{if(S.view===b.dataset.view&&!S.team)return;S.view=b.dataset.view;S.team=null;render();window.scrollTo(0,0)});
   document.querySelectorAll("[data-sport]").forEach(b=>b.onclick=()=>{if(S.sport===b.dataset.sport&&!S.team)return;S.sport=b.dataset.sport;S.team=null;store("gp.sport",S.sport);S.sel=null;ensureSel();render()});
-  ({picks:renderPicks,league:renderLeague,board:renderBoard,stats:renderStats,admin:renderAdmin,watch:renderWatch})[S.view]();
+  ({picks:renderPicks,league:renderLeague,board:renderBoard,stats:renderStats,admin:renderAdmin,watch:renderWatch,remind:renderRemind})[S.view]();
   if(fg){const n=[...document.querySelectorAll(".side[data-g]")].find(x=>x.dataset.g===fg&&x.dataset.t===ft);if(n)n.focus({preventScroll:true})}
   window.scrollTo(0,y);
 }
@@ -358,6 +360,7 @@ function startData(){
 }
 function subscribeAll(){
   const fail=()=>toast("Couldn't load part of the picks. Reload to try again.");
+  unsubs.push(db.doc("gp_remind/"+S.user.uid).onSnapshot(d=>{S.remind=d.exists?d.data():{on:false,tok:{}};remindRefresh();rerender()},()=>{S.remind=S.remind||{on:false,tok:{}}}));
   unsubs.push(db.collection("gp_players").onSnapshot(s=>{S.players={};s.docs.forEach(d=>S.players[d.id]=d.data());rerender()},fail));
   unsubs.push(db.collection("gp_weeks").onSnapshot(s=>{S.weeks={};s.docs.forEach(d=>S.weeks[d.id]=d.data());rerender()},fail));
   unsubs.push(db.collection("gp_picks").onSnapshot(s=>{S.picks={};S.locked={};S.ch={};s.docs.forEach(d=>{const x=d.data();(S.picks[x.week]=S.picks[x.week]||{})[x.uid]=x.picks||{};if(x.locked)(S.locked[x.week]=S.locked[x.week]||{})[x.uid]=x.locked;
@@ -591,6 +594,63 @@ async function watchSync(){
 }
 if(WL){setInterval(()=>{if(!document.hidden)watchSync()},30000);document.addEventListener("visibilitychange",()=>{if(!document.hidden)watchSync()});WL.onChange(on=>{WSTATE.last="";if(on)watchSync();else if(S.view==="watch")render()})}
 
+/* ---------- pick reminders (remind.js; the sender is picks/reminders/, an hourly Apps Script on the owner's account) ----------
+   gp_remind/<player>: { on, tok: {<this phone's id>: {t: Cloud Messaging token, at}}, updatedAt }. Turning reminders on asks
+   this phone for notifications and saves its token; the sender reads it, checks the player's NFL picks and sends a
+   notification about two hours before the first game that day that isn't picked yet. The owner also gets an email when no
+   phone can be reached. Turning off clears every phone's token. */
+const RM={busy:false,msg:"",checked:false};
+const devId=()=>{let d=store("gp.dev");if(!d){d=Array.from(crypto.getRandomValues(new Uint8Array(9)),b=>"abcdefghijklmnopqrstuvwxyz234567"[b%32]).join("");store("gp.dev",d)}return d};
+const pushOk=()=>"serviceWorker" in navigator&&"PushManager" in window&&"Notification" in window;
+function loadMessaging(){
+  if(firebase.messaging)return Promise.resolve();
+  return new Promise((ok,no)=>{const sc=document.createElement("script");sc.src="https://www.gstatic.com/firebasejs/11.6.0/firebase-messaging-compat.js";sc.onload=()=>firebase.messaging?ok():no(new Error("no messaging"));sc.onerror=no;document.head.appendChild(sc)});
+}
+async function phoneToken(){
+  await loadMessaging();
+  const reg=(await navigator.serviceWorker.getRegistration("sw.js"))||(await navigator.serviceWorker.register("sw.js"));
+  return firebase.messaging().getToken({serviceWorkerRegistration:reg});
+}
+function renderRemind(){
+  const on=!!(S.remind&&S.remind.on),mine=on&&S.remind.tok&&S.remind.tok[devId()];
+  const perm=pushOk()?Notification.permission:"none";
+  const where=!on?"":mine?"This phone gets them.":S.isOwner?"They come to you by email (this phone isn't set up for notifications).":"Another device of yours gets them, not this one.";
+  $("#view").innerHTML=`<div class="card"><h2>Pick reminders</h2>
+    <p>Turn these on and you'll get a nudge when there are NFL games you haven't picked yet: about two hours before the first game that day you still need to pick. With nothing picked, that's Thursday evening before the Thursday night game, Sunday morning before the early games, and Monday evening. Pick them all, or lock in, and the reminders stop.</p>
+    <p class="status" id="rmst" role="status">${on?`<b>Reminders are on.</b> ${where}`:"Reminders are off."}${perm==="denied"?" Notifications are blocked for this app on this phone. Allow them in the phone's settings for this app, then tap the button again.":""}</p>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">${on&&mine?`<button class="btn" id="rmoff">Turn off reminders</button>`:`<button class="btn gold" id="rmon">${on?"Get them on this phone too":"Turn on reminders"}</button>${on?`<button class="btn" id="rmoff">Turn off</button>`:""}`}</div>
+    <p class="status" id="rmmsg" role="status">${esc(RM.msg)}</p></div>`;
+  if($("#rmon"))$("#rmon").onclick=remindOn;
+  if($("#rmoff"))$("#rmoff").onclick=remindOff;
+}
+function remindMsg(m){RM.msg=m;const x=$("#rmmsg");if(x)x.textContent=m}
+async function remindOn(){
+  if(RM.busy)return;RM.busy=true;remindMsg("Setting up…");
+  const tok=Object.assign({},(S.remind&&S.remind.tok)||{});let t=null,why="";
+  try{
+    if(!pushOk())why="This browser can't show notifications.";
+    else if((await Notification.requestPermission())!=="granted")why="Notifications weren't allowed.";
+    else{try{t=await phoneToken()}catch(_){why="Couldn't set up notifications on this phone just now."}}
+    if(!t&&!S.isOwner){remindMsg(why+" Try again, or open the app from your home screen and tap the button there.");return}
+    if(t)tok[devId()]={t,at:new Date().toISOString()};
+    await db.doc("gp_remind/"+S.user.uid).set({on:true,tok,updatedAt:new Date().toISOString()});
+    remindMsg(t?"You're set. Reminders come to this phone.":why+" Reminders will come to you by email instead.");toast("Reminders on");
+  }catch(_){remindMsg("Couldn't turn reminders on just now. Check your connection and try again.")}
+  finally{RM.busy=false;if(S.view==="remind")renderRemind()}
+}
+async function remindOff(){
+  if(RM.busy)return;RM.busy=true;
+  try{await db.doc("gp_remind/"+S.user.uid).set({on:false,tok:{},updatedAt:new Date().toISOString()});remindMsg("Reminders are off.");toast("Reminders off")}
+  catch(_){remindMsg("Couldn't turn reminders off just now. Try again.")}
+  finally{RM.busy=false;if(S.view==="remind")renderRemind()}
+}
+// Once per visit: if this phone gets reminders, make sure its token is still the current one (tokens can change).
+async function remindRefresh(){
+  if(RM.checked||!S.remind||!S.remind.on||!pushOk()||Notification.permission!=="granted")return;
+  const cur=S.remind.tok&&S.remind.tok[devId()];if(!cur)return;RM.checked=true;
+  try{const t=await phoneToken();if(t&&t!==cur.t){const tok=Object.assign({},S.remind.tok,{[devId()]:{t,at:new Date().toISOString()}});await db.doc("gp_remind/"+S.user.uid).set({on:true,tok,updatedAt:new Date().toISOString()})}}catch(_){}
+}
+
 /* ---------- owner: players and invite codes ---------- */
 function inviteLink(code){return location.origin+location.pathname+"?code="+encodeURIComponent(code)}
 function newCode(){const a="ABCDEFGHJKMNPQRSTUVWXYZ23456789";let s="";const r=crypto.getRandomValues(new Uint8Array(6));r.forEach(n=>s+=a[n%a.length]);return s}
@@ -619,7 +679,7 @@ async function share(code){const url=inviteLink(code);const text=`Join my NFL, M
   if("serviceWorker" in navigator)addEventListener("load",()=>navigator.serviceWorker.register("sw.js").catch(()=>{}));
   if(!window.firebase){$("#app").innerHTML=`<div class="gate"><div class="box"><h1>Gameday Picks</h1><p>Couldn't load. Check your connection and reopen the app.</p></div></div>`;return}
   firebase.initializeApp(FIREBASE_CONFIG);db=firebase.firestore();try{db.enablePersistence({synchronizeTabs:true}).catch(()=>{})}catch(_){}
-  firebase.auth().onAuthStateChanged(u=>{unsubs.forEach(f=>f());unsubs=[];S.user=u;S.me=null;S.players={};S.picks={};S.locked={};S.ch={};S.weeks={};if(u)startData();render()});
+  firebase.auth().onAuthStateChanged(u=>{unsubs.forEach(f=>f());unsubs=[];S.user=u;S.me=null;S.remind=null;S.players={};S.picks={};S.locked={};S.ch={};S.weeks={};if(u)startData();render()});
 })();
 </script>
 </body>

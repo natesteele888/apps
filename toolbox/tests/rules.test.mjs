@@ -626,3 +626,19 @@ test('picks from the watch: another player cannot take over a watch, and a remov
   await assertFails(setDoc(doc(watchDb(), 'gp_picks/player1_2026-2-12'), wPicks('player1', '2026-2-12')));
   await assertSucceeds(deleteDoc(doc(owner(), 'gp_watch/' + WATCH)), 'the owner can clear it');
 });
+
+test('gp_remind: a player turns pick reminders on and off for themselves only', async () => {
+  const at = '2026-11-19T03:00:00.000Z', tok = { dev1: { t: 'token-1', at } };
+  await assertSucceeds(getDoc(doc(player(), 'gp_remind/player1')), 'their own, before it exists');
+  await assertSucceeds(setDoc(doc(player(), 'gp_remind/player1'), { on: true, tok, updatedAt: at }));
+  await assertSucceeds(setDoc(doc(player(), 'gp_remind/player1'), { on: false, tok: {}, updatedAt: at }));
+  await assertFails(setDoc(doc(player(), 'gp_remind/player1'), { on: true, tok, updatedAt: at, extra: 1 }), 'no other fields');
+  await assertFails(setDoc(doc(player(), 'gp_remind/player1'), { on: 'yes', tok, updatedAt: at }), 'on is true or false');
+  const six = Object.fromEntries([1, 2, 3, 4, 5, 6].map(i => ['d' + i, { t: 't' + i, at }]));
+  await assertFails(setDoc(doc(player(), 'gp_remind/player1'), { on: true, tok: six, updatedAt: at }), 'five phones at most');
+  await assertFails(setDoc(doc(player(), 'gp_remind/stranger'), { on: true, tok, updatedAt: at }), 'not someone else\'s');
+  await assertFails(getDoc(doc(stranger(), 'gp_remind/player1')), 'nobody else reads it');
+  await assertFails(getDocs(collection(player(), 'gp_remind')), 'nobody lists them');
+  await assertFails(setDoc(doc(stranger(), 'gp_remind/stranger'), { on: true, tok, updatedAt: at }), 'only league players');
+  await assertSucceeds(getDocs(collection(owner(), 'gp_remind')), 'the owner (and the sender, on the owner\'s account) reads them all');
+});
