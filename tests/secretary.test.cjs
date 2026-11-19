@@ -46,15 +46,29 @@ async function addMotion(page, text, { nay = [], abstain = [], unanimous = false
   const srv = await startServer('secretary');
   const browser = await launch();
   try {
-    await test('the header has a way back to the Dashboard, and the app installs on its own', async () => {
+    await test('the header matches the LYBS family header: logo and "← Dashboard" go back, actions sit in the row under it; the app installs on its own', async () => {
       const { ctx, page, errors } = await newPage(browser);
       await page.goto(srv.url);
       await page.waitForFunction(() => typeof view !== 'undefined' && view === 'home');
       const dash = await page.evaluate(() => { const a = document.querySelector('.topbar #btnDash'); const r = a && a.getBoundingClientRect();
         return a && { href: a.href, target: a.target, text: a.textContent.trim(), shown: r.width > 0 && r.height > 0 }; });
       eq(dash && dash.href, 'https://lybs-dashboard.web.app/', 'goes to the Dashboard');
-      eq(dash.target, '_top', 'leaves the Dashboard frame when shown inside one');
-      eq(dash.text, '‹ Dashboard'); eq(dash.shown, true, 'visible at phone size');
+      eq(dash.target, '', 'opens in place when not inside a frame');
+      eq(dash.text, '← Dashboard'); eq(dash.shown, true, 'visible at phone size');
+      const hd = await page.evaluate(() => ({
+        title: document.querySelector('.topbar h1').textContent.trim(),
+        logo: document.querySelector('.topbar .brand a').href,
+        actsInHeader: !!document.querySelector('.topbar #btnSettings, .topbar #btnHome'),
+        acts: !!document.querySelector('.toolsrow #btnSettings') && !!document.querySelector('.toolsrow #btnHome'),
+        fit: document.documentElement.scrollWidth <= innerWidth }));
+      eq(hd.title, 'Meeting Secretary'); eq(hd.logo, 'https://lybs-dashboard.web.app/', 'the logo goes back to the Dashboard too');
+      eq(hd.actsInHeader, false, 'no page actions in the header'); eq(hd.acts, true, 'All meetings and Roster & Settings in the toolbar row');
+      eq(hd.fit, true, 'nothing runs off the side');
+      // Inside a frame (the Crossbar board page) the Dashboard links open a tab instead of loading in the frame.
+      await page.setContent('<iframe id="f" src="' + srv.url + '" style="width:390px;height:700px"></iframe>');
+      const fr = await (await page.waitForSelector('#f')).contentFrame();
+      await fr.waitForSelector('#btnDash');
+      eq(await fr.evaluate(() => [...document.querySelectorAll('.dash-link')].map(a => a.target).join(',')), '_blank,_blank');
       const man = await (await fetch(srv.url + 'manifest.json')).json();
       eq(man.scope, './', 'its own scope, so it installs as its own app'); eq(man.start_url, './'); eq(man.display, 'standalone');
       eq(man.short_name, 'Secretary');

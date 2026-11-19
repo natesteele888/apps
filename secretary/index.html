@@ -58,27 +58,36 @@ button{cursor:pointer}
 .hidden{display:none!important}
 a{color:var(--blue-soft)}
 
-/* ---------- header (same card as the board page) ---------- */
-.topbar{display:flex;align-items:center;gap:14px;flex-wrap:wrap;width:calc(100% - 40px);max-width:1240px;margin:16px auto 0;padding:16px 18px;border-radius:14px;
-  background:linear-gradient(135deg,var(--hdr) 0%,var(--hdr2) 100%);color:#fff;box-shadow:var(--shadow);position:relative;z-index:20}
-/* the league's transparent logo straight on the navy: screen blending drops its black outline, as on the board page */
-.topbar .logo{height:54px;width:auto;max-width:132px;flex:0 0 auto;mix-blend-mode:screen;filter:drop-shadow(0 2px 10px rgba(26,86,219,.45))}
-.brand{flex:1;min-width:0;display:flex;flex-direction:column}
-.brand .kick{font-size:11px;font-weight:700;letter-spacing:1.6px;text-transform:uppercase;color:#9FB3E6}
-.brand b{font:34px/1 var(--head);letter-spacing:.6px;color:#fff;margin-top:2px;font-weight:400}
-.brand span{color:#C9D2E8;font-size:14px;margin-top:3px}
-.topbar .tb-acts{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
-.topbar .btn,.topbar .btn.ghost{background:rgba(255,255,255,.08);border-color:rgba(255,255,255,.22);color:#fff}
-.topbar .btn:hover,.topbar .btn.ghost:hover{background:rgba(255,255,255,.16)}
-.savepill{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;color:#D7F5E5;background:rgba(91,212,154,.16);border:1px solid rgba(91,212,154,.35);padding:3px 10px;border-radius:999px;white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:ellipsis}
-.savepill:before{content:"";width:7px;height:7px;border-radius:50%;background:#5BD49A;flex:none;box-shadow:0 0 0 3px rgba(91,212,154,.25)}
-.savepill.warn{color:#FFD9D6;background:rgba(255,99,88,.2);border-color:rgba(255,138,128,.5)}
-.savepill.warn:before{background:#FF8A80;box-shadow:0 0 0 3px rgba(255,138,128,.25)}
+/* ---------- header: the LYBS family header (lybs-reporting shared/app-header.css) ----------
+   Same as every Dashboard page: a navy card with the logo, the page's name and one line under it, and
+   on the right the way back to the Dashboard. The logo goes back to the Dashboard too. Page actions
+   never sit in the header; they go in the toolbar row under it (where am I / what can I do here). */
+.topbar{display:flex;align-items:center;gap:14px;flex-wrap:wrap;width:calc(100% - 40px);max-width:1240px;margin:16px auto 0;padding:12px 16px;border-radius:14px;
+  background:linear-gradient(135deg,#0a1628 0%,#16294f 100%);color:#fff;box-shadow:0 1px 2px rgba(16,24,40,.08),0 2px 8px rgba(16,24,40,.12);position:relative;z-index:20}
+.brand{display:flex;align-items:center;gap:12px;min-width:0;flex:1 1 280px}
+.brand a{display:flex;flex:0 0 auto}
+/* the league's transparent logo straight on the navy: screen blending drops its black outline */
+.topbar .logo{height:40px;width:auto;max-width:98px;flex:0 0 auto;mix-blend-mode:screen;filter:drop-shadow(0 2px 8px rgba(26,86,219,.45))}
+.brand .bt{min-width:0}
+.topbar h1{margin:0;font:600 24px/1.1 var(--label);letter-spacing:.2px;color:#fff;text-transform:none}
+.topbar h1 span{color:#9FB3E6}
+.topbar .bt p{margin:3px 0 0;font-size:13px;line-height:1.35;color:#C9D2E8}
+.topbar .tb-nav{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.topbar .tb-nav .btn{min-height:38px;padding:0 14px;font-size:14px;border-radius:9px;background:#fff;color:#0a1628;border-color:#fff}
+.topbar .tb-nav .btn:hover{background:#E7ECF8}
+.topbar .tb-nav .btn:focus-visible{outline:2px solid #9FB3E6;outline-offset:2px}
+/* the toolbar row under the header: save status on the left, this app's own buttons on the right */
+.toolsrow{display:flex;align-items:center;gap:8px;flex-wrap:wrap;width:calc(100% - 40px);max-width:1240px;margin:10px auto 0}
+.toolsrow .end{margin-left:auto;display:flex;gap:8px;flex-wrap:wrap}
+.savepill{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;color:var(--green);background:var(--green-bg);border:1px solid color-mix(in srgb,var(--green) 40%,transparent);padding:3px 10px;border-radius:999px;white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:ellipsis}
+.savepill:before{content:"";width:7px;height:7px;border-radius:50%;background:currentColor;flex:none}
+.savepill.warn{color:var(--red);background:var(--red-bg);border-color:color-mix(in srgb,var(--red) 45%,transparent)}
 /* during a meeting the header gets slimmer so the clocks and notes get the room */
-body:has(#agLive) .topbar{padding:10px 14px}
-body:has(#agLive) .topbar .logo{height:38px}
-body:has(#agLive) .brand b{font-size:26px}
-body:has(#agLive) .brand span,body:has(#agLive) .brand .kick{display:none}
+body:has(#agLive) .topbar{padding:8px 14px}
+body:has(#agLive) .topbar .logo{height:30px}
+body:has(#agLive) .topbar h1{font-size:20px}
+body:has(#agLive) .topbar .bt p{display:none}
+body:has(#agLive) .toolsrow{margin-top:8px}
 .stepl{font:700 11.5px var(--label);letter-spacing:1.2px;text-transform:uppercase;color:var(--text-3);margin:14px 0 6px}
 .pill{display:inline-flex;align-items:center;font:700 12px var(--label);padding:3px 10px;border-radius:999px;border:1px solid var(--line);color:var(--text-2);white-space:nowrap}
 
@@ -333,7 +342,7 @@ details.tx div{font-size:13px;color:var(--text-2);max-height:260px;overflow:auto
 /* live screen fits the window: clocks/Pause/End stay put, each column scrolls inside itself */
 @media (min-width:901px){
   body:has(#agLive){height:100vh;display:flex;flex-direction:column;overflow:hidden}
-  body:has(#agLive) .topbar{flex:none}
+  body:has(#agLive) .topbar,body:has(#agLive) .toolsrow{flex:none}
   body:has(#agLive) main#app{flex:1;min-height:0;width:100%;display:flex;flex-direction:column;padding:12px 20px 14px}
   body:has(#agLive) .recbar{flex:none;margin-bottom:12px;padding:10px 16px}
   body:has(#agLive) #srBanner{flex:none}
@@ -388,18 +397,19 @@ html.locked body > *:not(#lockScreen){visibility:hidden}
 /* ---------- phone first: the Samsung in Chrome ---------- */
 @media (max-width:600px){
   main{padding:12px 10px 40px}
-  .topbar{width:calc(100% - 20px);margin-top:10px;padding:14px;gap:12px;border-radius:12px}
-  .topbar .logo{height:44px;max-width:106px}
-  .brand b{font-size:29px}
-  .brand span{display:none}
-  .topbar .tb-acts{flex:1 1 100%}
-  .topbar .tb-acts .btn{flex:1 1 calc(50% - 4px);min-height:40px}
-  .brand{flex:1 1 calc(100% - 130px)}   /* logo and title fill the first line; the save status drops to its own line */
-  .savepill{flex:0 1 auto}
-  body:has(#agLive) .topbar{padding:10px 12px;gap:8px}
-  body:has(#agLive) .topbar .logo{height:32px}
-  body:has(#agLive) .brand b{font-size:22px}
-  body:has(#agLive) .topbar .tb-acts .btn{min-height:36px}
+  .topbar{width:calc(100% - 20px);margin-top:10px;padding:12px;gap:10px;border-radius:12px}
+  .toolsrow{width:calc(100% - 20px)}
+  .toolsrow .end{flex:1 1 100%;margin-left:0}
+  .toolsrow .end .btn{flex:1 1 0;min-height:40px}
+  .topbar .logo{height:34px;max-width:84px}
+  .topbar h1{font-size:20px}
+  .topbar .bt p{font-size:12.5px}
+  .topbar .tb-nav{width:100%}
+  .topbar .tb-nav .btn{flex:1 1 0;padding:0 10px;font-size:13.5px}
+  body:has(#agLive) .topbar{padding:8px 12px;gap:8px}
+  body:has(#agLive) .topbar .logo{height:28px}
+  body:has(#agLive) .topbar h1{font-size:18px}
+  body:has(#agLive) .topbar .tb-nav .btn,body:has(#agLive) .toolsrow .end .btn{min-height:36px}
   h1{font-size:29px}
   h2{font-size:21px}
   .sub{margin-bottom:16px}
@@ -446,16 +456,22 @@ html.locked body > *:not(#lockScreen){visibility:hidden}
 </div>
 
 <header class="topbar">
-  <img class="logo" src="logo.svg" alt="LYBS">
-  <div class="brand"><div class="kick">LYBS Board of Directors</div><b>Meeting Secretary</b><span>Lunenburg Youth Baseball &amp; Softball</span></div>
-  <span id="topStatus" class="savepill" role="status">Saved</span>
-  <div class="tb-acts">
-    <!-- back to the LYBS Dashboard, which links here too; _top leaves the Dashboard's frame when it shows this app inside one -->
-    <a class="btn ghost sm" id="btnDash" href="https://lybs-dashboard.web.app/" target="_top" title="Back to the LYBS Dashboard">‹ Dashboard</a>
-    <button class="btn ghost sm" id="btnSettings" title="Board roster &amp; settings">Roster &amp; Settings</button>
-    <button class="btn ghost sm" id="btnHome">All meetings</button>
-  </div>
+  <div class="brand"><a class="dash-link" href="https://lybs-dashboard.web.app/" title="Back to the Dashboard"><img class="logo" src="logo.svg" alt="LYBS Dashboard"></a><div class="bt"><h1>Meeting <span>Secretary</span></h1><p>Board meetings, motions and minutes</p></div></div>
+  <!-- the way back to the LYBS Dashboard, which links here too -->
+  <nav class="tb-nav" aria-label="Other LYBS pages"><a class="btn dash-link" id="btnDash" href="https://lybs-dashboard.web.app/" title="Back to the LYBS Dashboard">← Dashboard</a></nav>
 </header>
+<div class="toolsrow">
+  <span id="topStatus" class="savepill" role="status">Saved</span>
+  <span class="end">
+    <button class="btn sm" id="btnHome">All meetings</button>
+    <button class="btn sm" id="btnSettings" title="Board roster &amp; settings">Roster &amp; Settings</button>
+  </span>
+</div>
+<script>
+/* Inside a frame (the board page on the league's Crossbar site), the Dashboard links open a tab instead of loading in that little box. */
+(function(){ var framed; try { framed = window.self !== window.top; } catch(e){ framed = true; }
+  if (framed) document.querySelectorAll('.dash-link').forEach(function(a){ a.target = '_blank'; a.rel = 'noopener'; }); })();
+</script>
 
 <main id="app"></main>
 <div id="printRoot"></div>
