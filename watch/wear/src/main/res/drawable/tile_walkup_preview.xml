@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- What the Walk-Up tile looks like, in the watch's list of tiles: the name on top and one big red Stop -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android" android:width="192dp" android:height="192dp" android:viewportWidth="192" android:viewportHeight="192">
+    <path android:fillColor="#FF000000" android:pathData="M96,0a96,96 0,1 1,0 192a96,96 0,1 1,0 -192z" />
+    <path android:fillColor="#FF93C5FD" android:pathData="M70,52h52v10h-52z" />
+    <path android:fillColor="#FF94A3B8" android:pathData="M78,68h36v5h-36z" />
+    <path android:fillColor="#FFDC2626" android:pathData="M68,84h56a26,26 0,0 1,0 52h-56a26,26 0,0 1,0 -52z" />
+    <path android:fillColor="#FFFFFFFF" android:pathData="M86,104h20v12h-20z" />
+    <path android:fillColor="#FF94A3B8" android:pathData="M66,146h60v5h-60z" />
+</vector>

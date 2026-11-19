@@ -1,6 +1,6 @@
 {
   "about": "The one list of Nathan's apps. Live links, which apps show where, and each app's App Store listing (text, highlights, screenshots) all come from here. Edit listings and icons in the Toolbox; the sync job copies them here. Don't hand-edit text in store/index.html.",
-  "updated": "2026-11-18",
+  "updated": "2026-11-19",
   "toolbox": "https://natesteele888.github.io/apps/toolbox/",
   "store": "https://natesteele888.github.io/apps/store/",
   "apps": [
@@ -80,11 +80,23 @@
         "autoShots": [],
         "latest": {
           "d": "Nov 18, 2026",
-          "t": "Fairway: hole sketches, Jack the caddie's lines, and course sounds while you score",
-          "url": "https://github.com/natesteele888/apps/commit/c88682862102ec00112b9a35dabae8a20df052ae"
+          "t": "Toolbox rules: note that fg, fam and ps were published",
+          "url": "https://github.com/natesteele888/apps/commit/f7eff24832325df6acf2b9a4fc234bbca5d94dc5"
         },
-        "version": "1.5.4",
+        "version": "1.5.7",
         "history": [
+          {
+            "v": "1.5.7",
+            "t": "Toolbox rules: note that fg, fam and ps were published"
+          },
+          {
+            "v": "1.5.6",
+            "t": "Fairway rules: shared tournaments can be a front or back nine"
+          },
+          {
+            "v": "1.5.5",
+            "t": "My Stats on the watch: LYBS stats by season and personal bests"
+          },
           {
             "v": "1.5.4",
             "t": "Fairway: hole sketches, Jack the caddie's lines, and course sounds while you score"
@@ -92,18 +104,6 @@
           {
             "v": "1.5.3",
             "t": "Fairway on the watch: yards, score and Jack"
-          },
-          {
-            "v": "1.5.2",
-            "t": "Practice Clock on the family watch: station, countdown and a buzz at every change"
-          },
-          {
-            "v": "1.5.1",
-            "t": "Fairway: side games with a running tally (skins, team skins, Nassau, wolf, best ball, CTP, long drive, greenies, sandies, snake)"
-          },
-          {
-            "v": "1.5.0",
-            "t": "Schedule on the family watch: games and practices with live scores"
           }
         ]
       }
@@ -190,12 +190,16 @@
         ],
         "autoShots": [],
         "latest": {
-          "d": "Nov 16, 2026",
-          "t": "Where Do I Go?: org in a box (any league's name, colors, logo and teams from settings)",
-          "url": "https://github.com/natesteele888/apps/commit/bf46c2ba9da76043164e15e0c2c8d22ccdf440c3"
+          "d": "Nov 18, 2026",
+          "t": "Where Do I Go: New here? steps for first-timers, position names under each chip, bigger labels",
+          "url": "https://github.com/natesteele888/lybs-ballclub/commit/439871113eb4c740324ba5de6608ce12efe7db9b"
         },
-        "version": "1.5.3",
+        "version": "1.5.4",
         "history": [
+          {
+            "v": "1.5.4",
+            "t": "Where Do I Go: New here? steps for first-timers, position names under each chip, bigger labels"
+          },
           {
             "v": "1.5.3",
             "t": "Where Do I Go?: org in a box (any league's name, colors, logo and teams from settings)"
@@ -211,10 +215,6 @@
           {
             "v": "1.5.0",
             "t": "Situations: note that the App Store's Where Do I Go? runs this trainer too"
-          },
-          {
-            "v": "1.4.9",
-            "t": "Where Do I Go?: run LYBS Ballclub's Situations trainer, so it's always the newest"
           }
         ],
         "caps": [
@@ -329,11 +329,19 @@
         "autoShots": [],
         "latest": {
           "d": "Nov 18, 2026",
-          "t": "Gameday Picks: team records and a win-chance gauge on every matchup",
-          "url": "https://github.com/natesteele888/apps/commit/836133cc559f0944d00d8c8939c65bfafdd471a4"
+          "t": "Gameday Picks: lock in to see picks, and challenges",
+          "url": "https://github.com/natesteele888/apps/commit/beecc6dc9d1be429481d4a508511f1963a2824d3"
         },
-        "version": "1.1.7",
+        "version": "1.1.9",
         "history": [
+          {
+            "v": "1.1.9",
+            "t": "Gameday Picks: lock in to see picks, and challenges"
+          },
+          {
+            "v": "1.1.8",
+            "t": "Gameday Picks: sign up with a player name and a 4-digit PIN"
+          },
           {
             "v": "1.1.7",
             "t": "Gameday Picks: team records and a win-chance gauge on every matchup"
@@ -345,14 +353,6 @@
           {
             "v": "1.1.5",
             "t": "Keep the install pop-up off floating bottom buttons"
-          },
-          {
-            "v": "1.1.4",
-            "t": "Lift the install pop-up above an app's bottom tab bar"
-          },
-          {
-            "v": "1.1.3",
-            "t": "Gameday Picks: paint the page before the Firebase code arrives"
           }
         ],
         "caps": [
@@ -363,7 +363,8 @@
           "Switch leagues with one tap: NFL, MLB, NBA and NHL",
           "Invite your crew with a code, and turn it off any time"
         ]
-      }
+      },
+      "store": true
     },
     {
       "id": "bengals",
@@ -443,12 +444,16 @@
         ],
         "autoShots": [],
         "latest": {
-          "d": "Nov 16, 2026",
-          "t": "Show the logo and background on the sign-in and loading screens with no signal",
-          "url": "https://github.com/natesteele888/ASL-Bengals/commit/45c7bf8a8384c4d8b27ff1b4cc454bb9e7104f0a"
+          "d": "Nov 18, 2026",
+          "t": "Play Builder: don't crash when no play or formation is loaded yet",
+          "url": "https://github.com/natesteele888/ASL-Bengals/commit/5fe08655d65263b0a08908e7729f8f0562c23ca7"
         },
-        "version": "1.50.5",
+        "version": "1.50.6",
         "history": [
+          {
+            "v": "1.50.6",
+            "t": "Play Builder: don't crash when no play or formation is loaded yet"
+          },
           {
             "v": "1.50.5",
             "t": "Show the logo and background on the sign-in and loading screens with no signal"
@@ -464,10 +469,6 @@
           {
             "v": "1.50.2",
             "t": "Make the name button at the top of every screen easy to tap"
-          },
-          {
-            "v": "1.50.1",
-            "t": "Banner: end with 'All of us coaches are proud of you.'"
           }
         ],
         "caps": [
@@ -560,12 +561,16 @@
         ],
         "autoShots": [],
         "latest": {
-          "d": "Nov 17, 2026",
-          "t": "Gridiron Hub role preview: make the Back to Gridiron Hub link easy to tap",
-          "url": "https://github.com/natesteele888/ASL-Bengals/commit/4417e1c915587f99b81b4f7d74588fd46ed0c78e"
+          "d": "Nov 18, 2026",
+          "t": "Gridiron Hub: show the saved copy after 3 seconds on one weak bar of signal",
+          "url": "https://github.com/natesteele888/ASL-Bengals/commit/11f8b4faee0b806aa02e9d48d1da7aa0486d0902"
         },
-        "version": "1.6.1",
+        "version": "1.6.2",
         "history": [
+          {
+            "v": "1.6.2",
+            "t": "Gridiron Hub: show the saved copy after 3 seconds on one weak bar of signal"
+          },
           {
             "v": "1.6.1",
             "t": "Gridiron Hub role preview: make the Back to Gridiron Hub link easy to tap"
@@ -581,10 +586,6 @@
           {
             "v": "1.5.8",
             "t": "Make the For Coaches page's form and course links easy to tap"
-          },
-          {
-            "v": "1.5.7",
-            "t": "Gridiron Hub: make the Full schedule, All Programs and Email us links easy to tap"
           }
         ],
         "caps": [
@@ -766,30 +767,30 @@
         "autoShots": [],
         "latest": {
           "d": "Nov 18, 2026",
-          "t": "Sponsors: \"Sponsored by\" on the team's Home card; take the sponsor fill out of Share to Social",
-          "url": "https://github.com/natesteele888/lybs-ballclub/commit/247c954b9c98aed39d0467c19db51bf0eeb49930"
+          "t": "Age page: open the chart on the baseball divisions, not an empty row",
+          "url": "https://github.com/natesteele888/lybs-ballclub/commit/d278c8473d02a5cfc3fc76e1b8ff57b9a7b92556"
         },
-        "version": "1.28.0",
+        "version": "1.28.7",
         "history": [
           {
-            "v": "1.28.0",
-            "t": "Sponsors: \"Sponsored by\" on the team's Home card; take the sponsor fill out of Share to Social"
+            "v": "1.28.7",
+            "t": "Age page: open the chart on the baseball divisions, not an empty row"
           },
           {
-            "v": "1.27.9",
-            "t": "Calendar: send the next two weeks of games and practices to the watch"
+            "v": "1.28.6",
+            "t": "Coach link from the Dashboard: a board member who opens it gives that coach the team in Ballclub"
           },
           {
-            "v": "1.27.8",
-            "t": "Share to Social: suggest this team's sponsors in the thank-you box"
+            "v": "1.28.5",
+            "t": "Practice plans: a League practice plans section for each division, Coaching opens on Practice Plan"
           },
           {
-            "v": "1.27.7",
-            "t": "Rules deploy: stop with a plain message when the database secrets aren't set"
+            "v": "1.28.4",
+            "t": "Switch team: the open team's name on the button, sport and division in the picker, works with no signal"
           },
           {
-            "v": "1.27.6",
-            "t": "Public info: Try again retries the panel instead of going back to sign-in"
+            "v": "1.28.3",
+            "t": "Fields: Directions from where you are, in place of Street View"
           }
         ],
         "caps": [
@@ -951,11 +952,15 @@
         "autoShots": [],
         "latest": {
           "d": "Nov 18, 2026",
-          "t": "Power Program on the watch: today's workout goes to the watch, its ticks come back",
-          "url": "https://github.com/natesteele888/fitness-hub/commit/ba7af7df9a2ed0a108debe656beb98367ad6bc38"
+          "t": "Power Program: open the saved copy after 3 seconds on one weak bar of signal",
+          "url": "https://github.com/natesteele888/fitness-hub/commit/bf1dbf87af4ddcd0fcbf5bc49a1decbb37f43a1d"
         },
-        "version": "1.4.2",
+        "version": "1.4.3",
         "history": [
+          {
+            "v": "1.4.3",
+            "t": "Power Program: open the saved copy after 3 seconds on one weak bar of signal"
+          },
           {
             "v": "1.4.2",
             "t": "Power Program on the watch: today's workout goes to the watch, its ticks come back"
@@ -971,10 +976,6 @@
           {
             "v": "1.3.9",
             "t": "Power Program: keep tab and Prev/Next words inside their buttons on a small phone"
-          },
-          {
-            "v": "1.3.8",
-            "t": "Power Program: keep the check-in units on screen on a small phone"
           }
         ],
         "caps": [
@@ -986,7 +987,7 @@
           "See the gap between left and right leg at a glance"
         ]
       },
-      "store": true
+      "store": false
     },
     {
       "id": "cube",
@@ -1061,12 +1062,20 @@
         ],
         "autoShots": [],
         "latest": {
-          "d": "Nov 18, 2026",
-          "t": "Watch link copy: add Practice Clock's pk field, matching the apps original",
-          "url": "https://github.com/natesteele888/cube-clock/commit/eaf2a5a31667c0783633fe751c94612c09d39598"
+          "d": "Nov 19, 2026",
+          "t": "Statistics: make the chart's Last 50 / Last 200 / All buttons easier to tap",
+          "url": "https://github.com/natesteele888/cube-clock/commit/db62ef3b79df0eb6c5bd70398e13cbbacd7d680d"
         },
-        "version": "1.3.4",
+        "version": "1.3.6",
         "history": [
+          {
+            "v": "1.3.6",
+            "t": "Statistics: make the chart's Last 50 / Last 200 / All buttons easier to tap"
+          },
+          {
+            "v": "1.3.5",
+            "t": "Watch link copy: add the fg and ps fields, matching the apps original"
+          },
           {
             "v": "1.3.4",
             "t": "Watch link copy: add Practice Clock's pk field, matching the apps original"
@@ -1078,14 +1087,6 @@
           {
             "v": "1.3.2",
             "t": "Statistics: say the watch hint once"
-          },
-          {
-            "v": "1.3.1",
-            "t": "Your watch: Cube Clock on a Wear OS watch"
-          },
-          {
-            "v": "1.3.0",
-            "t": "Statistics: stretch the last stat tile instead of leaving a grey box"
           }
         ],
         "caps": [
@@ -1190,30 +1191,30 @@
         "autoShots": [],
         "latest": {
           "d": "Nov 18, 2026",
-          "t": "Sponsors: no sponsor list for coaches; team page \"Sponsored by\" name and logo",
-          "url": "https://github.com/natesteele888/sponsor-banner-inventory/commit/cc68545e0987a88480919bd07777ec99c3e8ccb9"
+          "t": "Sponsors: let in a Google address without a Dashboard role",
+          "url": "https://github.com/natesteele888/sponsor-banner-inventory/commit/6a58c248494181ec36702503f21a8d52ae35993b"
         },
-        "version": "1.3.4",
+        "version": "1.4.0",
         "history": [
           {
-            "v": "1.3.4",
-            "t": "Sponsors: no sponsor list for coaches; team page \"Sponsored by\" name and logo"
+            "v": "1.4.0",
+            "t": "Sponsors: let in a Google address without a Dashboard role"
           },
           {
-            "v": "1.3.3",
-            "t": "Ballclub door: coaches get their own team's sponsor names only"
+            "v": "1.3.9",
+            "t": "Sponsors: totals fit their boxes, plus a thin year-over-year strip"
           },
           {
-            "v": "1.3.2",
-            "t": "Sponsors: keep team picks in Script Properties, not a new Sheet tab"
+            "v": "1.3.8",
+            "t": "Sponsors: its own home-screen app, board-only screen for everyone else"
           },
           {
-            "v": "1.3.1",
-            "t": "LYBS Sponsors: live sponsorship sheet tab with team picks"
+            "v": "1.3.7",
+            "t": "Fields tab: Place here, Mark hung from a dot, print a hang sheet"
           },
           {
-            "v": "1.3.0",
-            "t": "2027 tab: five count tiles in one row; hide the empty photo box"
+            "v": "1.3.6",
+            "t": "Show the saved copy after 3 seconds on one weak bar of signal"
           }
         ],
         "caps": [
@@ -1303,12 +1304,16 @@
         ],
         "autoShots": [],
         "latest": {
-          "d": "Nov 16, 2026",
-          "t": "Show a loading screen when a host opens Edit, and don't paint the editor over the page they moved to",
-          "url": "https://github.com/natesteele888/events/commit/cc9bdcd03b9cde8826ddd863496c3c53e3f52ff2"
+          "d": "Nov 18, 2026",
+          "t": "Events: show the saved page after 3 seconds on one bar of signal",
+          "url": "https://github.com/natesteele888/events/commit/9c8401deaf05b540d2c8fcb88b29c88ed4c7d32b"
         },
-        "version": "1.3.7",
+        "version": "1.3.8",
         "history": [
+          {
+            "v": "1.3.8",
+            "t": "Events: show the saved page after 3 seconds on one bar of signal"
+          },
           {
             "v": "1.3.7",
             "t": "Show a loading screen when a host opens Edit, and don't paint the editor over the page they moved to"
@@ -1324,10 +1329,6 @@
           {
             "v": "1.3.3",
             "t": "Load the fonts without holding up the Events page"
-          },
-          {
-            "v": "1.3.1",
-            "t": "Load the QR code library without holding up the page"
           }
         ],
         "caps": [
@@ -1338,7 +1339,8 @@
           "The guest list: headcount, pizza choices and comments",
           "Design the invitation on screen with a live preview"
         ]
-      }
+      },
+      "store": true
     },
     {
       "id": "eightcount",
@@ -1418,12 +1420,16 @@
         ],
         "autoShots": [],
         "latest": {
-          "d": "Nov 15, 2026",
-          "t": "Load the fonts without holding up six apps",
-          "url": "https://github.com/natesteele888/apps/commit/036fbc3def826df877e2c87aa48c4c7526c7ccb8"
+          "d": "Nov 19, 2026",
+          "t": "Eight Count, Play Board, Locker: open the saved copy after 3 seconds on one weak bar",
+          "url": "https://github.com/natesteele888/apps/commit/cd45d7df8407abb9d1931c2f172f1a18801ce2cd"
         },
-        "version": "1.0.5",
+        "version": "1.0.6",
         "history": [
+          {
+            "v": "1.0.6",
+            "t": "Eight Count, Play Board, Locker: open the saved copy after 3 seconds on one weak bar"
+          },
           {
             "v": "1.0.5",
             "t": "Load the fonts without holding up six apps"
@@ -1439,10 +1445,6 @@
           {
             "v": "1.0.2",
             "t": "Every app: a health check on open, a problem log, and a Something wrong? report"
-          },
-          {
-            "v": "1.0.1",
-            "t": "Add Eight Count: cheer and dance counts, lock in together, record and review"
           }
         ],
         "caps": [
@@ -1531,12 +1533,16 @@
         ],
         "autoShots": [],
         "latest": {
-          "d": "Nov 13, 2026",
-          "t": "Fix phone-width clips in Who's Where, Eight Count and Play Board",
-          "url": "https://github.com/natesteele888/apps/commit/89d1f611742c334e4259a967f447876f71dc11d1"
+          "d": "Nov 19, 2026",
+          "t": "Eight Count, Play Board, Locker: open the saved copy after 3 seconds on one weak bar",
+          "url": "https://github.com/natesteele888/apps/commit/cd45d7df8407abb9d1931c2f172f1a18801ce2cd"
         },
-        "version": "1.0.4",
+        "version": "1.0.5",
         "history": [
+          {
+            "v": "1.0.5",
+            "t": "Eight Count, Play Board, Locker: open the saved copy after 3 seconds on one weak bar"
+          },
           {
             "v": "1.0.4",
             "t": "Fix phone-width clips in Who's Where, Eight Count and Play Board"
@@ -1639,12 +1645,16 @@
         ],
         "autoShots": [],
         "latest": {
-          "d": "Nov 12, 2026",
-          "t": "Add a copyright notice and an all-rights-reserved LICENSE",
-          "url": "https://github.com/natesteele888/apps/commit/25fd10682c4fe1ef072b42512df48ff23a75faea"
+          "d": "Nov 19, 2026",
+          "t": "Eight Count, Play Board, Locker: open the saved copy after 3 seconds on one weak bar",
+          "url": "https://github.com/natesteele888/apps/commit/cd45d7df8407abb9d1931c2f172f1a18801ce2cd"
         },
-        "version": "1.0.4",
+        "version": "1.0.5",
         "history": [
+          {
+            "v": "1.0.5",
+            "t": "Eight Count, Play Board, Locker: open the saved copy after 3 seconds on one weak bar"
+          },
           {
             "v": "1.0.4",
             "t": "Add a copyright notice and an all-rights-reserved LICENSE"
@@ -1749,11 +1759,15 @@
         "autoShots": [],
         "latest": {
           "d": "Nov 18, 2026",
-          "t": "Practice Clock on the family watch: station, countdown and a buzz at every change",
-          "url": "https://github.com/natesteele888/apps/commit/4ad814d129df04f87f1519e0a79111baf89be667"
+          "t": "Walk-Up, Scoreboard, Practice Clock: open the saved copy after 3 seconds on one weak bar",
+          "url": "https://github.com/natesteele888/apps/commit/a0ef59afd165323bfc5e7bf329653078fb5659fa"
         },
-        "version": "1.0.4",
+        "version": "1.0.5",
         "history": [
+          {
+            "v": "1.0.5",
+            "t": "Walk-Up, Scoreboard, Practice Clock: open the saved copy after 3 seconds on one weak bar"
+          },
           {
             "v": "1.0.4",
             "t": "Practice Clock on the family watch: station, countdown and a buzz at every change"
@@ -1857,12 +1871,16 @@
         ],
         "autoShots": [],
         "latest": {
-          "d": "Nov 15, 2026",
-          "t": "Who's Where: move focus into a sheet the moment it opens",
-          "url": "https://github.com/natesteele888/apps/commit/0dc22eb7733b0c6f48fb36a581d6ba6454cf3050"
+          "d": "Nov 19, 2026",
+          "t": "Get Ready, Who's Where, Tournament Pack: open the saved copy after 3 seconds on one weak bar",
+          "url": "https://github.com/natesteele888/apps/commit/6ec74c96f9f70b02d1b07e2cb67192f9e3328c49"
         },
-        "version": "1.0.5",
+        "version": "1.0.6",
         "history": [
+          {
+            "v": "1.0.6",
+            "t": "Get Ready, Who's Where, Tournament Pack: open the saved copy after 3 seconds on one weak bar"
+          },
           {
             "v": "1.0.5",
             "t": "Who's Where: move focus into a sheet the moment it opens"
@@ -1878,10 +1896,6 @@
           {
             "v": "1.0.2",
             "t": "Every app: a health check on open, a problem log, and a Something wrong? report"
-          },
-          {
-            "v": "1.0.1",
-            "t": "Who's Where: the family sports week, with conflicts flagged"
           }
         ],
         "caps": [
@@ -1971,12 +1985,16 @@
         ],
         "autoShots": [],
         "latest": {
-          "d": "Nov 17, 2026",
-          "t": "Party games, flag football and keep score between Tournament Pack and Scoreboard",
-          "url": "https://github.com/natesteele888/apps/commit/ef445f99d7084cae240302dc69e3a25f6db3478d"
+          "d": "Nov 19, 2026",
+          "t": "Get Ready, Who's Where, Tournament Pack: open the saved copy after 3 seconds on one weak bar",
+          "url": "https://github.com/natesteele888/apps/commit/6ec74c96f9f70b02d1b07e2cb67192f9e3328c49"
         },
-        "version": "1.0.9",
+        "version": "1.1.0",
         "history": [
+          {
+            "v": "1.1.0",
+            "t": "Get Ready, Who's Where, Tournament Pack: open the saved copy after 3 seconds on one weak bar"
+          },
           {
             "v": "1.0.9",
             "t": "Party games, flag football and keep score between Tournament Pack and Scoreboard"
@@ -1992,10 +2010,6 @@
           {
             "v": "1.0.6",
             "t": "Tournament Pack: know if you're in the bracket, and try some scores"
-          },
-          {
-            "v": "1.0.5",
-            "t": "Add a copyright notice and an all-rights-reserved LICENSE"
           }
         ],
         "caps": [
@@ -2092,11 +2106,15 @@
         "autoShots": [],
         "latest": {
           "d": "Nov 18, 2026",
-          "t": "Older phones: keep Scoreboard's big score, Film Lite's video size and Walk-Up's pitch card working",
-          "url": "https://github.com/natesteele888/apps/commit/24c399124e2010db19c20226b0385756bc1dee7d"
+          "t": "Walk-Up, Scoreboard, Practice Clock: open the saved copy after 3 seconds on one weak bar",
+          "url": "https://github.com/natesteele888/apps/commit/a0ef59afd165323bfc5e7bf329653078fb5659fa"
         },
-        "version": "1.3.0",
+        "version": "1.3.1",
         "history": [
+          {
+            "v": "1.3.1",
+            "t": "Walk-Up, Scoreboard, Practice Clock: open the saved copy after 3 seconds on one weak bar"
+          },
           {
             "v": "1.3.0",
             "t": "Older phones: keep Scoreboard's big score, Film Lite's video size and Walk-Up's pitch card working"
@@ -2112,10 +2130,6 @@
           {
             "v": "1.2.5",
             "t": "Walk-Up: a Ballclub song starts where the family set it, even on a short song"
-          },
-          {
-            "v": "1.2.4",
-            "t": "Walk-Up: approve Ballclub song requests in one tap and bring approved songs onto the phone; iPhone audio and the watch note"
           }
         ],
         "caps": [
@@ -2206,11 +2220,15 @@
         "autoShots": [],
         "latest": {
           "d": "Nov 18, 2026",
-          "t": "Older phones: keep Scoreboard's big score, Film Lite's video size and Walk-Up's pitch card working",
-          "url": "https://github.com/natesteele888/apps/commit/24c399124e2010db19c20226b0385756bc1dee7d"
+          "t": "Walk-Up, Scoreboard, Practice Clock: open the saved copy after 3 seconds on one weak bar",
+          "url": "https://github.com/natesteele888/apps/commit/a0ef59afd165323bfc5e7bf329653078fb5659fa"
         },
-        "version": "1.0.9",
+        "version": "1.1.0",
         "history": [
+          {
+            "v": "1.1.0",
+            "t": "Walk-Up, Scoreboard, Practice Clock: open the saved copy after 3 seconds on one weak bar"
+          },
           {
             "v": "1.0.9",
             "t": "Older phones: keep Scoreboard's big score, Film Lite's video size and Walk-Up's pitch card working"
@@ -2226,10 +2244,6 @@
           {
             "v": "1.0.6",
             "t": "Scoreboard baseball: runners on base, a run limit per inning, and a game time limit"
-          },
-          {
-            "v": "1.0.5",
-            "t": "Scoreboard: big scores shrink to fit their half; Recent games lines wrap"
           }
         ],
         "caps": [
@@ -2242,7 +2256,7 @@
           "Start a game in one tap, and look back at recent finals"
         ]
       },
-      "store": true
+      "store": false
     },
     {
       "id": "fairway",
@@ -2326,30 +2340,30 @@
         ],
         "latest": {
           "d": "Nov 18, 2026",
-          "t": "Fairway: Monoosnock Country Club as a ready-made course",
-          "url": "https://github.com/natesteele888/apps/commit/303794e639875fb0ed3f6ecc2fe054e968b2365c"
+          "t": "Fairway: refresh the saved copy even when it showed first on a slow load",
+          "url": "https://github.com/natesteele888/apps/commit/a7b40f581b42a0d758a453736c441115cea43265"
         },
-        "version": "1.1.7",
+        "version": "1.4.0",
         "history": [
           {
-            "v": "1.1.7",
-            "t": "Fairway: Monoosnock Country Club as a ready-made course"
+            "v": "1.4.0",
+            "t": "Fairway: refresh the saved copy even when it showed first on a slow load"
           },
           {
-            "v": "1.1.6",
-            "t": "Fairway demo: play this phone as a golfer in group 1"
+            "v": "1.3.9",
+            "t": "Fairway pace of play: a fixed score keeps the time the hole was first scored"
           },
           {
-            "v": "1.1.5",
-            "t": "Fairway: hole sketches, Jack the caddie's lines, and course sounds while you score"
+            "v": "1.3.8",
+            "t": "Fairway: pace of play for each group on the Field board"
           },
           {
-            "v": "1.1.4",
-            "t": "Fairway on the watch: yards, score and Jack"
+            "v": "1.3.7",
+            "t": "Fairway: send the card as text from the Round done card"
           },
           {
-            "v": "1.1.3",
-            "t": "Fairway: who's where, each group as a dot on a course overview"
+            "v": "1.3.6",
+            "t": "Fairway: your round by the numbers on the Round done card"
           }
         ]
       }
@@ -2657,8 +2671,12 @@
           "store/shots/getready-5.webp",
           "store/shots/getready-6.webp"
         ],
-        "version": "1.0.8",
+        "version": "1.0.9",
         "history": [
+          {
+            "v": "1.0.9",
+            "t": "Get Ready, Who's Where, Tournament Pack: open the saved copy after 3 seconds on one weak bar"
+          },
           {
             "v": "1.0.8",
             "t": "Steele Family watch app: Get Ready, Cube Clock, Power Program, Gameday Picks and Read 20 on a Wear OS watch"
@@ -2674,16 +2692,12 @@
           {
             "v": "1.0.5",
             "t": "App Store: real screenshots with demo data for every app, and a week-in-the-life view"
-          },
-          {
-            "v": "1.0.4",
-            "t": "Every app: a health check on open, a problem log, and a Something wrong? report"
           }
         ],
         "latest": {
-          "d": "Nov 17, 2026",
-          "t": "Steele Family watch app: Get Ready, Cube Clock, Power Program, Gameday Picks and Read 20 on a Wear OS watch",
-          "url": "https://github.com/natesteele888/apps/commit/6380e3c83fba1d7a2afbc7ef15bd9632c8401ba6"
+          "d": "Nov 19, 2026",
+          "t": "Get Ready, Who's Where, Tournament Pack: open the saved copy after 3 seconds on one weak bar",
+          "url": "https://github.com/natesteele888/apps/commit/6ec74c96f9f70b02d1b07e2cb67192f9e3328c49"
         },
         "caps": [
           "Check things off with a picture of each item beside it",
@@ -2809,7 +2823,7 @@
         ],
         "autoShots": []
       },
-      "store": true
+      "store": false
     },
     {
       "id": "secretary",

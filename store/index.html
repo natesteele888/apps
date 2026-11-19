@@ -251,6 +251,14 @@ h1{font-size:34px;line-height:1.1;margin:2px 0 0;letter-spacing:-.02em;font-weig
 .mock .dock img{width:40px;height:40px;border-radius:22%}
 
 footer{color:var(--muted);font-size:13px;text-align:center;padding:30px 0 10px}
+footer .ownertap{padding:6px;margin:0 0 4px;opacity:.55;-webkit-tap-highlight-color:transparent;touch-action:manipulation}
+footer .ownertap img{display:block;width:34px;height:34px;border-radius:22%}
+.mrow{display:flex;align-items:center;gap:12px;padding:10px 0}
+.mrow+.mrow{border-top:1px solid var(--line)}
+.mrow .ic{width:52px;height:52px;border-radius:12px;flex:none;box-shadow:0 0 0 1px var(--line)}
+.mrow .txt{flex:1;min-width:0}.mrow b{display:block;font-size:16px}.mrow small{display:block;color:var(--muted);font-size:13px}
+.mrow .tag{display:inline-block;font-size:11px;font-weight:700;padding:2px 7px;border-radius:99px;background:var(--line);color:var(--text);margin:3px 4px 0 0}
+.mrow .getbtn{flex:none}
 /* text links get a 44px tap area without moving anything */
 footer a,footer button,#main p a,#main p button,#sheet p a,#sheet p button{display:inline-block;padding:13px 6px;margin:-13px 0}
 .toast{position:fixed;left:50%;bottom:calc(96px + env(safe-area-inset-bottom));transform:translateX(-50%) translateY(20px);opacity:0;background:var(--text);color:var(--bg);padding:10px 16px;border-radius:12px;font-weight:600;font-size:14px;z-index:60;transition:.25s;pointer-events:none}
@@ -301,6 +309,7 @@ const SV={
   big:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><circle cx="4.5" cy="5.5" r="2"/><circle cx="19.5" cy="5.5" r="2"/><circle cx="4.5" cy="18.5" r="2"/><circle cx="19.5" cy="18.5" r="2"/><path d="M6 7l4 3M18 7l-4 3M6 17l4-3M18 17l-4-3"/></svg>',
   search:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/></svg>',
   share:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 15V3M7 8l5-5 5 5"/><path d="M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7"/></svg>',
+  mine:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="5" y="10.5" width="14" height="10" rx="2.5"/><path d="M8 10.5V7.5a4 4 0 018 0v3"/><circle cx="12" cy="15.5" r="1.4"/></svg>',
   back:'<svg width="12" height="20" viewBox="0 0 12 20" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M10 2L2 10l8 8"/></svg>'
 };
 const TABS=[["today","Today"],["apps","Apps"],["big","Big Picture"],["search","Search"],["about","About"]];
@@ -531,14 +540,16 @@ addEventListener("keydown",e=>{if(e.key==="Escape"&&$("#sheet").classList.contai
 /* ===== render + events ===== */
 function render(){
   renderTabs();
-  $("#main").innerHTML=({today:renderToday,apps:renderApps,big:renderBig,search:renderSearch,about:renderAbout})[TAB]()+
-    `<footer>Designed and built by Nathan Steele with Claude · <button id="shareStore" style="color:var(--blue);font-weight:600">Share this store</button></footer>`;
+  $("#main").innerHTML=({today:renderToday,apps:renderApps,big:renderBig,search:renderSearch,about:renderAbout,mine:renderMine})[TAB]()+
+    `<footer><button class="ownertap" data-owner-tap aria-label="Steele App Store"><img src="../icons/store-192.png" alt="" width="34" height="34"></button><br>Designed and built by Nathan Steele with Claude · <button id="shareStore" style="color:var(--blue);font-weight:600">Share this store</button></footer>`;
   document.title=TAB==="today"?"Steele App Store":`${TABS.find(t=>t[0]===TAB)[1]} · Steele App Store`;
   const q=$("#q");if(q)q.oninput=()=>{Q=q.value;$("#results").innerHTML=results()};
   $("#shareStore").onclick=()=>share("Steele App Store",location.origin+location.pathname);
   shine();
 }
 document.addEventListener("click",e=>{
+  if(e.target.closest("[data-owner-tap]")){ownerTap();return}
+  if(e.target.closest("[data-owner-out]")){ownerSignOut();return}
   const qb=e.target.closest("[data-qr]");if(qb){saveQR(qb.dataset.qr);return}
   const ap=e.target.closest("[data-app]");if(ap&&!e.target.closest("a")){e.preventDefault();openApp(ap.dataset.app);return}
   const tg=e.target.closest("[data-tab-go]");if(tg){location.hash=tg.dataset.tabGo;return}
@@ -550,6 +561,87 @@ document.addEventListener("keydown",e=>{const n=e.target.closest&&e.target.close
 function shine(){const cs=$("#cardset");if(!cs)return;cs.addEventListener("pointermove",e=>{const c=e.target.closest(".tcard");if(!c)return;const r=c.getBoundingClientRect();c.style.setProperty("--shine",(100-((e.clientX-r.left)/r.width)*100+20)+"%")})}
 let NARROW=innerWidth<620;addEventListener("resize",()=>{const n=innerWidth<620;if(n!==NARROW){NARROW=n;if(TAB==="big")render()}});
 
+
+/* ===== Owner view: tap the footer logo 7 times, sign in with Google, and only Nathan's account gets in.
+   Who counts as the owner is decided by the Toolbox's Firestore rules (only the owner can read profile/me),
+   not by this page, so nothing here names him. The app list itself is the public catalog. ===== */
+let RAW=null,OWNER=false,OWN_USER=null,TAPS=[];
+const FB_CFG={apiKey:"AIzaSyDT_wGN93U4oM70orIU8flSAnvXHApqW2A",authDomain:"nates-toolbox.firebaseapp.com",projectId:"nates-toolbox",storageBucket:"nates-toolbox.firebasestorage.app",messagingSenderId:"567737923830",appId:"1:567737923830:web:b597b5d71e7c7a73c4d4d7"};
+const FB_V="11.6.0";
+const DOWNLOADS=[
+  ["dugout-phone.apk","Dugout for your phone","Walk-Up music and Pitch Count, paired with the watch","🎵"],
+  ["dugout-watch.apk","Dugout for the watch","Pitch Count, scores and Walk-Up on your Galaxy Watch","⌚"],
+  ["steele-family-watch.apk","Steele Family watch","The family apps on a watch, no phone app needed","👨‍👧‍👦"]];
+let REL=null;
+function loadScript(u){return new Promise((ok,no)=>{const s=document.createElement("script");s.src=u;s.onload=ok;s.onerror=no;document.head.appendChild(s)})}
+let fbReady=null;
+function fb(){if(!fbReady)fbReady=(async()=>{if(!window.firebase){const b=`https://www.gstatic.com/firebasejs/${FB_V}/`;
+  await loadScript(b+"firebase-app-compat.js");await Promise.all([loadScript(b+"firebase-auth-compat.js"),loadScript(b+"firebase-firestore-compat.js")])}
+  if(!firebase.apps.length)firebase.initializeApp(FB_CFG);return firebase})();return fbReady}
+/* the server decides: a read only the owner's account is allowed to make */
+async function checkOwner(){const f=await fb();await f.firestore().doc("profile/me").get({source:"server"});return true}
+function setOwner(on,user){
+  OWNER=!!on;OWN_USER=on?user:null;
+  const has=TABS.some(t=>t[0]==="mine");
+  if(OWNER&&!has)TABS.push(["mine","Mine"]);
+  if(!OWNER&&has){TABS.splice(TABS.findIndex(t=>t[0]==="mine"),1);if(TAB==="mine")TAB="today"}
+  if(!OWNER)store("store.owner","");
+  if(APPS.length||RAW)go();
+}
+function ownerTap(){
+  const now=Date.now();TAPS=TAPS.filter(t=>now-t<4000);TAPS.push(now);
+  if(TAPS.length<7)return;TAPS=[];
+  if(OWNER){location.hash="mine";return}
+  ownerSignIn();
+}
+async function ownerSignIn(){
+  try{const f=await fb();const pr=new f.auth.GoogleAuthProvider();pr.setCustomParameters({prompt:"select_account"});
+    store("store.owner","pending");
+    try{await f.auth().signInWithPopup(pr)}
+    catch(e){if(e&&/popup-blocked|operation-not-supported/.test(e.code||"")){await f.auth().signInWithRedirect(pr);return}
+      store("store.owner","");if(e&&!/popup-closed|cancelled-popup/.test(e.code||""))toast("Sign-in didn't finish. Try again.");return}
+    await ownerVerify(f.auth().currentUser,true);
+  }catch(_){toast("Couldn't reach sign-in. Check your connection.")}
+}
+async function ownerVerify(u,fresh){
+  if(!u){setOwner(false);return}
+  try{await checkOwner();store("store.owner","1");setOwner(true,u);if(fresh){location.hash="mine";toast("Owner view unlocked")}}
+  catch(e){
+    if(e&&e.code==="permission-denied"){store("store.owner","");(await fb()).auth().signOut();setOwner(false);if(fresh)toast("That view is just for the owner.")}
+    else if(store("store.owner")==="1")setOwner(true,u);   /* offline: keep the view, it only shows the public catalog */
+  }
+}
+async function ownerSignOut(){try{(await fb()).auth().signOut()}catch(_){}store("store.owner","");setOwner(false);location.hash="today";toast("Signed out")}
+(function ownerBoot(){
+  if(!store("store.owner"))return;      /* nothing loads for visitors until the logo is tapped */
+  if(store("store.owner")==="1"){OWNER=true;TABS.push(["mine","Mine"])}
+  fb().then(f=>{f.auth().getRedirectResult().catch(()=>{});f.auth().onAuthStateChanged(u=>ownerVerify(u,store("store.owner")==="pending"))}).catch(()=>{});
+})();
+function release(){
+  if(REL)return;REL={};
+  fetch("https://api.github.com/repos/natesteele888/apps/releases/latest").then(r=>r.ok?r.json():null).then(j=>{if(!j)return;
+    REL={tag:j.tag_name||"",name:j.name||"",at:j.published_at||""};if(TAB==="mine")render()}).catch(()=>{});
+}
+/* install.js marks an app "nate.installed:<folder>" when it opens from the home screen; same site, so the store can read it */
+function installedHere(live){try{const u=new URL(live);if(u.origin!==location.origin)return false;const dir=u.pathname.replace(/[^/]*\.[a-z0-9]+$/i,"").replace(/([^/])$/,"$1/");return !!localStorage.getItem("nate.installed:"+dir)}catch(_){return false}}
+function renderMine(){
+  if(!OWNER)return renderToday();
+  release();
+  const all=((RAW&&RAW.apps)||[]).filter(a=>!a.retired&&!a.redirectsTo&&a.live&&a.id!=="store");
+  const pub=new Set(APPS.map(a=>a.id));
+  const rows=all.slice().sort((a,b)=>a.name.localeCompare(b.name)).map(a=>{
+    const on=installedHere(a.live);
+    const tags=[on?"✓ On this phone":"",a.private?"🔒 Private":"",pub.has(a.id)?"In the store":"Owner only"].filter(Boolean);
+    const href=on?a.live:a.live+(a.live.includes("?")?"&install":"?install");   /* ?install opens the app with its Add to home screen pop-up */
+    return `<div class="mrow"><img class="ic" src="../icons/${esc(a.id)}-192.png" alt="" width="52" height="52" loading="lazy" onerror="this.src='../icons/store-192.png'"><span class="txt"><b>${esc(a.name)}</b><small>${esc((a.listing&&a.listing.sub)||a.live.replace(/^https:\/\//,""))}</small>${tags.map(t=>`<span class="tag">${esc(t)}</span>`).join("")}</span><a class="getbtn" href="${esc(href)}" target="_blank" rel="noopener">${on?"OPEN":"INSTALL"}</a></div>`}).join("");
+  const ver=REL&&REL.tag?`Version ${esc(REL.tag.replace(/^\D+/,""))}`:"Newest build";
+  const dl=DOWNLOADS.map(([f,n,d,e])=>`<div class="mrow"><span class="ic" style="display:grid;place-items:center;font-size:28px">${e}</span><span class="txt"><b>${esc(n)}</b><small>${esc(d)}</small><span class="tag">${ver}</span></span><a class="getbtn" href="https://github.com/natesteele888/apps/releases/latest/download/${f}" rel="noopener">GET</a></div>`).join("");
+  return header("Mine",`Every app you've built, ${all.length} in all. Tap INSTALL and the app opens with its Add to home screen pop-up.`)+
+  `<div class="sect"><h3>⌚ Phone and watch downloads</h3></div>${dl}
+   <p style="color:var(--muted);font-size:13.5px">Android apps install from the file. <a href="https://github.com/natesteele888/apps/releases" target="_blank" rel="noopener" style="color:var(--blue);font-weight:600">All versions</a></p>
+   <div class="sect"><h3>📲 All apps</h3></div>${rows}
+   <p style="margin-top:18px"><button data-owner-out style="color:var(--blue);font-weight:600">Sign out of the owner view</button>${OWN_USER&&OWN_USER.displayName?` <span style="color:var(--muted)">· ${esc(OWN_USER.displayName)}</span>`:""}</p>`;
+}
 /* live links come from the shared app list, so the store never shows an old address */
 /* ===== the app catalog: one file decides every app, its listing, icon and screenshots ===== */
 function fromCatalog(j){
@@ -561,7 +653,7 @@ function fromCatalog(j){
   const ids=new Set(out.map(a=>a.id));out.forEach(a=>a.rel=a.rel.filter(r=>ids.has(r)));
   return out;
 }
-function useCatalog(j){APPS=fromCatalog(j);SOON=(j.comingSoon||[]).map(s=>[s.emoji||"🛠️",s.name,s.desc]);go()}
+function useCatalog(j){RAW=j;APPS=fromCatalog(j);SOON=(j.comingSoon||[]).map(s=>[s.emoji||"🛠️",s.name,s.desc]);go()}
 (function loadCatalog(){
   let cached=null;try{cached=JSON.parse(localStorage.getItem("store.catalog")||"null")}catch(_){}
   if(cached)useCatalog(cached);else $("#main").innerHTML='<p class="empty" style="padding:40px 0">Loading apps…</p>';

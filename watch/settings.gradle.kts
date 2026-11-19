@@ -6,4 +6,4 @@ dependencyResolutionManagement {
     repositories { google(); mavenCentral() }
 }
 rootProject.name = "dugout"
-include(":shared", ":phone", ":wear", ":family")
+include(":shared", ":phone", ":wear", ":family", ":usage")

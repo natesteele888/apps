@@ -37,3 +37,4 @@ NODE_PATH=/path/to/node_modules tests/run.sh locker    # one app
 - `live-smoke.cjs <app> <text>`: opens the published page and checks the service worker, manifest icons, offline reload and console errors.
 
 Not covered by any test (needs real phones): real microphones and Bluetooth speakers, the iPhone silent switch, real wake locks and vibration, two real phones' clocks lining up, real music and Bluetooth speaker delay, iPhone Safari recording, real touch hardware.
+- `store`: the App Store's owner view (Firebase stubbed): the public Apps tab lists only apps turned on for the store, seven quick taps on the footer logo start a Google sign-in, only an account the Toolbox rules let read `profile/me` gets the Mine tab (every catalog app with INSTALL or OPEN, and the Dugout phone and watch downloads), anyone else is signed back out, a stale owner mark is dropped, sign out removes the tab, and visitors load no Firebase.

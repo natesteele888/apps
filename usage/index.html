@@ -98,6 +98,12 @@ svg.chart{display:block;width:100%;height:auto}
 .repo .rb{height:6px;border-radius:3px;background:var(--empty);overflow:hidden}
 .repo .rb i{display:block;height:100%;border-radius:3px;background:var(--accent)}
 .more{background:none;border:0;color:var(--accent);font-weight:600;font-size:12.5px;padding:4px 0 0}
+.clogo{width:22px;height:22px;border-radius:6px;background:#D97757;display:grid;place-items:center;flex:none}
+.flogo{width:22px;height:22px;border-radius:6px;background:#F57C00;display:grid;place-items:center;flex:none}
+.cmsg{color:var(--text-3);font-size:12.5px;padding:4px 0 2px}
+.cbtn.fbtn{background:#F57C00}
+.cbtn{margin-top:8px;border:0;border-radius:10px;padding:9px 14px;background:#D97757;color:#fff;font-weight:700;font-size:14px}
+.clink{background:none;border:0;color:var(--text-3);font-size:11.5px;text-decoration:underline;padding:0}
 .slot{display:flex;align-items:center;gap:10px;border:1px dashed var(--line-2);background:transparent;width:100%;text-align:left;color:var(--text-2)}
 .slot .clogo{width:24px;height:24px;border-radius:6px;background:#D97757;display:grid;place-items:center;flex:none}
 .slot b{display:block;color:var(--text);font-size:15px}
@@ -189,11 +195,23 @@ svg.chart{display:block;width:100%;height:auto}
       <div class="mfoot" id="mfoot"></div>
     </section>
 
-    <button class="card slot" id="claudeSlot" type="button">
-      <span class="clogo" aria-hidden="true"><svg width="15" height="15" viewBox="0 0 24 24"><path fill="#fff" d="M12 2l1.6 6.3L19 4.9l-3.4 5.5L22 12l-6.4 1.6 3.4 5.5-5.4-3.4L12 22l-1.6-6.3L5 19.1l3.4-5.5L2 12l6.4-1.6L5 4.9l5.4 3.4z"/></svg></span>
-      <span><b>Claude</b><small>5-hour and weekly limits go here once there's a way to read them</small></span>
-    </button>
+    <section class="card meter" id="claude">
+      <div class="mhead">
+        <span class="clogo" aria-hidden="true"><svg width="15" height="15" viewBox="0 0 24 24"><path fill="#fff" d="M12 2l1.6 6.3L19 4.9l-3.4 5.5L22 12l-6.4 1.6 3.4 5.5-5.4-3.4L12 22l-1.6-6.3L5 19.1l3.4-5.5L2 12l6.4-1.6L5 4.9l5.4 3.4z"/></svg></span>
+        <span class="nm">Claude</span>
+        <span class="when"><span class="dot" id="cDot"></span><span id="cWhen"></span></span>
+      </div>
+      <div id="cBody"></div>
+    </section>
 
+    <section class="card meter hidden" id="firebase">
+      <div class="mhead">
+        <span class="flogo" aria-hidden="true"><svg width="14" height="14" viewBox="0 0 24 24"><path fill="#fff" d="M4 19.5L6.6 3.3c.1-.5.7-.6 1-.2l2.8 5.2L4 19.5zm16 .2l-2.4-14.9c-.1-.5-.7-.6-1-.3L4 19.7l7.2 4c.5.3 1.1.3 1.6 0L20 19.7zM14 8.8l-2-3.8c-.2-.4-.8-.4-1 0L5.4 15.4 14 8.8z"/></svg></span>
+        <span class="nm">Firebase</span><span class="badge">free plan, per day</span>
+        <span class="when"><span class="dot" id="fDot"></span><span id="fWhen"></span></span>
+      </div>
+      <div id="fBody"></div>
+    </section>
     <section class="card box">
       <div class="boxhead">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#6EA8FF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l5-6 4 4 8-9"/><path d="M15 6h5v5"/></svg>
@@ -297,6 +315,8 @@ function explain(status, body) {
 }
 async function load(manual) {
   if (S.loading) return;
+  if (C.state !== 'web') app('refreshClaude');
+  if (F.state !== 'web') fapp('refreshFirebase');
   if (S.demo) { S.data = demoData(); S.fetchedAt = +now(); S.error = ''; scheduleNext(); render(); return; }
   if (!S.token) { render(); return; }
   S.loading = true; $('refreshBtn').classList.add('spin');
@@ -391,6 +411,8 @@ function render() {
   /* chart, schedule, repos */
   drawChart(d, p, plan);
   drawRepos(d);
+  drawClaude();
+  drawFirebase();
   tickStatus();
 }
 function bolt() { return '<svg width="16" height="18" viewBox="0 0 16 18" aria-hidden="true"><path d="M9 0L1 10h6l-1 8 8-10H8z" fill="currentColor"/></svg>'; }
@@ -492,6 +514,108 @@ async function toggleWake() {
 }
 function wakeUi() { $('wakePill').classList.toggle('on', !!S.wantWake); $('wakePill').setAttribute('aria-pressed', S.wantWake ? 'true' : 'false'); }
 
+/* ---------- Claude ----------
+   Only inside the Steele Usage Android app. The app signs in to Claude on the phone and reads the usage numbers
+   (5-hour and weekly percent, and when each resets); this page only ever gets those numbers, never the sign-in. */
+const APK = 'https://github.com/natesteele888/apps/releases/latest/download/steele-usage.apk';
+const C = { state: window.SteeleApp ? 'loading' : 'web', d: null, at: 0 };
+const app = (fn) => { try { window.SteeleApp && window.SteeleApp[fn](); } catch (e) {} };
+window.steeleClaude = function (x) {
+  C.state = (x && x.state) || 'error';
+  if (C.state === 'ok') { C.d = x; C.at = +now(); }
+  drawClaude();
+};
+function cRow(name, w, len) {
+  const pct = Math.max(0, +w.pct || 0) / 100, lv = level(pct), r = Date.parse(w.reset), t = +now();
+  const has = isFinite(r) && r > t, left = has ? r - t : 0;
+  const when = !has ? '' : len > 864e5 ? DOW[new Date(r).getDay()] + ' ' + clock(r) : clock(r);
+  return '<div class="mrow"><div class="pct ' + lv + '">' + Math.round(pct * 100) + '%</div>' +
+    '<div class="name">' + name + '<small>' + (len > 864e5 ? 'this week' : 'this window') + '</small></div>' +
+    '<div class="bar">' + segs(pct, has ? 1 - left / len : null, lv) + '</div>' +
+    '<div class="rt"><b>' + (has ? span(left, true).replace(/d/, 'd ').replace(/h(?=\d)/, 'h ') : '–') + '</b><small>' + (has ? esc(when) : 'not started') + '</small></div></div>';
+}
+function drawClaude() {
+  const body = $('cBody'), card = $('claude'); if (!body) return;
+  const ok = C.state === 'ok' && C.d;
+  $('cDot').className = 'dot' + (C.state === 'error' ? ' err' : '');
+  $('cWhen').textContent = ok ? (+now() - C.at < 6e4 ? 'just now' : span(+now() - C.at, true) + ' ago') : '';
+  $('cDot').style.display = ok || C.state === 'error' ? '' : 'none';
+  if (ok) {
+    const five = C.d.five || {}, week = C.d.week || {}, worst = Math.max(+five.pct || 0, +week.pct || 0) / 100;
+    card.className = 'card meter ' + (level(worst) === 'ok' ? '' : level(worst));
+    body.innerHTML = cRow('5-hour', five, 5 * 36e5) + cRow('Week', week, 7 * 864e5) +
+      '<div class="mfoot"><span>Read from your Claude account on this phone</span><button class="clink" id="cOut" type="button">Sign out</button></div>';
+    $('cOut').onclick = () => { if (confirm('Sign out of Claude in this app?')) app('signOut'); };
+    return;
+  }
+  card.className = 'card meter';
+  if (C.state === 'web') body.innerHTML = '<div class="cmsg">Your 5-hour and weekly Claude usage shows here in the Steele Usage phone app, where you sign in to Claude once.</div><a class="cbtn" style="display:inline-block;text-decoration:none" href="' + APK + '">Get the Android app</a>';
+  else if (C.state === 'signedout') { body.innerHTML = '<div class="cmsg">Sign in to Claude once and your 5-hour and weekly usage fills in here.</div><button class="cbtn" id="cIn" type="button">Sign in to Claude</button>'; $('cIn').onclick = () => app('signIn'); }
+  else if (C.state === 'error') { body.innerHTML = '<div class="cmsg">Couldn’t read your Claude usage just now.</div><button class="cbtn" id="cTry" type="button">Try again</button>'; $('cTry').onclick = () => { C.state = 'loading'; drawClaude(); app('refreshClaude'); }; }
+  else body.innerHTML = '<div class="cmsg">Reading your Claude usage…</div>';
+}
+/* ---------- Firebase ----------
+   Also only inside the phone app: it connects your Google account read-only and hands this page each
+   Firebase project's Firestore reads, writes and deletes since midnight Pacific, when the free plan's caps reset. */
+const FCAP = { reads: 50000, writes: 20000, deletes: 20000 };
+const F = { state: window.SteeleApp ? 'loading' : 'web', d: null, at: 0 };
+window.steeleFirebase = function (x) {
+  F.state = (x && x.state) || 'error';
+  if (F.state === 'ok') { F.d = x; F.at = +now(); }
+  F.x = x || {};
+  drawFirebase();
+};
+const kfmt = n => n >= 1e4 ? (n / 1e3).toFixed(n >= 1e5 ? 0 : 1).replace(/\.0$/, '') + 'k' : fmt(n);
+function drawFirebase() {
+  const card = $('firebase'), body = $('fBody'); if (!card) return;
+  card.classList.toggle('hidden', F.state === 'web');
+  if (F.state === 'web') return;
+  const ok = F.state === 'ok' && F.d;
+  $('fDot').style.display = ok || F.state === 'error' ? '' : 'none';
+  $('fDot').className = 'dot' + (F.state === 'error' ? ' err' : '');
+  $('fWhen').textContent = ok ? (+now() - F.at < 6e4 ? 'just now' : span(+now() - F.at, true) + ' ago') : '';
+  if (ok) {
+    const r = Date.parse(F.d.reset), left = Math.max(0, r - +now()), elapsed = 1 - left / 864e5;
+    const ps = (F.d.projects || []).map(p => {
+      const f = { reads: (+p.reads || 0) / FCAP.reads, writes: (+p.writes || 0) / FCAP.writes, deletes: (+p.deletes || 0) / FCAP.deletes };
+      return Object.assign({}, p, { worst: Math.max(f.reads, f.writes, f.deletes) });
+    }).sort((a, b) => b.worst - a.worst);
+    let worst = 0;
+    const rows = ps.map(p => {
+      const lv = level(p.worst); worst = Math.max(worst, p.worst);
+      return '<div class="mrow"><div class="pct ' + lv + '">' + Math.round(p.worst * 100) + '%</div>' +
+        '<div class="name" title="' + esc(p.id) + '">' + esc(p.name || p.id) + '<small>' + kfmt(+p.reads || 0) + ' reads · ' + kfmt(+p.writes || 0) + ' writes · ' + kfmt(+p.deletes || 0) + ' del</small></div>' +
+        '<div class="bar">' + segs(p.worst, elapsed, lv) + '</div>' +
+        '<div class="rt"><b>' + span(left, true).replace(/h(?=\d)/, 'h ') + '</b><small>' + clock(r) + '</small></div></div>';
+    }).join('');
+    card.className = 'card meter ' + (level(worst) === 'ok' ? '' : level(worst));
+    body.innerHTML = (rows || '<div class="cmsg">No Firebase projects on this Google account.</div>') +
+      '<div class="mfoot"><span>Free caps a day: <b>50k</b> reads, <b>20k</b> writes, <b>20k</b> deletes</span><span>Resets midnight Pacific</span></div>';
+    return;
+  }
+  card.className = 'card meter';
+  if (F.state === 'signedout') { body.innerHTML = '<div class="cmsg">Connect your Google account once (read-only) to see today\u2019s Firestore reads, writes and deletes for each project.</div><button class="cbtn fbtn" id="fIn" type="button">Connect Google</button>'; $('fIn').onclick = () => { F.state = 'loading'; drawFirebase(); fapp('connectFirebase'); }; }
+  else if (F.state !== 'loading') { body.innerHTML = fbWhy(F.state, F.x || {}); const b = $('fGo'); if (b) b.onclick = () => { F.state = 'loading'; drawFirebase(); fapp(b.dataset.fn); }; }
+  else body.innerHTML = '<div class="cmsg">Reading your Firebase usage\u2026</div>';
+}
+/* Why Connect Google didn't work, in plain words, with the one thing to do next. */
+const FAPI = { 'monitoring.googleapis.com': 'Cloud Monitoring API', 'firebase.googleapis.com': 'Firebase Management API' };
+function fbWhy(st, x) {
+  const go = (label, fn) => '<button class="cbtn fbtn" id="fGo" data-fn="' + fn + '" type="button">' + label + '</button>';
+  const ids = '<div class="cmsg"><small>Package <b>' + esc(x.pkg || 'com.steele.usage') + '</b>' + (x.sha1 ? '<br>SHA-1 <b>' + esc(x.sha1) + '</b>' : '') + '</small></div>';
+  const svc = /^[a-z]+\.googleapis\.com$/.test(x.service || '') ? x.service : '';
+  const msg = t => '<div class="cmsg">' + t + '</div>';
+  if (st === 'setup') return msg('Google doesn\u2019t recognize this app yet. Add it as an Android app in your Firebase console with these two values. If you just did, give Google a few minutes.') + ids + go('Try again', 'connectFirebase');
+  if (st === 'cancelled') return msg('Google closed without connecting. Tap Connect Google and pick your account. If it closes right away, the app isn\u2019t added in your Firebase console yet.') + ids + go('Connect Google', 'connectFirebase');
+  if (st === 'offline') return msg('No internet connection right now.') + go('Try again', 'refreshFirebase');
+  if (st === 'noplay') return msg('Google Play services on this phone needs an update before it can connect Google.') + go('Try again', 'connectFirebase');
+  if (x.reason === 'SERVICE_DISABLED' && svc) return msg('Google says the ' + esc(FAPI[svc] || svc) + ' is turned off in the Firebase project this app is added to. <a class="clink" href="https://console.cloud.google.com/apis/library/' + svc + '">Turn it on</a>, wait a minute, then try again.') + go('Try again', 'refreshFirebase');
+  if (x.reason === 'ACCESS_TOKEN_SCOPE_INSUFFICIENT' || x.reason === 'USER_PROJECT_DENIED' || x.code === 403) return msg('Google didn\u2019t allow the read. Tap Connect Google and allow read-only access to Firebase and Monitoring.') + go('Connect Google', 'connectFirebase');
+  if (x.reason === 'TIMEOUT') return msg('Google didn\u2019t answer in time.') + go('Try again', 'connectFirebase');
+  const why = [x.code ? 'code ' + (+x.code || 0) : '', /^[A-Z_]{1,40}$/.test(x.reason || '') ? x.reason : ''].filter(Boolean).join(', ');
+  return msg('Couldn\u2019t read your Firebase usage just now' + (why ? ' (Google said ' + esc(why) + ')' : '') + '.') + go('Try again', x.reason === 'SIGN_IN' ? 'connectFirebase' : 'refreshFirebase');
+}
+const fapp = (fn) => { try { window.SteeleApp && window.SteeleApp[fn] && window.SteeleApp[fn](); } catch (e) {} };
 /* ---------- wire up ---------- */
 $('refreshBtn').onclick = () => load(true);
 $('settingsBtn').onclick = openSettings;
@@ -502,7 +626,6 @@ $('setupSave').onclick = () => {
   S.token = tk; put(K.token, tk); S.demo = false; put(K.demo, null); $('setupToken').value = ''; load(true);
 };
 $('setupDemo').onclick = () => { S.demo = true; put(K.demo, '1'); load(); };
-$('claudeSlot').onclick = () => toast('Claude has no public usage feed yet, so this card is saved for when there is one.');
 $('wakePill').onclick = toggleWake;
 document.querySelectorAll('.tabs button').forEach(b => b.onclick = () => { S.view = b.dataset.view; put(K.view, S.view); if (S.data) drawChart(S.data, period(), S.plan); });
 document.addEventListener('visibilitychange', async () => {

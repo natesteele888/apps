@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- What the Schedule tile looks like in the watch's list of tiles: NEXT UP, a big line, then two small ones -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android" android:width="192dp" android:height="192dp" android:viewportWidth="192" android:viewportHeight="192">
+    <path android:fillColor="#FF000000" android:pathData="M96,0a96,96 0,1 1,0 192a96,96 0,1 1,0 -192z" />
+    <path android:fillColor="#FF0EA5E9" android:pathData="M72,42h48v7h-48zM58,60h76v8h-76z" />
+    <path android:fillColor="#FFFFFFFF" android:pathData="M44,78h104v14h-104z" />
+    <path android:fillColor="#FF94A3B8" android:pathData="M60,100h72v7h-72z" />
+    <path android:fillColor="#CCFFFFFF" android:pathData="M50,122h92v7h-92zM50,138h92v7h-92z" />
+</vector>
