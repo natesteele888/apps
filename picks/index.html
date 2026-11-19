@@ -69,6 +69,18 @@ nav.views button[aria-current="page"]{color:var(--ink);border-bottom-color:var(-
 .wp-wait .wp-bar{animation:wpw 1.2s ease-in-out infinite alternate}
 @keyframes wpw{to{opacity:.45}}
 @media(prefers-reduced-motion:reduce){.wp-wait .wp-bar{animation:none}}
+.lockbar{display:flex;align-items:center;justify-content:space-between;gap:10px;background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:8px 10px 8px 12px;margin:0 0 10px;font-size:13px;color:var(--ink-dim)}
+.lockbar.done{border-color:var(--win);color:var(--ink)}
+.lockbar .btn{flex:none;min-height:40px}
+.chbar{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:8px 10px 8px 12px;margin:0 0 10px;font-size:13px;color:var(--ink-dim)}
+.chbar .row{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.chbar b{color:var(--ink)}
+.chbar .btn{flex:none;min-height:40px}
+.chlist{display:flex;flex-direction:column;gap:2px;margin:8px 0}
+.chlist label{display:flex;align-items:center;gap:10px;min-height:44px;color:var(--ink)}
+.chlist input{width:20px;height:20px}
+.chin{display:flex;align-items:center;justify-content:space-between;gap:10px;background:var(--panel-2);border:1px solid var(--gold);border-radius:var(--r);padding:6px 10px 6px 12px;margin:0 0 8px;font-size:13px}
+.chin .btn{flex:none;min-height:40px}
 .who{font-size:11.5px;color:var(--ink-dim);text-align:center;min-height:16px}
 .who b{color:var(--ink)}
 .mid{width:46px;flex:none;display:flex;flex-direction:column;align-items:center;justify-content:center;border-left:1px solid var(--line-soft);border-right:1px solid var(--line-soft);font-size:10.5px;color:var(--ink-dim);gap:2px}
@@ -217,7 +229,7 @@ let toastT;function toast(m){const t=$("#toast");t.textContent=m;t.classList.add
 function contrast(hex){hex=String(hex||"").replace("#","");if(hex.length!==6)return"#fff";const r=parseInt(hex.slice(0,2),16),g=parseInt(hex.slice(2,4),16),b=parseInt(hex.slice(4,6),16);return(.299*r+.587*g+.114*b)/255>.6?"#151515":"#fff"}
 function store(k,v){try{if(v===undefined)return localStorage.getItem(k);localStorage.setItem(k,v)}catch(_){return null}}
 
-const S={user:null,me:null,isOwner:false,players:{},weeks:{},picks:{},view:"picks",sel:null,selBy:{},sport:C.SPORTS[store("gp.sport")]?store("gp.sport"):"nfl",season:null,codes:[],loading:false,
+const S={user:null,me:null,isOwner:false,players:{},weeks:{},picks:{},locked:{},ch:{},view:"picks",sel:null,selBy:{},sport:C.SPORTS[store("gp.sport")]?store("gp.sport"):"nfl",season:null,codes:[],loading:false,
   extra:{},wp:{},team:null,lsub:store("gp.lsub")||"standings"}; // extra: the scoreboard's team ids, records and top players; wp: ESPN's win chances per game; both in memory only
 let db,unsubs=[];
 
@@ -250,7 +262,15 @@ function renderSignIn(){
   $("#app").innerHTML=`<div class="gate"><div class="box"><img src="/apps/icons/picks-192.png" alt=""><h1>Gameday Picks</h1>
     <p style="color:var(--ink-dim)">NFL, MLB, NBA and NHL picks with your crew. Sign in to play.</p>
     <button class="btn gold" id="si">Sign in with Google</button><p class="err" id="siErr"></p>
-    <p class="or">No Google account? Use any email instead.</p>
+    <p class="or">No Google account? Pick a player name and a 4-digit PIN.</p>
+    <form class="card" id="pf" novalidate>
+      <label class="field">Player name<input id="pn" maxlength="20" autocomplete="username" autocapitalize="words" spellcheck="false" required></label>
+      <label class="field">4-digit PIN<input id="pp" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="4" autocomplete="new-password" required></label>
+      <p class="err" id="pErr" role="alert"></p>
+      <button class="btn gold" id="pGo" style="width:100%"></button>
+      <div class="row"><button type="button" class="linkbtn tall" id="pMode"></button></div>
+    </form>
+    <p class="or">Or use any email.</p>
     <form class="card" id="ef" novalidate>
       <label class="field">Email<input id="em" type="email" autocomplete="email" inputmode="email" autocapitalize="off" spellcheck="false" required></label>
       <label class="field">Password<input id="pw" type="password" minlength="6" required></label>
@@ -259,6 +279,7 @@ function renderSignIn(){
       <div class="row"><button type="button" class="linkbtn tall" id="eMode"></button><button type="button" class="linkbtn tall" id="eReset">Forgot password?</button></div>
     </form></div></div>`;
   $("#si").onclick=signIn;
+  pinForm(invited?"new":"old");
   const paint=()=>{const n=mode==="new";$("#eGo").textContent=n?"Create account":"Sign in";$("#eMode").textContent=n?"Have an account? Sign in":"New here? Create an account";
     $("#pw").autocomplete=n?"new-password":"current-password";$("#pw").placeholder=n?"At least 6 characters":"";$("#eReset").hidden=n;$("#eErr").textContent=""};
   paint();
@@ -271,6 +292,28 @@ function renderSignIn(){
     const b=$("#eGo");b.disabled=true;b.textContent=mode==="new"?"Creating…":"Signing in…";$("#eErr").textContent="";
     try{const a=firebase.auth();await(mode==="new"?a.createUserWithEmailAndPassword(em,pw):a.signInWithEmailAndPassword(em,pw))}
     catch(err){if(!$("#ef"))return;b.disabled=false;paint();$("#eErr").textContent=authMsg(err,mode)}};
+}
+/* ---------- no Google account: a player name and a 4-digit PIN ----------
+   Under the hood it's Firebase's email sign-in with a made-up address built from the name (never a real inbox, never
+   shown, nothing is ever mailed to it) and the PIN as the password, so the player can sign back in on any phone. */
+const PIN_DOMAIN="players.natesteele888.github.io";
+const pinSlug=n=>String(n||"").toLowerCase().normalize("NFKD").replace(/[^a-z0-9]/g,"");
+const pinEmail=n=>pinSlug(n)+"@"+PIN_DOMAIN,pinPass=p=>"gp-pin-"+p;
+const isPinUser=u=>!!(u&&u.email&&u.email.endsWith("@"+PIN_DOMAIN));
+function pinForm(start){
+  let mode=start;
+  const paint=()=>{const n=mode==="new";$("#pGo").textContent=n?"Start playing":"Sign in";$("#pMode").textContent=n?"Already playing? Sign in with your name and PIN":"New here? Make a player name";
+    $("#pp").autocomplete=n?"new-password":"current-password";$("#pErr").textContent=""};
+  paint();$("#pMode").onclick=()=>{mode=mode==="new"?"old":"new";paint()};
+  $("#pf").onsubmit=async e=>{e.preventDefault();const name=$("#pn").value.trim().replace(/\s+/g," "),pin=$("#pp").value.trim(),err=$("#pErr");
+    if(pinSlug(name).length<2){err.textContent="Use at least 2 letters or numbers for the name.";$("#pn").focus();return}
+    if(!/^\d{4}$/.test(pin)){err.textContent="The PIN is 4 numbers.";$("#pp").focus();return}
+    const b=$("#pGo");b.disabled=true;b.textContent=mode==="new"?"Setting up…":"Signing in…";err.textContent="";
+    if(mode==="new")store("gp.pname",name.slice(0,24));
+    try{const a=firebase.auth();await(mode==="new"?a.createUserWithEmailAndPassword(pinEmail(name),pinPass(pin)):a.signInWithEmailAndPassword(pinEmail(name),pinPass(pin)))}
+    catch(x){if(!$("#pf"))return;b.disabled=false;paint();const c=(x&&x.code)||"";
+      err.textContent=c==="auth/email-already-in-use"?`That name is taken. Try ${name.replace(/\d+$/,"")}${(+(/\d+$/.exec(name)||[1])[0])+1}, or tap \u201cAlready playing?\u201d if it's you.`
+        :/auth\/(wrong-password|user-not-found|invalid-credential|invalid-login-credentials)/.test(c)?"That name and PIN don't match. New here? Tap \u201cNew here?\u201d":authMsg(x,mode)}};
 }
 function authMsg(e,mode){const c=(e&&e.code)||"";
   if(c==="auth/email-already-in-use")return"That email already has an account. Tap \u201cHave an account? Sign in\u201d.";
@@ -286,7 +329,7 @@ function renderJoin(){
   $("#app").innerHTML=`<div class="gate"><div class="box" style="text-align:left"><img src="/apps/icons/picks-192.png" alt=""><h1 style="text-align:center">Join the picks</h1>
     <form class="card" id="join"><p>Enter the invite code you were given and the name to show on the leaderboard.</p>
     <label class="field">Invite code<input id="jcode" value="${esc(code)}" autocomplete="off" autocapitalize="characters" required></label>
-    <label class="field">Your name<input id="jname" maxlength="24" value="${esc((S.user.displayName||"").split(" ")[0])}" required></label>
+    <label class="field">Your name<input id="jname" maxlength="24" value="${esc((S.user.displayName||"").split(" ")[0]||(isPinUser(S.user)&&store("gp.pname"))||"")}" required></label>
     <p class="err" id="jerr"></p><button class="btn gold">Join</button></form>
     <p style="text-align:center"><button class="linkbtn tall" id="out">Use a different account</button></p></div></div>`;
   $("#out").onclick=()=>firebase.auth().signOut();
@@ -311,13 +354,14 @@ function startData(){
       if(!triedOwner){triedOwner=true;try{await db.doc("gp_players/"+S.user.uid).set({name:(S.user.displayName||"Nate").split(" ")[0],code:"OWNER",joinedAt:new Date().toISOString()});return}catch(_){}}
       if(S.me){S.me=null;S.isOwner=false;unsubs.slice(1).forEach(f=>f());unsubs.length=1}
       if(!$("#join"))render();return}
-    const first=!S.me;S.me=d.data();S.isOwner=S.me.code==="OWNER";if(first)subscribeAll();render()},()=>{S.me=null;render()}));
+    const first=!S.me;S.me=d.data();S.isOwner=S.me.code==="OWNER";if(first)subscribeAll();render();if(first&&store("gp.vs"))setTimeout(takeChallengeLink,1500)},()=>{S.me=null;render()}));
 }
 function subscribeAll(){
   const fail=()=>toast("Couldn't load part of the picks. Reload to try again.");
   unsubs.push(db.collection("gp_players").onSnapshot(s=>{S.players={};s.docs.forEach(d=>S.players[d.id]=d.data());rerender()},fail));
   unsubs.push(db.collection("gp_weeks").onSnapshot(s=>{S.weeks={};s.docs.forEach(d=>S.weeks[d.id]=d.data());rerender()},fail));
-  unsubs.push(db.collection("gp_picks").onSnapshot(s=>{S.picks={};s.docs.forEach(d=>{const x=d.data();(S.picks[x.week]=S.picks[x.week]||{})[x.uid]=x.picks||{}});rerender()},fail));
+  unsubs.push(db.collection("gp_picks").onSnapshot(s=>{S.picks={};S.locked={};S.ch={};s.docs.forEach(d=>{const x=d.data();(S.picks[x.week]=S.picks[x.week]||{})[x.uid]=x.picks||{};if(x.locked)(S.locked[x.week]=S.locked[x.week]||{})[x.uid]=x.locked;
+    if(x.ch&&Array.isArray(x.ch.to))(S.ch[x.week]=S.ch[x.week]||{})[x.uid]=x.ch});rerender()},fail));
   if(S.isOwner)unsubs.push(db.collection("gp_codes").onSnapshot(s=>{S.codes=s.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>String(b.createdAt).localeCompare(String(a.createdAt)));if(S.view==="admin")rerender()},()=>{}));
   ensureSel();
   setTimeout(watchSync,4000); // once the players and picks have loaded
@@ -389,39 +433,119 @@ function renderPicks(){
   const wk=S.weeks[S.sel];const games=wk?Object.entries(wk.games).sort((a,b)=>new Date(a[1].date)-new Date(b[1].date)):[];
   const mine=(S.picks[S.sel]||{})[S.user.uid]||{};
   const open=games.filter(([,g])=>!started(g));const pickedOpen=open.filter(([id])=>mine[id]).length;
-  v.innerHTML=`<div class="pills" role="group" aria-label="${sp.weekly?"Week":"Day"}">${keys.map(k=>`<button class="pill" data-wk="${k}" aria-pressed="${k===S.sel}">${C.label(k,today())}</button>`).join("")}</div>
+  v.innerHTML=`${chIncoming()}<div class="pills" role="group" aria-label="${sp.weekly?"Week":"Day"}">${keys.map(k=>`<button class="pill" data-wk="${k}" aria-pressed="${k===S.sel}">${C.label(k,today())}</button>`).join("")}</div>
     <div class="status"><span>${S.loading&&!games.length?"Loading games…":games.length?`${open.length?`${pickedOpen} of ${open.length} open games picked`:"All games have started"}`:`No ${sp.name} games ${sp.weekly?"this week":"on this day"}.`}</span><button class="btn small" id="refresh">Refresh scores</button></div>
+    ${lockBar(open,pickedOpen,sp)}${chBar(S.sel,open)}
     <div class="games">${games.map(([id,g])=>gameCard(id,g,mine)).join("")||`<p class="empty">${S.loading?"":`Pick another ${sp.noun} above.`}</p>`}</div>`;
   v.querySelectorAll("[data-wk]").forEach(b=>b.onclick=()=>{S.sel=b.dataset.wk;S.selBy[S.sport]=S.sel;render();loadSlate(S.sel)});
   $("#refresh").onclick=()=>loadSlate(S.sel);
+  if($("#lockin"))$("#lockin").onclick=lockIn;
+  chWire(v);
   v.querySelectorAll(".side[data-g]").forEach(b=>b.onclick=()=>{if(b.dataset.held){delete b.dataset.held;return}pick(b.dataset.g,b.dataset.t)});
   xHold(v);
   // centre the selected slate by sliding the pill row only; scrollIntoView would also pull the whole page up to it
   const row=v.querySelector(".pills"),cur=row.querySelector('[aria-pressed="true"]');
   if(cur)row.scrollLeft=cur.offsetLeft-row.offsetLeft-(row.clientWidth-cur.offsetWidth)/2;
 }
+/* Lock to reveal: nobody sees anyone else's picks for a game until they've locked in their own picks for that week (NFL)
+   or day, or the game has started. Locking in is for good: picks for that slate can't change after. */
+const iLocked=key=>!!((S.locked[key]||{})[S.user.uid]);
+function lockBar(open,picked,sp){
+  if(iLocked(S.sel))return`<div class="lockbar done" role="status">🔒 You're locked in. Everyone's picks show now.</div>`;
+  if(!open.length)return"";
+  return`<div class="lockbar"><span>Lock in your picks to see everyone else's.</span><button class="btn gold small" id="lockin" ${picked?"":"disabled"}>Lock in</button></div>`;
+}
+let lockArm=0;
+async function lockIn(){
+  const b=$("#lockin");if(!b||iLocked(S.sel))return;
+  const wk=S.weeks[S.sel],mine=(S.picks[S.sel]||{})[S.user.uid]||{};
+  const left=wk?Object.entries(wk.games).filter(([id,g])=>!started(g)&&!mine[id]).length:0;
+  if(Date.now()-lockArm>4000){lockArm=Date.now();b.textContent="Tap again to lock";toast(left?`${left} game${left>1?"s":""} not picked yet. Locked picks can't change.`:"Locked picks can't change.");
+    setTimeout(()=>{const x=$("#lockin");if(x&&Date.now()-lockArm>=4000)x.textContent="Lock in"},4100);return}
+  lockArm=0;const at=new Date().toISOString();(S.locked[S.sel]=S.locked[S.sel]||{})[S.user.uid]=at;render();
+  try{await db.doc(`gp_picks/${S.user.uid}_${S.sel}`).set(picksDoc(S.sel,mine));toast("Locked in")}
+  catch(_){delete S.locked[S.sel][S.user.uid];render();toast("Couldn't lock in. Check your connection.")}
+}
+/* Challenges: challenge one player or a few to a slate (a week of NFL, or one day of another league). The challenge rides
+   on the challenger's own picks doc for that slate (ch: {to:[player ids], at}), so it needs no new database rules.
+   Picks stay hidden both ways until each player locks in, like every slate. A share link (slate + challenger) opens
+   the slate and joins the challenge. */
+function picksDoc(key,picks){const u=S.user.uid,d={uid:u,week:key,picks,updatedAt:new Date().toISOString()};
+  const l=(S.locked[key]||{})[u],c=(S.ch[key]||{})[u];if(l)d.locked=l;if(c)d.ch=c;return d}
+function rivals(key){const u=S.user.uid,c=S.ch[key]||{},set=new Set((c[u]&&c[u].to)||[]);
+  Object.entries(c).forEach(([from,x])=>{if(from!==u&&x.to.includes(u))set.add(from)});set.delete(u);return[...set].filter(x=>S.players[x])}
+function slateScore(key,uid){const wk=S.weeks[key],p=(S.picks[key]||{})[uid]||{};let w=0,l=0;
+  if(wk)Object.entries(wk.games).forEach(([id,g])=>{if(g.done&&p[id])p[id]===g.winner?w++:l++});return{w,l}}
+function chIncoming(){
+  const u=S.user.uid,rows=[];
+  Object.entries(S.ch).forEach(([key,c])=>Object.entries(c).forEach(([from,x])=>{
+    if(from===u||!x.to.includes(u)||iLocked(key)||!S.players[from])return;
+    const wk=S.weeks[key];if(wk&&Object.values(wk.games).every(started))return; // nothing left to pick
+    if(key<C.dayKey(C.sportOf(key),today())&&C.sportOf(key)!=="nfl")return;
+    rows.push(`<div class="chin"><span>⚔️ <b>${esc(S.players[from].name)}</b> challenged you: ${C.sport(C.sportOf(key)).emoji} ${esc(C.label(key,today()))}</span><button class="btn small" data-chgo="${esc(key)}">Pick</button></div>`)}));
+  return rows.slice(0,4).join("");
+}
+function chBar(key,open){
+  const r=rivals(key),me=S.user.uid;let h="";
+  if(r.length){const line=[me,...r].map(x=>{const sc=slateScore(key,x),lk=(S.locked[key]||{})[x];
+      return`<b>${x===me?"You":esc(S.players[x].name)}</b> ${sc.w}-${sc.l}${lk?" 🔒":""}`}).join(" · ");
+    h=`<div class="row"><span>⚔️ Head to head: ${line}</span></div>`}
+  if(open.length)h+=`<div class="row"${r.length?' style="margin-top:6px"':""}><span>${r.length?"Add someone, or send the link.":"Challenge a friend to this slate."}</span><button class="btn small" id="chOpen" aria-expanded="${!!S.chOpen}">${S.chOpen?"Close":"Challenge"}</button></div>`;
+  if(open.length&&S.chOpen){const mine=((S.ch[key]||{})[me]||{}).to||[];
+    const others=Object.entries(S.players).filter(([u])=>u!==me).sort((a,b)=>String(a[1].name).localeCompare(String(b[1].name)));
+    h+=`<div class="chlist" role="group" aria-label="Players to challenge">${others.map(([u,p])=>`<label><input type="checkbox" value="${esc(u)}" ${mine.includes(u)?"checked disabled":""}>${esc(p.name)}</label>`).join("")||`<span>No other players yet. Send the link.</span>`}</div>
+      <div class="row"><button class="btn small" id="chLink">Share link</button>${others.length?`<button class="btn gold small" id="chSend">Send challenge</button>`:""}</div>`}
+  return h?`<div class="chbar">${h}</div>`:"";
+}
+function chWire(v){
+  v.querySelectorAll("[data-chgo]").forEach(b=>b.onclick=()=>goSlate(b.dataset.chgo));
+  if($("#chOpen"))$("#chOpen").onclick=()=>{S.chOpen=!S.chOpen;render()};
+  if($("#chLink"))$("#chLink").onclick=()=>shareChallenge(S.sel);
+  if($("#chSend"))$("#chSend").onclick=async()=>{const sel=[...v.querySelectorAll('.chlist input:checked:not(:disabled)')].map(i=>i.value);
+    if(!sel.length){toast("Tick someone to challenge.");return}
+    const key=S.sel,me=S.user.uid,prev=(S.ch[key]||{})[me],to=[...new Set([...(prev&&prev.to||[]),...sel])].slice(0,12);
+    (S.ch[key]=S.ch[key]||{})[me]={to,at:new Date().toISOString()};S.chOpen=false;render();
+    try{await db.doc(`gp_picks/${me}_${key}`).set(picksDoc(key,(S.picks[key]||{})[me]||{}));toast(sel.length>1?"Challenges sent":"Challenge sent")}
+    catch(_){if(prev)S.ch[key][me]=prev;else delete S.ch[key][me];render();toast("Couldn't send the challenge. Check your connection.")}};
+}
+function goSlate(key){S.sport=C.sportOf(key);store("gp.sport",S.sport);S.sel=key;S.selBy[S.sport]=key;S.view="picks";S.team=null;loadSlate(key);render();window.scrollTo(0,0)}
+async function shareChallenge(key){
+  let url=location.origin+location.pathname+"?"+(S.isOwner?"":"code="+encodeURIComponent(S.me.code)+"&")+"slate="+encodeURIComponent(key)+"&vs="+encodeURIComponent(S.user.uid);
+  const text=`${S.me.name} challenged you to ${C.sport(C.sportOf(key)).name} picks (${C.label(key,today())}) on Gameday Picks. Lock in your picks to see theirs.`;
+  try{if(navigator.share){await navigator.share({title:"Gameday Picks challenge",text,url});return}}catch(e){if(e&&e.name==="AbortError")return}
+  try{await navigator.clipboard.writeText(text+" "+url);toast("Challenge link copied")}catch(_){prompt("Copy this challenge link:",url)}
+}
+// a challenge link someone opened: go to that slate and join the challenge (it's added to this player's own doc)
+async function takeChallengeLink(){
+  let t;try{t=JSON.parse(store("gp.vs")||"null")}catch(_){t=null}if(!t||!t.slate)return;store("gp.vs","");
+  if(new URLSearchParams(location.search).get("slate"))history.replaceState(null,"",location.pathname);
+  goSlate(t.slate);const me=S.user.uid;if(!t.vs||t.vs===me)return;
+  const cur=(S.ch[t.slate]||{})[me];if(cur&&cur.to.includes(t.vs))return;
+  (S.ch[t.slate]=S.ch[t.slate]||{})[me]={to:[...new Set([...(cur&&cur.to||[]),t.vs])].slice(0,12),at:new Date().toISOString()};
+  try{await db.doc(`gp_picks/${me}_${t.slate}`).set(picksDoc(t.slate,(S.picks[t.slate]||{})[me]||{}));toast("You're in the challenge. Lock in to see their picks.")}catch(_){}
+}
 function gameCard(id,g,mine){
-  const lock=started(g);const all=S.picks[S.sel]||{};
+  const lock=started(g);const all=S.picks[S.sel]||{};const seen=lock||iLocked(S.sel);
   const ex=S.extra[S.sel]&&S.extra[S.sel][id];
   const side=(t,cls)=>{const rec=ex&&ex[cls==="hm"?"home":"away"];const r=rec&&rec.records&&rec.records.total||"";const isMine=mine[id]===t.abbr;const res=g.done&&isMine?(g.winner===t.abbr?" right":" wrong"):"";
-    const who=lock?Object.entries(all).filter(([u,p])=>p[id]===t.abbr).map(([u])=>S.players[u]?S.players[u].name:"?"):[];
-    const n=Object.values(all).filter(p=>p[id]===t.abbr).length;
-    return `<button class="side ${cls}${isMine?" mine":""}${res}" data-g="${id}" data-t="${esc(t.abbr)}" ${lock?"disabled":""} aria-pressed="${isMine}" aria-label="${esc(t.city+" "+t.name)}${r?", "+esc(r):""}${isMine?", your pick":""}">
+    const who=seen?Object.entries(all).filter(([u,p])=>p[id]===t.abbr).map(([u])=>S.players[u]?S.players[u].name:"?"):[];
+    return `<button class="side ${cls}${isMine?" mine":""}${res}" data-g="${id}" data-t="${esc(t.abbr)}" ${seen?"disabled":""} aria-pressed="${isMine}" aria-label="${esc(t.city+" "+t.name)}${r?", "+esc(r):""}${isMine?", your pick":""}">
       <span class="badge" style="background:${esc(t.color)};color:${contrast(t.color)}">${esc(t.abbr)}</span>
       <span class="tname">${esc(t.name)}<small>${esc(t.city)}</small></span>
       ${r?`<span class="trec">${esc(r)}</span>`:""}
-      <span class="who">${lock?(who.length?who.map(w=>`<b>${esc(w)}</b>`).join(", "):"&nbsp;"):(n?`${n} pick${n>1?"s":""}`:"&nbsp;")}</span></button>`};
+      <span class="who">${seen&&who.length?who.map(w=>`<b>${esc(w)}</b>`).join(", "):"&nbsp;"}</span></button>`};
   let date="";try{date=new Date(g.date).toLocaleString(undefined,{weekday:"short",month:"short",day:"numeric",hour:"numeric",minute:"2-digit"})}catch(_){}
   const sc=g.away.score!=null&&g.state!=="pre"?`<div class="score"><span class="${g.done?"f":""}">${esc(g.away.score)}</span><span>–</span><span class="${g.done?"f":""}">${esc(g.home.score)}</span></div>`:"";
-  return `<div class="game"><div class="gtop"><span>${esc(date)}</span><span>${g.done?"Final":lock?"Locked · in progress":mine[id]?"Picked":"Open"}</span></div>
+  return `<div class="game"><div class="gtop"><span>${esc(date)}</span><span>${g.done?"Final":lock?"Locked · in progress":iLocked(S.sel)?"Locked in":mine[id]?"Picked":"Open"}</span></div>
     <div class="matchup">${side(g.away,"aw")}<div class="mid"><span>${C.sport(S.sport).emoji}</span><span>at</span></div>${side(g.home,"hm")}</div>${lock?"":gauge(g,chanceOf(id))}${sc}
     ${xWhere(id)}<button class="x-scoutbtn" type="button" data-scout="${esc(id)}">📊 Scout this matchup</button></div>`;
 }
 async function pick(gid,abbr){
   const g=S.weeks[S.sel]&&S.weeks[S.sel].games[gid];if(!g||started(g)){toast("That game has started. Picks are locked.");return}
+  if(iLocked(S.sel)){toast("You locked in these picks. They can't change.");return}
   const mine={...((S.picks[S.sel]||{})[S.user.uid]||{})};if(mine[gid]===abbr)delete mine[gid];else mine[gid]=abbr;
   (S.picks[S.sel]=S.picks[S.sel]||{})[S.user.uid]=mine;render();
-  try{await db.doc(`gp_picks/${S.user.uid}_${S.sel}`).set({uid:S.user.uid,week:S.sel,picks:mine,updatedAt:new Date().toISOString()})}
+  try{await db.doc(`gp_picks/${S.user.uid}_${S.sel}`).set(picksDoc(S.sel,mine))}
   catch(_){toast("Couldn't save that pick. Check your connection.")}
 }
 
@@ -432,7 +556,7 @@ function renderBoard(){
   const all=Object.entries(S.players).map(([u,p])=>({u,name:p.name,...C.record(S.picks,S.weeks,u,null)})).sort((a,b)=>b.w-a.w||a.name.localeCompare(b.name));
   $("#view").innerHTML=`<p class="status"><span>${sp.emoji} ${sp.name} leaderboard</span></p><div class="board">${rows.map((r,i)=>{const pct=r.total?Math.round(r.w/r.total*100):0;
     return `<div class="lrow${r.u===S.user.uid?" me-row":""}"><span class="rk">${i+1}</span><span><span class="nm">${esc(r.name)}</span><div class="bar"><i style="width:${pct}%"></i></div></span><span class="wl">${r.w}-${r.l}<small>${r.total?pct+"%":"no results"}</small></span></div>`}).join("")||`<p class="empty">No players yet.</p>`}</div>
-    <p class="status">Wins count when a picked game goes final. Everyone's picks show once a game starts.</p>
+    <p class="status">Wins count when a picked game goes final. Everyone's picks show once you lock in yours, or once a game starts.</p>
     <h2 style="margin:18px 0 0;font-size:24px">All leagues together</h2><div class="board" style="margin-top:8px">${all.map((r,i)=>`<div class="lrow${r.u===S.user.uid?" me-row":""}"><span class="rk">${i+1}</span><span class="nm">${esc(r.name)}</span><span class="wl">${r.w}-${r.l}<small>${r.total?Math.round(r.w/r.total*100)+"%":"no results"}</small></span></div>`).join("")}</div>`;
 }
 function renderStats(){
@@ -483,18 +607,19 @@ function renderAdmin(){
   document.querySelectorAll("[data-rm]").forEach(b=>{let armed=false;b.onclick=async()=>{if(!armed){armed=true;b.textContent="Tap again to remove";setTimeout(()=>{armed=false;b.textContent="Remove"},3000);return}
     try{await db.doc("gp_players/"+b.dataset.rm).delete();toast("Removed. Their old picks stay hidden from the board.")}catch(_){toast("Couldn't remove")}}});
 }
-async function share(code){const url=inviteLink(code);const text=`Join my NFL, MLB, NBA and NHL picks on Gameday Picks. Sign in with Google or any email. Code: ${code}`;
+async function share(code){const url=inviteLink(code);const text=`Join my NFL, MLB, NBA and NHL picks on Gameday Picks. Sign in with Google, or just pick a player name and a PIN. Code: ${code}`;
   try{if(navigator.share){await navigator.share({title:"Gameday Picks",text,url});return}}catch(e){if(e&&e.name==="AbortError")return}
   try{await navigator.clipboard.writeText(text+"\n"+url);toast("Invite link copied")}catch(_){prompt("Copy this invite link",url)}}
 
 /* ---------- boot ---------- */
 (function boot(){
-  const c=new URLSearchParams(location.search).get("code");if(c)store("gp.code",c.toUpperCase());
+  const q=new URLSearchParams(location.search),c=q.get("code");if(c)store("gp.code",c.toUpperCase());
+  if(/^(\d{4}-\d{1,2}-\d{1,2}|(mlb|nba|nhl)-\d{4}-\d{2}-\d{2})$/.test(q.get("slate")||""))store("gp.vs",JSON.stringify({slate:q.get("slate").slice(0,40),vs:(q.get("vs")||"").replace(/[^A-Za-z0-9]/g,"").slice(0,128)}));
   // register first, so even a visit where Firebase failed to load sets up the offline copy for next time
   if("serviceWorker" in navigator)addEventListener("load",()=>navigator.serviceWorker.register("sw.js").catch(()=>{}));
   if(!window.firebase){$("#app").innerHTML=`<div class="gate"><div class="box"><h1>Gameday Picks</h1><p>Couldn't load. Check your connection and reopen the app.</p></div></div>`;return}
   firebase.initializeApp(FIREBASE_CONFIG);db=firebase.firestore();try{db.enablePersistence({synchronizeTabs:true}).catch(()=>{})}catch(_){}
-  firebase.auth().onAuthStateChanged(u=>{unsubs.forEach(f=>f());unsubs=[];S.user=u;S.me=null;S.players={};S.picks={};S.weeks={};if(u)startData();render()});
+  firebase.auth().onAuthStateChanged(u=>{unsubs.forEach(f=>f());unsubs=[];S.user=u;S.me=null;S.players={};S.picks={};S.locked={};S.ch={};S.weeks={};if(u)startData();render()});
 })();
 </script>
 </body>

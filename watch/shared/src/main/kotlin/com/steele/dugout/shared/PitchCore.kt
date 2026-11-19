@@ -225,6 +225,10 @@ object PitchCore {
         return null
     }
 
+    /** the next pitch adds a rest day: the step it reaches, or null */
+    fun restSoon(pitches: Int, division: String): RestStep? =
+        nextRestStep(pitches, division)?.takeIf { it.at == pitches + 1 }
+
     /** One row per pitcher: everyone on the list, plus anyone who pitched today but isn't on it.
      *  [resting] is from the phone (pitcher id to the day they can pitch again), worked out there from Ballclub and past days. */
     fun bullpen(log: PitchLog, day: String, resting: Map<String, String>): List<Row> {

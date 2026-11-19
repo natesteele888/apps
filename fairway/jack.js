@@ -12,8 +12,10 @@
   const NK = "fw:cnotes", SK = "fw:jack";
   J.settings = () => C.cleanJack(FW.LS.get(SK, {}));
   J.allNotes = () => C.cleanCourseNotes(FW.LS.get(NK, {}));
-  J.notesFor = (course, h) => ((J.allNotes()[C.courseKey(course)] || {})[h] || []);
+  // kept by the number on the hole's sign, so a back nine's first hole shares the 10th's notes
+  J.notesFor = (course, h) => ((J.allNotes()[C.courseKey(course)] || {})[C.holeNo(course, h)] || []);
   function setNotes(course, h, list) {
+    h = C.holeNo(course, h);
     const all = J.allNotes(), ck = C.courseKey(course), holes = all[ck] || {};
     if (list.length) holes[h] = list.slice(0, 5); else delete holes[h];
     if (Object.keys(holes).length) all[ck] = holes; else delete all[ck];
@@ -29,7 +31,7 @@
   // A bar on the Score tab under the hole card: your note for this hole, or a nudge to add one.
   J.holeHtml = function (ev, h) {
     const esc = U().esc, l = J.notesFor(ev.course, h);
-    return `<button type="button" class="jackbar" id="jackopen"><span><b>Jack</b><small>${l.length ? esc(l[0]) + (l.length > 1 ? ` (+${l.length - 1} more)` : "") : `Add your own note for hole ${h}`}</small></span><span class="chev">Notes</span></button>`;
+    return `<button type="button" class="jackbar" id="jackopen"><span><b>Jack</b><small>${l.length ? esc(l[0]) + (l.length > 1 ? ` (+${l.length - 1} more)` : "") : `Add your own note for hole ${C.holeNo(ev.course, h)}`}</small></span><span class="chev">Notes</span></button>`;
   };
   J.wire = function (el, ev, mine, h) { const b = $("#jackopen", el); if (b) b.onclick = () => J.sheet(ev, mine, h); };
 
@@ -37,12 +39,12 @@
     const u = U(), esc = u.esc;
     const draw = box => {
       const l = J.notesFor(ev.course, h), js = J.settings();
-      $(".sheet-b", box).innerHTML = `<p class="msg small">Your notes for hole ${h} at ${esc(ev.course.name)}, in your own words. They stay on this phone and come up every time you play this hole.</p>
+      $(".sheet-b", box).innerHTML = `<p class="msg small">Your notes for hole ${C.holeNo(ev.course, h)} at ${esc(ev.course.name)}, in your own words. They stay on this phone and come up every time you play this hole.</p>
         ${l.length ? `<ul class="list">${l.map((t, i) => `<li class="ritem"><span>${esc(t)}</span><button type="button" class="x" data-del="${i}" aria-label="Remove this note">×</button></li>`).join("")}</ul>` : ""}
         ${l.length < 5 ? `<label class="fld"><span>Add a note</span><textarea id="jn" rows="2" maxlength="200" placeholder="Hate this hole. Stay up on the right."></textarea></label>
         <div class="row2">${Rec ? `<button type="button" class="btn" id="jmic">Say it</button>` : ""}<button type="button" class="btn primary" id="jsave">Save note</button></div>
         <p class="msg small" id="jmsg" role="status"></p>` : `<p class="msg small">Five notes is the most for one hole. Remove one to add another.</p>`}
-        ${canSpeak() ? `<button type="button" class="btn block" id="jread">Read hole ${h} to me</button>` : ""}
+        ${canSpeak() ? `<button type="button" class="btn block" id="jread">Read hole ${C.holeNo(ev.course, h)} to me</button>` : ""}
         ${FW.bag ? `<button type="button" class="btn ghost block" id="jbag">My bag</button>` : ""}
         <button type="button" class="btn ghost block" id="jset">Jack's settings · ${esc(C.JACK_LANGS.find(x => x[0] === js.lang)[1])}</button>`;
       $$("[data-del]", box).forEach(b => b.onclick = () => { const n = l.slice(); n.splice(+b.dataset.del, 1); setNotes(ev.course, h, n); draw(box); u.render(); });
@@ -50,7 +52,7 @@
       if (save) save.onclick = () => {
         const t = $("#jn", box).value.replace(/\s+/g, " ").trim().slice(0, 200);
         if (!t) { $("#jmsg", box).textContent = "Type or say a note first."; return; }
-        setNotes(ev.course, h, l.concat(t)); draw(box); u.render(); u.toast("Saved for hole " + h);
+        setNotes(ev.course, h, l.concat(t)); draw(box); u.render(); u.toast("Saved for hole " + C.holeNo(ev.course, h));
       };
       const mic = $("#jmic", box);
       if (mic) mic.onclick = () => {
@@ -62,11 +64,11 @@
         rec.onend = () => { mic.disabled = false; const m = $("#jmsg", box); if (m && m.textContent === "Listening…") m.textContent = ""; };
         try { rec.start(); } catch (e) { mic.disabled = false; $("#jmsg", box).textContent = "This phone can't listen here. Type the note instead."; }
       };
-      const rd = $("#jread", box); if (rd) rd.onclick = () => J.say(C.holeTalk(ev, mine, h, J.allNotes(), C.jackLevel(J.settings()), FW.bag ? FW.bag.get() : null));
+      const rd = $("#jread", box); if (rd) rd.onclick = () => J.say(C.holeTalk(ev, mine, h, J.allNotes(), ev.fam ? "clean" : C.jackLevel(J.settings()), FW.bag ? FW.bag.get() : null));
       $("#jset", box).onclick = () => J.settingsSheet(() => J.sheet(ev, mine, h));
       const jb = $("#jbag", box); if (jb) jb.onclick = () => FW.bag.sheet(() => J.sheet(ev, mine, h));
     };
-    u.sheet("Jack · hole " + h, "", draw);
+    u.sheet("Jack · hole " + C.holeNo(ev.course, h), "", draw);
   };
 
   J.settingsSheet = function (back) {

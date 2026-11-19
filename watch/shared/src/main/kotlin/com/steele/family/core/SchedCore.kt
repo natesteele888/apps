@@ -133,4 +133,36 @@ object SchedCore {
             else -> ""
         }
     }
+
+    // ---------- the watch face ("Next up", a complication) ----------
+
+    /** a small slot shows [shortTitle] over [shortText]; a wide slot shows [longText] */
+    data class Face(val shortTitle: String?, val shortText: String, val longText: String)
+
+    /**
+     * The words for the "Next up" watch-face slot, from what's still ahead ([ahead], soonest first).
+     *   nothing sent yet      SCHED              "Open Schedule on the watch once"
+     *   nothing ahead         — / NONE           "Nothing in the next two weeks"
+     *   a game on now         LIVE / GAME        "Game on now @ Hawks"
+     *   today                 GAME / 6:00        "Game 6:00 PM @ Hawks"           (PRAC for a practice)
+     *   tomorrow              TMRW / GAME        "Tomorrow 6:00 PM practice"
+     *   later                 TUE / GAME         "Tue Nov 24 6:00 PM @ Hawks"
+     * Only absolute times, so the words stay right between the watch's updates.
+     */
+    fun face(have: Boolean, ahead: List<Ev>, now: Long, zone: ZoneId, h24: Boolean): Face {
+        if (!have) return Face(null, "SCHED", "Open Schedule on the watch once")
+        val e = ahead.firstOrNull() ?: return Face("NONE", "—", "Nothing in the next two weeks")
+        val today = Instant.ofEpochMilli(now).atZone(zone).toLocalDate()
+        val kind = if (e.game) "GAME" else "PRAC"
+        val what = if (e.game) e.title else e.label.ifBlank { "Practice" }
+        val time = timeLabel(e.min, h24)
+        if (live(e, now, zone)) return Face("LIVE", "GAME", "Game on now " + e.title)
+        return when (e.date) {
+            today -> Face(kind, time.ifBlank { "TODAY" }.removeSuffix(" AM").removeSuffix(" PM"),
+                listOf(if (e.game) "Game" else what, time, if (e.game) e.title else "").filter { it.isNotBlank() }.joinToString(" "))
+            today.plusDays(1) -> Face("TMRW", kind, listOf("Tomorrow", time, if (e.game) e.title else what.lowercase(Locale.US)).filter { it.isNotBlank() }.joinToString(" "))
+            else -> Face(e.date.format(DateTimeFormatter.ofPattern("EEE", Locale.US)).uppercase(Locale.US), kind,
+                listOf(e.date.format(DateTimeFormatter.ofPattern("EEE MMM d", Locale.US)), time, if (e.game) e.title else what.lowercase(Locale.US)).filter { it.isNotBlank() }.joinToString(" "))
+        }
+    }
 }

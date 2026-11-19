@@ -79,4 +79,25 @@ class SchedCoreTest {
         assertEquals("Friday", SchedCore.dayLabel(today.plusDays(2), today))
         assertEquals("Thu Nov 26", SchedCore.dayLabel(today.plusDays(8), today))
     }
+
+    @Test fun face() {
+        val s = SchedCore.parse(phone)!!
+        val now = ms("2026-11-18", 9)
+        fun f(at: Long) = SchedCore.face(true, SchedCore.ahead(s.ev.sortedWith(compareBy({ it.date }, { it.min ?: 720 })), at, zone), at, zone, false)
+        // today's batting cage at 5:30 PM
+        assertEquals(SchedCore.Face("PRAC", "5:30", "Batting cage 5:30 PM"), f(now))
+        // after it: tomorrow's practice with no time
+        assertEquals(SchedCore.Face("TMRW", "PRAC", "Tomorrow practice"), f(ms("2026-11-18", 21)))
+        // a practice with no time stays up all its day
+        assertEquals(SchedCore.Face("PRAC", "TODAY", "Practice"), f(ms("2026-11-19", 23)))
+        // two days out: the game
+        val games = s.ev.filter { it.game }
+        assertEquals(SchedCore.Face("FRI", "GAME", "Fri Nov 20 6:00 PM @ Hawks"), SchedCore.face(true, SchedCore.ahead(games, now, zone), now, zone, false))
+        // the game day, then during the game
+        assertEquals(SchedCore.Face("GAME", "6:00", "Game 6:00 PM @ Hawks"), f(ms("2026-11-20", 8)))
+        assertEquals(SchedCore.Face("LIVE", "GAME", "Game on now @ Hawks"), f(ms("2026-11-20", 18, 30)))
+        assertEquals("—", f(ms("2026-12-20", 8)).shortText)
+        assertEquals(SchedCore.Face(null, "SCHED", "Open Schedule on the watch once"), SchedCore.face(false, emptyList(), now, zone, false))
+        assertEquals("17:30", SchedCore.face(true, SchedCore.ahead(s.ev.sortedBy { it.date }, now, zone), now, zone, true).shortText)
+    }
 }

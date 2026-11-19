@@ -47,9 +47,9 @@
   const MONO_HCP = [9, 5, 3, 15, 17, 1, 7, 13, 11, 10, 6, 4, 16, 18, 2, 8, 14, 12];
   function monoosnockCourse() {
     const tees = [
-      { id: "whiteblue", name: "White/Blue", color: TEE_COLORS.blue },
-      { id: "green", name: "Green", color: TEE_COLORS.green },
-      { id: "ladies", name: "Ladies", color: TEE_COLORS.red }
+      { id: "whiteblue", name: "White/Blue", color: TEE_COLORS.blue, cr: 69.6, sl: 126 },
+      { id: "green", name: "Green", color: TEE_COLORS.green, cr: 66.4, sl: 122 },
+      { id: "ladies", name: "Ladies", color: TEE_COLORS.red, cr: 72.5, sl: 128 }
     ];
     const holes = MONO_HCP.map((hcp, i) => {
       const k = i % 9, h = { par: MONO_PAR[k], hcp, y: { whiteblue: MONO_WB[k], green: MONO_GR[k], ladies: MONO_LD[k] } };
@@ -57,6 +57,18 @@
       return h;
     });
     return { id: "monoosnock", name: "Monoosnock Country Club", tees, holes, ready: true };
+  }
+  // Just one nine of an 18-hole course, for a quick nine: holes 1-9 ("front") or 10-18 ("back"), with the handicap
+  // order kept (ranked 1 to 9 within the nine) and each tee's rating halved for nine holes. The slope stays.
+  function nineOf(course, which) {
+    if (!course || course.holes.length !== 18) return course;
+    const from = which === "back" ? 9 : 0, holes = course.holes.slice(from, from + 9).map(h => JSON.parse(JSON.stringify(h)));
+    holes.map((h, i) => i).sort((a, b) => holes[a].hcp - holes[b].hcp || a - b).forEach((i, k) => { holes[i].hcp = k + 1; });
+    const tees = course.tees.map(t => Object.assign({}, t, t.cr ? { cr: Math.round(t.cr * 5) / 10 } : {}));
+    const out = { name: clip(course.name + (which === "back" ? " (back 9)" : " (front 9)"), 60), tees, holes };
+    if (which === "back") out.h0 = 9;
+    if (course.id) out.id = clip(course.id + (which === "back" ? "-b9" : "-f9"), 40);
+    return out;
   }
   // The courses that come with the app, ahead of the ones built on this phone.
   const readyCourses = () => [monoosnockCourse()];
@@ -86,7 +98,12 @@
       while (seen[id]) id += "x";
       seen[id] = 1;
       const color = /^#[0-9a-f]{6}$/i.test(t && t.color) ? t.color.toLowerCase() : TEE_COLORS.white;
-      return { id, name: clip(t && t.name, 16) || "Tee " + (i + 1), color };
+      const out = { id, name: clip(t && t.name, 16) || "Tee " + (i + 1), color };
+      // the tee's course rating and slope from the scorecard, when the course has them (they turn a handicap index into strokes)
+      const cr = Number(t && t.cr), sl = Number(t && t.sl);
+      if (Number.isFinite(cr) && cr >= 25 && cr <= 85) out.cr = Math.round(cr * 10) / 10;
+      if (Number.isFinite(sl) && sl >= 55 && sl <= 155) out.sl = Math.round(sl);
+      return out;
     });
     if (!tees.length) tees = [{ id: "white", name: "White", color: TEE_COLORS.white }];
     const n = Array.isArray(c.holes) && c.holes.length >= 18 ? 18 : 9;
@@ -107,7 +124,21 @@
     if (c.id) out.id = clip(c.id, 40);
     if (c.sample) out.sample = true;
     if (c.ready) out.ready = true;
+    // the back nine of an 18-hole course, played on its own: its holes are 10 to 18 on the signs (quick rounds only)
+    if (c.h0 === 9 && n === 9) out.h0 = 9;
     return out;
+  }
+  // The number on the hole's sign: hole 1 of a back-nine round is the 10th.
+  function holeNo(course, h) { return h + ((course && course.h0) || 0); }
+  // Hole art that comes with the app: one picture per hole, by course id, shown in place of the pencil sketch.
+  // To add a course's art, put the pictures in fairway/art/<course id>/ named by hole number (1.webp to 18.webp) and
+  // list the holes that have one here. A front or back nine of that course uses the same pictures.
+  const HOLE_ART = { monoosnock: { ext: "webp", holes: [] } };
+  function holeArt(course, h) {
+    if (!course || !course.id) return null;
+    const base = String(course.id).replace(/-(f9|b9)$/, ""), a = Object.prototype.hasOwnProperty.call(HOLE_ART, base) ? HOLE_ART[base] : null;
+    const n = holeNo(course, h);
+    return a && a.holes.indexOf(n) >= 0 ? "art/" + base + "/" + n + "." + a.ext : null;
   }
   function cleanName(s) { return clip(s, NAME_MAX); }
   // A handicap index as golfers say it (+2.1 is written -2.1 here), or null when there isn't one.
@@ -142,6 +173,25 @@
     const odd = course.tees.filter(t => coursePar(course, t.id) !== base).map(t => t.name + " " + coursePar(course, t.id));
     return "par " + base + (odd.length ? " (" + odd.join(", ") + ")" : "");
   }
+  /* ---------- handicaps: course handicap and the strokes it gives on each hole ---------- */
+  // Course handicap, the way the World Handicap System works it out: index x slope / 113 + (course rating - par),
+  // rounded. Without a rating and slope from the card it's the index, rounded. A 9-hole course takes half the index
+  // (its card's rating is for nine). Plus handicaps come out negative. null when the golfer gave no index.
+  function courseHc(course, pl) {
+    const hc = pl && Number.isFinite(pl.hc) ? pl.hc : null; if (hc == null) return null;
+    const t = course.tees.find(x => x.id === pl.tee) || course.tees[0], nine = course.holes.length === 9, ix = nine ? hc / 2 : hc;
+    const v = t && t.cr && t.sl ? ix * t.sl / 113 + (t.cr - coursePar(course, t.id)) : ix;
+    return Math.round(v) || 0;
+  }
+  // Strokes a course handicap gets on each hole: one on each hole in handicap order (1 is the hardest), going round
+  // again past the number of holes. A plus handicap gives strokes back, starting on the easiest hole.
+  function strokesBy(course, ch) {
+    const n = course.holes.length, out = course.holes.map(() => 0); if (!ch) return out;
+    const rank = course.holes.map((h, i) => i).sort((a, b) => course.holes[a].hcp - course.holes[b].hcp || a - b);
+    const abs = Math.abs(ch), sign = ch < 0 ? -1 : 1, base = Math.floor(abs / n), extra = abs % n;
+    rank.forEach((hi, k) => { const pos = sign > 0 ? k : n - 1 - k; out[hi] = sign * (base + (pos < extra ? 1 : 0)); });
+    return out;
+  }
   const players = ev => Object.keys(ev.p || {}).filter(isPid).map(id => Object.assign({ id }, ev.p[id]));
   function teeOf(ev, pl) { return ev.course.tees.find(t => t.id === pl.tee) || ev.course.tees[0]; }
   function yards(course, hole, teeId) { const h = course.holes[hole - 1]; return h && h.y ? h.y[teeId] || 0 : 0; }
@@ -153,31 +203,43 @@
   // One player's round: scores by hole, strokes, to par, how far through and the hole they're on.
   function round(ev, pl, r) {
     const n = holeCount(ev), order = playOrder(n, pl.st), sc = [], pars = parsFor(ev.course, pl.tee);
-    let tot = 0, par = 0, thru = 0;
-    for (let h = 1; h <= n; h++) { const v = strokes(pl, r, h); sc.push(v); if (v != null) { tot += v; par += pars[h - 1]; thru++; } }
+    const ch = courseHc(ev.course, pl), gets = strokesBy(ev.course, ch || 0);
+    let tot = 0, par = 0, thru = 0, given = 0, pts = 0, ptsNet = 0;
+    for (let h = 1; h <= n; h++) {
+      const v = strokes(pl, r, h); sc.push(v);
+      if (v != null) { tot += v; par += pars[h - 1]; thru++; given += gets[h - 1]; pts += stableford(v, pars[h - 1], 0); ptsNet += stableford(v, pars[h - 1], gets[h - 1]); }
+    }
     const next = order.find(h => sc[h - 1] == null) || null;
     // the last hole they finished, in their own order (where the board's marker sits)
     let last = null; for (const h of order) if (sc[h - 1] != null) last = h;
     // to par after each hole, in play order (the classic board shows this number for every hole)
     const run = {}; let acc = 0;
     order.forEach(h => { const v = sc[h - 1]; if (v != null) { acc += v - pars[h - 1]; run[h] = acc; } });
-    return { r, pars, scores: sc, strokes: tot, par, toPar: tot - par, thru, done: thru === n, started: thru > 0, next, last, order, run, out: half(ev, sc, 0), inn: n === 18 ? half(ev, sc, 9) : null };
+    // net: strokes take off the strokes this golfer gets on the holes they've played (gross for a golfer with no index)
+    return { r, pars, ch, gets, scores: sc, strokes: tot, par, toPar: tot - par, net: tot - given - par, pts, ptsNet, thru, done: thru === n, started: thru > 0, next, last, order, run, out: half(ev, sc, 0), inn: n === 18 ? half(ev, sc, 9) : null };
   }
+  // Stableford points for one hole: 2 for par, 1 more for each stroke under, 1 less for each over, never below 0.
+  // gets: the handicap strokes on that hole, for net points.
+  function stableford(v, par, gets) { return v == null ? 0 : Math.max(0, 2 + par + (gets || 0) - v); }
   function half(ev, sc, from) { let t = 0, any = false; for (let i = from; i < from + 9 && i < sc.length; i++) if (sc[i] != null) { t += sc[i]; any = true; } return any ? t : null; }
 
   // Everyone, in place order. The overall to par adds up every hole played in every round.
-  function standings(ev) {
+  // With { net: true } the board ranks by net to par (each golfer's handicap strokes taken off), else by gross.
+  // With { pts: true } it ranks by Stableford points, most first (net points with net).
+  function standings(ev, opt) {
+    const net = !!(opt && opt.net), sf = !!(opt && opt.pts);
+    const by = row => (sf ? -(net ? row.ptsNet : row.pts) : net ? row.net : row.toPar);
     const rows = players(ev).map(pl => {
-      const rs = []; let toPar = 0, total = 0, holes = 0;
-      for (let r = 1; r <= ev.rounds; r++) { const x = round(ev, pl, r); rs.push(x); toPar += x.toPar; total += x.strokes; holes += x.thru; }
+      const rs = []; let toPar = 0, total = 0, holes = 0, nt = 0, pts = 0, ptsNet = 0;
+      for (let r = 1; r <= ev.rounds; r++) { const x = round(ev, pl, r); rs.push(x); toPar += x.toPar; total += x.strokes; holes += x.thru; nt += x.net; pts += x.pts; ptsNet += x.ptsNet; }
       const today = rs[Math.min(ev.cur, ev.rounds) - 1];
-      return { id: pl.id, pl, name: pl.n, rounds: rs, toPar, total, holes, today };
+      return { id: pl.id, pl, name: pl.n, rounds: rs, toPar, net: nt, pts, ptsNet, ch: rs[0] ? rs[0].ch : null, total, holes, today };
     });
-    rows.sort((a, b) => (a.holes ? 0 : 1) - (b.holes ? 0 : 1) || a.toPar - b.toPar || b.holes - a.holes || a.name.localeCompare(b.name));
+    rows.sort((a, b) => (a.holes ? 0 : 1) - (b.holes ? 0 : 1) || by(a) - by(b) || b.holes - a.holes || a.name.localeCompare(b.name));
     rows.forEach((row, i) => {
       if (!row.holes) { row.pos = "–"; row.rank = null; return; }
-      const first = rows.findIndex(x => x.holes && x.toPar === row.toPar);
-      const tied = rows.filter(x => x.holes && x.toPar === row.toPar).length > 1;
+      const first = rows.findIndex(x => x.holes && by(x) === by(row));
+      const tied = rows.filter(x => x.holes && by(x) === by(row)).length > 1;
       row.rank = first + 1; row.pos = (tied ? "T" : "") + (first + 1);
     });
     return rows;
@@ -318,14 +380,14 @@
      PHASE 1: getting a tournament going, the format, the draft, teams, matchups, picks and tee times.
      Every part is optional on a tournament, so older tournaments read the same as before.
        rally: { on, date "YYYY-MM-DD", note, goal, r: { id: { n, s "in"|"maybe"|"out", at } } }
-       fmt:   { kind "solo"|"teams"|"match", nt teams, draft "snake"|"straight", clk seconds, mt "singles"|"2v2"|"both"|"none" }
+       fmt:   { kind "solo"|"teams"|"scramble"|"match", nt teams, draft "snake"|"straight", clk seconds, mt "singles"|"2v2"|"both"|"none" }
        teams: { "t1": { n, cap: playerId } }       a player's team comes from the draft (see teamOf), or p.<id>.t
        dr:    { on, done, ord: [teamId], pk: [playerId], at }   the draft: round-one order and every pick so far
        m:     { id: { a: [playerId], b: [playerId], r } }      singles (one a side) and 2v2 best ball
        pk:    { playerId: teamId }                              "who wins?" picks, bragging rights only
        tt:    { date, where, g: { "1": "08:10" } }             tee times by group
      ====================================================================== */
-  const KINDS = ["solo", "teams", "match"], DRAFTS = ["snake", "straight"], CLOCKS = [0, 30, 60, 300], MTS = ["singles", "2v2", "both", "none"];
+  const KINDS = ["solo", "teams", "scramble", "match"], DRAFTS = ["snake", "straight"], CLOCKS = [0, 30, 60, 300], MTS = ["singles", "2v2", "both", "none"];
   const isDate = s => typeof s === "string" && /^20[0-9]{2}-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])$/.test(s);
   const isTime = s => typeof s === "string" && /^([01][0-9]|2[0-3]):[0-5][0-9]$/.test(s);
   const isTid = s => typeof s === "string" && /^t[1-8]$/.test(s);
@@ -408,6 +470,20 @@
     if (on && f.clk) left = Math.max(-3600, Math.round(f.clk - ((now || Date.now()) - (dr.at || 0)) / 1000));
     return { started: !!dr.on, done, on, cap: on ? ev.teams[on].cap : null, pick: n + 1, total: pool.length, avail, next: slots.slice(n + 1, n + 6), left, clk: f.clk };
   }
+  // A scramble team plays one ball, so it has to play in one group. Is any team spread over more than one group?
+  function teamsSplit(ev) {
+    if (!isScramble(ev)) return false;
+    return teamIds(ev).some(t => new Set(players(ev).filter(p => teamOf(ev, p.id) === t).map(p => p.g)).size > 1);
+  }
+  // The changes that put each team in a group of its own (group 1 for the first team, and so on). A group keeps the
+  // starting hole it had; a new group starts on the 1st. Golfers on no team go in the group after the last team.
+  function teamGroupsPatch(ev) {
+    const ids = teamIds(ev), starts = {}, patch = {};
+    groups(ev).forEach(x => { starts[x.g] = x.start || 1; });
+    const put = (p, g) => { if (p.g !== g) patch["p." + p.id + ".g"] = g; const s = starts[g] || 1; if ((p.st || 1) !== s) patch["p." + p.id + ".st"] = s; };
+    players(ev).forEach(p => { const t = teamOf(ev, p.id), i = t ? ids.indexOf(t) : -1; put(p, i >= 0 ? i + 1 : ids.length + 1); });
+    return patch;
+  }
   // The changes for one pick.
   function pickPatch(ev, pid, now) {
     const st = draftState(ev, now);
@@ -432,8 +508,42 @@
     return a.slice(0, n).map(p => p.id);
   }
   // Each team's members (captain first, then in draft order) and its total to par, best first.
-  function teamBoard(ev) {
+  // how: "total" (every player's to par added up, the default), "best1" (best ball: the team's low score on each
+  // hole) or "best2" (the two low scores on each hole). A best-ball hole counts once that many teammates have a
+  // score on it; each player's score is against their own tees' par.
+  const TEAM_SCORING = ["total", "best1", "best2"];
+  function teamBest(ev, members, k) {
+    let toPar = 0, holes = 0; const n = holeCount(ev);
+    for (let r = 1; r <= ev.rounds; r++) {
+      const xs = members.map(p => round(ev, p, r));
+      for (let h = 1; h <= n; h++) {
+        const d = xs.map(x => (x.scores[h - 1] == null ? null : x.scores[h - 1] - x.pars[h - 1])).filter(v => v != null).sort((a, b) => a - b);
+        if (d.length < k) continue;
+        toPar += d.slice(0, k).reduce((a, b) => a + b, 0); holes++;
+      }
+    }
+    return { toPar, holes };
+  }
+  // Teams play with a captain and a draft in both "teams" and "scramble" tournaments.
+  const teamKind = f => !!f && (f.kind === "teams" || f.kind === "scramble");
+  const isScramble = ev => !!(ev && ev.fmt && ev.fmt.kind === "scramble");
+  // In a scramble the team plays one ball and one card: the captain's (or, with no captain, the first teammate's).
+  function cardKeeper(ev, t) {
+    if (!ev.teams || !ev.teams[t]) return null;
+    const cap = ev.teams[t].cap; if (cap && ev.p[cap] && teamOf(ev, cap) === t) return cap;
+    const m = players(ev).filter(p => teamOf(ev, p.id) === t).sort((a, b) => a.at - b.at || a.n.localeCompare(b.n))[0];
+    return m ? m.id : null;
+  }
+  // Does this golfer keep a card? Everyone does, except a scramble teammate whose team's card someone else keeps.
+  function keepsCard(ev, pid) {
+    if (!ev.p[pid]) return false;
+    const t = isScramble(ev) ? teamOf(ev, pid) : null;
+    return !t || cardKeeper(ev, t) === pid;
+  }
+  function teamBoard(ev, how) {
     const ids = teamIds(ev); if (!ids.length) return [];
+    if (isScramble(ev)) how = "scr";
+    const best = how === "best1" ? 1 : how === "best2" ? 2 : 0;
     const rows = standings(ev), byId = {}; rows.forEach(r => { byId[r.id] = r; });
     const pkOrder = (ev.dr && ev.dr.pk) || [];
     const out = ids.map(t => {
@@ -441,7 +551,9 @@
         .sort((a, b) => (a.id === ev.teams[t].cap ? -1 : b.id === ev.teams[t].cap ? 1 : 0) || pkOrder.indexOf(a.id) - pkOrder.indexOf(b.id));
       const hcs = members.map(hcOf).filter(v => v != null);
       const played = members.filter(p => byId[p.id] && byId[p.id].holes);
-      return { id: t, name: ev.teams[t].n, cap: ev.teams[t].cap, members, toPar: played.reduce((a, p) => a + byId[p.id].toPar, 0), holes: played.reduce((a, p) => a + byId[p.id].holes, 0),
+      const keep = how === "scr" ? cardKeeper(ev, t) : null, kr = keep && byId[keep];
+      const bb = how === "scr" ? { toPar: kr ? kr.toPar : 0, holes: kr ? kr.holes : 0 } : best ? teamBest(ev, members, best) : null;
+      return { id: t, name: ev.teams[t].n, cap: ev.teams[t].cap, members, toPar: bb ? bb.toPar : played.reduce((a, p) => a + byId[p.id].toPar, 0), holes: bb ? bb.holes : played.reduce((a, p) => a + byId[p.id].holes, 0),
         avg: hcs.length ? Math.round((hcs.reduce((a, b) => a + b, 0) / hcs.length) * 10) / 10 : null };
     });
     out.sort((a, b) => (a.holes ? 0 : 1) - (b.holes ? 0 : 1) || a.toPar - b.toPar || a.name.localeCompare(b.name));
@@ -486,6 +598,47 @@
   /* ---------- picks: who wins? ---------- */
   const picksLocked = ev => players(ev).some(p => Object.keys(p.s || {}).some(k => k.indexOf("1_") === 0));
   function pickCounts(ev) { const o = {}; Object.keys(ev.pk || {}).forEach(pid => { const t = ev.pk[pid]; if (ev.p[pid] && ev.teams && ev.teams[t]) o[t] = (o[t] || 0) + 1; }); return o; }
+
+  /* ---------- predictions: each golfer's picks before tee off ---------- */
+  // Kept on the golfer's own record (pd): w = who wins, lo = who shoots the low round (tournaments of two rounds or
+  // more), sc = the winning score to par. They lock with the first score, and are scored when the tournament ends:
+  // 3 points for the winner, 2 for the low round, 2 for the closest winning score (ties all get the points).
+  const PRED_PTS = { w: 3, lo: 2, sc: 2 };
+  function cleanPred(x) {
+    if (!x || typeof x !== "object") return null;
+    const o = {};
+    if (isPid(x.w)) o.w = x.w;
+    if (isPid(x.lo)) o.lo = x.lo;
+    if (Number.isInteger(x.sc) && x.sc >= -40 && x.sc <= 80) o.sc = x.sc;
+    return Object.keys(o).length ? o : null;
+  }
+  function predictions(ev) {
+    const locked = picksLocked(ev) || ev.done, multi = ev.rounds > 1;
+    const list = players(ev).filter(p => p.pd).map(p => ({ id: p.id, name: p.n, pd: p.pd, pts: 0, hit: {} }));
+    const out = { locked, multi, list, done: ev.done, winners: [], low: [], lowScore: null, winScore: null };
+    if (!ev.done) return out;
+    const st = standings(ev).filter(x => x.holes);
+    if (st.length) {
+      out.winScore = st[0].toPar;
+      out.winners = st.filter(x => x.toPar === st[0].toPar).map(x => x.id);
+      if (multi) {
+        let best = null; const n = holeCount(ev);
+        st.forEach(row => row.rounds.forEach(x => { if (x.thru === n && (best == null || x.strokes < best)) best = x.strokes; }));
+        out.lowScore = best;
+        if (best != null) out.low = st.filter(row => row.rounds.some(x => x.thru === n && x.strokes === best)).map(row => row.id);
+      }
+    }
+    const guesses = list.filter(e => Number.isInteger(e.pd.sc) && out.winScore != null);
+    const closest = guesses.length ? Math.min.apply(null, guesses.map(e => Math.abs(e.pd.sc - out.winScore))) : null;
+    list.forEach(e => {
+      if (e.pd.w && out.winners.indexOf(e.pd.w) >= 0) { e.hit.w = true; e.pts += PRED_PTS.w; }
+      if (multi && e.pd.lo && out.low.indexOf(e.pd.lo) >= 0) { e.hit.lo = true; e.pts += PRED_PTS.lo; }
+      if (closest != null && Number.isInteger(e.pd.sc) && Math.abs(e.pd.sc - out.winScore) === closest) { e.hit.sc = true; e.pts += PRED_PTS.sc; }
+    });
+    list.sort((a, b) => b.pts - a.pts || a.name.localeCompare(b.name));
+    list.forEach(e => { e.place = list.findIndex(x => x.pts === e.pts) + 1; });
+    return out;
+  }
 
   /* ---------- tee times and the calendar file ---------- */
   function cleanTt(x, n) {
@@ -640,11 +793,11 @@
         else {
           let carry = 1, won = 0;
           for (let h = 1; h <= n; h++) {
-            if (!sides.every(s => all(s.m, h))) { lines.push(`Hole ${h} waits on everyone's score${carry > 1 ? `, ${carry} skins riding` : ""}.`); carry = 0; break; }
+            if (!sides.every(s => all(s.m, h))) { lines.push(`Hole ${holeNo(ev.course, h)} waits on everyone's score${carry > 1 ? `, ${carry} skins riding` : ""}.`); carry = 0; break; }
             const best = sides.map(s => Math.min.apply(null, s.m.map(p => sc(p, h)))), low = Math.min.apply(null, best), at = best.filter(v => v === low).length;
             if (at > 1) { carry++; continue; }
             const w = sides[best.indexOf(low)];
-            lines.push(`Hole ${h}: ${w.n}${carry > 1 ? ` wins ${carry} skins` : " wins the skin"}.`);
+            lines.push(`Hole ${holeNo(ev.course, h)}: ${w.n}${carry > 1 ? ` wins ${carry} skins` : " wins the skin"}.`);
             pay(w.m, who.filter(p => w.m.indexOf(p) < 0), unit * carry, real); won += carry; carry = 1;
           }
           if (carry > 1) lines.push(`${carry - 1} skin${carry > 2 ? "s" : ""} carried past the last hole.`);
@@ -675,23 +828,23 @@
       } else if (g === "ctp") {
         ctpBoard(ev, r).forEach(x => {
           const b = x.list.find(e => who.indexOf(e.pid) >= 0);
-          if (!b) { lines.push(`Hole ${x.h}: nobody on yet.`); return; }
-          lines.push(`Hole ${x.h}: ${nm(b.pid)}, ${fmtFeet(b.d)}.`); pay([b.pid], others(b.pid), unit, real);
+          if (!b) { lines.push(`Hole ${holeNo(ev.course, x.h)}: nobody on yet.`); return; }
+          lines.push(`Hole ${holeNo(ev.course, x.h)}: ${nm(b.pid)}, ${fmtFeet(b.d)}.`); pay([b.pid], others(b.pid), unit, real);
         });
         if (!(ev.ctph || []).length) lines.push("Pick the closest to the pin holes on the Score tab.");
       } else if (g === "long" || g === "green" || g === "sandy") {
         for (let h = 1; h <= n; h++) {
           const m = bm[key(r, h)] || {}, parFor = id => parOf(ev.course, h, (ev.p[id] || {}).tee);
-          if (g === "long" && m.ld && who.indexOf(m.ld) >= 0) { lines.push(`Hole ${h}: ${nm(m.ld)}.`); pay([m.ld], others(m.ld), unit, real); }
+          if (g === "long" && m.ld && who.indexOf(m.ld) >= 0) { lines.push(`Hole ${holeNo(ev.course, h)}: ${nm(m.ld)}.`); pay([m.ld], others(m.ld), unit, real); }
           if (g === "green" && m.gr && who.indexOf(m.gr) >= 0) {
             const v = sc(m.gr, h);
-            if (v == null) lines.push(`Hole ${h}: ${nm(m.gr)}, once they make par.`);
-            else if (v <= parFor(m.gr)) { lines.push(`Hole ${h}: ${nm(m.gr)}.`); pay([m.gr], others(m.gr), unit, real); }
-            else lines.push(`Hole ${h}: ${nm(m.gr)} hit it close but missed par.`);
+            if (v == null) lines.push(`Hole ${holeNo(ev.course, h)}: ${nm(m.gr)}, once they make par.`);
+            else if (v <= parFor(m.gr)) { lines.push(`Hole ${holeNo(ev.course, h)}: ${nm(m.gr)}.`); pay([m.gr], others(m.gr), unit, real); }
+            else lines.push(`Hole ${holeNo(ev.course, h)}: ${nm(m.gr)} hit it close but missed par.`);
           }
           if (g === "sandy") (m.sa || []).filter(p => who.indexOf(p) >= 0).forEach(p => {
             const v = sc(p, h);
-            if (v != null && v <= parFor(p)) { lines.push(`Hole ${h}: ${nm(p)}.`); pay([p], others(p), unit, real); }
+            if (v != null && v <= parFor(p)) { lines.push(`Hole ${holeNo(ev.course, h)}: ${nm(p)}.`); pay([p], others(p), unit, real); }
           });
         }
         if (!lines.length) lines.push(g === "long" ? "Mark the long drive from Mark a hole." : g === "green" ? "Greenies: on the green in one on a par 3 and make par. Mark them from Mark a hole." : "Sandies: out of the sand and par or better. Mark them from Mark a hole.");
@@ -711,9 +864,9 @@
             if (!pick || !all(order, h) || (pick !== "lone" && order.indexOf(pick) < 0)) continue;
             const a = pick === "lone" ? [w] : [w, pick], b = order.filter(p => a.indexOf(p) < 0);
             const ba = Math.min.apply(null, a.map(p => sc(p, h))), bb = Math.min.apply(null, b.map(p => sc(p, h)));
-            if (ba === bb) { lines.push(`${pre}hole ${h}: halved.`); continue; }
+            if (ba === bb) { lines.push(`${pre}hole ${holeNo(ev.course, h)}: halved.`); continue; }
             const stake = pick === "lone" ? 2 * unit : unit, win = ba < bb ? a : b, lose = ba < bb ? b : a;
-            lines.push(`${pre}hole ${h}: ${pick === "lone" ? (ba < bb ? `${nm(w)} wins alone` : `${nm(w)} loses alone`) : `${win.map(nm).join(" and ")} win`}.`);
+            lines.push(`${pre}hole ${holeNo(ev.course, h)}: ${pick === "lone" ? (ba < bb ? `${nm(w)} wins alone` : `${nm(w)} loses alone`) : `${win.map(nm).join(" and ")} win`}.`);
             lose.forEach(l => win.forEach(x => { tally[l] -= stake; tally[x] += stake; }));
           }
           if (real) order.forEach(p => { bal[p] += tally[p]; });
@@ -768,11 +921,65 @@
     return s.charAt(0).toUpperCase() + s.slice(1);
   }
   // The next hole in this golfer's own order, with the yards from their tees.
+  // A golfer's round by the numbers, from their scores and the hole reviews kept on this phone (notes by "r_h"):
+  // fairways hit of the par 4s and 5s they marked, putts and three-putts on the holes they counted, penalties, sand,
+  // and their best and worst holes against par. A count is null when they marked nothing for it.
+  function roundNumbers(ev, pl, r, notes) {
+    const n = holeCount(ev), pars = parsFor(ev.course, pl.tee), nt = notes || {};
+    let fwHit = 0, fwOf = 0, putts = 0, pHoles = 0, three = 0, pen = 0, sand = 0, marked = 0, best = null, worst = null, holes = 0;
+    for (let h = 1; h <= n; h++) {
+      const v = strokes(pl, r, h); if (v == null) continue;
+      holes++;
+      const d = v - pars[h - 1], x = nt[key(r, h)] || {};
+      if (best == null || d < best.d) best = { h, n: holeNo(ev.course, h), d, v };
+      if (worst == null || d > worst.d) worst = { h, n: holeNo(ev.course, h), d, v };
+      if (Object.keys(x).length) marked++;
+      if (pars[h - 1] > 3 && x.t) { fwOf++; if (x.t === "fairway") fwHit++; }
+      if (Number.isInteger(x.p)) { putts += x.p; pHoles++; if (x.p >= 3) three++; }
+      if (Number.isInteger(x.x)) pen += x.x;
+      if (x.b) sand++;
+    }
+    return { holes, marked, fw: fwOf ? [fwHit, fwOf] : null, putts: pHoles ? putts : null, pHoles, three, pen: marked ? pen : null, sand: marked ? sand : null,
+      best: best && worst && best.d < worst.d ? best : null, worst: best && worst && best.d < worst.d ? worst : null };
+  }
+  /* ---------- pace of play: from when each score went in ---------- */
+  const PACE_MIN = 15;   // minutes a hole: 4 hours 30 for 18, a usual pace
+  const nowMin = t => Math.round((t || Date.now()) / 60000);
+  // A group's pace this round: minutes a hole between its first and last scored hole, how far behind a 15-minute
+  // hole it is, and how long since its last score. Null until two holes have a time.
+  function groupPace(ev, g, r, now) {
+    const times = {};
+    g.players.forEach(pl => Object.keys(pl.tm || {}).forEach(k => { const m = /^(\d)_(\d+)$/.exec(k); if (m && +m[1] === r) times[m[2]] = Math.max(times[m[2]] || 0, pl.tm[k]); }));
+    const t = Object.keys(times).map(k => times[k]).sort((a, b) => a - b);
+    if (t.length < 2) return null;
+    const first = t[0], last = t[t.length - 1], span = last - first, holes = t.length;
+    const n = holeCount(ev), done = g.players.every(pl => round(ev, pl, r).done);
+    const per = Math.round(span / (holes - 1)), behind = span - (holes - 1) * PACE_MIN;
+    const since = done ? 0 : Math.max(0, nowMin(now) - last);
+    return { per, behind, since, holes, done, total: done && holes === n ? span + PACE_MIN : null };
+  }
+  // A plain-text scorecard for Messages: the course and par, then each golfer's total and their holes nine by nine.
+  function cardText(ev, list, r, date) {
+    const n = holeCount(ev), c = ev.course, d = date ? " · " + date : "";
+    const halves = n === 18 ? [[1, 9, "Out"], [10, 18, "In"]] : [[1, n, "Holes " + holeNo(c, 1) + "-" + holeNo(c, n)]];
+    const lines = [c.name + d + " (par " + coursePar(c) + ")"];
+    list.forEach(pl => {
+      const x = round(ev, pl, r); if (!x.started) return;
+      lines.push("", pl.n + ": " + x.strokes + " (" + fmtPar(x.toPar) + ")" + (x.done ? "" : " thru " + x.thru));
+      halves.forEach(([a, b, lbl]) => {
+        const hs = []; for (let k = a; k <= b; k++) hs.push(x.scores[k - 1]);
+        if (hs.every(v => v == null)) return;
+        lines.push(lbl + ": " + hs.map(v => (v == null ? "-" : v)).join(" ") + " = " + hs.reduce((s, v) => s + (v || 0), 0));
+      });
+    });
+    lines.push("", "Scored with Fairway");
+    return lines.join("\n");
+  }
   function nextHole(ev, pl, r, h) {
     const order = playOrder(holeCount(ev), pl.st), i = order.indexOf(h);
     if (i < 0 || i >= order.length - 1) return null;
     const nh = order[i + 1], hole = ev.course.holes[nh - 1], tee = teeOf(ev, pl);
-    return { h: nh, par: parOf(ev.course, nh, pl.tee), hcp: hole.hcp, yds: yards(ev.course, nh, tee.id) || null, tee: tee.name };
+    return { h: nh, n: holeNo(ev.course, nh), par: parOf(ev.course, nh, pl.tee), hcp: hole.hcp, yds: yards(ev.course, nh, tee.id) || null, tee: tee.name };
   }
   // Plain, clean words about a pattern in the last few holes. No AI here, just counting.
   function jackNoticed(ev, pl, r, notes) {
@@ -812,7 +1019,9 @@
   }
   // Notes are filed by course (its id, or its name) and hole: up to 5 short notes a hole.
   const NOTE_MAX = 200, NOTES_PER_HOLE = 5;
-  function courseKey(course) { return course && course.id ? "id:" + clip(course.id, 40) : "n:" + clip(course && course.name, 60).toLowerCase(); }
+  // A front or back nine shares the full course's key, so notes and hole maps (kept by the number on the hole's sign)
+  // are the same whichever way it's played.
+  function courseKey(course) { return course && course.id ? "id:" + clip(String(course.id).replace(/-(f9|b9)$/, ""), 40) : "n:" + clip(course && course.name, 60).replace(/ \((front|back) 9\)$/, "").toLowerCase(); }
   function cleanCourseNotes(x) {
     const out = {}; if (!x || typeof x !== "object") return out;
     Object.keys(x).slice(0, 50).forEach(ck => {
@@ -830,8 +1039,8 @@
   // What Jack says walking up to a hole: par and yards, then the golfer's own notes in their own words.
   function holeTalk(ev, pl, h, notes, level, bag) {
     const tee = teeOf(ev, pl), y = yards(ev.course, h, tee.id), par = parOf(ev.course, h, tee.id);
-    const mine = ((notes || {})[courseKey(ev.course)] || {})[h] || [];
-    let s = `Hole ${h}, par ${par}${y ? `, ${y} yards` : ""}.`;
+    const mine = ((notes || {})[courseKey(ev.course)] || {})[holeNo(ev.course, h)] || [];
+    let s = `Hole ${holeNo(ev.course, h)}, par ${par}${y ? `, ${y} yards` : ""}.`;
     if (bag && par === 3 && y) { const c = clubFor(bag, y); if (c) s += " " + clubWords(c) + "."; }
     if (mine.length) s += " Your notes: " + mine.map(t => speakable(t, level)).filter(Boolean).map(t => (/[.!?]$/.test(t) ? t : t + ".")).join(" ");
     return s;
@@ -888,10 +1097,18 @@
 
   /* ---------- season race: points from every finished tournament this phone has followed this year ---------- */
   const SEASON_PTS = [500, 300, 190, 135, 110, 100, 90, 85, 80, 75, 70, 65, 60, 55, 50];
+  // Quick rounds (q) count toward each golfer's rounds, scoring average and best 18, never toward points or events.
   function seasonRace(hist, year) {
-    const rows = (Array.isArray(hist) ? hist : []).filter(h => h && typeof h.name === "string" && typeof h.code === "string" && Number.isFinite(h.toPar) && new Date(h.date || 0).getUTCFullYear() === year);
+    const all = (Array.isArray(hist) ? hist : []).filter(h => h && typeof h.name === "string" && typeof h.code === "string" && Number.isFinite(h.toPar) && new Date(h.date || 0).getUTCFullYear() === year);
+    const rows = all.filter(h => !h.q);
     const events = {}; rows.forEach(h => { (events[h.code] = events[h.code] || []).push(h); });
     const table = {};
+    const row = (k, name) => (table[k] = table[k] || { name, pts: 0, events: 0, wins: 0, rounds: 0, holes: 0, toPar: 0, best: null });
+    all.forEach(h => {
+      const n = h.n === 9 ? 9 : 18, t = row(cleanName(h.name).toLowerCase(), cleanName(h.name));
+      t.rounds++; t.holes += n; t.toPar += h.toPar;
+      if (n === 18 && Number.isFinite(h.strokes) && (t.best == null || h.strokes < t.best.strokes)) t.best = { strokes: h.strokes, toPar: h.toPar, course: h.course };
+    });
     Object.keys(events).forEach(code => {
       const by = {}; events[code].forEach(h => { const k = cleanName(h.name).toLowerCase(); const o = by[k] = by[k] || { name: cleanName(h.name), toPar: 0, rounds: 0, tw: false, bonus: 0 }; o.toPar += h.toPar; o.rounds++; if (h.tw) o.tw = true; o.bonus += (h.sg ? 50 : 0) + (h.bg ? 25 : 0); });
       const list = Object.keys(by).map(k => Object.assign({ k }, by[k])), most = Math.max.apply(null, list.map(x => x.rounds));
@@ -899,11 +1116,13 @@
       list.forEach(x => {
         const place = x.rounds === most ? full.filter(y => y.toPar < x.toPar).length + 1 : null;
         const pts = (place ? SEASON_PTS[place - 1] || 40 : 25) + (x.tw ? 100 : 0) + x.bonus;
-        const t = table[x.k] = table[x.k] || { name: x.name, pts: 0, events: 0, wins: 0 };
+        const t = row(x.k, x.name);
         t.pts += pts; t.events++; if (place === 1) t.wins++;
       });
     });
-    const out = Object.keys(table).map(k => table[k]).sort((a, b) => b.pts - a.pts || b.wins - a.wins || a.name.localeCompare(b.name));
+    const out = Object.keys(table).map(k => table[k]).sort((a, b) => b.pts - a.pts || b.wins - a.wins || b.rounds - a.rounds || a.name.localeCompare(b.name));
+    // scoring average to par, per 18 holes (a nine counts as half a round)
+    out.forEach(x => { x.avg = x.holes ? Math.round((x.toPar * 18 / x.holes) * 10) / 10 : null; });
     out.forEach((x, i) => { x.place = out.findIndex(y => y.pts === x.pts) + 1; });
     return { year, events: Object.keys(events).length, list: out };
   }
@@ -1053,12 +1272,18 @@
       const pl = { n: cleanName(x.n) || "Player", tee: ev.course.tees.some(t => t.id === x.tee) ? x.tee : ev.course.tees[0].id, g: int(x.g, 1, 60, 1), st: int(x.st, 1, n, 1), at: Number(x.at) || 0, s: {} };
       const hc = typeof x.hc === "number" ? cleanHc(x.hc) : null; if (hc != null) pl.hc = hc;
       if (isTid(x.t)) pl.t = x.t;
+      const pd = cleanPred(x.pd); if (pd) pl.pd = pd;
       Object.keys(x.s && typeof x.s === "object" ? x.s : {}).forEach(k => {
         const m = /^([1-4])_([0-9]{1,2})$/.exec(k), v = x.s[k];
         if (m && +m[1] <= ev.rounds && +m[2] >= 1 && +m[2] <= n && Number.isInteger(v) && v >= 1 && v <= 20) pl.s[k] = v;
       });
+      // when each score went in (whole minutes since 1970), for pace of play; only for holes with a score
+      const tm = {}; Object.keys(x.tm && typeof x.tm === "object" ? x.tm : {}).forEach(k => { const v = x.tm[k]; if (pl.s[k] != null && Number.isInteger(v) && v > 0 && v < 1e8) tm[k] = v; });
+      if (Object.keys(tm).length) pl.tm = tm;
       ev.p[id] = pl;
     });
+    // a pick can only name someone who is in the tournament
+    players(ev).forEach(pl => { const pd = pl.pd; if (!pd) return; ["w", "lo"].forEach(k => { if (pd[k] && !ev.p[pd[k]]) delete pd[k]; }); if (!Object.keys(pd).length) delete ev.p[pl.id].pd; });
     ev.ctph = cleanCtpHoles(d.ctph, n);
     Object.keys(d.ctp && typeof d.ctp === "object" ? d.ctp : {}).forEach(k => {
       const m = /^([1-4])_([0-9]{1,2})$/.exec(k), box = d.ctp[k];
@@ -1101,14 +1326,16 @@
   }
   // What one finished round looks like in this phone's history (for "previous rounds" on a player card).
   // tw: on the winning team once it's over; sg: the round's biggest side-game winner; bg: got a bingo. The season race counts them.
-  function historyRows(ev, code) {
+  function historyRows(ev, code, o) {
+    const quick = !!(o && o.quick);
     const tb = ev.done ? teamBoard(ev).filter(t => t.holes) : [], winTeam = tb.length >= 2 && tb[0].toPar < tb[1].toPar ? tb[0] : null, topSg = {};
     for (let r = 1; r <= ev.rounds; r++) if (ev.bets) { const t = betTally(ev, r), top = Object.keys(t.bal).sort((a, b) => t.bal[b] - t.bal[a])[0]; if (top && t.bal[top] > 0) topSg[r] = top; }
     return players(ev).map(pl => {
       const out = [];
       for (let r = 1; r <= ev.rounds; r++) {
         const x = round(ev, pl, r); if (!x.done) continue;
-        const row = { code, event: ev.name, course: ev.course.name, date: ev.created, r, strokes: x.strokes, toPar: x.toPar, name: pl.n };
+        const row = { code, event: ev.name, course: ev.course.name, date: ev.created, r, strokes: x.strokes, toPar: x.toPar, name: pl.n, n: holeCount(ev) };
+        if (quick) row.q = true;
         if (winTeam && winTeam.members.some(m => m.id === pl.id)) row.tw = true;
         if (topSg[r] === pl.id) row.sg = true;
         if (bingoState(ev, pl.id, r).line) row.bg = true;
@@ -1116,6 +1343,18 @@
       }
       return out;
     }).reduce((a, b) => a.concat(b), []);
+  }
+  // One golfer's finished rounds on this phone (by name), newest first, and per course their best and average.
+  function myRounds(hist, name) {
+    const list = (hist || []).filter(h => h && sameName(h.name, name) && Number.isFinite(h.strokes)).sort((a, b) => b.date - a.date || b.r - a.r);
+    const by = {};
+    list.forEach(h => { const k = h.course + "|" + (h.n || 18); (by[k] = by[k] || { course: h.course, holes: h.n || 18, rounds: [] }).rounds.push(h); });
+    const courses = Object.keys(by).map(k => {
+      const c = by[k], best = c.rounds.slice().sort((a, b) => a.strokes - b.strokes || a.date - b.date)[0];
+      const avg = Math.round((c.rounds.reduce((a, h) => a + h.strokes, 0) / c.rounds.length) * 10) / 10;
+      return { course: c.course, holes: c.holes, count: c.rounds.length, best, avg, last: c.rounds[0].date };
+    }).sort((a, b) => b.count - a.count || b.last - a.last);
+    return { list, courses };
   }
   const sameName = (a, b) => cleanName(a).toLowerCase() === cleanName(b).toLowerCase();
   // Board names the way a TV leaderboard shows them: the last name, with a first initial only when two share it.
@@ -1129,12 +1368,12 @@
   }
 
   return { VERSION, MAX_PLAYERS, MAX_ROUNDS, MAX_TEES, NAME_MAX, EVENT_MAX, TEE_COLORS, DEMO_NAMES, DELETE,
-    sampleCourse, monoosnockCourse, readyCourses, parOf, parsFor, parText, newCode, isCode, newPid, isPid, cleanCourse, cleanName, newEvent, newPlayer, cleanEvent,
+    courseHc, strokesBy, stableford, roundNumbers, cardText, PACE_MIN, groupPace, nineOf, holeNo, HOLE_ART, holeArt, sampleCourse, monoosnockCourse, readyCourses, parOf, parsFor, parText, newCode, isCode, newPid, isPid, cleanCourse, cleanName, newEvent, newPlayer, cleanEvent,
     key, holeCount, coursePar, players, teeOf, yards, teeYards, playOrder, strokes, round, standings, groups,
-    fmtPar, tone, scoreName, mark, stats, demoEvent, applyPatch, historyRows, sameName, boardNames,
+    fmtPar, tone, scoreName, mark, stats, demoEvent, applyPatch, historyRows, myRounds, sameName, boardNames,
     cleanCtpHoles, cleanCtpEntry, ctpBoard, metres, averageFix, ctpMeasure, fmtFeet,
     cleanHc, isDate, isTime, isTid, cleanRally, cleanFmt, rallyList, officialPatch, openGroup, teamIds, pickSlots, teamOf, draftState, pickPatch,
-    draftStartPatch, pickCaptains, teamBoard, matchStatus, matchIds, autoMatches, picksLocked, pickCounts, cleanTt, teeTime, fmtTime, fmtDate,
+    draftStartPatch, pickCaptains, teamBoard, TEAM_SCORING, teamKind, isScramble, cardKeeper, keepsCard, teamsSplit, teamGroupsPatch, matchStatus, matchIds, autoMatches, picksLocked, pickCounts, PRED_PTS, cleanPred, predictions, cleanTt, teeTime, fmtTime, fmtDate,
     reminders, icsFor, directions, cleanMsg, shout, BINGO, BINGO_AUTO, bingoCard, bingoState, cleanBingo,
     BETS, BET_AMTS, cleanBets, cleanBetMarks, betOn, betAmt, betPlayers, wolfOrder, wolfOf, betTally, money,
     TEE_SHOTS, cleanHoleNote, cleanHoleNotes, holeLine, nextHole, jackNoticed,

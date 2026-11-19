@@ -83,7 +83,7 @@
       if (C.betOn(ev, "green") && par === 3) parts.push(pickOne("bgr", "Greenie (on in one, then par)", m.gr));
       if (C.betOn(ev, "sandy")) parts.push(pickMany("sa", "Sandies (out of the sand, then par)", m.sa));
       if (C.betOn(ev, "snake")) parts.push(pickMany("tp", "Three-putts (the last one holds the snake)", m.tp));
-      $(".sheet-b", box).innerHTML = `<label class="fld"><span>Hole</span><select id="bh">${ev.course.holes.map((x, i) => `<option value="${i + 1}" ${i + 1 === h ? "selected" : ""}>Hole ${i + 1} · par ${x.par}</option>`).join("")}</select></label>
+      $(".sheet-b", box).innerHTML = `<label class="fld"><span>Hole</span><select id="bh">${ev.course.holes.map((x, i) => `<option value="${i + 1}" ${i + 1 === h ? "selected" : ""}>Hole ${C.holeNo(ev.course, i + 1)} · par ${x.par}</option>`).join("")}</select></label>
         ${parts.length ? parts.join("") : `<p class="msg">Nothing to mark on this hole for today's games. Skins, Nassau and best ball come straight from the scores.</p>`}
         ${parts.length ? `<button type="button" class="btn primary block" id="bmsave">Save</button>` : ""}`;
       $("#bh", box).onchange = e => { h = +e.target.value; draw(box); };
@@ -96,15 +96,42 @@
         if ($("[data-sa]", box)) { const l = many("sa"); patch[base + "sa"] = l.length ? l : C.DELETE; }
         if ($("[data-tp]", box)) { const l = many("tp"); patch[base + "tp"] = l.length ? l : C.DELETE; }
         $$("[data-wolf]", box).forEach(s => { patch[base + "wp." + s.dataset.wolf] = s.value || C.DELETE; });
-        u.write(patch); u.closeSheet(); u.toast("Marked hole " + h);
+        u.write(patch); u.closeSheet(); u.toast("Marked hole " + C.holeNo(ev.course, h));
       };
     };
     u.sheet("Mark a hole", "", draw);
   }
 
+  // Predictions: each golfer picks the winner, the low round (two rounds or more) and the winning score before tee off.
+  function predHtml(ev, me) {
+    const u = U(), esc = u.esc, pr = C.predictions(ev), ps = C.players(ev);
+    if (ps.length < 2) return "";
+    const nm = id => (ev.p[id] ? esc(ev.p[id].n) : "–"), mine = me && ev.p[me.id] && ev.p[me.id].pd || {};
+    const opts = sel => `<option value="">Pick one</option>` + ps.map(p => `<option value="${esc(p.id)}" ${p.id === sel ? "selected" : ""}>${esc(p.n)}</option>`).join("");
+    let form = "";
+    if (me && !pr.locked) form = `<div class="predform">
+        <label class="fld"><span>Who wins?</span><select id="pdw">${opts(mine.w)}</select></label>
+        ${pr.multi ? `<label class="fld"><span>Who shoots the low round?</span><select id="pdlo">${opts(mine.lo)}</select></label>` : ""}
+        <label class="fld"><span>Winning score to par (E is 0, -3 is three under)</span><input id="pdsc" inputmode="numeric" maxlength="3" value="${Number.isInteger(mine.sc) ? mine.sc : ""}" placeholder="+2"></label>
+        <button type="button" class="btn primary" id="pdsave">Save my picks</button></div>`;
+    else if (!me && !pr.locked) form = `<p class="msg">Join the tournament to make your picks.</p>`;
+    const show = pr.locked;
+    const rows = pr.list.map(e => `<li class="ritem"><span><b>${pr.done ? e.place + ". " : ""}${esc(e.name)}${me && e.id === me.id ? " · you" : ""}</b><small>${show ? `Wins: ${nm(e.pd.w)}${e.hit.w ? " ✓" : ""}${pr.multi ? ` · Low round: ${nm(e.pd.lo)}${e.hit.lo ? " ✓" : ""}` : ""}${Number.isInteger(e.pd.sc) ? ` · Score: ${esc(C.fmtPar(e.pd.sc))}${e.hit.sc ? " ✓" : ""}` : ""}` : "Picks are in"}</small></span>${pr.done ? `<b class="pts">${e.pts}</b>` : ""}</li>`).join("");
+    const result = pr.done && pr.winners.length ? `<p class="msg small">Won by ${pr.winners.map(nm).join(" and ")} at ${esc(C.fmtPar(pr.winScore))}${pr.multi && pr.low.length ? `. Low round: ${pr.lowScore} by ${pr.low.map(nm).join(" and ")}` : ""}.</p>` : "";
+    return `<h2 class="sec">Predictions <small>${pr.list.length} in${pr.locked && !pr.done ? " · locked" : ""}</small></h2>${form}
+      ${rows ? `<ul class="list">${rows}</ul>` : pr.locked ? `<p class="msg small">Nobody made picks this time.</p>` : ""}${result}
+      <p class="msg small">${pr.locked ? (pr.done ? "" : "Picks locked with the first score. ") : "Picks lock with the first score, and nobody sees them until then. "}3 points for the winner${pr.multi ? ", 2 for the low round" : ""}, 2 for the closest winning score.</p>`;
+  }
+
   G.tab = function (el, ev) {
     const u = U(), me = u.me(), r = Math.min(ev.cur, ev.rounds);
-    el.innerHTML = betsHtml(ev, me, r) + bingoHtml(ev, me, r) + (FW.recap ? FW.recap.seasonHtml() : "");
+    el.innerHTML = predHtml(ev, me) + betsHtml(ev, me, r) + bingoHtml(ev, me, r) + (FW.recap ? FW.recap.seasonHtml() : "");
+    const ps = $("#pdsave", el); if (ps && me) ps.onclick = () => {
+      const sc = $("#pdsc", el).value.trim().replace(/^e$/i, "0").replace(/^\+/, "");
+      const pd = C.cleanPred({ w: $("#pdw", el).value || null, lo: ($("#pdlo", el) || {}).value || null, sc: sc === "" ? null : Number(sc) });
+      if (sc !== "" && !(pd && Number.isInteger(pd.sc))) { u.toast("Type the winning score as a number, like -2, 0 or +5.", "error"); return; }
+      u.write({ ["p." + me.id + ".pd"]: pd || C.DELETE }); u.toast(pd ? "Picks saved" : "Picks cleared");
+    };
     const bs = $("#betset", el); if (bs) bs.onclick = () => setupSheet(ev);
     const bk = $("#betmark", el); if (bk) bk.onclick = () => markSheet(ev, r);
     $$("[data-sq]", el).forEach(b => b.onclick = () => {

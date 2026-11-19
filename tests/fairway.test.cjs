@@ -78,6 +78,215 @@ const pl = (ev, id) => Object.assign({ id }, ev.p[id]);
     eq(C.cleanCourse({ tees: [{ id: 'w' }], holes: [{ par: 4, tp: { w: 4, zz: 5 } }] }).holes[0].tp, undefined);
   });
 
+  await test('core: handicaps give World Handicap System course handicaps and net scores (Monoosnock ratings)', () => {
+    const c = C.monoosnockCourse();
+    deq(c.tees.map(t => [t.cr, t.sl]), [[69.6, 126], [66.4, 122], [72.5, 128]], 'ratings and slopes from the card');
+    // index x slope / 113 + (rating - par), rounded
+    eq(C.courseHc(c, { tee: 'whiteblue', hc: 10 }), 11); eq(C.courseHc(c, { tee: 'green', hc: 10 }), 7);
+    eq(C.courseHc(c, { tee: 'ladies', hc: 20 }), 23); eq(C.courseHc(c, { tee: 'green', hc: 0 }), -4, 'a scratch golfer from the short tees gives strokes');
+    eq(C.courseHc(c, { tee: 'green' }), null);
+    eq(C.courseHc(C.sampleCourse(), { tee: 'blue', hc: 12.6 }), 13, 'no rating on the card: the index, rounded');
+    // strokes go on the hardest holes first, a second lap past 18, and a plus handicap gives back on the easiest
+    const g11 = C.strokesBy(c, 11); eq(g11.reduce((a, b) => a + b, 0), 11); eq(g11[5], 1, 'hole 6 is handicap 1'); eq(g11[13], 0, 'hole 14 is handicap 18');
+    const g23 = C.strokesBy(c, 23); eq(g23[5], 2); eq(g23[13], 1); eq(g23.reduce((a, b) => a + b, 0), 23);
+    const gp = C.strokesBy(c, -2); eq(gp[13], -1); eq(gp[4], -1); eq(gp.reduce((a, b) => a + b, 0), -2);
+    // a round: 5 on the handicap-1 sixth (par 5) with a stroke is a net par
+    const ev = C.newEvent({ name: 'Net', course: c, now: NOW });
+    ev.p.aaaaaa1 = C.newPlayer(ev, { name: 'High', tee: 'whiteblue', hc: 10, group: 1, now: NOW });
+    ev.p.bbbbbb1 = C.newPlayer(ev, { name: 'Low', tee: 'whiteblue', hc: 0, group: 1, now: NOW });
+    ev.p.cccccc1 = C.newPlayer(ev, { name: 'Nobody', tee: 'whiteblue', group: 1, now: NOW });
+    ev.p.aaaaaa1.s['1_6'] = 6; ev.p.bbbbbb1.s['1_6'] = 5; ev.p.cccccc1.s['1_6'] = 5;
+    const x = C.round(ev, pl(ev, 'aaaaaa1'), 1); eq(x.toPar, 1); eq(x.net, 0); eq(x.ch, 11);
+    eq(C.round(ev, pl(ev, 'cccccc1'), 1).net, 0, 'no index: net is gross');
+    eq(C.standings(ev)[0].name === 'High', false, 'gross: the high handicap is behind');
+    const sn = C.standings(ev, { net: true }); eq(sn[0].pos, 'T1'); eq(sn[0].net, 0);
+    ev.p.bbbbbb1.s['1_6'] = 6; eq(C.standings(ev, { net: true })[0].name, 'High', 'net: the stroke wins it');
+    // a rating and slope from the builder survive cleaning, nonsense doesn't
+    const cc = C.cleanCourse({ tees: [{ id: 'w', cr: '71.25', sl: '131' }, { id: 'b', cr: 'x', sl: 400 }], holes: [] });
+    eq(cc.tees[0].cr, 71.3); eq(cc.tees[0].sl, 131); eq(cc.tees[1].cr, undefined); eq(cc.tees[1].sl, undefined);
+  });
+
+  await test('core: team best ball and best 2 count the low scores on each hole, against each golfer\'s own par', () => {
+    const ev = C.newEvent({ name: 'BB', course: C.monoosnockCourse(), now: NOW });
+    const add = (id, n, tee, t) => { ev.p[id] = C.newPlayer(ev, { name: n, tee, group: 1, now: NOW }); ev.p[id].t = t; };
+    ev.teams = { t1: { n: 'Team One', cap: 'aaaaaa1' }, t2: { n: 'Team Two', cap: 'cccccc1' } };
+    add('aaaaaa1', 'A One', 'green', 't1'); add('bbbbbb1', 'B One', 'ladies', 't1'); add('cccccc1', 'C Two', 'green', 't2'); add('dddddd1', 'D Two', 'green', 't2');
+    // hole 5: men's par 3, ladies' par 4. A 3 / B 4 (both par), C 2 (birdie) / D 6
+    ev.p.aaaaaa1.s['1_5'] = 3; ev.p.bbbbbb1.s['1_5'] = 4; ev.p.cccccc1.s['1_5'] = 2; ev.p.dddddd1.s['1_5'] = 6;
+    const tot = C.teamBoard(ev), b1 = C.teamBoard(ev, 'best1'), b2 = C.teamBoard(ev, 'best2');
+    eq(tot.find(t => t.id === 't1').toPar, 0); eq(tot.find(t => t.id === 't2').toPar, 2); eq(tot[0].id, 't1');
+    eq(b1[0].id, 't2', 'best ball: the birdie wins the hole'); eq(b1[0].toPar, -1); eq(b1[1].toPar, 0); eq(b1[0].holes, 1);
+    eq(b2[0].id, 't1'); eq(b2[0].toPar, 0); eq(b2[1].toPar, 2);
+    // a best-2 hole waits until two teammates have a score
+    ev.p.aaaaaa1.s['1_6'] = 4; eq(C.teamBoard(ev, 'best2').find(t => t.id === 't1').holes, 1); eq(C.teamBoard(ev, 'best1').find(t => t.id === 't1').holes, 2);
+    deq(C.TEAM_SCORING, ['total', 'best1', 'best2']);
+  });
+
+  await test('core: your rounds: newest first, best and average for each course, by the name you play under', () => {
+    const h = [
+      { code: 'a', course: 'Monoosnock Country Club', date: 3, r: 1, strokes: 84, toPar: 14, name: 'Pat Golfer', n: 18 },
+      { code: 'b', course: 'Monoosnock Country Club', date: 2, r: 1, strokes: 80, toPar: 10, name: 'pat golfer', n: 18 },
+      { code: 'c', course: 'Monoosnock Country Club', date: 1, r: 1, strokes: 41, toPar: 6, name: 'Pat Golfer', n: 9 },
+      { code: 'd', course: 'Other Place', date: 4, r: 1, strokes: 90, toPar: 18, name: 'Pat Golfer' },
+      { code: 'e', course: 'Other Place', date: 5, r: 1, strokes: 70, toPar: -2, name: 'Someone Else', n: 18 }
+    ];
+    const m = C.myRounds(h, 'Pat Golfer');
+    deq(m.list.map(x => x.code), ['d', 'a', 'b', 'c']);
+    eq(m.courses[0].course, 'Monoosnock Country Club'); eq(m.courses[0].holes, 18); eq(m.courses[0].count, 2); eq(m.courses[0].avg, 82); eq(m.courses[0].best.strokes, 80);
+    eq(m.courses.length, 3, 'nine-hole rounds are their own line'); eq(C.myRounds(h, 'Nobody').list.length, 0);
+    const ev = C.newEvent({ name: 'R', course: C.monoosnockCourse(), now: NOW }); ev.p.aaaaaa1 = C.newPlayer(ev, { name: 'Pat Golfer', tee: 'green', now: NOW });
+    for (let k = 1; k <= 18; k++) ev.p.aaaaaa1.s['1_' + k] = 4;
+    const rows = C.historyRows(ev, 'zz'); eq(rows.length, 1); eq(rows[0].n, 18); eq(rows[0].strokes, 72);
+  });
+
+  await test('core: a quick nine of an 18-hole course keeps the handicap order and halves the rating', () => {
+    const c = C.monoosnockCourse(), f = C.nineOf(c, 'front'), b = C.nineOf(c, 'back');
+    eq(f.holes.length, 9); eq(b.holes.length, 9); eq(f.name, 'Monoosnock Country Club (front 9)'); eq(b.id, 'monoosnock-b9');
+    deq(f.holes.map(h => h.hcp), [5, 3, 2, 8, 9, 1, 4, 7, 6]); deq(b.holes.map(h => h.hcp), [5, 3, 2, 8, 9, 1, 4, 7, 6]);
+    eq(f.tees[0].cr, 34.8); eq(f.tees[0].sl, 126); eq(c.tees[0].cr, 69.6, 'the full course is untouched');
+    deq(b.holes[4].tp, { ladies: 4 }); eq(C.coursePar(f), 35); eq(C.coursePar(f, 'ladies'), 36);
+    // a 10 index from White/Blue over nine: 5 x 126 / 113 + (34.8 - 35) = 5.4, so 5 strokes
+    eq(C.courseHc(f, { tee: 'whiteblue', hc: 10 }), 5);
+    const ev = C.newEvent({ name: 'Nine', course: f, now: NOW }); eq(ev.course.holes.length, 9); eq(C.nineOf(f, 'front'), f, 'a nine stays a nine');
+    eq(C.holeNo(ev.course, 1), 1); const bev = C.newEvent({ name: 'Back', course: b, now: NOW }); eq(bev.course.h0, 9); eq(C.holeNo(bev.course, 1), 10);
+    eq(C.cleanCourse(Object.assign({}, c, { h0: 9 })).h0, undefined, 'an 18-hole course never gets an offset');
+  });
+
+  await test('core: predictions lock with the first score and are scored when the tournament ends', () => {
+    const ev = C.newEvent({ name: 'P', course: C.sampleCourse(), rounds: 2, now: NOW });
+    ['aaaaaa1', 'bbbbbb1', 'cccccc1'].forEach((id, i) => { ev.p[id] = C.newPlayer(ev, { name: ['Al Ace', 'Bo Bogey', 'Cy Chip'][i], tee: ev.course.tees[0].id, now: NOW }); });
+    ev.p.aaaaaa1.pd = { w: 'aaaaaa1', lo: 'bbbbbb1', sc: -1 }; ev.p.bbbbbb1.pd = { w: 'bbbbbb1', sc: 5 }; ev.p.cccccc1.pd = { w: 'zzzzzz9', sc: 'x' };
+    let x = C.cleanEvent(JSON.parse(JSON.stringify(ev)));
+    deq(x.p.aaaaaa1.pd, { w: 'aaaaaa1', lo: 'bbbbbb1', sc: -1 }); eq(x.p.cccccc1.pd, undefined, 'a pick of nobody and a bad score are dropped');
+    let pr = C.predictions(x); eq(pr.locked, false); eq(pr.list.length, 2); eq(pr.multi, true);
+    const n = C.holeCount(x), par = h => x.course.holes[h - 1].par;
+    for (let r = 1; r <= 2; r++) for (let h = 1; h <= n; h++) {
+      x.p.aaaaaa1.s[r + '_' + h] = par(h) + (h === 1 && r === 1 ? 1 : 0);       // +1 over two rounds
+      x.p.bbbbbb1.s[r + '_' + h] = par(h) + (r === 1 ? 0 : 1);                  // a round at par, then a bad one
+      x.p.cccccc1.s[r + '_' + h] = par(h) + 1;
+    }
+    pr = C.predictions(x); eq(pr.locked, true); eq(pr.list[0].pts, 0, 'not scored until the end');
+    x.done = true; pr = C.predictions(x);
+    deq(pr.winners, ['aaaaaa1']); eq(pr.winScore, 1); eq(pr.lowScore, C.coursePar(x.course)); deq(pr.low, ['aaaaaa1', 'bbbbbb1'], 'both shot a round at par');
+    eq(pr.list[0].id, 'aaaaaa1'); eq(pr.list[0].pts, 3 + 2 + 2); deq(pr.list[0].hit, { w: true, lo: true, sc: true });
+    eq(pr.list[1].pts, 0); eq(C.cleanPred({ sc: 1.5 }), null);
+  });
+
+  await test('core: a scramble: teams play one ball and the captain keeps the card', () => {
+    const ev = C.newEvent({ name: 'S', course: C.sampleCourse(), now: NOW }); ev.fmt = C.cleanFmt({ kind: 'scramble', nt: 2 });
+    eq(C.cleanFmt({ kind: 'scramble' }).kind, 'scramble'); eq(C.teamKind(ev.fmt), true); eq(C.teamKind({ kind: 'solo' }), false); eq(C.isScramble(ev), true);
+    const add = (id, n, t, at) => { ev.p[id] = C.newPlayer(ev, { name: n, tee: ev.course.tees[0].id, now: at }); ev.p[id].t = t; };
+    add('aaaaaa1', 'A One', 't1', 1); add('bbbbbb1', 'B One', 't1', 2); add('cccccc1', 'C Two', 't2', 3); add('dddddd1', 'D Two', 't2', 4);
+    ev.teams = { t1: { n: 'Team One', cap: 'bbbbbb1' }, t2: { n: 'Team Two', cap: null } };
+    eq(C.cardKeeper(ev, 't1'), 'bbbbbb1'); eq(C.cardKeeper(ev, 't2'), 'cccccc1', 'no captain: the first to join');
+    eq(C.keepsCard(ev, 'aaaaaa1'), false); eq(C.keepsCard(ev, 'bbbbbb1'), true); eq(C.keepsCard(ev, 'dddddd1'), false);
+    ev.p.bbbbbb1.s['1_1'] = ev.course.holes[0].par - 1; ev.p.aaaaaa1.s['1_1'] = 9; ev.p.cccccc1.s['1_1'] = ev.course.holes[0].par;
+    const tb = C.teamBoard(ev); eq(tb[0].id, 't1'); eq(tb[0].toPar, -1, 'only the captain\'s card counts'); eq(tb[1].toPar, 0); eq(tb[0].holes, 1);
+    ev.fmt.kind = 'teams'; eq(C.keepsCard(ev, 'aaaaaa1'), true, 'everyone keeps a card outside a scramble'); eq(C.teamBoard(ev).find(t => t.id === 't1').toPar, 0 - 1 + 9 - ev.course.holes[0].par);
+  });
+
+  await test('core: a back nine shares the full course\'s notes and maps, and every line says the number on the sign', () => {
+    const c = C.monoosnockCourse(), b9 = C.nineOf(c, 'back'), f9 = C.nineOf(c, 'front');
+    eq(C.courseKey(b9), C.courseKey(c)); eq(C.courseKey(f9), C.courseKey(c));
+    const byName = { name: 'Elm Hill', tees: c.tees, holes: c.holes };
+    eq(C.courseKey(C.nineOf(byName, 'back')), C.courseKey(byName), 'a course with no id too');
+    const ev = C.newEvent({ name: 'B', course: b9, now: NOW }); ev.p.aaaaaa1 = C.newPlayer(ev, { name: 'Al Ace', tee: b9.tees[0].id, now: NOW });
+    const notes = { [C.courseKey(c)]: { 10: ['Aim at the barn'], 1: ['Front nine note'] } };
+    const talk = C.holeTalk(ev, ev.p.aaaaaa1, 1, notes, 'clean');
+    ok(/^Hole 10, par/.test(talk), talk); ok(/Aim at the barn/.test(talk)); ok(!/Front nine/.test(talk));
+  });
+
+  await test('core: a 12-golfer scramble: teams spread over groups get a group each', () => {
+    const ev = C.newEvent({ name: 'S12', course: C.sampleCourse(), now: NOW }); ev.fmt = C.cleanFmt({ kind: 'scramble', nt: 3 });
+    const ids = Array.from({ length: 12 }, (_, i) => 'p' + String(i).padStart(5, '0') + 'x');
+    ids.forEach((id, i) => { ev.p[id] = C.newPlayer(ev, { name: 'Golfer ' + (i + 1), tee: ev.course.tees[0].id, group: Math.floor(i / 4) + 1, start: Math.floor(i / 4) * 2 + 1, now: NOW + i }); ev.p[id].t = 't' + ((i % 3) + 1); });
+    ev.teams = { t1: { n: 'One', cap: ids[0] }, t2: { n: 'Two', cap: ids[1] }, t3: { n: 'Three', cap: ids[2] } };
+    eq(C.teamsSplit(ev), true);
+    const x = C.applyPatch(JSON.parse(JSON.stringify(ev)), C.teamGroupsPatch(ev));
+    eq(C.teamsSplit(x), false);
+    const gs = C.groups(x); eq(gs.length, 3); gs.forEach(g => { eq(g.players.length, 4); eq(new Set(g.players.map(p => p.t)).size, 1); });
+    deq(gs.map(g => g.start), [1, 3, 5], 'each group keeps its starting hole');
+    eq(Object.keys(C.teamGroupsPatch(x)).length, 0, 'nothing left to change');
+    ev.fmt.kind = 'teams'; eq(C.teamsSplit(ev), false, 'only a scramble needs it');
+  });
+
+  await test('core: Stableford points, gross and net, and the board ranked by points', () => {
+    eq(C.stableford(4, 4, 0), 2); eq(C.stableford(3, 4, 0), 3); eq(C.stableford(2, 4, 0), 4); eq(C.stableford(5, 4, 0), 1);
+    eq(C.stableford(9, 4, 0), 0, 'never below zero'); eq(C.stableford(5, 4, 1), 2, 'a handicap stroke makes a bogey worth a par'); eq(C.stableford(null, 4, 0), 0);
+    const ev = C.newEvent({ name: 'SF', course: C.sampleCourse(), now: NOW });
+    ev.p.aaaaaa1 = C.newPlayer(ev, { name: 'Al Ace', tee: ev.course.tees[0].id, now: NOW });
+    ev.p.bbbbbb1 = C.newPlayer(ev, { name: 'Bo Bogey', tee: ev.course.tees[0].id, now: NOW + 1 });
+    const par = h => ev.course.holes[h - 1].par;
+    // Al: birdie, then a 10 (zero points). Bo: two bogeys. By strokes Bo leads; by points Al does (3 to 2).
+    ev.p.aaaaaa1.s['1_1'] = par(1) - 1; ev.p.aaaaaa1.s['1_2'] = 10;
+    ev.p.bbbbbb1.s['1_1'] = par(1) + 1; ev.p.bbbbbb1.s['1_2'] = par(2) + 1;
+    eq(C.standings(ev)[0].id, 'bbbbbb1');
+    const sp = C.standings(ev, { pts: true }); eq(sp[0].id, 'aaaaaa1'); eq(sp[0].pts, 3); eq(sp[1].pts, 2); eq(sp[0].rounds[0].pts, 3);
+  });
+
+  await test('core: your round by the numbers, from the scores and the hole reviews', () => {
+    const ev = C.newEvent({ name: 'N', course: C.sampleCourse(), now: NOW });
+    ev.p.aaaaaa1 = C.newPlayer(ev, { name: 'Al Ace', tee: ev.course.tees[0].id, now: NOW });
+    const pl = ev.p.aaaaaa1, par = h => C.parOf(ev.course, h, pl.tee);
+    let x = C.roundNumbers(ev, pl, 1, {}); eq(x.holes, 0); eq(x.best, null); eq(x.fw, null); eq(x.putts, null);
+    const h3 = [1, 2, 3, 4, 5, 6].find(h => par(h) === 3), h4 = [1, 2, 3, 4, 5, 6].filter(h => par(h) > 3);
+    [1, 2, 3, 4, 5, 6].forEach(h => { pl.s['1_' + h] = par(h); });
+    pl.s['1_' + h4[0]] = par(h4[0]) - 1; pl.s['1_' + h4[1]] = par(h4[1]) + 2;
+    const notes = { ['1_' + h4[0]]: { t: 'fairway', p: 1 }, ['1_' + h4[1]]: { t: 'left', p: 3, x: 1, b: true }, ['1_' + h3]: { p: 2 } };
+    x = C.roundNumbers(ev, pl, 1, notes);
+    eq(x.holes, 6); eq(x.marked, 3); deq(x.fw, [1, 2]); eq(x.putts, 6); eq(x.pHoles, 3); eq(x.three, 1); eq(x.pen, 1); eq(x.sand, 1);
+    eq(x.best.h, h4[0]); eq(x.best.d, -1); eq(x.worst.h, h4[1]); eq(x.worst.d, 2);
+    const b9 = C.newEvent({ name: 'B', course: C.nineOf(C.monoosnockCourse(), 'back'), now: NOW });
+    b9.p.aaaaaa1 = C.newPlayer(b9, { name: 'Al Ace', tee: b9.course.tees[0].id, now: NOW }); b9.p.aaaaaa1.s['1_1'] = 3; b9.p.aaaaaa1.s['1_2'] = 9;
+    eq(C.roundNumbers(b9, b9.p.aaaaaa1, 1, {}).best.n, 10, 'a back nine names the 10th');
+    eq(C.nextHole(b9, b9.p.aaaaaa1, 1, 1).n, 11);
+  });
+
+  await test('core: the card as text for Messages', () => {
+    const ev = C.newEvent({ name: 'T', course: C.sampleCourse(), now: NOW });
+    ev.p.aaaaaa1 = C.newPlayer(ev, { name: 'Al Ace', tee: ev.course.tees[0].id, now: NOW });
+    ev.p.bbbbbb1 = C.newPlayer(ev, { name: 'Bo Bogey', tee: ev.course.tees[0].id, now: NOW + 1 });
+    for (let h = 1; h <= 18; h++) ev.p.aaaaaa1.s['1_' + h] = ev.course.holes[h - 1].par;
+    ev.p.bbbbbb1.s['1_1'] = 7;
+    const t = C.cardText(ev, C.players(ev), 1, 'Nov 18').split('\n');
+    eq(t[0], ev.course.name + ' · Nov 18 (par ' + C.coursePar(ev.course) + ')');
+    eq(t[2], 'Al Ace: ' + C.coursePar(ev.course) + ' (E)'); ok(/^Out: (\d+ ){8}\d+ = \d+$/.test(t[3]), t[3]); ok(/^In: /.test(t[4]));
+    eq(t[6], 'Bo Bogey: 7 (+' + (7 - ev.course.holes[0].par) + ') thru 1'); eq(t[7], 'Out: 7 - - - - - - - - = 7'); eq(t[8], '');
+    const b9 = C.newEvent({ name: 'B', course: C.nineOf(C.monoosnockCourse(), 'back'), now: NOW });
+    b9.p.aaaaaa1 = C.newPlayer(b9, { name: 'Al Ace', tee: b9.course.tees[0].id, now: NOW }); b9.p.aaaaaa1.s['1_1'] = 4;
+    ok(C.cardText(b9, C.players(b9), 1).indexOf('Holes 10-18: 4 ') >= 0);
+  });
+
+  await test('core: pace of play from when each score went in', () => {
+    const ev = C.newEvent({ name: 'P', course: C.sampleCourse(), now: NOW });
+    ev.p.aaaaaa1 = C.newPlayer(ev, { name: 'Al Ace', tee: ev.course.tees[0].id, group: 1, now: NOW });
+    ev.p.bbbbbb1 = C.newPlayer(ev, { name: 'Bo Bogey', tee: ev.course.tees[0].id, group: 1, now: NOW + 1 });
+    const t0 = 29000000;
+    ev.p.aaaaaa1.s['1_1'] = 4; ev.p.aaaaaa1.tm = { '1_1': t0, '1_2': t0 + 20, '9_1': 5, '1_5': t0 + 3 };
+    let x = C.cleanEvent(JSON.parse(JSON.stringify(ev)));
+    deq(x.p.aaaaaa1.tm, { '1_1': t0 }, 'a time only stays with a score');
+    let g = C.groups(x)[0]; eq(C.groupPace(x, g, 1), null, 'one hole is not a pace');
+    for (let h = 2; h <= 5; h++) { x.p.aaaaaa1.s['1_' + h] = 4; x.p.aaaaaa1.tm['1_' + h] = t0 + (h - 1) * 20; }
+    x.p.bbbbbb1.s['1_5'] = 5; x.p.bbbbbb1.tm = { '1_5': t0 + 82 };
+    g = C.groups(x)[0];
+    const pc = C.groupPace(x, g, 1, (t0 + 82 + 30) * 60000);
+    eq(pc.holes, 5); eq(pc.per, Math.round(82 / 4)); eq(pc.behind, 82 - 4 * C.PACE_MIN); eq(pc.since, 30); eq(pc.done, false); eq(pc.total, null);
+    // the score write and its time clear together
+    const y = C.applyPatch(x, { 'p.aaaaaa1.s.1_2': C.DELETE, 'p.aaaaaa1.tm.1_2': C.DELETE });
+    eq(y.p.aaaaaa1.tm['1_2'], undefined);
+  });
+
+  await test('core: hole art that comes with the app, by course, and the same pictures for a front or back nine', () => {
+    const c = C.monoosnockCourse();
+    eq(C.holeArt(c, 1), null, 'no pictures listed yet');
+    C.HOLE_ART.monoosnock.holes = [1, 10];
+    try {
+      eq(C.holeArt(c, 1), 'art/monoosnock/1.webp'); eq(C.holeArt(c, 2), null);
+      eq(C.holeArt(C.nineOf(c, 'front'), 1), 'art/monoosnock/1.webp'); eq(C.holeArt(C.nineOf(c, 'back'), 1), 'art/monoosnock/10.webp');
+      eq(C.holeArt(C.sampleCourse(), 1), null); eq(C.holeArt({ id: 'constructor', holes: [] }, 1), null); eq(C.holeArt(null, 1), null);
+    } finally { C.HOLE_ART.monoosnock.holes = []; }
+  });
+
   await test('core: to-par words and colors match the Masters board (red under, green over)', () => {
     eq(C.fmtPar(0), 'E'); eq(C.fmtPar(-3), '-3'); eq(C.fmtPar(2), '+2');
     eq(C.tone(-1), 'under'); eq(C.tone(1), 'over'); eq(C.tone(0), 'even');
@@ -327,6 +536,13 @@ const pl = (ev, id) => Object.assign({ id }, ev.p[id]);
     const sr = C.seasonRace(two, y);
     eq(sr.events, 2); eq(sr.list[0].pts, 800, 'a win (500) and a second (300)'); eq(sr.list[0].wins, 1);
     eq(C.seasonRace(two, y - 1).list.length, 0, 'only this year counts');
+    eq(sr.list[0].rounds, 2); eq(sr.list[0].best.strokes, Math.min.apply(null, two.filter(h => h.name === sr.list[0].name).map(h => h.strokes)));
+    // a quick round adds to rounds and the average but not to points or events; a nine counts as half a round
+    const q = two.concat([{ code: 'cccccccccccccccccccc', event: 'R', course: 'X', date: NOW, r: 1, strokes: 40, toPar: 4, name: 'Alpha Test', n: 9, q: true }]);
+    const sq = C.seasonRace(q, y), al = sq.list.find(x => x.name === 'Alpha Test'), al0 = sr.list.find(x => x.name === 'Alpha Test');
+    eq(sq.events, 2); eq(al.pts, al0.pts); eq(al.events, al0.events); eq(al.rounds, al0.rounds + 1);
+    eq(al.avg, Math.round(((al0.toPar + 4) * 18 / (al0.holes + 9)) * 10) / 10);
+    eq(C.historyRows(ev, 'zzzzzzzzzzzzzzzzzzzz', { quick: true })[0].q, true); eq(hist[0].q, undefined);
   });
 
   await test('core My bag: typical yards until you set yours, the shortest club that gets there, and Jack names it on a par 3', () => {
@@ -399,6 +615,31 @@ const pl = (ev, id) => Object.assign({ id }, ev.p[id]);
     await page.click('[data-ct=stats]'); assert.match(await page.locator('.cbody').textContent(), /Birdies|birdies/);
     await page.click('.cbtns [data-cclose]'); await page.waitForFunction(() => !document.querySelector('#cardlayer').innerHTML);
     const wide = await page.evaluate(() => document.documentElement.scrollWidth); assert.ok(wide <= 390, 'no sideways scroll at 390 px, got ' + wide);
+    deq(errors, []); await ctx.close();
+  });
+
+  if (browser) await test('page: start a round (no tournament): Monoosnock first, a partner, score on this phone', async () => {
+    const { page, errors, ctx } = await open();
+    await page.click('#round'); await page.waitForSelector('#rf');
+    eq(await page.locator('input[name=rcourse]').first().getAttribute('value'), 'monoosnock', 'Monoosnock is the first course');
+    await page.fill('#rme', 'Alpha Test'); await page.click('label:has(input[name=rtee][value=whiteblue]) span'); await page.fill('#rhc', '10');
+    await page.click('#addpal'); await page.fill('.palrow .pname', 'Bravo Test'); await page.selectOption('.palrow .ptee', 'ladies');
+    await page.locator('#rf [type=submit]').click();
+    await page.waitForFunction(() => window.FW.debug.S.view === 'event' && window.FW.debug.S.tab === 'score' && window.FW.debug.S.ev);
+    eq(await page.locator('#tabs [data-tab]').count(), 3, 'Score, Card and Games only');
+    eq(await page.locator('.scorer li').count(), 2);
+    await page.waitForSelector('#mapopen'); await page.waitForSelector('#jackopen'); await page.waitForSelector('#hsketch svg');
+    await page.locator('.scorer li').first().locator('.val').click();
+    const code = await page.evaluate(() => window.FW.debug.S.code);
+    await page.waitForFunction(c => Object.values(JSON.parse(localStorage.getItem('fw:ev:' + c)).p).some(x => x.s && x.s['1_1'] === 4), code);
+    // fixing a score 40 minutes later keeps the time the hole was first scored, for pace of play
+    const tmOf = c => { const p = Object.values(JSON.parse(localStorage.getItem('fw:ev:' + c)).p).find(x => x.s && x.s['1_1'] != null); return p && p.tm && p.tm['1_1']; };
+    const t1 = await page.evaluate(tmOf, code); assert.ok(t1 > 0, 'the score has a time');
+    await page.evaluate(() => { const real = Date.now; Date.now = () => real() + 40 * 60000; });
+    await page.locator('.scorer li').first().locator('.minus').click();
+    await page.waitForFunction(c => Object.values(JSON.parse(localStorage.getItem('fw:ev:' + c)).p).some(x => x.s && x.s['1_1'] === 3), code);
+    eq(await page.evaluate(tmOf, code), t1, 'a fixed score keeps its first time');
+    await page.click('#back'); await page.waitForSelector('[data-open] .chip:text("Round")');
     deq(errors, []); await ctx.close();
   });
 
