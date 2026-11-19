@@ -1,6 +1,6 @@
 // Steele Usage: network first, so updates show up right away; falls back to the last saved copy of the app when offline.
 // Only the app's own files are cached. GitHub API traffic (and the token in it) is never cached.
-const CACHE = "usage-v5";
+const CACHE = "usage-v6";
 const SHELL = ["./", "manifest.json", "/apps/icons/usage-192.png", "/apps/icons/usage-512.png"];
 self.addEventListener("install", e => {
   self.skipWaiting();
@@ -14,8 +14,21 @@ self.addEventListener("fetch", e => {
   if (e.request.method !== "GET") return;
   const u = new URL(e.request.url);
   if (u.origin !== self.location.origin) return;
-  e.respondWith(fetch(e.request, {cache: "no-cache"}).then(res => {
-    if (res.ok) { const copy = res.clone(); caches.open(CACHE).then(c => c.put(e.request, copy)); }
-    return res;
-  }).catch(() => caches.match(e.request, {ignoreSearch: true})));
+  const r = e.request;
+  const savedOr = () => caches.match(r, {ignoreSearch: true});
+  const net = fetch(r, {cache: "no-cache"});
+  // Refresh the saved copy from the network's answer. waitUntil is called now, while the event runs: a call made
+  // later, after the saved copy has already gone out, can be refused and the copy would never refresh.
+  e.waitUntil(net.then(res => {
+    if (res.ok) { const copy = res.clone(); return caches.open(CACHE).then(c => c.put(r, copy)); }
+  }, () => {}));
+  // One weak bar of signal: a fetch can hang a long time without failing. After 3 seconds the saved copy
+  // shows instead (if there is one); with nothing saved, keep waiting for the network.
+  e.respondWith(new Promise(resolve => {
+    let done = false;
+    const give = res => { if (!done && res) { done = true; resolve(res); } };
+    const t = setTimeout(() => savedOr().then(give), 3000);
+    net.then(res => { clearTimeout(t); give(res); },
+      () => { clearTimeout(t); savedOr().then(m => { give(m); if (!done) { done = true; resolve(Response.error()); } }); });
+  }));
 });
