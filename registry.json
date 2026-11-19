@@ -80,11 +80,15 @@
         "autoShots": [],
         "latest": {
           "d": "Nov 19, 2026",
-          "t": "Gameday Picks: pick reminders",
-          "url": "https://github.com/natesteele888/apps/commit/f33e7b23b27adbcd628eab3c495162137a5d90b1"
+          "t": "Show the saved copy after 3 seconds on one weak bar in the App Store, Toolbox and Where Do I Go?",
+          "url": "https://github.com/natesteele888/apps/commit/5a1daf56f4af04880a8547c8a920b0defa1642a3"
         },
-        "version": "1.5.8",
+        "version": "1.5.9",
         "history": [
+          {
+            "v": "1.5.9",
+            "t": "Show the saved copy after 3 seconds on one weak bar in the App Store, Toolbox and Where Do I Go?"
+          },
           {
             "v": "1.5.8",
             "t": "Gameday Picks: pick reminders"
@@ -100,10 +104,6 @@
           {
             "v": "1.5.5",
             "t": "My Stats on the watch: LYBS stats by season and personal bests"
-          },
-          {
-            "v": "1.5.4",
-            "t": "Fairway: hole sketches, Jack the caddie's lines, and course sounds while you score"
           }
         ]
       }
@@ -190,12 +190,16 @@
         ],
         "autoShots": [],
         "latest": {
-          "d": "Nov 18, 2026",
-          "t": "Where Do I Go: New here? steps for first-timers, position names under each chip, bigger labels",
-          "url": "https://github.com/natesteele888/lybs-ballclub/commit/439871113eb4c740324ba5de6608ce12efe7db9b"
+          "d": "Nov 19, 2026",
+          "t": "Show the saved copy after 3 seconds on one weak bar in the App Store, Toolbox and Where Do I Go?",
+          "url": "https://github.com/natesteele888/apps/commit/5a1daf56f4af04880a8547c8a920b0defa1642a3"
         },
-        "version": "1.5.4",
+        "version": "1.5.5",
         "history": [
+          {
+            "v": "1.5.5",
+            "t": "Show the saved copy after 3 seconds on one weak bar in the App Store, Toolbox and Where Do I Go?"
+          },
           {
             "v": "1.5.4",
             "t": "Where Do I Go: New here? steps for first-timers, position names under each chip, bigger labels"
@@ -211,10 +215,6 @@
           {
             "v": "1.5.1",
             "t": "Add a copyright notice and an all-rights-reserved LICENSE"
-          },
-          {
-            "v": "1.5.0",
-            "t": "Situations: note that the App Store's Where Do I Go? runs this trainer too"
           }
         ],
         "caps": [
@@ -329,11 +329,15 @@
         "autoShots": [],
         "latest": {
           "d": "Nov 19, 2026",
-          "t": "Gameday Picks: pick reminders",
-          "url": "https://github.com/natesteele888/apps/commit/f33e7b23b27adbcd628eab3c495162137a5d90b1"
+          "t": "Show the saved copy after 3 seconds on one weak bar in Photo Blueprint, Gameday Picks and Catch Log",
+          "url": "https://github.com/natesteele888/apps/commit/4d32cca5c1b41a39b1e154da72922f188df1906e"
         },
-        "version": "1.2.0",
+        "version": "1.2.1",
         "history": [
+          {
+            "v": "1.2.1",
+            "t": "Show the saved copy after 3 seconds on one weak bar in Photo Blueprint, Gameday Picks and Catch Log"
+          },
           {
             "v": "1.2.0",
             "t": "Gameday Picks: pick reminders"
@@ -349,10 +353,6 @@
           {
             "v": "1.1.7",
             "t": "Gameday Picks: team records and a win-chance gauge on every matchup"
-          },
-          {
-            "v": "1.1.6",
-            "t": "Steele Family watch app: Get Ready, Cube Clock, Power Program, Gameday Picks and Read 20 on a Wear OS watch"
           }
         ],
         "caps": [
@@ -444,12 +444,16 @@
         ],
         "autoShots": [],
         "latest": {
-          "d": "Nov 18, 2026",
-          "t": "Play Builder: don't crash when no play or formation is loaded yet",
-          "url": "https://github.com/natesteele888/ASL-Bengals/commit/5fe08655d65263b0a08908e7729f8f0562c23ca7"
+          "d": "Nov 19, 2026",
+          "t": "Bengals app: keep the plays that arrive late on a weak signal",
+          "url": "https://github.com/natesteele888/ASL-Bengals/commit/70bd0b3502b85301bac5937b549e27d9d38c6ec1"
         },
-        "version": "1.50.6",
+        "version": "1.50.7",
         "history": [
+          {
+            "v": "1.50.7",
+            "t": "Bengals app: keep the plays that arrive late on a weak signal"
+          },
           {
             "v": "1.50.6",
             "t": "Play Builder: don't crash when no play or formation is loaded yet"
@@ -465,10 +469,6 @@
           {
             "v": "1.50.3",
             "t": "Load the PDF and GIF libraries without holding up the page"
-          },
-          {
-            "v": "1.50.2",
-            "t": "Make the name button at the top of every screen easy to tap"
           }
         ],
         "caps": [
@@ -767,11 +767,19 @@
         "autoShots": [],
         "latest": {
           "d": "Nov 19, 2026",
-          "t": "One sign-in for coaches, and every division's standings a tap away",
-          "url": "https://github.com/natesteele888/lybs-ballclub/commit/c9f97d2d385a262b74766b7d56b37425ed9e68e1"
+          "t": "Field Time: the league's softball numbers for Fitzgerald",
+          "url": "https://github.com/natesteele888/lybs-ballclub/commit/6aea62cad48d3a61e9c3028a6745d73e1326cd18"
         },
-        "version": "1.29.0",
+        "version": "1.29.3",
         "history": [
+          {
+            "v": "1.29.2",
+            "t": "Field Time: the league's softball numbers for Fitzgerald"
+          },
+          {
+            "v": "1.29.1",
+            "t": "Field Time: shared field booking, starting with Fitzgerald Softball"
+          },
           {
             "v": "1.29.0",
             "t": "One sign-in for coaches, and every division's standings a tap away"
@@ -783,14 +791,6 @@
           {
             "v": "1.28.8",
             "t": "League dates from the LYBS Dashboard on every team's page and Important Dates"
-          },
-          {
-            "v": "1.28.7",
-            "t": "Age page: open the chart on the baseball divisions, not an empty row"
-          },
-          {
-            "v": "1.28.6",
-            "t": "Coach link from the Dashboard: a board member who opens it gives that coach the team in Ballclub"
           }
         ],
         "caps": [
@@ -1191,30 +1191,30 @@
         "autoShots": [],
         "latest": {
           "d": "Nov 19, 2026",
-          "t": "Backend: paid sponsors, logos and card filing for the posting plan",
-          "url": "https://github.com/natesteele888/sponsor-banner-inventory/commit/08abbb41029dc2c2438d0c837cb50f64298d5812"
+          "t": "Sponsors: cleaner sponsor card with returning mark and banner thumbnail, phone fixes",
+          "url": "https://github.com/natesteele888/sponsor-banner-inventory/commit/8b23069080d9dea2283c8f70a31399d9279fe750"
         },
-        "version": "1.4.7",
+        "version": "1.5.7",
         "history": [
           {
-            "v": "1.4.7",
-            "t": "Backend: paid sponsors, logos and card filing for the posting plan"
+            "v": "1.5.7",
+            "t": "Sponsors: cleaner sponsor card with returning mark and banner thumbnail, phone fixes"
           },
           {
-            "v": "1.4.6",
-            "t": "Sponsors app: run on the board's own sponsor sheet"
+            "v": "1.5.6",
+            "t": "Sponsors: league or personal version of each follow-up, both editable"
           },
           {
-            "v": "1.4.5",
-            "t": "Sponsors: follow-up emails, one receipt for every sponsor, send from the league address"
+            "v": "1.5.5",
+            "t": "Sponsors: search box stays one line tall on desktop"
           },
           {
-            "v": "1.4.4",
-            "t": "Sponsors: board edits (add contact, edit rows, mark paid/contacted/not sponsoring)"
+            "v": "1.5.4",
+            "t": "Sponsors: receipts badge, previews under their row, follow-ups off until started, Add sponsor, in kind"
           },
           {
-            "v": "1.4.3",
-            "t": "Sponsors app: show sponsor info packets from their sheet"
+            "v": "1.5.3",
+            "t": "Sponsors: plain words for what the follow-ups and receipts still need"
           }
         ],
         "caps": [
@@ -2444,12 +2444,16 @@
         ],
         "autoShots": [],
         "latest": {
-          "d": "Nov 18, 2026",
-          "t": "Older phones: keep Scoreboard's big score, Film Lite's video size and Walk-Up's pitch card working",
-          "url": "https://github.com/natesteele888/apps/commit/24c399124e2010db19c20226b0385756bc1dee7d"
+          "d": "Nov 19, 2026",
+          "t": "Film Lite, Read 20, Meeting Secretary: show the saved copy after 3 seconds on one weak bar",
+          "url": "https://github.com/natesteele888/apps/commit/054ee1dafe331947a57c73f1a363d6ac970058a3"
         },
-        "version": "1.0.5",
+        "version": "1.0.6",
         "history": [
+          {
+            "v": "1.0.6",
+            "t": "Film Lite, Read 20, Meeting Secretary: show the saved copy after 3 seconds on one weak bar"
+          },
           {
             "v": "1.0.5",
             "t": "Older phones: keep Scoreboard's big score, Film Lite's video size and Walk-Up's pitch card working"
@@ -2465,10 +2469,6 @@
           {
             "v": "1.0.2",
             "t": "Film Lite: leave the tag list its full room on small phones"
-          },
-          {
-            "v": "1.0.1",
-            "t": "Film Lite: step through a clip, tag the moments and share the notes"
           }
         ],
         "caps": [
@@ -2559,8 +2559,12 @@
           "store/shots/read20-5.webp",
           "store/shots/read20-6.webp"
         ],
-        "version": "1.4.0",
+        "version": "1.4.1",
         "history": [
+          {
+            "v": "1.4.1",
+            "t": "Film Lite, Read 20, Meeting Secretary: show the saved copy after 3 seconds on one weak bar"
+          },
           {
             "v": "1.4.0",
             "t": "Steele Family watch app: Get Ready, Cube Clock, Power Program, Gameday Picks and Read 20 on a Wear OS watch"
@@ -2576,16 +2580,12 @@
           {
             "v": "1.3.7",
             "t": "Read 20: a morning second chance to finish last night's reading"
-          },
-          {
-            "v": "1.3.6",
-            "t": "Read 20: remove an entry from the log (with confirmation)"
           }
         ],
         "latest": {
-          "d": "Nov 17, 2026",
-          "t": "Steele Family watch app: Get Ready, Cube Clock, Power Program, Gameday Picks and Read 20 on a Wear OS watch",
-          "url": "https://github.com/natesteele888/apps/commit/6380e3c83fba1d7a2afbc7ef15bd9632c8401ba6"
+          "d": "Nov 19, 2026",
+          "t": "Film Lite, Read 20, Meeting Secretary: show the saved copy after 3 seconds on one weak bar",
+          "url": "https://github.com/natesteele888/apps/commit/054ee1dafe331947a57c73f1a363d6ac970058a3"
         },
         "caps": [
           "Every child gets their own profile, streak and shelf",
@@ -2786,12 +2786,16 @@
           "store/shots/photoblueprint-6.webp"
         ],
         "latest": {
-          "d": "Nov 15, 2026",
-          "t": "Photo Blueprint: frame the area before drawing its circle",
-          "url": "https://github.com/natesteele888/apps/commit/4bf47d789c44d11a5499b38fed0e75b07ce9aedc"
+          "d": "Nov 19, 2026",
+          "t": "Show the saved copy after 3 seconds on one weak bar in Photo Blueprint, Gameday Picks and Catch Log",
+          "url": "https://github.com/natesteele888/apps/commit/4d32cca5c1b41a39b1e154da72922f188df1906e"
         },
-        "version": "1.1.2",
+        "version": "1.1.3",
         "history": [
+          {
+            "v": "1.1.3",
+            "t": "Show the saved copy after 3 seconds on one weak bar in Photo Blueprint, Gameday Picks and Catch Log"
+          },
           {
             "v": "1.1.2",
             "t": "Photo Blueprint: frame the area before drawing its circle"
@@ -2807,10 +2811,6 @@
           {
             "v": "1.0.9",
             "t": "Photo Blueprint: make the home link in the top bar easy to tap"
-          },
-          {
-            "v": "1.0.8",
-            "t": "Photo Blueprint: the direction cone stays on the sheet, off the main map"
           }
         ],
         "caps": [
@@ -2914,12 +2914,16 @@
           "mock"
         ],
         "latest": {
-          "d": "Nov 18, 2026",
-          "t": "Catch Log: let people pinch to zoom",
-          "url": "https://github.com/natesteele888/apps/commit/e2291e2a05661baadfc293189dd2d6e782fa8442"
+          "d": "Nov 19, 2026",
+          "t": "Show the saved copy after 3 seconds on one weak bar in Photo Blueprint, Gameday Picks and Catch Log",
+          "url": "https://github.com/natesteele888/apps/commit/4d32cca5c1b41a39b1e154da72922f188df1906e"
         },
-        "version": "1.0.6",
+        "version": "1.0.7",
         "history": [
+          {
+            "v": "1.0.7",
+            "t": "Show the saved copy after 3 seconds on one weak bar in Photo Blueprint, Gameday Picks and Catch Log"
+          },
           {
             "v": "1.0.6",
             "t": "Catch Log: let people pinch to zoom"
@@ -2935,10 +2939,6 @@
           {
             "v": "1.0.3",
             "t": "Load the fonts without holding up six apps"
-          },
-          {
-            "v": "1.0.2",
-            "t": "Catch Log: load the map stylesheet only when a map is shown"
           }
         ]
       }
