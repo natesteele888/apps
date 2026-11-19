@@ -137,15 +137,17 @@ function espn(u) {
   const FIREBASE_STUB = `(() => {
     const data = { gp_players: { me1: { name: 'Player One', code: 'GOOD', joinedAt: '2026-11-01' } }, gp_weeks: {}, gp_picks: {}, gp_codes: {} };
     const listeners = []; const notify = () => listeners.forEach(f => f());
-    const snapOf = (col, id) => ({ id, exists: data[col][id] !== undefined, data: () => data[col][id], metadata: { hasPendingWrites: false, fromCache: false } });
+    const C = col => (data[col] = data[col] || {}); // any other collection the page reads (reminders, watch) starts empty
+    const snapOf = (col, id) => ({ id, exists: C(col)[id] !== undefined, data: () => data[col][id], metadata: { hasPendingWrites: false, fromCache: false } });
     const docRef = (col, id) => ({
       onSnapshot(a, b) { const cb = typeof a === 'function' ? a : b; const f = () => cb(snapOf(col, id)); listeners.push(f); f(); return () => {}; },
       set(v) { if (col === 'gp_players' && v.code === 'OWNER') return Promise.reject(Object.assign(new Error('denied'), { code: 'permission-denied' }));
-        data[col][id] = JSON.parse(JSON.stringify(v)); window.__writes.push([col, id, v]); notify(); return Promise.resolve(); },
-      update(v) { data[col][id] = Object.assign({}, data[col][id], v); notify(); return Promise.resolve(); },
-      delete() { delete data[col][id]; notify(); return Promise.resolve(); }
+        C(col)[id] = JSON.parse(JSON.stringify(v)); window.__writes.push([col, id, v]); notify(); return Promise.resolve(); },
+      update(v) { C(col)[id] = Object.assign({}, C(col)[id], v); notify(); return Promise.resolve(); },
+      delete() { delete C(col)[id]; notify(); return Promise.resolve(); },
+      get() { return Promise.resolve(snapOf(col, id)); }
     });
-    const colRef = col => ({ onSnapshot(cb) { const f = () => cb({ docs: Object.keys(data[col]).map(id => snapOf(col, id)) }); listeners.push(f); f(); return () => {}; }, doc: id => docRef(col, id) });
+    const colRef = col => ({ onSnapshot(cb) { const f = () => cb({ docs: Object.keys(C(col)).map(id => snapOf(col, id)), empty: !Object.keys(C(col)).length, metadata: { fromCache: false } }); listeners.push(f); f(); return () => {}; }, doc: id => docRef(col, id) });
     const db = { doc: p => { const [col, id] = p.split('/'); return docRef(col, id); }, collection: colRef, enablePersistence: () => Promise.resolve() };
     const user = { uid: 'me1', displayName: 'Player One' };
     window.__writes = [];
