@@ -145,6 +145,38 @@ async function addMotion(page, text, { nay = [], abstain = [], unanimous = false
       assert.ok(mins.includes('Respectfully submitted, Member D, Secretary'), 'secretary named: ' + mins.slice(-200));
       await ctx.close();
     });
+    await test('topics from the Dashboard: reports and board votes go after the opening items, refresh, stay removed, and reach the minutes', async () => {
+      const { ctx, page } = await newPage(browser);
+      await page.goto(srv.url);
+      await setup(page);
+      const r = await page.evaluate(() => {
+        M.agenda = ['Call to Order', 'Approval of Prior Minutes', 'Fields', 'Adjournment'].map(t => ({ id: uid(), title: t, startT: null, notes: '' }));
+        const feed = cleanDashTopics([
+          { id: 'report__sponsors', title: 'Sponsorships report', detail: 'Made-up season: 3 sponsors.\nSince Nov 8: 1 new sponsor.' },
+          { id: 'vote__demo-1', title: 'Vote to ratify: Demo motion', detail: 'Moved by Member A, Nov 19, by email. Passed.\nMotion: Demo ask. Vote 4–1–0.' },
+          { id: 'evil', title: 'Not from the Dashboard' }, { id: 'report__x', title: '' },
+        ]);
+        const first = placeDashTopics(feed);
+        const order = M.agenda.map(a => a.title);
+        M.agenda.find(a => a.dashId === 'report__sponsors').detail = 'Edited by the secretary';
+        placeDashTopics(cleanDashTopics([{ id: 'report__sponsors', title: 'Sponsorships report', detail: 'New numbers' }, { id: 'vote__demo-1', title: 'Vote to ratify: Demo motion', detail: 'Moved by Member A. Passed.\nMotion: Demo ask. Vote 5–0–0.' }]));
+        const kept = M.agenda.find(a => a.dashId === 'report__sponsors').detail, fresh = M.agenda.find(a => a.dashId === 'vote__demo-1').detail;
+        const i = M.agenda.findIndex(a => a.dashId === 'report__sponsors'); noteRemovedFeedTopic(M.agenda.splice(i, 1)[0]);
+        const again = placeDashTopics(cleanDashTopics([{ id: 'report__sponsors', title: 'Sponsorships report', detail: 'x' }]));
+        return { kept: feed.length, first, order, edited: kept, fresh, again, reported: boardActionsPayload().reported, mins: minutesHTML(), handoff: buildHandoff() };
+      });
+      eq(r.kept, 2, 'only report__ and vote__ topics with a title are taken');
+      eq(r.first, 2);
+      eq(JSON.stringify(r.order), JSON.stringify(['Call to Order', 'Approval of Prior Minutes', 'Sponsorships report', 'Vote to ratify: Demo motion', 'Fields', 'Adjournment']));
+      eq(r.edited, 'Edited by the secretary', 'a checked-again topic keeps the secretary’s edit');
+      assert.ok(r.fresh.includes('5–0–0'), 'an unedited one takes the new numbers');
+      eq(r.again, 0, 'a removed topic is not added back');
+      assert.ok(r.reported.includes('vote__demo-1'), 'the vote is reported back to the board page');
+      assert.ok(/## Board votes taken between meetings[\s\S]*- Vote to ratify: Demo motion: Moved by Member A\. Passed\. \/ Motion/.test(r.handoff), 'the minutes handoff lists the vote');
+      const mins = plain(r.mins);
+      assert.ok(/Votes Taken Between Meetings .* Demo motion Moved by Member A\. Passed\. Motion: Demo ask\. Vote 5–0–0\./.test(mins), mins.slice(0, 900));
+      await ctx.close();
+    });
   } finally {
     await browser.close();
     srv.stop();
