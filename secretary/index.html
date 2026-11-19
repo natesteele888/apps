@@ -631,6 +631,7 @@ function newMeeting(){
    The setup screen offers it in a banner (Use these topics / Keep the standard agenda). Nothing changes
    until you choose, nothing is removed behind your back, and a topic you delete is not offered again.
    With no file, or one that doesn't parse, none of this shows and the app works exactly as before. */
+let redrawSetupAgenda = null;   // the setup screen's agenda list, redrawn when the Dashboard adds topics
 function readAgendaFeed(){
   const f = window.AGENDA_FEED;
   if (!f || !Array.isArray(f.items)) return null;
@@ -665,6 +666,7 @@ function addFeedTopics(feed, topics){   // new topics go in just before the clos
   M.agenda.splice(at, 0, ...topics.map(t => topicItem(t, true)));
 }
 function noteRemovedFeedTopic(item){   // remembering a removal keeps that topic from being offered again
+  if (item && item.dashId) { (M.dashRemoved = M.dashRemoved || []).push(item.dashId); return; }
   if (!item || !M.feedChoice || M.feedChoice.choice !== 'used') return;
   (M.feedChoice.removed = M.feedChoice.removed || []).push(item.title);
 }
@@ -1032,7 +1034,7 @@ function renderSetup(){
 
   const openDetail = new Set();   // items whose text box stays open even while it is empty
   const growText = ta => { ta.style.height = 'auto'; ta.style.height = ta.scrollHeight + 'px'; };
-  const drawAgenda = () => {
+  const drawAgenda = redrawSetupAgenda = () => {
     $('#agEdit').innerHTML = M.agenda.map((a,i) => `
       <div class="ag-item">
       <div class="ag-row" data-i="${i}">
@@ -1833,7 +1835,7 @@ function boardActionsPayload(){
                dueDate: iso ? d : '', dueText: iso ? '' : d, topic: ag ? ag.title : '' };
     }),
     // Items added on the board page between meetings that these minutes read in.
-    reported: betweenItems().map(b => b.id) };
+    reported: betweenItems().map(b => b.id).concat(M.agenda.filter(a => /^vote__/.test(a.dashId || '')).map(a => a.dashId)) };
 }
 // What was sent last, so saving the minutes again doesn't reopen the board page for nothing.
 const boardSendKey = p => JSON.stringify([p.meeting, p.items, p.reported]);
@@ -1897,14 +1899,59 @@ function checkBetween(){
     if (e.data.type === 'lybs-board-actions-ready' && e.data.want === 'between' && !done) w.postMessage({ type: 'lybs-board-between-request' }, BOARD_PAGE_ORIGIN);
     if (e.data.type === 'lybs-board-between' && e.data.v === 1) {
       done = true; window.removeEventListener('message', onMsg);
-      const list = cleanBetween(e.data.items);
-      if (M === mtg) { M.betweenItems = mergeBetween(list); M.betweenCheckedAt = new Date().toISOString(); scheduleSave(); refreshBetween(); }
-      toast(list.length ? `${list.length} action item${list.length === 1 ? ' was' : 's were'} added since the last meeting.` : 'Nothing was added on the board page since the last meeting.', 4000);
+      const list = cleanBetween(e.data.items), dash = cleanDashTopics([].concat(e.data.report || [], e.data.votes || []));
+      let added = 0;
+      if (M === mtg) {
+        M.betweenItems = mergeBetween(list); M.betweenCheckedAt = new Date().toISOString(); added = placeDashTopics(dash); scheduleSave(); refreshBetween();
+        if (view === 'setup' && redrawSetupAgenda) redrawSetupAgenda(); else if (view === 'live') drawAgendaLive();
+      }
+      const nv = dash.filter(t => /^vote__/.test(t.id)).length;
+      toast((list.length ? `${list.length} action item${list.length === 1 ? ' was' : 's were'} added since the last meeting.` : 'Nothing was added on the board page since the last meeting.')
+        + (added ? ` ${added} topic${added === 1 ? '' : 's'} from the Dashboard went on the agenda${nv ? ', ' + nv + ' of them board vote' + (nv === 1 ? '' : 's') : ''}.` : (dash.length ? ' The Dashboard’s reports and votes are up to date on the agenda.' : '')), 5000);
     }
   };
   window.addEventListener('message', onMsg);
   setTimeout(() => window.removeEventListener('message', onMsg), 60 * 60 * 1000);
 }
+/* ---------- TOPICS FROM THE DASHBOARD ----------
+   The same "Check the board page" answer also carries agenda topics the Dashboard fills in: a report
+   on sponsorships, the Winter Clinic Pass and what changed on the Dashboard since the last meeting
+   (ids report__…), and one topic for every board vote not yet read into minutes (ids vote__…), each
+   with the motion, every sub-ask's tally and how each member voted. They go on the agenda after the
+   opening items, reports first. Checking again refreshes their text unless the secretary edited it,
+   and a topic the secretary removed isn't added back. Saving the minutes tells the board page which
+   votes these minutes read in, so they come off the next agenda. */
+const DASH_TOPIC_RE = /^(vote|report)__[A-Za-z0-9_-]+$/;
+function cleanDashTopics(list){
+  const one = (v, n) => String(v ?? '').replace(/\s+/g, ' ').trim().slice(0, n);
+  const lines = (v, n) => String(v ?? '').split('\n').map(l => l.replace(/\s+/g, ' ').trim()).filter(Boolean).join('\n').slice(0, n);
+  return (Array.isArray(list) ? list : []).slice(0, 30).map(x => ({
+    id: one(x && x.id, 80), title: one(x && x.title, 160), detail: lines(x && x.detail, 3000),
+  })).filter(x => DASH_TOPIC_RE.test(x.id) && x.title);
+}
+const OPENING_RE = /call to order|roll call|attendance|quorum|approv\w* (of )?(the )?(prior|previous|last)? ?minutes|prior minutes/i;
+function placeDashTopics(list){
+  const gone = M.dashRemoved || [];
+  let at = 0;
+  while (at < M.agenda.length && OPENING_RE.test(M.agenda[at].title || '')) at++;
+  while (at < M.agenda.length && M.agenda[at].dashId) at++;
+  let added = 0;
+  list.forEach(t => {
+    const a = M.agenda.find(x => x.dashId === t.id);
+    if (a) {   // refresh what came from the Dashboard, not what the secretary changed
+      if (a.title === a.dashTitle) { a.title = t.title; a.dashTitle = t.title; }
+      if ((a.detail || '') === (a.dashDetail || '')) { a.detail = t.detail; a.dashDetail = t.detail; }
+      return;
+    }
+    if (gone.includes(t.id)) return;
+    M.agenda.splice(at++, 0, { id: uid(), title: t.title, startT: null, notes: '', detail: t.detail, source: 'Dashboard',
+      isNew: true, dashId: t.id, dashTitle: t.title, dashDetail: t.detail });
+    added++;
+  });
+  return added;
+}
+const dashVotes = () => (M && Array.isArray(M.agenda) ? M.agenda : []).filter(a => /^vote__/.test(a.dashId || ''));
+const voteMotion = a => String(a.title || '').replace(/^(Open vote|Vote to ratify):\s*/i, '');
 const betweenDue = b => b.dueText || (b.dueDate ? fmtDateShort(b.dueDate) : '');
 const betweenLine = b => `${esc(b.text)}${b.owner ? ' — <b>' + esc(b.owner) + '</b>' : ''}${betweenDue(b) ? ', by ' + esc(betweenDue(b)) : ''} <span class="bw">· added ${esc(b.addedOn ? fmtDateShort(b.addedOn) : 'between meetings')} · ${esc(BETWEEN_STATUS[b.status])}</span>`;
 function betweenLiveHTML(){
@@ -1914,10 +1961,11 @@ function betweenLiveHTML(){
 function drawBetween(){
   const box = $('#betweenBox'); if (!box) return;
   const list = betweenItems(), checked = M.betweenCheckedAt ? fmtSentAt(M.betweenCheckedAt) : '';
-  if (!driveShown() && !list.length) { box.innerHTML = ''; return; }
+  if (!driveShown() && !list.length && !M.agenda.some(a => a.dashId)) { box.innerHTML = ''; return; }
   box.innerHTML = `<div class="between"><h3>Added since the last meeting</h3>
     ${list.length ? `<div style="font-size:13px;color:var(--text-2)">Action items added on the board page between meetings. They show during the meeting and go in the minutes.</div><ul>${list.map(b => `<li>${betweenLine(b)}</li>`).join('')}</ul>`
-      : `<div style="font-size:13px;color:var(--text-2)">${checked ? 'Nothing was added on the board page since the last meeting.' : 'Check the board page for action items added between meetings, so they get read into the minutes.'}</div>`}
+      : `<div style="font-size:13px;color:var(--text-2)">${checked ? 'Nothing was added on the board page since the last meeting.' : 'Check the board page for action items added between meetings, board votes and the Dashboard’s reports, so they get on the agenda and into the minutes.'}</div>`}
+    ${M.agenda.some(a => a.dashId) ? `<div style="font-size:13px;color:var(--text-2);margin-top:6px">From the Dashboard, on the agenda: ${esc(M.agenda.filter(a => a.dashId).map(a => a.title).join(' · '))}</div>` : ''}
     ${driveShown() ? `<div class="row" style="margin-top:8px"><button class="btn sm" id="betweenCheck">${checked ? 'Check again' : 'Check the board page'}</button>${checked ? `<span class="notehint" style="margin:0">Checked ${esc(checked)}</span>` : ''}</div>` : ''}</div>`;
   const b = $('#betweenCheck'); if (b) b.onclick = checkBetween;
 }
@@ -2855,6 +2903,12 @@ function buildHandoff(){
     betweenItems().forEach(b => L.push(`- ADDED ${b.addedOn ? fmtDateShort(b.addedOn) : '(date not given)'} · ${b.text} · Owner: ${b.owner || 'unassigned'} · Due: ${betweenDue(b) || 'none given'} · Status: ${BETWEEN_STATUS[b.status]}`));
     L.push('');
   }
+  if (dashVotes().length) {
+    L.push(`## Board votes taken between meetings (authoritative)`);
+    L.push(`Taken by email or on the Dashboard since the last meeting. Give them their own short section, "Votes Taken Between Meetings", before the Action Items: each motion with every sub-ask, its tally (yay–nay–abstain) and its result, or "still open". If the board ratified or voted on one at this meeting, say so there and record that vote with the motions as usual. A name marked * was read from that member's emailed reply.`);
+    dashVotes().forEach(a => L.push(`- ${a.title}: ${String(a.detail || '').replace(/\n+/g, ' / ')}`));
+    L.push('');
+  }
   L.push(`## Transcript by agenda topic (raw speech-to-text)`);
   M.agenda.forEach((a, i) => {
     const segs = M.segments.filter(s => s.agendaId === a.id && s.src !== 'phone'), ps = M.segments.filter(s => s.agendaId === a.id && s.src === 'phone');
@@ -2929,6 +2983,9 @@ function minutesHTML(){
     ${betweenItems().length ? `<h4><span class="no">+</span>Action Items Added Between Meetings</h4>
     <p>These were added to the board's action items after the last meeting and read into the record at this one:</p>
     <table><thead><tr><th>Action item</th><th style="width:22%">Owner</th><th style="width:16%">Added</th><th style="width:16%">Status</th></tr></thead><tbody>${betweenItems().map(b => `<tr><td>${esc(b.text)}${betweenDue(b) ? `<div style="font-size:10.5px;color:#7E8284;margin-top:1px">Due ${esc(betweenDue(b))}</div>` : ''}</td><td>${esc(b.owner || 'To be decided')}</td><td>${esc(b.addedOn ? fmtDateShort(b.addedOn) : '—')}</td><td>${esc(BETWEEN_STATUS[b.status])}</td></tr>`).join('')}</tbody></table>` : ''}
+    ${dashVotes().length ? `<h4><span class="no">✓</span>Votes Taken Between Meetings</h4>
+    <p>Taken by email or on the Dashboard since the last meeting and read into the record at this one:</p>
+    ${dashVotes().map(a => `<p style="margin:8px 0 2px"><b>${esc(voteMotion(a))}</b>${/^open vote/i.test(a.title) ? ' <span style="color:#9A6E00">(still open)</span>' : ''}</p>${String(a.detail || '').split('\n').filter(Boolean).map(l => `<div style="font-size:12px;margin:1px 0 0 10px">${esc(l)}</div>`).join('')}`).join('')}` : ''}
     <h4><span class="no">▸</span>Open Items</h4>
     <p><span class="lbl">Action items</span>${allActions.length ? '' : 'None.'}</p>
     ${allActions.length ? actionGroupsHTML(allActions) : ''}
