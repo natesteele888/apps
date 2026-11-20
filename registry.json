@@ -1,6 +1,6 @@
 {
   "about": "The one list of Nathan's apps. Live links, which apps show where, and each app's App Store listing (text, highlights, screenshots) all come from here. Edit listings and icons in the Toolbox; the sync job copies them here. Don't hand-edit text in store/index.html.",
-  "updated": "2026-11-19",
+  "updated": "2026-11-20",
   "toolbox": "https://natesteele888.github.io/apps/toolbox/",
   "store": "https://natesteele888.github.io/apps/store/",
   "apps": [
@@ -766,12 +766,16 @@
         ],
         "autoShots": [],
         "latest": {
-          "d": "Nov 19, 2026",
-          "t": "Field Time: the league's softball numbers for Fitzgerald",
-          "url": "https://github.com/natesteele888/lybs-ballclub/commit/6aea62cad48d3a61e9c3028a6745d73e1326cd18"
+          "d": "Nov 20, 2026",
+          "t": "Age page: make the macleague.org and league email links tappable",
+          "url": "https://github.com/natesteele888/lybs-ballclub/commit/516a8d9e93474ca5155c09ec2af39f945d49913f"
         },
-        "version": "1.29.3",
+        "version": "1.29.4",
         "history": [
+          {
+            "v": "1.29.4",
+            "t": "Age page: make the macleague.org and league email links tappable"
+          },
           {
             "v": "1.29.2",
             "t": "Field Time: the league's softball numbers for Fitzgerald"
@@ -787,10 +791,6 @@
           {
             "v": "1.28.9",
             "t": "League dates: phones pick up the new league-events and league-info files"
-          },
-          {
-            "v": "1.28.8",
-            "t": "League dates from the LYBS Dashboard on every team's page and Important Dates"
           }
         ],
         "caps": [
@@ -1190,31 +1190,31 @@
         ],
         "autoShots": [],
         "latest": {
-          "d": "Nov 19, 2026",
-          "t": "Sponsors: cleaner sponsor card with returning mark and banner thumbnail, phone fixes",
-          "url": "https://github.com/natesteele888/sponsor-banner-inventory/commit/8b23069080d9dea2283c8f70a31399d9279fe750"
+          "d": "Nov 20, 2026",
+          "t": "Card receipt button reads Preview Receipt",
+          "url": "https://github.com/natesteele888/sponsor-banner-inventory/commit/97254f428a4e56226d759debb0d89f84fa8a15bc"
         },
-        "version": "1.5.7",
+        "version": "1.7.2",
         "history": [
           {
-            "v": "1.5.7",
-            "t": "Sponsors: cleaner sponsor card with returning mark and banner thumbnail, phone fixes"
+            "v": "1.7.2",
+            "t": "Card receipt button reads Preview Receipt"
           },
           {
-            "v": "1.5.6",
-            "t": "Sponsors: league or personal version of each follow-up, both editable"
+            "v": "1.7.1",
+            "t": "Card receipt button sits on the right, under the status"
           },
           {
-            "v": "1.5.5",
-            "t": "Sponsors: search box stays one line tall on desktop"
+            "v": "1.7.0",
+            "t": "Receipt button on paid sponsor cards; Receipts keeps a copy of every receipt sent"
           },
           {
-            "v": "1.5.4",
-            "t": "Sponsors: receipts badge, previews under their row, follow-ups off until started, Add sponsor, in kind"
+            "v": "1.6.9",
+            "t": "Last season's treasurer figures on the year-over-year line; money order and the donation page as ways to pay an upgrade"
           },
           {
-            "v": "1.5.3",
-            "t": "Sponsors: plain words for what the follow-ups and receipts still need"
+            "v": "1.6.8",
+            "t": "Packet page: returning sponsors keep last year's info in one tap"
           }
         ],
         "caps": [
