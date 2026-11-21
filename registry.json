@@ -1,6 +1,6 @@
 {
   "about": "The one list of Nathan's apps. Live links, which apps show where, and each app's App Store listing (text, highlights, screenshots) all come from here. Edit listings and icons in the Toolbox; the sync job copies them here. Don't hand-edit text in store/index.html.",
-  "updated": "2026-11-20",
+  "updated": "2026-11-21",
   "toolbox": "https://natesteele888.github.io/apps/toolbox/",
   "store": "https://natesteele888.github.io/apps/store/",
   "apps": [
@@ -444,12 +444,16 @@
         ],
         "autoShots": [],
         "latest": {
-          "d": "Nov 19, 2026",
-          "t": "Bengals app: keep the plays that arrive late on a weak signal",
-          "url": "https://github.com/natesteele888/ASL-Bengals/commit/70bd0b3502b85301bac5937b549e27d9d38c6ec1"
+          "d": "Nov 21, 2026",
+          "t": "Bengals app: save the quiz and drill sounds so they play with no signal",
+          "url": "https://github.com/natesteele888/ASL-Bengals/commit/0fe167d9ea8f474e3f69648160a468f519211c5e"
         },
-        "version": "1.50.7",
+        "version": "1.50.8",
         "history": [
+          {
+            "v": "1.50.8",
+            "t": "Bengals app: save the quiz and drill sounds so they play with no signal"
+          },
           {
             "v": "1.50.7",
             "t": "Bengals app: keep the plays that arrive late on a weak signal"
@@ -465,10 +469,6 @@
           {
             "v": "1.50.4",
             "t": "Play edits: save only what changed, so coaches' saves stop undoing each other"
-          },
-          {
-            "v": "1.50.3",
-            "t": "Load the PDF and GIF libraries without holding up the page"
           }
         ],
         "caps": [
@@ -1062,12 +1062,16 @@
         ],
         "autoShots": [],
         "latest": {
-          "d": "Nov 19, 2026",
-          "t": "Statistics: make the chart's Last 50 / Last 200 / All buttons easier to tap",
-          "url": "https://github.com/natesteele888/cube-clock/commit/db62ef3b79df0eb6c5bd70398e13cbbacd7d680d"
+          "d": "Nov 21, 2026",
+          "t": "Timer: a tap on the install bar still stops a running solve",
+          "url": "https://github.com/natesteele888/cube-clock/commit/9ce5fafad355d044c1cf75e4cd49430e0ef41d8d"
         },
-        "version": "1.3.6",
+        "version": "1.3.7",
         "history": [
+          {
+            "v": "1.3.7",
+            "t": "Timer: a tap on the install bar still stops a running solve"
+          },
           {
             "v": "1.3.6",
             "t": "Statistics: make the chart's Last 50 / Last 200 / All buttons easier to tap"
@@ -1083,10 +1087,6 @@
           {
             "v": "1.3.3",
             "t": "Watch link copy: add the schedule field, same as the apps original"
-          },
-          {
-            "v": "1.3.2",
-            "t": "Statistics: say the watch hint once"
           }
         ],
         "caps": [
@@ -1190,31 +1190,31 @@
         ],
         "autoShots": [],
         "latest": {
-          "d": "Nov 20, 2026",
-          "t": "Card receipt button reads Preview Receipt",
-          "url": "https://github.com/natesteele888/sponsor-banner-inventory/commit/97254f428a4e56226d759debb0d89f84fa8a15bc"
+          "d": "Nov 21, 2026",
+          "t": "Outreach greeting drops the town in brackets; made-up address in a comment",
+          "url": "https://github.com/natesteele888/sponsor-banner-inventory/commit/1bb5842dc003f6059d70c9edd8849ee745119901"
         },
-        "version": "1.7.2",
+        "version": "1.8.4",
         "history": [
           {
-            "v": "1.7.2",
-            "t": "Card receipt button reads Preview Receipt"
+            "v": "1.8.4",
+            "t": "Outreach greeting drops the town in brackets; made-up address in a comment"
           },
           {
-            "v": "1.7.1",
-            "t": "Card receipt button sits on the right, under the status"
+            "v": "1.8.3",
+            "t": "Spotlights: ready after the receipt, write-ups by level"
           },
           {
-            "v": "1.7.0",
-            "t": "Receipt button on paid sponsor cards; Receipts keeps a copy of every receipt sent"
+            "v": "1.8.2",
+            "t": "Sponsors: email lockdown, one-time Allow, warmer greeting, tappable counts, pills, in kind"
           },
           {
-            "v": "1.6.9",
-            "t": "Last season's treasurer figures on the year-over-year line; money order and the donation page as ways to pay an upgrade"
+            "v": "1.8.1",
+            "t": "Sponsor reply form: say so when loading takes too long"
           },
           {
-            "v": "1.6.8",
-            "t": "Packet page: returning sponsors keep last year's info in one tap"
+            "v": "1.8.0",
+            "t": "Sponsors: Outreach tab for first emails, one per business"
           }
         ],
         "caps": [
