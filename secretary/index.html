@@ -7,7 +7,7 @@
 <title>LYBS Meeting Secretary</title>
 <meta name="application-name" content="Meeting Secretary">
 <meta name="description" content="Record a board meeting, capture motions and action items as they happen, then turn it into minutes. Private: meetings sync only to the owner's Google account.">
-<meta name="theme-color" content="#0a1628">
+<meta name="theme-color" content="#0a1628" data-lybs-theme data-light="#F4F6FA" data-dark="#0B1120">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -20,6 +20,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@400;500;600;700&family=Anton&family=Oswald:wght@400;500;600&family=Inter:wght@400;500;600;700&family=Source+Serif+4:ital,wght@0,400;0,600;1,400&display=swap" media="print" onload="this.media='all'"><noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@400;500;600;700&family=Anton&family=Oswald:wght@400;500;600&family=Inter:wght@400;500;600;700&family=Source+Serif+4:ital,wght@0,400;0,600;1,400&display=swap"></noscript>
+<script src="../theme.js"></script>
 <style>
 /* The app's look matches the LYBS Board Action Items page (lybs-reporting/board-actions.html): a navy header card
    with the league logo, DM Sans text, Bebas Neue headings, soft status pills, light by default and dark when the
@@ -39,7 +40,7 @@
   --serif:'Source Serif 4',Georgia,serif;
 }
 @media (prefers-color-scheme:dark){
-  :root{
+  :root:not([data-theme="light"]){
     color-scheme:dark;
     --hdr:#0d1830; --hdr2:#1b2d55;
     --text:#E9EDF6; --text-2:#B3BBCE; --text-3:#8A93AA;
@@ -50,6 +51,18 @@
     --shadow:0 1px 2px rgba(0,0,0,.4);
   }
 }
+/* the same, when dark is chosen on a light device */
+:root[data-theme="dark"]{
+  color-scheme:dark;
+  --hdr:#0d1830; --hdr2:#1b2d55;
+  --text:#E9EDF6; --text-2:#B3BBCE; --text-3:#8A93AA;
+  --line:#283350; --line2:#222B44; --bg:#0B1120; --panel:#131B2E; --panel-2:#19223A; --inset:#0F1628; --field:#0F1628;
+  --blue:#7C9BFF; --blue-soft:#86A6FF; --blue-bg:rgba(124,155,255,.14);
+  --red:#FF8A80; --red-bg:rgba(255,99,88,.15); --green:#5BD49A; --green-bg:rgba(76,208,142,.15); --amber:#F2B544; --amber-bg:rgba(242,181,68,.10); --amber-line:rgba(242,181,68,.35);
+  --grey:#A3ABC0; --grey-bg:rgba(163,171,192,.14); --steel:#5d6680;
+  --shadow:0 1px 2px rgba(0,0,0,.4);
+}
+
 *{box-sizing:border-box}
 html,body{margin:0;height:100%}
 body{background:var(--bg);color:var(--text);font:15px/1.5 var(--body);-webkit-font-smoothing:antialiased}
@@ -76,6 +89,8 @@ a{color:var(--blue-soft)}
 .topbar .tb-nav .btn{min-height:38px;padding:0 14px;font-size:14px;border-radius:9px;background:#fff;color:#0a1628;border-color:#fff}
 .topbar .tb-nav .btn:hover{background:#E7ECF8}
 .topbar .tb-nav .btn:focus-visible{outline:2px solid #9FB3E6;outline-offset:2px}
+.topbar .tb-nav .theme-btn{padding:0 11px;font-size:16px;background:rgba(255,255,255,.08);border-color:rgba(255,255,255,.22);color:#fff}
+.topbar .tb-nav .theme-btn:hover{background:rgba(255,255,255,.16)}
 /* the toolbar row under the header: save status on the left, this app's own buttons on the right */
 .toolsrow{display:flex;align-items:center;gap:8px;flex-wrap:wrap;width:calc(100% - 40px);max-width:1240px;margin:10px auto 0}
 .toolsrow .end{margin-left:auto;display:flex;gap:8px;flex-wrap:wrap}
@@ -406,6 +421,7 @@ html.locked body > *:not(#lockScreen){visibility:hidden}
   .topbar .bt p{font-size:12.5px}
   .topbar .tb-nav{width:100%}
   .topbar .tb-nav .btn{flex:1 1 0;padding:0 10px;font-size:13.5px}
+  .topbar .tb-nav .theme-btn{flex:0 0 auto}
   body:has(#agLive) .topbar{padding:8px 12px;gap:8px}
   body:has(#agLive) .topbar .logo{height:28px}
   body:has(#agLive) .topbar h1{font-size:18px}
@@ -458,7 +474,7 @@ html.locked body > *:not(#lockScreen){visibility:hidden}
 <header class="topbar">
   <div class="brand"><a class="dash-link" href="https://lybs-dashboard.web.app/" title="Back to the Dashboard"><img class="logo" src="logo.svg" alt="LYBS Dashboard"></a><div class="bt"><h1>Meeting <span>Secretary</span></h1><p>Board meetings, motions and minutes</p></div></div>
   <!-- the way back to the LYBS Dashboard, which links here too -->
-  <nav class="tb-nav" aria-label="Other LYBS pages"><a class="btn dash-link" id="btnDash" href="https://lybs-dashboard.web.app/" title="Back to the LYBS Dashboard">← Dashboard</a></nav>
+  <nav class="tb-nav" aria-label="Other LYBS pages"><a class="btn dash-link" id="btnDash" href="https://lybs-dashboard.web.app/" title="Back to the LYBS Dashboard">← Dashboard</a><button type="button" class="btn theme-btn" data-lybs-theme-toggle aria-label="Switch to light mode" title="Switch to light mode">🌙</button></nav>
 </header>
 <div class="toolsrow">
   <span id="topStatus" class="savepill" role="status">Saved</span>

@@ -1,7 +1,7 @@
 // Meeting Secretary: network first, so updates show up right away; shows the last saved copy when offline or after 3 seconds on a weak signal.
 // Only the app's own files, the Firebase scripts and fonts are cached. Database and sign-in traffic is never cached.
-const CACHE = "secretary-v21";
-const SHELL = ["./", "manifest.json", "logo.svg", "/apps/icons/secretary-192.png", "/apps/icons/secretary-512.png"];
+const CACHE = "secretary-v22";
+const SHELL = ["./", "manifest.json", "logo.svg", "/apps/theme.js", "/apps/icons/secretary-192.png", "/apps/icons/secretary-512.png"];
 self.addEventListener("install", e => {
   self.skipWaiting();
   e.waitUntil(caches.open(CACHE).then(c => Promise.all(SHELL.map(u => c.add(new Request(u, {cache: "reload"})).catch(() => {})))));
