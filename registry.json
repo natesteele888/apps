@@ -1191,30 +1191,30 @@
         "autoShots": [],
         "latest": {
           "d": "Nov 22, 2026",
-          "t": "Sponsors home tidy: tab badges, one Banners tab, thin chart, moving Upgrade buttons",
-          "url": "https://github.com/natesteele888/sponsor-banner-inventory/commit/111f29ca6d0b16bb7757734a5a4d66a849533231"
+          "t": "Receipts: in-kind wording on the thank-you + packet email",
+          "url": "https://github.com/natesteele888/sponsor-banner-inventory/commit/7fed8970183d843447e454846f7053ae2cc37a41"
         },
-        "version": "1.8.5",
+        "version": "1.9.0",
         "history": [
           {
-            "v": "1.8.5",
-            "t": "Sponsors home tidy: tab badges, one Banners tab, thin chart, moving Upgrade buttons"
+            "v": "1.9.0",
+            "t": "Receipts: in-kind wording on the thank-you + packet email"
           },
           {
-            "v": "1.8.4",
-            "t": "Outreach greeting drops the town in brackets; made-up address in a comment"
+            "v": "1.8.9",
+            "t": "Receipts: thank-you + packet on every handled row, including receipts sent from the app"
           },
           {
-            "v": "1.8.3",
-            "t": "Spotlights: ready after the receipt, write-ups by level"
+            "v": "1.8.8",
+            "t": "Sponsors app at lybs-sponsors.web.app; old GitHub links forward there"
           },
           {
-            "v": "1.8.2",
-            "t": "Sponsors: email lockdown, one-time Allow, warmer greeting, tappable counts, pills, in kind"
+            "v": "1.8.7",
+            "t": "Receipts: Not needed asks Sent another way; thank-you + packet email, preview only until turned on"
           },
           {
-            "v": "1.8.1",
-            "t": "Sponsor reply form: say so when loading takes too long"
+            "v": "1.8.6",
+            "t": "Outreach: short business name in the body, new scoreboard line"
           }
         ],
         "caps": [
