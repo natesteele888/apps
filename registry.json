@@ -766,12 +766,16 @@
         ],
         "autoShots": [],
         "latest": {
-          "d": "Nov 20, 2026",
-          "t": "Age page: make the macleague.org and league email links tappable",
-          "url": "https://github.com/natesteele888/lybs-ballclub/commit/7e1f0b3b8e5d39e1a31ad6dfbd22af02bbe5539f"
+          "d": "Nov 22, 2026",
+          "t": "Take the owner's email out of the public README",
+          "url": "https://github.com/natesteele888/lybs-ballclub/commit/d055a87b807ebf61866fb4d7fbb55fc3c11ce1f1"
         },
-        "version": "1.29.4",
+        "version": "1.29.5",
         "history": [
+          {
+            "v": "1.29.5",
+            "t": "Take the owner's email out of the public README"
+          },
           {
             "v": "1.29.4",
             "t": "Age page: make the macleague.org and league email links tappable"
@@ -787,10 +791,6 @@
           {
             "v": "1.29.0",
             "t": "One sign-in for coaches, and every division's standings a tap away"
-          },
-          {
-            "v": "1.28.9",
-            "t": "League dates: phones pick up the new league-events and league-info files"
           }
         ],
         "caps": [
@@ -1190,12 +1190,16 @@
         ],
         "autoShots": [],
         "latest": {
-          "d": "Nov 21, 2026",
-          "t": "Outreach greeting drops the town in brackets; made-up address in a comment",
-          "url": "https://github.com/natesteele888/sponsor-banner-inventory/commit/1bb5842dc003f6059d70c9edd8849ee745119901"
+          "d": "Nov 22, 2026",
+          "t": "Sponsors home tidy: tab badges, one Banners tab, thin chart, moving Upgrade buttons",
+          "url": "https://github.com/natesteele888/sponsor-banner-inventory/commit/111f29ca6d0b16bb7757734a5a4d66a849533231"
         },
-        "version": "1.8.4",
+        "version": "1.8.5",
         "history": [
+          {
+            "v": "1.8.5",
+            "t": "Sponsors home tidy: tab badges, one Banners tab, thin chart, moving Upgrade buttons"
+          },
           {
             "v": "1.8.4",
             "t": "Outreach greeting drops the town in brackets; made-up address in a comment"
@@ -1211,10 +1215,6 @@
           {
             "v": "1.8.1",
             "t": "Sponsor reply form: say so when loading takes too long"
-          },
-          {
-            "v": "1.8.0",
-            "t": "Sponsors: Outreach tab for first emails, one per business"
           }
         ],
         "caps": [
