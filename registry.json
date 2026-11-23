@@ -1,6 +1,6 @@
 {
   "about": "The one list of Nathan's apps. Live links, which apps show where, and each app's App Store listing (text, highlights, screenshots) all come from here. Edit listings and icons in the Toolbox; the sync job copies them here. Don't hand-edit text in store/index.html.",
-  "updated": "2026-11-22",
+  "updated": "2026-11-23",
   "toolbox": "https://natesteele888.github.io/apps/toolbox/",
   "store": "https://natesteele888.github.io/apps/store/",
   "apps": [
@@ -1191,11 +1191,23 @@
         "autoShots": [],
         "latest": {
           "d": "Nov 22, 2026",
-          "t": "Receipts: in-kind wording on the thank-you + packet email",
-          "url": "https://github.com/natesteele888/sponsor-banner-inventory/commit/7fed8970183d843447e454846f7053ae2cc37a41"
+          "t": "Outreach send: sender becomes LYBS Owner, Contacted? says Yes",
+          "url": "https://github.com/natesteele888/sponsor-banner-inventory/commit/9895558c2b5c1864f9e567deea57b9e534dc4b64"
         },
-        "version": "1.9.0",
+        "version": "1.9.4",
         "history": [
+          {
+            "v": "1.9.3",
+            "t": "Outreach send: sender becomes LYBS Owner, Contacted? says Yes"
+          },
+          {
+            "v": "1.9.2",
+            "t": "Outreach: ready batch on top, needs attention and for review at the end"
+          },
+          {
+            "v": "1.9.1",
+            "t": "Sponsors app: three yes/no lines per sponsor, fewer tabs, Teams split off"
+          },
           {
             "v": "1.9.0",
             "t": "Receipts: in-kind wording on the thank-you + packet email"
@@ -1203,18 +1215,6 @@
           {
             "v": "1.8.9",
             "t": "Receipts: thank-you + packet on every handled row, including receipts sent from the app"
-          },
-          {
-            "v": "1.8.8",
-            "t": "Sponsors app at lybs-sponsors.web.app; old GitHub links forward there"
-          },
-          {
-            "v": "1.8.7",
-            "t": "Receipts: Not needed asks Sent another way; thank-you + packet email, preview only until turned on"
-          },
-          {
-            "v": "1.8.6",
-            "t": "Outreach: short business name in the body, new scoreboard line"
           }
         ],
         "caps": [
