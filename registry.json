@@ -1190,12 +1190,16 @@
         ],
         "autoShots": [],
         "latest": {
-          "d": "Nov 23, 2026",
-          "t": "Sponsor card: logo on every sponsor, not only from Teams",
-          "url": "https://github.com/natesteele888/sponsor-banner-inventory/commit/1bea59f48151993282487eb85e044d79d497a67f"
+          "d": "Nov 24, 2026",
+          "t": "Sponsors: count of sponsors committed up top; Became a sponsor on a not-signed-up card",
+          "url": "https://github.com/natesteele888/sponsor-banner-inventory/commit/7d739065dd22fbf0868f44004ee673dffbd1bf2c"
         },
-        "version": "1.9.9",
+        "version": "1.10.0",
         "history": [
+          {
+            "v": "1.10.0",
+            "t": "Sponsors: count of sponsors committed up top; Became a sponsor on a not-signed-up card"
+          },
           {
             "v": "1.9.9",
             "t": "Sponsor card: logo on every sponsor, not only from Teams"
@@ -1211,10 +1215,6 @@
           {
             "v": "1.9.5",
             "t": "Sponsors list: five sections in the order the work goes"
-          },
-          {
-            "v": "1.9.3",
-            "t": "Outreach send: sender becomes LYBS Owner, Contacted? says Yes"
           }
         ],
         "caps": [
