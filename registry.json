@@ -1,6 +1,6 @@
 {
   "about": "The one list of Nathan's apps. Live links, which apps show where, and each app's App Store listing (text, highlights, screenshots) all come from here. Edit listings and icons in the Toolbox; the sync job copies them here. Don't hand-edit text in store/index.html.",
-  "updated": "2026-11-24",
+  "updated": "2026-11-28",
   "toolbox": "https://natesteele888.github.io/apps/toolbox/",
   "store": "https://natesteele888.github.io/apps/store/",
   "apps": [
@@ -1190,12 +1190,16 @@
         ],
         "autoShots": [],
         "latest": {
-          "d": "Nov 24, 2026",
-          "t": "Sponsors: count of sponsors committed up top; Became a sponsor on a not-signed-up card",
-          "url": "https://github.com/natesteele888/sponsor-banner-inventory/commit/7d739065dd22fbf0868f44004ee673dffbd1bf2c"
+          "d": "Nov 28, 2026",
+          "t": "Sponsors: money bar toward the season goal in Numbers and reports",
+          "url": "https://github.com/natesteele888/sponsor-banner-inventory/commit/8408236a4794519c998c069203f535225a39bf26"
         },
-        "version": "1.10.0",
+        "version": "1.10.1",
         "history": [
+          {
+            "v": "1.10.1",
+            "t": "Sponsors: money bar toward the season goal in Numbers and reports"
+          },
           {
             "v": "1.10.0",
             "t": "Sponsors: count of sponsors committed up top; Became a sponsor on a not-signed-up card"
@@ -1211,10 +1215,6 @@
           {
             "v": "1.9.7",
             "t": "Sponsors: Needs a payment nudge section with a reminder to preview and send"
-          },
-          {
-            "v": "1.9.5",
-            "t": "Sponsors list: five sections in the order the work goes"
           }
         ],
         "caps": [
